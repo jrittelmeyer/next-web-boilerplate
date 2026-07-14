@@ -1,0 +1,116 @@
+# Production-ish stack: the built app image + Postgres + Meilisearch on one
+# network. This is for self-hosted deploys (and to smoke-test the image locally);
+# for day-to-day development use docker-compose.yml + `pnpm dev` instead.
+#
+#   docker compose -f docker/docker-compose.prod.yml up --build
+#
+# Runtime secrets come from the repo-root .env (env_file). The service-internal
+# DATABASE_URL / MEILISEARCH_HOST below intentionally OVERRIDE the localhost
+# values in that file, because containers reach each other by service name.
+#
+# Migrations are NOT run by this stack (the runtime image has no drizzle-kit).
+# After the DB is up, apply them from the host once:
+#   pnpm --filter @repo/db db:migrate
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        # env.ts validates at runtime, not build time — see the Dockerfile.
+        SKIP_ENV_VALIDATION: "1"
+    image: nwb-web
+    container_name: nwb-web
+    restart: unless-stopped
+    # Pulls BETTER_AUTH_SECRET and any optional service keys from the root .env.
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      # Reach the sibling services by their compose network names, not localhost.
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/appdb
+      MEILISEARCH_HOST: http://meilisearch:7700
+      # Public origin the app is served from; override for a real domain.
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      # SITE_URL (canonical public/SEO origin) is intentionally NOT set here: it
+      # flows through from the root .env via env_file above, and the app defaults it
+      # to BETTER_AUTH_URL when unset. Setting it here with an empty host default
+      # would clobber the .env value (emptyStringAsUndefined → undefined).
+    ports:
+      - "3000:3000"
+    # Mirrors the Dockerfile HEALTHCHECK (it would apply on its own from the image),
+    # but declared here so it's visible/tunable in compose. Hits /api/health (DB-ping
+    # readiness): 200 healthy, 503 when the DB is down. node is used because the
+    # runtime image has no curl/wget.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+
+  # Background-jobs worker (D7). A second process sharing the SAME Postgres — no
+  # new service. The web app enqueues jobs (boss.send → an INSERT); this worker
+  # processes them. It's optional: stop it and jobs harmlessly queue in the
+  # `pgboss` schema until it's back. Needs only DATABASE_URL (+ any service keys
+  # a job uses, e.g. RESEND_* for the welcome email — pulled from the root .env).
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: worker
+    image: nwb-worker
+    container_name: nwb-worker
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      # Reach the sibling Postgres by its compose network name, not localhost.
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/appdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: nwb-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.48.1
+    container_name: nwb-meilisearch-prod
+    restart: unless-stopped
+    environment:
+      # Production mode requires a strong master key (>= 16 bytes) and disables
+      # the search-preview UI. Override MEILI_MASTER_KEY with a real secret.
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev_meili_master_key_change_me}
+      MEILI_ENV: ${MEILI_ENV:-production}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  meilisearch_data:

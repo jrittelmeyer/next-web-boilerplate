@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Client JS — all routes (gzip)",
+    "path": ".next/static/chunks/**/*.js",
+    "limit": "750 kB",
+    "gzip": true
+  },
+  {
+    "name": "CSS — all routes (gzip)",
+    "path": ".next/static/chunks/**/*.css",
+    "limit": "15 kB",
+    "gzip": true
+  }
+]

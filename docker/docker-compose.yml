@@ -1,0 +1,46 @@
+# Local development services. Start with: docker compose -f docker/docker-compose.yml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nwb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.48.1
+    container_name: nwb-meilisearch
+    restart: unless-stopped
+    environment:
+      # Local-dev master key. NOT a real secret — overridable via a MEILI_MASTER_KEY
+      # in the repo-root .env (which docker compose reads). Whatever value is used
+      # here must match MEILISEARCH_API_KEY in the app's .env.
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev_meili_master_key_change_me}
+      # development keeps the web search-preview UI at :7700 and is lenient about
+      # key length; use production (with a strong key) when you deploy.
+      MEILI_ENV: development
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  meilisearch_data:

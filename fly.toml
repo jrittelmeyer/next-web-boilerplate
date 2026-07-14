@@ -1,0 +1,53 @@
+# Fly.io deployment for apps/web — deploys the repo's committed production image
+# (docker/Dockerfile → the standalone Next.js server on :3000). This is the
+# web app only; the jobs worker, Meilisearch, Stripe, email, and observability
+# are all optional/graceful-degrade and are documented as follow-ups in
+# docs/context/DEPLOYMENT.md → "Fly.io (worked runbook)".
+#
+# Replace `app` with your own globally-unique name before deploying (and match it
+# in the `fly secrets set BETTER_AUTH_URL=...` step of the runbook).
+
+app = "nwb-web"            # globally-unique on Fly — `fly apps create` will reject a taken name
+primary_region = "iad"     # change to your nearest region (`fly platform regions`)
+
+[build]
+  # Build the committed production image. The build context is this directory
+  # (the repo root), so the path is relative to root and .dockerignore is honored.
+  # The Dockerfile sets BUILD_STANDALONE=1 + SKIP_ENV_VALIDATION=1 itself — the
+  # build needs no args and no real secrets.
+  dockerfile = "docker/Dockerfile"
+
+[env]
+  # Non-secret runtime env. The image already sets PORT=3000 / HOSTNAME=0.0.0.0 and
+  # NODE_ENV=production (runner stage); NODE_ENV is repeated here only for clarity.
+  #
+  # BETTER_AUTH_URL MUST equal the public origin (Better Auth validates the request
+  # Origin against it for CSRF + redirect safety). It depends on the final app name,
+  # so the runbook sets it via `fly secrets set BETTER_AUTH_URL=https://<app>.fly.dev`.
+  # Move it here instead once the hostname is fixed, if you prefer it non-secret.
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Keep one machine always running. The app holds open SSE streams and a dedicated
+  # Postgres LISTEN connection (realtime notifications), and its health check pings
+  # the DB — scale-to-zero would sever both. Enable autostop only if you strip the
+  # realtime/SSE surface (see ARCHITECTURE.md → removal notes).
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  # Readiness probe → the app's /api/health route: HTTP 200 with the DB up, 503 when
+  # it's unreachable. grace_period covers Next's cold boot (mirrors the Dockerfile
+  # HEALTHCHECK --start-period).
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "40s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"   # Next SSR + pg pool + SSE; bump to "1gb" if you see OOM under real load

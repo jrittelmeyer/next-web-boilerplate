@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "@repo/tailwind-config/base";
+
+/*
+ * Tailwind v4 auto-detects this app's own sources, but not external workspace
+ * packages — register @repo/ui so its component class names are generated.
+ * Exclude *.stories.tsx: those are gallery-only (Storybook builds them with its
+ * own Tailwind entry) and must not leak story-only utilities into the app CSS.
+ */
+@source "../../../../packages/ui/src/**/*.{ts,tsx}";
+@source not "../../../../packages/ui/src/**/*.stories.tsx";

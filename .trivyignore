@@ -1,0 +1,14 @@
+# Trivy ignore file — escape hatch for the `docker-image` CI job's image scan.
+#
+# The Trivy step (.github/workflows/ci.yml) fails the build on HIGH/CRITICAL
+# vulnerabilities that have a FIX available (`ignore-unfixed: true`). If a specific
+# advisory is a false positive, or an accepted risk with no fix path yet, silence it
+# here — one vulnerability ID per line, each with a dated reason on the line above —
+# mirroring the `auditConfig.ignoreGhsas` allowlist for `pnpm audit` in
+# pnpm-workspace.yaml. Prefer bumping the base image / package over adding an entry.
+#
+# Example:
+#   # <reason> — accepted 2026-01-01; revisit when a fixed base image ships
+#   CVE-2025-12345
+#
+# Empty = nothing suppressed: every fixable HIGH/CRITICAL turns the scan red.

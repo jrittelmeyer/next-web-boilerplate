@@ -1,0 +1,21 @@
+{
+  "name": "@repo/observability",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsx src/check.ts",
+    "sync": "tsx src/sync.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^24",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

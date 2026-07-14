@@ -1,0 +1,14 @@
+# Project-wide type-check before code leaves the machine. This is the full
+# turbo task (not a per-file tsc): the repo's types span packages, and
+# `type-check` dependsOn `^build`, so isolated-file tsc would be unsound.
+# Turbo caches it, so it's near-instant when nothing type-relevant changed.
+pnpm type-check || exit 1
+
+# Backstop the unbounded Turbo cache (it has no native TTL/size cap): prune
+# .turbo/cache down to its size ceiling before code leaves the machine. Each
+# build adds a ~3.5 GB artifact and nothing evicts, so the cache reached 100 GB
+# here in three days. Near-instant no-op when already under cap; the primary
+# trigger is the /checkpoint cadence during active build sessions, and this hook
+# guarantees it independent of who built. Never blocks a push (|| true).
+# See scripts/prune-turbo-cache.mjs + the `tidy` skill.
+pnpm cache:prune || true

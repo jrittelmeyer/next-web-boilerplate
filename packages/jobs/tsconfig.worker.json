@@ -1,0 +1,11 @@
+{
+  // RUNTIME-ONLY tsconfig for tsx (the worker + enqueue scripts) — NOT used by
+  // `tsc` type-check (that's tsconfig.json). tsx applies a tsconfig's `jsx`
+  // setting only to files within that config's scope; @repo/email's .tsx send
+  // helper + templates live in a sibling package, so without listing them here
+  // esbuild would transpile their JSX with the CLASSIC runtime ("React is not
+  // defined"). Pulling them into `include` puts them in scope so they get the
+  // automatic runtime (jsx: react-jsx, inherited via extends). See DECISIONS.md.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts", "../email/src/**/*.ts", "../email/src/**/*.tsx"]
+}

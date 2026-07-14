@@ -1,0 +1,12 @@
+{
+  // Recommended extensions for this repo's toolchain. VS Code prompts to install
+  // these on first open (Extensions view → "Recommended").
+  "recommendations": [
+    "biomejs.biome", // formatter + linter (JS/TS/JSON/CSS) — the default formatter
+    "bradlc.vscode-tailwindcss", // Tailwind CSS v4 IntelliSense
+    "ms-playwright.playwright", // run/debug Playwright E2E specs
+    "davidanson.vscode-markdownlint", // Markdown linting (.markdownlint.jsonc)
+    "editorconfig.editorconfig", // honor .editorconfig
+    "ms-azuretools.vscode-docker" // Dockerfile / compose support
+  ]
+}

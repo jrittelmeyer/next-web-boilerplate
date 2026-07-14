@@ -1,0 +1,77 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "tooling/*"
+# Native deps allowed to run install/build scripts (pnpm 11 replaced
+# onlyBuiltDependencies with allowBuilds). sharp = Next.js image optimization.
+# msgpackr-extract (transitive via uploadthing) is an *optional* native
+# accelerator for msgpackr; left off — msgpackr falls back to pure JS, so we
+# don't compile it. Explicit `false` records the decision (pnpm re-prompts if
+# the key is removed).
+#
+# @sentry/cli (via @sentry/nextjs → @sentry/bundler-plugin-core) postinstalls a
+# native sentry-cli binary used ONLY for source-map *upload* during `next build`,
+# which is gated on SENTRY_AUTH_TOKEN (+org/project) — creds the boilerplate
+# default doesn't ship. Left off so installs stay network-light and the no-creds
+# build is unaffected; flip to true when wiring real source-map upload in CI.
+# core-js (transitive via posthog-js) postinstall only prints a funding banner —
+# pure-JS polyfill, no build artifact — so skip it.
+#
+# @swc/core + @parcel/watcher (transitive via next-intl) back its OPTIONAL
+# build-time features — the experimental SWC plugin and message-file watching for
+# typed-message generation — which this app doesn't enable. Both also ship prebuilt
+# platform binaries (their build script only compiles from source as a fallback),
+# so `false` keeps installs cross-platform (no node-gyp on Windows) and network-light
+# without affecting our setup.
+allowBuilds:
+  '@parcel/watcher': false
+  '@sentry/cli': false
+  '@swc/core': false
+  core-js: false
+  esbuild: true
+  msgpackr-extract: false
+  sharp: true
+# Pin vite (pulled transitively by vitest) to an aged release. vitest@4's dep
+# range is vite ^6||^7||^8, which otherwise resolves to the newest 8.x — and the
+# current 8.1.0 was published hours ago. We never import vite directly (we use
+# vitest/config), so an override is the right tool: it keeps the test runner off
+# brand-new releases per the no-fresh-deps policy. Bump as newer 8.x ages out.
+overrides:
+  vite: 8.0.16
+# Supply-chain release-age gate (Step 26 · A11). Every Phase-1/2 dep note describes this
+# discipline ("let a release age before taking it; hours-old/days-old releases were
+# rejected, pins were chosen to clear the gate"). It is ENFORCED at two layers:
+#   - update layer  — Renovate (.github/renovate.json → minimumReleaseAge: "7 days")
+#     gates what gets PROPOSED (a bump PR never lands a <7-day release).
+#   - install layer — the pnpm setting below gates the EXISTING lockfile: pnpm
+#     validates every entry against the gate on install (including `--frozen-lockfile`),
+#     so a too-fresh transitive can never enter the tree through a lockfile edit either.
+#
+# Enabled 2026-07-08 (A11). It was left off while the repo was days old — pnpm checks
+# the WHOLE lockfile, and the early deliberate pins (stripe, @sentry/nextjs, posthog-*,
+# lucide-react, lint-staged) + their fresh transitives would have failed a frozen
+# install. The tree has since aged past the window: a frozen install verified all 1021
+# entries clear the gate. `minimumReleaseAge` reads each version's PUBLISH time (not its
+# lockfile-add date), so packages added recently but published long ago (e.g. sonner,
+# @manypkg/cli) pass. Value is in MINUTES. Security fixes are not exempted here — bypass
+# a specific advisory via auditConfig / an override if a fix is ever younger than 7 days.
+minimumReleaseAge: 10080 # 7 days
+# Audit allowlist (Step 26). `pnpm audit` (and the CI audit job) block on KNOWN
+# advisories; these three are deep TRANSITIVE deps we can't bump directly — each is
+# acknowledged here with its path + why it's low-risk for this app, so the audit stays
+# green on the status quo and goes red the moment a NEW advisory appears. Prune an
+# entry once the upstream bump lands in the lockfile (an ignore for an absent advisory
+# is a harmless no-op). Re-audit with `pnpm audit` (see DEPLOYMENT.md → Supply chain).
+auditConfig:
+  ignoreGhsas:
+    # effect <3.20.0 — AsyncLocalStorage context loss under concurrent RPC load.
+    # Transitive via @uploadthing/react → uploadthing/@effect/platform. Not on any
+    # path this app exercises (no Effect runtime of our own); awaiting an uploadthing bump.
+    - GHSA-38f7-945m-qr2g
+    # esbuild <=0.24.2 — dev-server lets any site read responses. Transitive via
+    # better-auth → drizzle-kit (a migration CLI), and only esbuild's DEV server is
+    # affected, which this repo never runs. No prod/runtime exposure.
+    - GHSA-67mh-4wv8-2f99
+    # postcss <8.5.10 — XSS via unescaped </style> in CSS stringify. Transitive via
+    # next's bundled postcss; we don't stringify untrusted CSS. Awaiting a next bump.
+    - GHSA-qx2v-qp2m-jg93

@@ -1,0 +1,156 @@
+{
+  "Landing": {
+    "heading": "Starter de Next.js listo para producción",
+    "tagline": "App Router · Tailwind v4 · shadcn/ui · TypeScript 6 · Node 24",
+    "cardTitle": "@repo/ui está conectado",
+    "cardDescription": "Componentes compartidos, tokens del tema slate y el ayudante cn().",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "tu@ejemplo.com"
+  },
+  "LanguageSwitcher": {
+    "label": "Cambiar idioma"
+  },
+  "Metadata": {
+    "description": "Starter de Next.js listo para producción para aplicaciones web complejas.",
+    "login": "Iniciar sesión",
+    "signup": "Crear cuenta",
+    "forgotPassword": "Olvidé mi contraseña",
+    "resetPassword": "Restablecer contraseña",
+    "goodbye": "Cuenta eliminada",
+    "dashboard": "Panel",
+    "notifications": "Notificaciones"
+  },
+  "Auth": {
+    "common": {
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "emailPlaceholder": "tu@ejemplo.com",
+      "backToSignIn": "Volver a iniciar sesión"
+    },
+    "login": {
+      "title": "Iniciar sesión",
+      "description": "Bienvenido de nuevo. Introduce tus credenciales para continuar.",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "submit": "Iniciar sesión",
+      "submitting": "Iniciando sesión…",
+      "error": "No se pudo iniciar sesión. Revisa tus credenciales e inténtalo de nuevo.",
+      "noAccount": "¿No tienes una cuenta?",
+      "signUpLink": "Regístrate"
+    },
+    "passkey": {
+      "signIn": "Iniciar sesión con una clave de acceso",
+      "waiting": "Esperando tu dispositivo…",
+      "error": "No se pudo iniciar sesión con una clave de acceso. Inténtalo de nuevo."
+    },
+    "twoFactor": {
+      "title": "Autenticación de dos factores",
+      "descriptionTotp": "Introduce el código de 6 dígitos de tu aplicación de autenticación para terminar de iniciar sesión.",
+      "descriptionBackup": "Introduce uno de tus códigos de respaldo guardados para terminar de iniciar sesión.",
+      "verificationCode": "Código de verificación",
+      "backupCode": "Código de respaldo",
+      "totpPlaceholder": "123456",
+      "backupPlaceholder": "xxxxx-xxxxx",
+      "trustDevice": "Confiar en este dispositivo durante 30 días",
+      "verify": "Verificar",
+      "verifying": "Verificando…",
+      "useBackup": "Usar un código de respaldo",
+      "useAuthenticator": "Usar tu aplicación de autenticación",
+      "errorTotp": "Ese código no coincide. Introduce el código actual de tu aplicación.",
+      "errorBackup": "Ese código de respaldo no coincide. Prueba con otro."
+    },
+    "signup": {
+      "title": "Crear cuenta",
+      "description": "Empieza con tu correo y una contraseña. Solo toma un momento.",
+      "name": "Nombre",
+      "namePlaceholder": "Ada Lovelace",
+      "submit": "Crear cuenta",
+      "submitting": "Creando cuenta…",
+      "error": "No se pudo crear tu cuenta.",
+      "haveAccount": "¿Ya tienes una cuenta?",
+      "signInLink": "Inicia sesión",
+      "sentTitle": "Revisa tu bandeja de entrada",
+      "sentDescription": "Enviamos un enlace de verificación a {email}. Confirma tu correo para terminar de registrarte.",
+      "sentHint": "¿No lo recibiste? Revisa tu carpeta de spam o vuelve a enviar el enlace.",
+      "resend": "Reenviar correo de verificación",
+      "resending": "Enviando…",
+      "resent": "Enviado: revisa tu bandeja de entrada",
+      "resendError": "No se pudo reenviar el correo."
+    },
+    "forgotPassword": {
+      "title": "Olvidé mi contraseña",
+      "description": "Introduce tu correo y te enviaremos un enlace para restablecerla.",
+      "submit": "Enviar enlace de restablecimiento",
+      "submitting": "Enviando…",
+      "sentTitle": "Revisa tu bandeja de entrada",
+      "sentDescription": "Si existe una cuenta con ese correo, te hemos enviado un enlace para restablecer tu contraseña.",
+      "sentHint": "El enlace caduca pronto. Sin el correo configurado, la URL de restablecimiento se registra en el servidor en desarrollo."
+    },
+    "resetPassword": {
+      "title": "Establecer una nueva contraseña",
+      "description": "Elige una nueva contraseña para tu cuenta.",
+      "newPassword": "Nueva contraseña",
+      "submit": "Actualizar contraseña",
+      "submitting": "Actualizando…",
+      "error": "No se pudo restablecer tu contraseña. Es posible que el enlace haya caducado.",
+      "invalidTitle": "Enlace de restablecimiento no válido",
+      "invalidDescription": "Este enlace para restablecer la contraseña falta o ha caducado.",
+      "invalidHint": "Los enlaces de restablecimiento son de un solo uso y con tiempo limitado. Solicita uno nuevo para continuar.",
+      "requestNew": "Solicitar un enlace nuevo",
+      "doneTitle": "Contraseña actualizada",
+      "doneDescription": "Tu contraseña se ha cambiado. Ya puedes iniciar sesión con ella.",
+      "doneHint": "La contraseña anterior ya no funciona.",
+      "goToSignIn": "Ir a iniciar sesión"
+    },
+    "social": {
+      "divider": "O continúa con",
+      "redirecting": "Redirigiendo…",
+      "error": "No se pudo iniciar el inicio de sesión. Inténtalo de nuevo."
+    },
+    "goodbye": {
+      "title": "Tu cuenta ha sido eliminada",
+      "description": "Tu perfil y todos sus datos han desaparecido, y se ha cerrado tu sesión en todas partes. Gracias por probarlo: eres bienvenido de nuevo cuando quieras.",
+      "backHome": "Volver a la página de inicio"
+    }
+  },
+  "Dashboard": {
+    "nav": {
+      "dashboard": "Panel",
+      "posts": "Publicaciones",
+      "notifications": "Notificaciones",
+      "admin": "Administración"
+    },
+    "userMenu": {
+      "menuLabel": "Menú de cuenta",
+      "account": "Cuenta",
+      "signOut": "Cerrar sesión",
+      "signingOut": "Cerrando sesión…"
+    },
+    "home": {
+      "title": "Panel",
+      "signedInAs": "Sesión iniciada como {email}.",
+      "cardTitle": "Área protegida",
+      "cardDescription": "Protegida por el proxy (optimista, en el edge) y la comprobación de sesión autoritativa del layout.",
+      "cardBody": "Reemplaza esta plantilla con tu aplicación. Usa el menú de cuenta (arriba a la derecha) para cerrar sesión."
+    },
+    "impersonation": {
+      "impersonating": "Suplantando a <bold>{email}</bold>",
+      "stop": "Dejar de suplantar"
+    }
+  },
+  "Notifications": {
+    "title": "Notificaciones",
+    "description": "Actualizaciones en vivo enviadas por Server-Sent Events. Envíate una notificación de prueba y luego abre esta página en una segunda pestaña para verla llegar en tiempo real entre conexiones.",
+    "send": "Enviar notificación de prueba",
+    "sending": "Enviando…",
+    "sendError": "No se pudo enviar la notificación. Inténtalo de nuevo.",
+    "markAllRead": "Marcar todas como leídas",
+    "loadMore": "Cargar más",
+    "loading": "Cargando…",
+    "empty": "Aún no hay notificaciones. Envíate una de prueba arriba.",
+    "unread": "{count, plural, =0 {Sin leer} one {# sin leer} other {# sin leer}}",
+    "toastTitle": "Nueva notificación",
+    "statusLive": "En vivo",
+    "statusConnecting": "Conectando…",
+    "statusOffline": "Reconectando…"
+  }
+}

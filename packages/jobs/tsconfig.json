@@ -1,0 +1,19 @@
+{
+  // react-library (not base) because this package imports @repo/email, whose
+  // index re-exports a .tsx send helper — type-checking that transitively needs
+  // the JSX + React lib settings. Same reason @repo/auth uses react-library.
+  "extends": "@repo/typescript-config/react-library",
+  "compilerOptions": {
+    "types": ["node", "react"],
+    "noEmit": true,
+    // The `server-only` marker package throws on import outside a React Server
+    // bundler (its sole job is to fail a CLIENT build). The worker is a plain Node
+    // process, so map the marker to an empty stub — see src/server-only.ts and
+    // DECISIONS.md (pg-boss worker / server-only).
+    "paths": {
+      "server-only": ["./src/server-only.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "__tests__/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

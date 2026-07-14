@@ -1,0 +1,23 @@
+{
+  // Markdownlint config tuned to this repo's documentation style.
+  //
+  // These docs (especially docs/PROJECT_STATUS.md) deliberately use prose-width
+  // lines and asterisk emphasis. The rules below are relaxed so editors stop
+  // flagging intentional style choices. This is EDITOR-ONLY: Biome does not lint
+  // markdown, so none of this affects `pnpm lint`, `pnpm format`, or CI.
+  //
+  // Every other markdownlint rule stays at its default (true), so genuinely
+  // useful checks (broken structure, duplicate headings, etc.) still apply to
+  // new docs.
+  "default": true,
+
+  // Style choices the repo makes intentionally:
+  "MD013": false, // line-length — docs use long prose lines + wide tables
+  "MD049": false, // emphasis-style — repo uses */** (markdownlint defaults to _/__)
+
+  // Relaxed so existing docs lint clean without reflowing prose:
+  "MD022": false, // blanks-around-headings
+  "MD031": false, // blanks-around-fences
+  "MD032": false, // blanks-around-lists
+  "MD040": false // fenced-code-language — a few intentional bare ``` blocks
+}

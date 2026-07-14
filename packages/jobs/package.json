@@ -1,0 +1,43 @@
+{
+  "name": "@repo/jobs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "tsx --tsconfig tsconfig.worker.json src/worker.ts",
+    "dev": "tsx watch --tsconfig tsconfig.worker.json src/worker.ts",
+    "enqueue:demo": "tsx --tsconfig tsconfig.worker.json src/scripts/enqueue-demo.ts",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@repo/email": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pg-boss": "12.20.0",
+    "server-only": "^0.0.1",
+    "stripe": "22.2.2",
+    "uploadthing": "^7.7.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^24",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
+    "@vitest/coverage-v8": "^4.1.9",
+    "dotenv": "^17.4.2",
+    "esbuild": "0.28.1",
+    "pg": "^8.21.0",
+    "react": "^19.2.7",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

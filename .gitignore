@@ -1,0 +1,60 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Next.js generated types (regenerated on dev/build)
+next-env.d.ts
+
+# React Email preview server's generated working dir
+.react-email/
+
+# Storybook static build output (packages/ui — `pnpm build-storybook`)
+storybook-static/
+
+# Turborepo
+.turbo/
+
+# Environment files — commit .env.example, never .env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# OS
+.DS_Store
+Thumbs.db
+*.pem
+
+# IDE — .vscode/{extensions,settings}.json are committed (shared workspace config)
+.idea/
+.vs/
+
+# Claude Code — local/personal settings (shared settings.json is committed)
+.claude/settings.local.json
+
+# Drizzle (generated files are committed; local db state is not)
+*.db
+*.db-shm
+*.db-wal
+
+# Local database backups (db:backup) — never commit dumps
+/backups/

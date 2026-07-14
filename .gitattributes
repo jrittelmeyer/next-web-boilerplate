@@ -1,0 +1,19 @@
+# Normalize line endings to LF for all text files across platforms.
+* text=auto eol=lf
+
+# Explicitly mark binaries so Git never touches their bytes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+
+# Lockfiles: keep LF, treat as generated in diffs.
+pnpm-lock.yaml linguist-generated=true text eol=lf

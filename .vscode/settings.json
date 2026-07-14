@@ -1,0 +1,48 @@
+{
+  // Shared workspace settings so the Biome / Tailwind / markdownlint toolchain
+  // works the moment you open the repo. Personal overrides go in your user
+  // settings, not here.
+
+  // Biome is the formatter for JS/TS/JSON/CSS: format on save + apply safe fixes
+  // (incl. import sorting). Key normalized to source.fixAll.biome by Biome itself.
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "biomejs.biome",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit"
+  },
+  "[javascript]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[javascriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[json]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[jsonc]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[css]": { "editor.defaultFormatter": "biomejs.biome" },
+
+  // Markdown is linted by markdownlint (Biome doesn't lint Markdown).
+  "[markdown]": { "editor.defaultFormatter": "davidanson.vscode-markdownlint" },
+
+  // Tailwind CSS v4 IntelliSense for cva()/cn() class strings.
+  "tailwindCSS.classAttributes": ["class", "className", "classList"],
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ],
+
+  // Match .editorconfig / .gitattributes (LF everywhere).
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  // Don't search generated output.
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/.turbo": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/playwright-report": true,
+    "pnpm-lock.yaml": true
+  },
+
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

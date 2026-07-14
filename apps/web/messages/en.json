@@ -1,0 +1,156 @@
+{
+  "Landing": {
+    "heading": "Production-ready Next.js starter",
+    "tagline": "App Router · Tailwind v4 · shadcn/ui · TypeScript 6 · Node 24",
+    "cardTitle": "@repo/ui is wired up",
+    "cardDescription": "Shared components, slate theme tokens, and the cn() helper.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com"
+  },
+  "LanguageSwitcher": {
+    "label": "Change language"
+  },
+  "Metadata": {
+    "description": "Production-ready Next.js starter for complex web applications.",
+    "login": "Sign in",
+    "signup": "Create account",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password",
+    "goodbye": "Account deleted",
+    "dashboard": "Dashboard",
+    "notifications": "Notifications"
+  },
+  "Auth": {
+    "common": {
+      "email": "Email",
+      "password": "Password",
+      "emailPlaceholder": "you@example.com",
+      "backToSignIn": "Back to sign in"
+    },
+    "login": {
+      "title": "Sign in",
+      "description": "Welcome back. Enter your credentials to continue.",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "error": "Could not sign in. Check your credentials and try again.",
+      "noAccount": "Don’t have an account?",
+      "signUpLink": "Sign up"
+    },
+    "passkey": {
+      "signIn": "Sign in with a passkey",
+      "waiting": "Waiting for your device…",
+      "error": "Could not sign in with a passkey. Please try again."
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "descriptionTotp": "Enter the 6-digit code from your authenticator app to finish signing in.",
+      "descriptionBackup": "Enter one of your saved backup codes to finish signing in.",
+      "verificationCode": "Verification code",
+      "backupCode": "Backup code",
+      "totpPlaceholder": "123456",
+      "backupPlaceholder": "xxxxx-xxxxx",
+      "trustDevice": "Trust this device for 30 days",
+      "verify": "Verify",
+      "verifying": "Verifying…",
+      "useBackup": "Use a backup code instead",
+      "useAuthenticator": "Use your authenticator app instead",
+      "errorTotp": "That code didn’t match. Enter the current code from your app.",
+      "errorBackup": "That backup code didn’t match. Try a different one."
+    },
+    "signup": {
+      "title": "Create account",
+      "description": "Start with email and a password. It takes a moment.",
+      "name": "Name",
+      "namePlaceholder": "Ada Lovelace",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "error": "Could not create your account.",
+      "haveAccount": "Already have an account?",
+      "signInLink": "Sign in",
+      "sentTitle": "Check your inbox",
+      "sentDescription": "We sent a verification link to {email}. Confirm your email to finish signing up.",
+      "sentHint": "Didn’t get it? Check your spam folder, or resend the link.",
+      "resend": "Resend verification email",
+      "resending": "Sending…",
+      "resent": "Sent — check your inbox",
+      "resendError": "Could not resend the email."
+    },
+    "forgotPassword": {
+      "title": "Forgot password",
+      "description": "Enter your email and we’ll send you a reset link.",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "sentTitle": "Check your inbox",
+      "sentDescription": "If an account exists for that email, we’ve sent a link to reset your password.",
+      "sentHint": "The link expires shortly. Without email configured, the reset URL is logged to the server in development."
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "description": "Choose a new password for your account.",
+      "newPassword": "New password",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "error": "Could not reset your password. The link may have expired.",
+      "invalidTitle": "Invalid reset link",
+      "invalidDescription": "This password reset link is missing or has expired.",
+      "invalidHint": "Reset links are single-use and time-limited. Request a fresh one to continue.",
+      "requestNew": "Request a new link",
+      "doneTitle": "Password updated",
+      "doneDescription": "Your password has been changed. You can sign in with it now.",
+      "doneHint": "The old password no longer works.",
+      "goToSignIn": "Go to sign in"
+    },
+    "social": {
+      "divider": "Or continue with",
+      "redirecting": "Redirecting…",
+      "error": "Could not start sign-in. Please try again."
+    },
+    "goodbye": {
+      "title": "Your account has been deleted",
+      "description": "Your profile and all of its data are gone, and you’ve been signed out everywhere. Thanks for giving this a try — you’re welcome back any time.",
+      "backHome": "Back to the homepage"
+    }
+  },
+  "Dashboard": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "posts": "Posts",
+      "notifications": "Notifications",
+      "admin": "Admin"
+    },
+    "userMenu": {
+      "menuLabel": "Account menu",
+      "account": "Account",
+      "signOut": "Sign out",
+      "signingOut": "Signing out…"
+    },
+    "home": {
+      "title": "Dashboard",
+      "signedInAs": "Signed in as {email}.",
+      "cardTitle": "Protected area",
+      "cardDescription": "Gated by the proxy (optimistic, edge) and the layout’s authoritative session check.",
+      "cardBody": "Replace this shell with your app. Use the account menu (top right) to sign out."
+    },
+    "impersonation": {
+      "impersonating": "Impersonating <bold>{email}</bold>",
+      "stop": "Stop impersonating"
+    }
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "description": "Live updates pushed over Server-Sent Events. Send yourself a test notification, then open this page in a second tab to watch it arrive in real time across connections.",
+    "send": "Send test notification",
+    "sending": "Sending…",
+    "sendError": "Could not send the notification. Please try again.",
+    "markAllRead": "Mark all read",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "empty": "No notifications yet. Send yourself a test one above.",
+    "unread": "{count, plural, =0 {No unread} one {# unread} other {# unread}}",
+    "toastTitle": "New notification",
+    "statusLive": "Live",
+    "statusConnecting": "Connecting…",
+    "statusOffline": "Reconnecting…"
+  }
+}

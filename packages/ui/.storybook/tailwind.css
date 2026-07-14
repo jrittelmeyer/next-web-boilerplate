@@ -1,0 +1,13 @@
+/*
+ * Tailwind entry for Storybook — mirrors how apps/web composes the layers
+ * (apps/web/src/app/globals.css), so the gallery renders with the exact same
+ * slate tokens, radius, and `.dark` block the app ships.
+ *
+ * The explicit `@source` registers this package's own sources (components +
+ * stories) so their class names generate utilities in Storybook's CSS. This is
+ * scoped to the Storybook build only — it never touches the app's stylesheet.
+ */
+@import "tailwindcss";
+@import "@repo/tailwind-config/base";
+
+@source "../src/**/*.{ts,tsx}";

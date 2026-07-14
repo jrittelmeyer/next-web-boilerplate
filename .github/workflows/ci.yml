@@ -1,0 +1,446 @@
+name: CI
+
+# Third-party actions are pinned to full commit SHAs (immutable — a moved tag can't
+# change what runs here); the version comment names the release each SHA belongs to.
+# Renovate's helpers:pinGitHubActionDigests preset keeps digest + comment updated
+# under the same 7-day minimumReleaseAge gate as npm deps (.github/renovate.json).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Type-check · Lint · Test · Build
+    runs-on: ubuntu-latest
+    env:
+      # Optional — publishing to Codecov is skipped when this secret is unset, so
+      # the pipeline is self-contained out of the box (coverage is always uploaded
+      # as a build artifact regardless).
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        # The pnpm version itself comes from package.json "packageManager".
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm type-check
+      - run: pnpm lint
+
+      # Workspace dependency consistency (manypkg). Fails if the same external dep is
+      # pinned to different versions across packages (drizzle-orm / react-hook-form /
+      # lucide-react are hand-synced), or if a peer dep is missing from devDependencies.
+      # Static package.json check — no build/DB needed, so it belongs in this lane.
+      - run: pnpm lint:deps
+
+      # Dead code + unused/unlisted dependencies (knip, A27). Resolves the real import
+      # graph across all workspaces and fails on unused files, unused exports, and
+      # unused/phantom deps — the orphan classes manypkg's consistency check can't see.
+      # Static analysis (no build/DB), so it belongs in this lane. Tuning lives in
+      # knip.jsonc, where every ignore carries its reason; intentional-but-unconsumed
+      # boilerplate API surface is tagged `@public` at the export site instead.
+      - run: pnpm knip
+
+      # Validate the checked-in observability config (dashboards-as-code). Pure Zod
+      # validation — no BetterStack credentials needed — so it belongs in this lane.
+      - run: pnpm --filter @repo/observability check
+
+      # Tests + coverage in one pass. Each package's vitest.config.ts enforces its
+      # own coverage thresholds under --coverage, so a coverage regression fails
+      # here. Plain `pnpm test` (local) stays coverage-free and fast.
+      - run: pnpm test:coverage
+
+      - name: Upload coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage
+          path: packages/*/coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+
+      # No root .env in CI. The app's build script loads ../../.env via dotenv-cli,
+      # which no-ops when the file is absent, so the only env that matters here is
+      # SKIP_ENV_VALIDATION — it lets `next build` run without real secrets. All
+      # feature env (Stripe/email/observability/uploads/search) is optional.
+      - run: pnpm build
+        env:
+          SKIP_ENV_VALIDATION: "1"
+
+  audit:
+    name: Audit (supply chain)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Fails the build on high/critical advisories. Known, unfixable transitive
+      # advisories are allowlisted in pnpm-workspace.yaml (auditConfig.ignoreGhsas),
+      # each with a documented reason — so a NEW high/critical advisory turns this
+      # red while the accepted status quo stays green. --ignore-registry-errors
+      # keeps a flaky advisory API from failing the build (exit 0 on registry error).
+      - name: pnpm audit
+        run: pnpm audit --audit-level high --ignore-registry-errors
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # DB-backed lane — @repo/db integration tests + the Playwright browser/a11y suite.
+    # Runs on every PR (catch a broken auth/posts flow BEFORE merge, not after) and on
+    # push to main. Needs a database: the postgres:16 service below. Meilisearch is
+    # intentionally absent — createPost indexes best-effort, so the suite degrades
+    # gracefully without it (see e2e/posts.spec.ts).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: appdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Throwaway CI values, not secrets — the database is the ephemeral service
+      # above and the auth secret only needs to satisfy the min-32-char schema.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/appdb
+      BETTER_AUTH_SECRET: ci-better-auth-secret-min-32-characters-long
+      BETTER_AUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply database migrations
+        run: pnpm --filter @repo/db db:migrate
+
+      # DB-backed Vitest integration tests (real Postgres, no mocks). They run only
+      # via this opt-in script — never in the DB-free `verify` lane / `pnpm test` —
+      # so they belong here, where the postgres service + migrations exist. DATABASE_URL
+      # comes from the job env above. See TESTING.md.
+      - name: Integration tests (DB)
+        run: pnpm --filter @repo/db test:integration
+
+      # Background-jobs integration test (D7): pg-boss creates its own schema +
+      # round-trips a job through the same Postgres. DB-backed, so it lives here,
+      # not in the DB-free verify lane. See TESTING.md.
+      - name: Background-jobs integration test (DB)
+        run: pnpm --filter @repo/jobs test:integration
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      # `pnpm test:e2e` builds the app (Turbo task dependsOn build) and Playwright's
+      # webServer boots it on :3000.
+      - run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  docker-image:
+    name: Docker image (build · smoke · scan · SBOM)
+    runs-on: ubuntu-latest
+    # Builds the production image the deploy targets actually run — CI never did
+    # before, so a broken docker/Dockerfile only surfaced on a manual build — then
+    # smoke-tests /api/health and scans the image. Independent of the other jobs
+    # (no `needs`), so it runs in parallel. The publish step is opt-in (see below).
+    permissions:
+      contents: read
+      packages: write # used ONLY by the opt-in GHCR publish step; harmless otherwise
+      id-token: write # OIDC token for Sigstore keyless signing (opt-in attestation steps)
+      attestations: write # write the provenance/SBOM attestations (opt-in steps)
+    env:
+      IMAGE: nwb-web:ci
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # A throwaway Postgres on a user-defined network so the built image's
+      # /api/health probe returns a real 200 (DB up), proving node-postgres works in
+      # the alpine standalone image — not merely that the process boots. The web
+      # container reaches it by the name `pg`. No migrations needed: the readiness
+      # probe only runs `select 1`.
+      - name: Start throwaway Postgres
+        run: |
+          docker network create nwb-ci
+          docker run -d --name pg --network nwb-ci \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=appdb \
+            postgres:16-alpine
+          for i in $(seq 1 30); do
+            if docker exec pg pg_isready -U postgres -d appdb >/dev/null 2>&1; then
+              echo "postgres ready"; break
+            fi
+            sleep 2
+            if [ "$i" = "30" ]; then echo "postgres never became ready" >&2; exit 1; fi
+          done
+
+      # Build exactly as documented (repo-root context, docker/Dockerfile). Self-
+      # contained: the Dockerfile hard-sets SKIP_ENV_VALIDATION=1 for the build, so
+      # no secrets are needed here. .dockerignore keeps the context lean.
+      - name: Build image
+        run: docker build -f docker/Dockerfile -t "$IMAGE" .
+
+      # Also build the background-jobs `worker` target. It's a separate runtime
+      # process (D7) with its own final stage — the esbuild bundle + slim runtime —
+      # so a broken worker Dockerfile / bundle would otherwise only surface on a
+      # manual build. Build-only (no boot/scan): the worker exposes no HTTP surface
+      # to smoke-test, and its slim JS bundle carries no OS/npm packages of its own
+      # to scan beyond the shared node:alpine base the web image already covers.
+      - name: Build worker image
+        run: docker build -f docker/Dockerfile --target worker -t nwb-worker:ci .
+
+      # Boot the standalone image against the throwaway DB. Runtime env mirrors the
+      # e2e lane: env.ts validates DATABASE_URL + BETTER_AUTH_SECRET at *runtime*
+      # (BETTER_AUTH_URL has a dev default, set here for clarity). Throwaway values.
+      - name: Run container
+        run: |
+          docker run -d --name web --network nwb-ci -p 3000:3000 \
+            -e DATABASE_URL=postgresql://postgres:postgres@pg:5432/appdb \
+            -e BETTER_AUTH_SECRET=ci-better-auth-secret-min-32-characters-long \
+            -e BETTER_AUTH_URL=http://localhost:3000 \
+            "$IMAGE"
+
+      # The /api/health readiness probe must return 200 with the DB up. Poll the
+      # published port from the runner host (curl is present there; the minimal
+      # runtime image ships none). Dump container logs on failure for debuggability.
+      - name: Smoke-test /api/health
+        run: |
+          ok=""
+          for i in $(seq 1 45); do
+            body="$(curl -fsS http://localhost:3000/api/health 2>/dev/null || true)"
+            if printf '%s' "$body" | grep -q '"status":"ok"' \
+              && printf '%s' "$body" | grep -q '"database":"up"'; then
+              echo "health OK: $body"; ok=1; break
+            fi
+            sleep 2
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::/api/health never returned a healthy 200"
+            echo "---- docker logs web ----"; docker logs web || true
+            exit 1
+          fi
+
+      # Generate a CycloneDX SBOM (software bill of materials) of the built image —
+      # the supply-chain inventory of every OS + app package it ships. Reuses Trivy in
+      # SBOM mode (same pinned action, passes `format` straight to the CLI): no
+      # severity/exit-code, so it never gates — the vuln scan below is the gate. Emitted
+      # on every run, uploaded as an artifact, and (in the opt-in publish path) fed to
+      # the SBOM attestation. Placed BEFORE the vuln gate so the inventory exists even
+      # for an image that later fails the scan.
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          scan-type: image
+          format: cyclonedx
+          output: trivy-sbom.cdx.json
+
+      - name: Upload SBOM
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-cyclonedx
+          path: trivy-sbom.cdx.json
+          retention-days: 7
+          if-no-files-found: warn
+
+      # Image vulnerability scan. Fails only on HIGH/CRITICAL that have a FIX
+      # available (ignore-unfixed), matching the `pnpm audit --audit-level high`
+      # posture so unpatchable upstream base-image CVEs don't flake CI red. Accept a
+      # specific advisory by adding its ID (with a reason) to .trivyignore. Results
+      # print as a table in the log — no SARIF upload, which would need GHAS/code-
+      # scanning (unavailable on this private repo, same constraint as CodeQL).
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          trivyignores: .trivyignore
+
+      # Opt-in publish of the SAME scanned image to GitHub Container Registry. OFF by
+      # default (self-contained pipeline): runs only on push to main AND when the
+      # ENABLE_GHCR_PUBLISH repo variable is "true" — the ENABLE_CODEQL pattern. To
+      # enable: `gh variable set ENABLE_GHCR_PUBLISH --body true`. Auth uses the job's
+      # GITHUB_TOKEN (needs the packages: write above). Tags: the commit SHA
+      # (immutable) + latest. See DEPLOYMENT.md.
+      - name: Publish to GHCR (opt-in)
+        id: publish
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_GHCR_PUBLISH == 'true' }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          repo_image="$(printf 'ghcr.io/%s-web' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          docker tag "$IMAGE" "$repo_image:${GITHUB_SHA::12}"
+          docker tag "$IMAGE" "$repo_image:latest"
+          docker push "$repo_image:${GITHUB_SHA::12}"
+          docker push "$repo_image:latest"
+          # Capture the registry digest of the pushed image (immutable content address)
+          # so the attestation steps below sign THAT, not a mutable tag.
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$repo_image:${GITHUB_SHA::12}" | cut -d@ -f2)"
+          echo "image=$repo_image" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # Sign a SLSA build-provenance attestation over the pushed image DIGEST (keyless
+      # Sigstore signing via the OIDC token) and attach it to the GHCR package. Same
+      # opt-in gate as the publish above, so it only runs when an image was pushed;
+      # needs id-token: write + attestations: write (declared in the job permissions).
+      # Verify a pulled image later with:
+      #   gh attestation verify oci://<image>@<digest> --owner <owner>
+      - name: Attest build provenance (opt-in)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_GHCR_PUBLISH == 'true' }}
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-name: ${{ steps.publish.outputs.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      # Attach the CycloneDX SBOM generated above to the same pushed digest as a signed
+      # SBOM attestation (so a consumer can verify BOTH how the image was built and what
+      # it contains). Same opt-in gate.
+      - name: Attest SBOM (opt-in)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_GHCR_PUBLISH == 'true' }}
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ steps.publish.outputs.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          sbom-path: trivy-sbom.cdx.json
+          push-to-registry: true
+
+  visual:
+    name: Visual regression (@repo/ui)
+    runs-on: ubuntu-latest
+    # Runs INSIDE the pinned Playwright image — the same one the `…-linux.png`
+    # baselines are generated in (UI.md → Visual regression) — so baselines and CI
+    # share a bit-identical rendering environment. The bare ubuntu runner is NOT that
+    # environment: its font set differs from the image's, glyph widths shift a few px,
+    # and every text-bearing story fails (the lane's first live run proved it). Keep
+    # this tag in lockstep with the @repo/ui @playwright/test version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.0-noble
+    # Variable-gated (the ENABLE_CODEQL / ENABLE_GHCR_PUBLISH pattern) — ON in this
+    # repo since A28 committed the Linux baselines (2026-07-12). Baselines are
+    # PLATFORM-SPECIFIC (Playwright names them `…-<platform>.png`), so a fresh fork
+    # starts with the variable unset (lane off, pipeline green) until it commits
+    # Linux baselines via the UI.md Docker recipe, then
+    # `gh variable set ENABLE_VISUAL --body true`. An intended visual change must
+    # rebase BOTH platform sets (win32 locally via test:visual:update, linux via
+    # that recipe) or this lane goes red.
+    if: ${{ vars.ENABLE_VISUAL == 'true' }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # No `playwright install` step: the image ships the browsers matching this
+      # @playwright/test version (PLAYWRIGHT_BROWSERS_PATH is baked in).
+      # Boots Storybook (the config's webServer) and diffs each story against the
+      # committed Linux baselines; the report (with pixel diffs) uploads on failure.
+      - run: pnpm --filter @repo/ui test:visual
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: visual-report
+          path: packages/ui/playwright-report/
+          retention-days: 7
+
+  perf:
+    name: Performance budget (bundle size)
+    runs-on: ubuntu-latest
+    # OPT-IN, OFF by default — the ENABLE_CODEQL / ENABLE_GHCR_PUBLISH / ENABLE_VISUAL
+    # pattern. Gates the production bundle against apps/web/.size-limit.json: a change
+    # that bloats the client JS / CSS past budget turns this red BEFORE merge. It's
+    # DETERMINISTIC — byte counts (gzip) of the built Turbopack output, no booted app,
+    # no headless Chrome, no runner-noise — so, unlike a Lighthouse category-score gate,
+    # it can't flake. Bundle sizes are platform-independent (same lockfile/Next → same
+    # chunk bytes), so the committed budgets hold on this ubuntu runner without a
+    # per-OS baseline (contrast the `visual` job). To turn on:
+    # `gh variable set ENABLE_PERF --body true`. See DEPLOYMENT.md → Performance budgets.
+    if: ${{ vars.ENABLE_PERF == 'true' }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build exactly like the verify lane (DB-free; SKIP_ENV_VALIDATION lets `next
+      # build` run without secrets). No PostHog key is set in CI, so this is a KEYLESS
+      # build — the ConsentBanner isn't inlined — matching what deploys ship and keeping
+      # the measured bundle representative.
+      - name: Build web (keyless)
+        run: pnpm --filter web build
+        env:
+          SKIP_ENV_VALIDATION: "1"
+
+      # Check the built .next output against the budgets in apps/web/.size-limit.json.
+      # size-limit measures the real files (@size-limit/file — no re-bundling), so it
+      # gates the exact JS/CSS the app ships, not a webpack approximation.
+      - name: Check bundle-size budget
+        run: pnpm --filter web size

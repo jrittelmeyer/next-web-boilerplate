@@ -1,0 +1,14 @@
+{
+  // base (not react-library) — this is a pure-TS, dev/CI-only package with no JSX
+  // and no React; it is never imported by the app. Same posture as @repo/db.
+  "extends": "@repo/typescript-config/base",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

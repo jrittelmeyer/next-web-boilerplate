@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/.github/SECURITY.md
+    about: Please report security issues privately — do not open a public issue.
+  - name: Questions & documentation
+    url: https://github.com/jrittelmeyer/next-web-boilerplate/tree/main/docs
+    about: Check the context docs in docs/ before filing an issue.

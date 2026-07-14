@@ -1,0 +1,35 @@
+{
+  "name": "@repo/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-auth/passkey": "1.6.20",
+    "@repo/db": "workspace:*",
+    "@repo/email": "workspace:*",
+    "@repo/jobs": "workspace:*",
+    "better-auth": "^1.6.20",
+    "server-only": "^0.0.1"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^24",
+    "@types/react": "^19.2.17",
+    "@vitest/coverage-v8": "^4.1.9",
+    "react": "^19.2.7",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

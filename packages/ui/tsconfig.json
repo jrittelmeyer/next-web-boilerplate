@@ -1,0 +1,11 @@
+{
+  "extends": "@repo/typescript-config/react-library",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@repo/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

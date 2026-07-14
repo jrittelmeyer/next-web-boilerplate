@@ -1,0 +1,44 @@
+{
+  "name": "next-web-boilerplate",
+  "private": true,
+  "license": "MIT",
+  "author": "John Rittelmeyer <john.rittelmeyer.dev@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jrittelmeyer/next-web-boilerplate.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "biome check . && turbo lint",
+    "lint:fix": "biome check --write . && turbo lint:fix",
+    "lint:deps": "manypkg check",
+    "fix:deps": "manypkg fix",
+    "knip": "knip",
+    "type-check": "turbo type-check",
+    "test": "turbo test",
+    "test:coverage": "turbo test:coverage",
+    "test:e2e": "turbo test:e2e",
+    "format": "biome format --write .",
+    "check": "biome ci .",
+    "clean": "turbo clean",
+    "cache:size": "node scripts/prune-turbo-cache.mjs --report",
+    "cache:prune": "node scripts/prune-turbo-cache.mjs",
+    "storybook": "pnpm --filter @repo/ui storybook",
+    "init-app": "node scripts/init-app.mjs",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.0",
+    "@manypkg/cli": "0.25.1",
+    "husky": "^9.1.7",
+    "knip": "6.24.0",
+    "lint-staged": "17.0.7",
+    "turbo": "^2.9.18",
+    "typescript": "^6.0.3"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

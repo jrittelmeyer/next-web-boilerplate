@@ -1,0 +1,42 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // A27 — dead-code / unused-dependency gate (`pnpm knip`, runs in CI's verify lane).
+  // knip resolves the real import graph across all workspaces to flag unused files,
+  // unused exports, and unused/unlisted dependencies — the orphan classes manypkg
+  // (package.json consistency) can't see. See STACK.md → knip; DEPLOYMENT.md → CI/CD.
+  //
+  // Tuning discipline: prefer fixing the code over adding entries here, and every
+  // entry must carry its why (the auditConfig.ignoreGhsas convention). Exports that
+  // are intentional-but-not-yet-consumed boilerplate API surface are tagged `@public`
+  // at the export site instead of being listed here — `tags` below skips them.
+  "tags": ["-public"],
+  // An export used within its own module is not dead code — the `export` keyword is
+  // deliberate API surface on a symbol the file itself exercises (e.g. TRPCProvider,
+  // TRPCContext, OAUTH_PROVIDERS, JOBS_SCHEMA). Only a symbol NO file uses is reported.
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    "apps/web": {
+      "entry": [
+        // Documented example scaffold (SERVICES.md → Resend): the worked send-an-email
+        // Server Action kept as copy-me surface — deliberately not imported by any route.
+        "src/server/actions/email.tsx",
+        // vitest.config.ts resolve.alias stubs (@/env, server-only, next/navigation,
+        // next/link): referenced only via template-string alias paths the vitest
+        // plugin can't statically trace, so they'd otherwise report as unused files.
+        "src/test/*.ts"
+      ]
+    },
+    "packages/email": {
+      // knip's react-email plugin assumes `email dev` (the preview script) requires
+      // this package on react-email >= 6; this repo's preview + `email export` are
+      // verified working without it (VERIFICATION.md → Resend), so don't demand it.
+      "ignoreDependencies": ["@react-email/ui"]
+    },
+    "tooling/typescript": {
+      // nextjs.json sets compilerOptions.plugins [{ "name": "next" }] — a TS
+      // language-service plugin resolved in the CONSUMING app (apps/web ships `next`);
+      // this config-only package rightly doesn't depend on it.
+      "ignoreUnresolved": ["next"]
+    }
+  }
+}

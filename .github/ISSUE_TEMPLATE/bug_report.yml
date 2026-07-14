@@ -1,0 +1,58 @@
+name: Bug report
+description: Report a problem with the boilerplate
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Please search existing issues first.
+        **Security vulnerability?** Do not file it here — see the
+        [security policy](https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/.github/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected instead.
+      placeholder: When I run ..., I expected ... but got ...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps (or a repo link) that reproduce the problem.
+      placeholder: |
+        1. `pnpm install`
+        2. `pnpm ...`
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / output
+      description: Paste any error output. This is automatically formatted as code.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version (`node -v`), pnpm version (`pnpm -v`), and how you're running it (local / Docker).
+      placeholder: |
+        - OS: Windows 11 / macOS 15 / Ubuntu 24.04
+        - Node: 24.x
+        - pnpm: 11.x
+        - Running: pnpm dev / Docker
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true
+        - label: I'm on the latest `main`.
+          required: false

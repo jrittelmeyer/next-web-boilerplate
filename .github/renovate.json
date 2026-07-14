@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "rangeStrategy": "auto",
+  "semanticCommits": "disabled",
+  "labels": ["dependencies"],
+  "schedule": ["before 6am on monday"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "minimumReleaseAge": null
+  },
+  "packageRules": [
+    {
+      "description": "Group @types/* devDependencies into a single PR",
+      "matchPackageNames": ["@types/**"],
+      "groupName": "type definitions"
+    },
+    {
+      "description": "Major upgrades wait for explicit approval via the Dependency Dashboard",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

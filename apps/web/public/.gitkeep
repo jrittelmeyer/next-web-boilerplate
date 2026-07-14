@@ -1,0 +1,3 @@
+# Static assets served at the site root (e.g. /favicon.ico, /robots.txt) go here.
+# Kept so the directory exists for the Docker `COPY public` step; remove this file
+# once real assets land.

@@ -1,0 +1,30 @@
+# Lightweight, dependency-free commit-message sanity check.
+# This is NOT a Conventional-Commits enforcer (the repo's history is mixed
+# style on purpose) — it only catches accidents: empty messages, throwaway
+# one-word subjects, and leftover autosquash prefixes. Bypass any hook with
+# `git commit --no-verify`. The floor below is tunable.
+
+min_subject_length=10
+msg_file="$1"
+
+# Subject = the first line that is neither blank nor a comment (#).
+subject=$(grep -vE '^[[:space:]]*#' "$msg_file" | grep -vE '^[[:space:]]*$' | head -n 1)
+
+if [ -z "$subject" ]; then
+  echo "✖ Aborting commit: the commit message is empty." >&2
+  exit 1
+fi
+
+if [ "${#subject}" -lt "$min_subject_length" ]; then
+  echo "✖ Aborting commit: subject is too short (min ${min_subject_length} chars): \"$subject\"" >&2
+  echo "  Write a descriptive subject, or bypass with: git commit --no-verify" >&2
+  exit 1
+fi
+
+case "$subject" in
+  fixup!* | squash!*)
+    echo "✖ Aborting commit: subject still has a fixup!/squash! prefix: \"$subject\"" >&2
+    echo "  Finish your autosquash rebase, or bypass with: git commit --no-verify" >&2
+    exit 1
+    ;;
+esac

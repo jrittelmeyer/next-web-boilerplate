@@ -1,0 +1,12 @@
+{
+  "extends": "@repo/typescript-config/base",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "drizzle.config.ts", "__tests__/**/*.ts"],
+  "exclude": ["node_modules", "dist", "drizzle"]
+}

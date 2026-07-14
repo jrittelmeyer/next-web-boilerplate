@@ -1,0 +1,10 @@
+/*
+ * Single-import stylesheet for the shared component library.
+ *
+ * Apps can either import this file (`@repo/ui/globals.css`) or compose the
+ * layers themselves (`@import "tailwindcss"; @import "@repo/tailwind-config/base";`).
+ * apps/web does the latter so it can also add its own `@source` directives.
+ */
+
+@import "tailwindcss";
+@import "@repo/tailwind-config/base";

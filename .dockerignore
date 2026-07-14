@@ -1,0 +1,51 @@
+# Keep the build context small and deterministic. The Dockerfile copies the
+# workspace source + manifests; everything below is reinstalled, rebuilt, or
+# irrelevant inside the image.
+
+# Dependencies (reinstalled from the lockfile in the deps stage)
+**/node_modules
+.pnp
+.pnp.js
+
+# Build outputs (rebuilt in the builder stage)
+**/.next
+**/out
+**/dist
+**/build
+**/.turbo
+
+# Next.js generated types (regenerated on build)
+**/next-env.d.ts
+
+# Env files — never bake secrets into the image; runtime env comes from the host
+.env
+.env.local
+.env.*.local
+
+# Version control & CI
+.git
+.github
+.gitignore
+.gitattributes
+
+# Tests, reports, coverage (not needed to build the app)
+**/coverage
+**/playwright-report
+**/test-results
+**/blob-report
+**/.react-email
+
+# Docs & editor/OS cruft
+docs
+.vscode
+.idea
+.vs
+.DS_Store
+Thumbs.db
+
+# Docker files themselves
+docker
+.dockerignore
+
+# Claude Code local tooling
+.claude

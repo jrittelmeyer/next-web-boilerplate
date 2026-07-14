@@ -1,0 +1,52 @@
+name: CodeQL
+
+# Actions are SHA-pinned (see the note in ci.yml); Renovate maintains the digests.
+# v3.36.3 existed at pin time but was published same-day — the repo's 7-day
+# minimumReleaseAge applies to action pins too, so v3.36.2 is the newest eligible.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly full scan (Mondays 04:30 UTC) so advisories that land between
+    # commits are still caught on a quiet repo.
+    - cron: "30 4 * * 1"
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    # Code scanning requires GitHub Advanced Security, which is only available on
+    # PUBLIC repos (free) or private repos on a GHAS-enabled plan. On a private repo
+    # without it, the analyze step fails ("Code scanning is not enabled for this
+    # repository"). So this job is OPT-IN: it runs only when the `ENABLE_CODEQL`
+    # repository variable is "true", and is otherwise skipped (no false-red check).
+    # To turn it on once the repo is public / GHAS is enabled:
+    #   gh variable set ENABLE_CODEQL --body true
+    # (or Settings → Secrets and variables → Actions → Variables). See DEPLOYMENT.md.
+    if: ${{ vars.ENABLE_CODEQL == 'true' }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # build-mode "none" is the right mode for JS/TS — CodeQL extracts directly
+      # from source, so there is no compile step (and no need to install deps).
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3.36.2
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3.36.2
+        with:
+          category: "/language:javascript-typescript"
