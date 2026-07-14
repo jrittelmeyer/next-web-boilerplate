@@ -15,6 +15,11 @@ boilerplate contains and why, read [`FEATURES.md`](FEATURES.md) first.
 Grab a copy (GitHub **"Use this template"**, or a history-less copy via
 `npx degit jrittelmeyer/next-web-boilerplate my-app`), then:
 
+> **Windows:** put the copy in a short path (e.g. `C:\Projects\my-app`). The build
+> emits long chunk filenames under `apps/web/.next`, and a deep starting directory
+> can push absolute paths past Windows' 260-character `MAX_PATH` limit — the build
+> then fails with `path length … exceeds max length of filesystem`.
+
 ```bash
 # bash / zsh
 cp .env.example .env

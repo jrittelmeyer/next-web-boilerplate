@@ -14,6 +14,13 @@ _Last updated: 2026-07-14._
 
 ## Where we are
 
+- **PUBLIC — launched 2026-07-14.** This repo is now a public GitHub template at
+  [github.com/jrittelmeyer/next-web-boilerplate](https://github.com/jrittelmeyer/next-web-boilerplate),
+  published as a fresh single-commit history (the full pre-launch history is archived
+  privately). Post-publish hardening is on: secret scanning + push protection,
+  CodeQL, vulnerability alerts, and a `main` ruleset that blocks force-pushes and
+  branch deletion. The README donation link is deferred until the owner's PayPal
+  account exists.
 - **Phases 1–2 complete & verified** — full-stack breadth (Steps 1–16) hardened to the
   100/100 production bar (Steps 17–29); the read-only Phase B audit found **no must-fix
   correctness bugs** ([archive/PHASE_B_AUDIT.md](archive/PHASE_B_AUDIT.md)).
@@ -34,13 +41,12 @@ _Last updated: 2026-07-14._
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) — rows
   at the bottom of the table below.
 - **CI is green** (`verify` · `audit` · `e2e` · `docker-image` · `visual` — the visual
-  lane is live since A28). **CodeQL is opt-in** — gated on the `ENABLE_CODEQL` repo
-  variable (private repo, no GHAS); flip it once public/GHAS-enabled
-  ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
+  lane is live since A28). **CodeQL is live** — `ENABLE_CODEQL` is set on the public
+  repo (code scanning is free once public); the variable gate stays so private forks
+  don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
 - **The repo is maintenance-only.** Everything left in [BACKLOG.md](BACKLOG.md) is
-  deferred or externally gated (enable CodeQL · app-side email bounce/complaint handling ·
-  TS7 cutover, blocked on Next.js TS7 support). Reopen on real need: plan → sign-off →
-  build.
+  deferred or externally gated (app-side email bounce/complaint handling · TS7 cutover,
+  blocked on Next.js TS7 support). Reopen on real need: plan → sign-off → build.
 
 ## Build progress
 
@@ -110,6 +116,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Deploy · Fly.io | Real host deploy **PROVEN live 2026-07-13** — committed `fly.toml` + managed `fly postgres`; `/api/health` 200, prod headers, sign-up → user row on the test Fly app. See [context/DEPLOYMENT.md → Fly.io](context/DEPLOYMENT.md#flyio-worked-runbook) · [VERIFICATION.md](VERIFICATION.md) Phase 6. |
 | Verify · Stripe Phase 5 | Stripe test-mode live-verify **COMPLETE 2026-07-13** — checkout → webhook → row (+ idempotency), customer reuse, billing portal, test-clock dunning → `past_due`, webhook 400/503/429, A13 live cancel. See [VERIFICATION.md](VERIFICATION.md) Phase 5. |
 | Verify · Prod email domain | A real verified sending domain + SPF/DKIM/DMARC recipe; deliverability + hop-2 email-change delivery **proven 2026-07-14**. Remaining optional: app-side bounce/complaint handling. See SERVICES.md → Resend · [VERIFICATION.md](VERIFICATION.md) → Resend. |
+| Launch · Public template | **PUBLISHED 2026-07-14** — public GitHub template (fresh single-commit history; pre-launch history bundled + archived privately). Hardening on: secret scanning + push protection · CodeQL (first scan green) · vulnerability alerts · `main` ruleset (no force-push/delete) · topics + template flag. Proven by a fresh-consumer test: degit → install → `init-app` → build → tests, all green, keyless. Donation link deferred until the owner's PayPal exists. |
 
 ## Fresh project on-ramp (clone → build a real app)
 

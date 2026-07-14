@@ -43,18 +43,15 @@
 > build-progress table + the doc in "See"; don't re-expand them here.
 >
 > **The open set, ordered** (both the value÷effort and breadth-of-value lenses now agree —
-> every other row has shipped): **1) Enable CodeQL** — near-zero effort but externally
-> gated (public/GHAS repo); the workflow is shipped-dormant, so the reusable half is already
-> delivered. **2) Email bounce/complaint handling** — the one unbuilt app-side piece;
-> common want, low urgency (Resend already suppresses account-side). **3) TypeScript 7
-> cutover** — the broadest win (every clone's build gets the native-compiler speedup) but
-> hard-gated on Next.js TS7 support (see Watch).
+> every other row has shipped): **1) Email bounce/complaint handling** — the one unbuilt
+> app-side piece; common want, low urgency (Resend already suppresses account-side).
+> **2) TypeScript 7 cutover** — the broadest win (every clone's build gets the
+> native-compiler speedup) but hard-gated on Next.js TS7 support (see Watch).
 
 ### Open rows
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
-| B1 | Security | **Enable CodeQL** | DEPLOYMENT.md + PROJECT_STATUS.md | Flip the `ENABLE_CODEQL` repo variable once the repo is public / GHAS-enabled. Near-zero effort when unblocked. **Externally gated.** If going public first, pre-flight a git-history secrets scan. |
 | B3 | Email | **Bounce/complaint handling** (deliverability follow-up) | SERVICES.md Resend | The verified sending domain + SPF/DKIM/DMARC recipe + deliverability proof shipped 2026-07-14 (shipped table below); the remaining optional piece is app-side bounce/complaint handling (a Resend webhook → `email_suppressions` table). Resend already suppresses hard-bounces/complaints account-side, so this is app-side *awareness* + halting pointless job retries, not primary deliverability. |
 | B4 | Toolchain | **TypeScript 7 cutover** | STACK.md | **Blocked on Next.js TS7 support (TS 7.1, ~Q4 2026)** — full detail in Watch above. |
 
@@ -62,6 +59,7 @@
 
 | Band | Upgrade | Shipped | See |
 | --- | --- | --- | --- |
+| B1 | ~~Enable CodeQL~~ — `ENABLE_CODEQL` flipped the day the repo went public (code scanning is free on public repos); the pre-publish git-history secrets scan happened as part of the launch. | 2026-07-14 | DEPLOYMENT.md → CI/CD · PROJECT_STATUS launch row |
 | B3 | ~~Production sending domain + deliverability~~ — a real verified domain + SPF/DKIM/DMARC recipe; deliverability + the hop-2 email-change delivery gap (open since 2026-07-05) proven/closed live. Bounce/complaint handling remains open (row above). | 2026-07-14 | [SERVICES.md → Resend](context/SERVICES.md) · [VERIFICATION.md](VERIFICATION.md) → Resend |
 | B1 | ~~Real host deploy~~ — **PROVEN live on Fly.io** (test app, managed `fly postgres`; `/api/health` 200 + sign-up→DB confirmed). Vercel/Railway/VPS paths stay authored. | 2026-07-13 | [DEPLOYMENT.md → Fly.io](context/DEPLOYMENT.md#flyio-worked-runbook) · [VERIFICATION.md](VERIFICATION.md) Phase 6 |
 | B2 | ~~Stripe Phase-5 live-verify~~ — **COMPLETE in test mode** (checkout → webhook → row + idempotency; customer reuse; billing portal; test-clock dunning; webhook 400/503/429; A13 cancel-on-delete live). Doc-only close. | 2026-07-13 | [VERIFICATION.md](VERIFICATION.md) Phase 5 |
