@@ -59,7 +59,7 @@ be exercised without credentials.
 - [ ] **Create the env file.** `Copy-Item .env.example .env` (Bash: `cp .env.example .env`).
 - [ ] **Set `BETTER_AUTH_SECRET`** (≥32 chars) in `.env`. Generate one cross-platform:
   `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
-  (the committed `.env` already has a dev secret; the example file's placeholder is too short and will fail `env.ts`).
+  (the placeholder seeded from `.env.example` is long enough to pass the `min(32)` validation, so the app boots with it — replace it with a real generated secret before anything non-local).
 - [ ] **`DATABASE_URL` matches compose** — default `postgresql://postgres:postgres@localhost:5432/appdb` lines up with `docker/docker-compose.yml`.
 - [ ] **Start backing services.** `docker compose -f docker/docker-compose.yml up -d`
   - _Expect:_ `nwb-postgres` + `nwb-meilisearch` both reach **healthy** (`docker ps`).

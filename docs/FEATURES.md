@@ -218,7 +218,8 @@ builds and runs with the worker never started.
 
 - **Vitest 4** unit/component suites across every package (jsdom for UI, coverage
   thresholds enforced), **Playwright** E2E including auth lifecycles, security-header
-  assertions, i18n, and **five axe accessibility scans**, plus DB integration tests.
+  assertions, i18n, and **axe accessibility scans over seven surfaces** (four public,
+  three signed-in), plus DB integration tests.
 - The entire unit/coverage suite runs **with zero keys and no database**; integration
   + E2E need only the local Docker Postgres.
 - CI lanes: `verify` (lint, type-check, manypkg pin-consistency, **knip** dead-code

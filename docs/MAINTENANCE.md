@@ -79,10 +79,11 @@ upgrade, a batch of merged Renovate PRs) rather than on a calendar:
 - **Project audit** — score the repo against a best-available bar and emit a
   prioritized backlog of gaps.
 
-Both exist as committed agent skills (`.claude/skills/project-audit/`, plus the
-checkpoint/tidy helpers); the SKILL.md files are plain-markdown procedures a human —
-or any agent tooling — can follow directly. Past audit reports live in
-[`archive/`](archive/) as worked examples.
+The project audit ships as a committed agent skill (`.claude/skills/project-audit/`,
+alongside the checkpoint/tidy helpers); its SKILL.md is a plain-markdown procedure a
+human — or any agent tooling — can follow directly. The doc audit is run as a
+described procedure (the sweep above) rather than a committed skill. Past audit
+reports live in [`archive/`](archive/) as worked examples.
 
 ## Local disk hygiene
 

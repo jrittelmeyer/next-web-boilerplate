@@ -32,11 +32,13 @@ _Last updated: 2026-07-14._
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row is SHIPPED (2026-07-07 → 13)** — including the
-  A23–A31 polish rows, A32, and A13. Four `/project-audit` passes graded the repo
-  **93 → 97.5 → 98.2 → 99.3/100** (2026-07-08 · 07-12 · 07-12B · **07-14** — the latest
-  verified every close in code, found zero new backlog rows, no correctness bugs;
-  reports in [docs/archive/](archive/), latest:
-  [PROJECT_AUDIT_2026-07-14.md](archive/PROJECT_AUDIT_2026-07-14.md)).
+  A23–A31 polish rows, A32, and A13. Five `/project-audit` passes graded the repo
+  **93 → 97.5 → 98.2 → 99.3 → 99.3/100** (2026-07-08 · 07-12 · 07-12B · 07-14 ·
+  **07-14B, post-launch** — the latest bounded the launch delta via git (product code
+  byte-identical to the 99.3-verified tree), audit-verified the launch docs' claims
+  against code, fixed three doc drifts, and found zero new backlog rows; reports in
+  [docs/archive/](archive/), latest:
+  [PROJECT_AUDIT_2026-07-14B.md](archive/PROJECT_AUDIT_2026-07-14B.md)).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) — rows
   at the bottom of the table below.
