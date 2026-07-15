@@ -5,8 +5,8 @@
 > **not** kept here: the compact record is the build-progress table in
 > [PROJECT_STATUS.md](PROJECT_STATUS.md), and the full per-item prose is in
 > [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md). The audits that seeded past
-> backlogs live in [docs/archive/](archive/) (Phase B + the five `/project-audit`
-> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3/100). Everything below goes plan →
+> backlogs live in [docs/archive/](archive/) (Phase B + the six `/project-audit`
+> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3/100). Everything below goes plan →
 > sign-off → build. Don't reintroduce shipped-item entries here.
 
 ## Watch (no action now)
