@@ -38,10 +38,13 @@ The full per-dependency record (versions, pin style, and *why*) is
    shared dependency's range diverges between workspace packages; auto-align with
    `pnpm fix:deps`. Some pairs are deliberate lockstep (e.g. `@better-auth/passkey`
    must match `better-auth` exactly).
-5. **Audit allowlist hygiene** — `pnpm audit` gates CI; known-unfixable transitive
-   advisories are acknowledged in `pnpm-workspace.yaml` `auditConfig.ignoreGhsas`,
-   each with its reason. **Prune entries** once the upstream fix lands. Same for the
-   `vite` version override there — bump it as newer releases age out.
+5. **Audit allowlist hygiene** — `pnpm audit` gates CI. For a transitive advisory,
+   prefer a scoped **override** in `pnpm-workspace.yaml` when a compatible fixed
+   version exists (see the dated Dependabot trio there — each carries its removal
+   condition, mirrored in the Watch items below); acknowledge it in
+   `auditConfig.ignoreGhsas` (with its reason) only when nothing fixable exists.
+   **Prune both kinds** once the upstream fix lands. Same for the `vite` version
+   override — bump it as newer releases age out.
 
 ## Automation on a fork / new repo
 
@@ -75,6 +78,19 @@ The live list is [`BACKLOG.md`](BACKLOG.md). At release:
   the win is worth tracking.
 - **Email bounce/complaint handling** — Resend already suppresses account-side; the
   optional app-side piece is a webhook → suppressions table.
+- **Temporary security overrides** (added 2026-07-15) — three pnpm `overrides:` in
+  `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts that have **no
+  upstream fix**. Remove each when its upstream moves, then `pnpm install` + the full
+  gate:
+  - `effect: 3.21.4` → remove when **uploadthing** ships on effect >=3.20 (7.7.4
+    exact-pins 3.17.7).
+  - `"postcss@<8.5.10": 8.5.15` → remove when **next**'s own postcss pin reaches
+    >=8.5.10 (16.2.10 pins 8.4.31).
+  - `"@esbuild-kit/core-utils>esbuild": 0.25.12` → remove when **drizzle-kit** drops
+    the deprecated `@esbuild-kit` loader.
+
+  The `auditConfig.ignoreGhsas` allowlist emptied the same day — `pnpm audit` now
+  guards these overrides live (red if one ever regresses).
 - The **e2e signup flake** — intermittent, absorbed by Playwright retries, not a code
   bug; harden only if it ever turns a lane red.
 

@@ -738,10 +738,14 @@ Automated dependency updates tuned to the repo's posture:
 transitive** advisories are explicitly acknowledged in `pnpm-workspace.yaml` under
 `auditConfig.ignoreGhsas` — each with its dependency path and why it's low-risk for
 this app — so the audit is green on the accepted status quo and goes **red the
-moment a new advisory appears**. Currently allowlisted (deep transitives awaiting
-upstream bumps): `effect` (via uploadthing), `esbuild` dev-server (via drizzle-kit,
-never run here), `postcss` stringify (via next). Prune an entry once the upstream
-fix lands in the lockfile — an ignore for an absent advisory is a harmless no-op.
+moment a new advisory appears**. The allowlist is **empty since 2026-07-15**: the
+three long-standing entries (`effect` via uploadthing, `esbuild` dev-server via
+drizzle-kit, `postcss` stringify via next) were remediated with temporary scoped
+`overrides:` in the same file — removal conditions in
+[MAINTENANCE.md → Watch items](../MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
+— so the audit now guards those overrides live. When a future advisory has no fix
+path at all, allowlist it with its reason and prune the entry once the upstream fix
+lands in the lockfile — an ignore for an absent advisory is a harmless no-op.
 
 ```bash
 pnpm audit                                  # full report (honors the allowlist)

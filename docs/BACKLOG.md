@@ -40,6 +40,11 @@
   (absorbed by `retries:2`, but it twice burned 2 of 3 CI attempts). **Not a code bug** — a
   fragile signup+redirect timing flow on modest runners. Harden **only if it ever turns a lane
   red**: bump that test's timeout, or wait on a network/cookie signal rather than only the URL.
+- **Temporary security overrides (2026-07-15)** — three pnpm `overrides:` in
+  `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts with no upstream fix
+  (`effect` 3.21.4 via uploadthing · `postcss` 8.5.15 via next's own pin · `esbuild` 0.25.12
+  child-scoped via drizzle-kit). Remove each when its upstream moves — per-package removal
+  conditions in [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 
 ## Tier 4 — Future upgrade paths (documented, unscheduled)
 

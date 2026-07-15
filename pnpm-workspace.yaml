@@ -38,6 +38,29 @@ allowBuilds:
 # brand-new releases per the no-fresh-deps policy. Bump as newer 8.x ages out.
 overrides:
   vite: 8.0.16
+  # ——— Dependabot remediation (2026-07-15): 3 transitive-only alerts with NO upstream
+  # fix available (uploadthing@7.7.4 exact-pins effect 3.17.7 · next@16.2.10 pins
+  # postcss 8.4.31 · drizzle-kit@0.31.10 still deps the deprecated @esbuild-kit).
+  # TEMPORARY — each override's removal condition is tracked in
+  # docs/MAINTENANCE.md → Watch items.
+  #
+  # effect <3.20.0 (GHSA-38f7-945m-qr2g, HIGH — AsyncLocalStorage context loss under
+  # concurrent RPC load). 3.21.4 is in-range for @effect/platform@0.90.3's peer
+  # (^3.17.7) and clears the 7-day age gate (published 2026-06-18). Expect harmless
+  # peer warnings from uploadthing's exact 3.17.7 pins. Remove when uploadthing
+  # ships on effect >=3.20.
+  effect: 3.21.4
+  # postcss <8.5.10 (GHSA-qx2v-qp2m-jg93 — XSS via unescaped </style> in stringify),
+  # via next's own exact pin. 8.5.15 was already in the lockfile (tailwind/vite
+  # chains) — this dedupes onto it; the ranged key leaves already-safe copies alone.
+  # Remove when next's pin reaches >=8.5.10.
+  "postcss@<8.5.10": 8.5.15
+  # esbuild <=0.24.2 (GHSA-67mh-4wv8-2f99 — dev server lets any site read responses),
+  # via drizzle-kit → @esbuild-kit/core-utils (deprecated upstream, frozen on 0.18.x).
+  # Child-scoped so the healthy 0.25.12/0.28.1 copies elsewhere in the tree stay
+  # untouched; 0.25.12 was already in the lockfile. Remove when drizzle-kit drops
+  # @esbuild-kit.
+  "@esbuild-kit/core-utils>esbuild": 0.25.12
 # Supply-chain release-age gate (Step 26 · A11). Every Phase-1/2 dep note describes this
 # discipline ("let a release age before taking it; hours-old/days-old releases were
 # rejected, pins were chosen to clear the gate"). It is ENFORCED at two layers:
@@ -57,21 +80,12 @@ overrides:
 # a specific advisory via auditConfig / an override if a fix is ever younger than 7 days.
 minimumReleaseAge: 10080 # 7 days
 # Audit allowlist (Step 26). `pnpm audit` (and the CI audit job) block on KNOWN
-# advisories; these three are deep TRANSITIVE deps we can't bump directly — each is
-# acknowledged here with its path + why it's low-risk for this app, so the audit stays
-# green on the status quo and goes red the moment a NEW advisory appears. Prune an
-# entry once the upstream bump lands in the lockfile (an ignore for an absent advisory
-# is a harmless no-op). Re-audit with `pnpm audit` (see DEPLOYMENT.md → Supply chain).
+# advisories; a deep TRANSITIVE dep we can't bump directly gets acknowledged here with
+# its path + why it's low-risk for this app, so the audit stays green on the accepted
+# status quo and goes red the moment a NEW advisory appears. Prune an entry once the
+# fix lands in the lockfile (an ignore for an absent advisory is a harmless no-op).
+# EMPTY since 2026-07-15: the three long-standing entries (effect · esbuild · postcss)
+# are remediated by the Dependabot overrides above, so the audit now guards those
+# overrides live. Re-audit with `pnpm audit` (see DEPLOYMENT.md → Supply chain).
 auditConfig:
-  ignoreGhsas:
-    # effect <3.20.0 — AsyncLocalStorage context loss under concurrent RPC load.
-    # Transitive via @uploadthing/react → uploadthing/@effect/platform. Not on any
-    # path this app exercises (no Effect runtime of our own); awaiting an uploadthing bump.
-    - GHSA-38f7-945m-qr2g
-    # esbuild <=0.24.2 — dev-server lets any site read responses. Transitive via
-    # better-auth → drizzle-kit (a migration CLI), and only esbuild's DEV server is
-    # affected, which this repo never runs. No prod/runtime exposure.
-    - GHSA-67mh-4wv8-2f99
-    # postcss <8.5.10 — XSS via unescaped </style> in CSS stringify. Transitive via
-    # next's bundled postcss; we don't stringify untrusted CSS. Awaiting a next bump.
-    - GHSA-qx2v-qp2m-jg93
+  ignoreGhsas: []
