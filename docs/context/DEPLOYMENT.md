@@ -712,8 +712,10 @@ Automated dependency updates tuned to the repo's posture:
   schedule to batch PRs, `@types/*` grouped, and **major bumps gated behind
   Dependency-Dashboard approval**.
 - **Setup:** Renovate runs via the **Renovate GitHub App** (install it on the repo
-  from the GitHub Marketplace); it then opens an onboarding PR and a "Dependency
-  Dashboard" issue. Validate config changes locally with
+  from the GitHub Marketplace). Because this config file is already committed it
+  skips the onboarding PR and goes straight to the "Dependency Dashboard" issue +
+  scheduled update PRs (onboarding PRs only appear on repos with no Renovate
+  config). Validate config changes locally with
   `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
 
 > **Two-layer release-age enforcement (A11).** The 7-day gate holds at both layers.

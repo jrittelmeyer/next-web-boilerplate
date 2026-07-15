@@ -48,8 +48,10 @@ The full per-dependency record (versions, pin style, and *why*) is
 GitHub repo settings don't travel with a template copy. On your own repo:
 
 - **Install the Renovate (Mend) GitHub App** — without it, no update PRs ever arrive.
-  It opens an onboarding PR and a Dependency Dashboard issue. Validate config edits
-  with `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
+  Because `.github/renovate.json` is already committed, there's no onboarding PR —
+  Renovate goes straight to the Dependency Dashboard issue and scheduled update PRs.
+  Validate config edits with
+  `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
 - **Re-create the CI gate variables** (they're repo variables, not workflow content):
   `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, and optionally
   `ENABLE_PERF` / `ENABLE_GHCR_PUBLISH`. Unset, those lanes *skip silently* — they

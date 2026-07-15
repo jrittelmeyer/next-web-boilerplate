@@ -122,7 +122,7 @@ The CI `verify` lane in one place, plus the dev tools that are wired but not par
 - [ ] **E2E + a11y suite** — `$env:CI="true"; pnpm test:e2e`  _(then `Remove-Item Env:\CI`)_
   - `CI=true` forces `workers=1` + retries, mitigating a **known local flake**.
   - _Expect (CI):_ all specs green (19 as of A22: home, auth, posts, notifications, admin, admin-audit, admin-ban, admin-impersonate, admin-pagination, a11y, security-headers, account, account-sessions, account-deletion, data-export, i18n, organization, passkey, two-factor).
-  - ⚠️ **Known environmental flake on this dev box:** the `signUp → /dashboard` redirect is timing-fragile here — during this dry-run **10 passed**, `posts.spec` was flaky (passed on retry), and `admin.spec` failed on that redirect. **This is environmental, not a code bug** (documented in PROJECT_STATUS / [BACKLOG → Watch](BACKLOG.md)); the suite is **green in CI**. If a spec fails locally: rerun, or trust the CI lane — `gh run watch <id> --exit-status`.
+  - ⚠️ **Known environmental flake on this dev box:** the `signUp → /dashboard` redirect is timing-fragile here — during this dry-run **10 passed**, `posts.spec` was flaky (passed on retry), and `admin.spec` failed on that redirect. **This is environmental, not a code bug** (documented in PROJECT_STATUS / [BACKLOG → Watch](BACKLOG.md)); the suite is **green in CI**. If a spec fails locally: rerun, or trust the CI lane — `gh run watch <id>`, confirmed with `gh run view <id> --json status,conclusion`.
 
 ---
 
@@ -470,7 +470,7 @@ All are optional and independent; the app keeps building/running if you skip any
 - [ ] **Railway** — deploy `docker/Dockerfile`; add Postgres + Meilisearch as Railway services; set env vars; run migrations.
 
 ### CI & extras
-- [ ] **Watch CI** — push a branch / open a PR → `gh run watch <id> --exit-status`; the `verify` · `audit` · `e2e` jobs go green.
+- [ ] **Watch CI** — push a branch / open a PR → `gh run watch <id>`, then `gh run view <id> --json status,conclusion` reports `success` (don't rely on `watch --exit-status` alone); the `verify` · `audit` · `e2e` jobs go green.
 - [ ] **CodeQL** _(opt-in)_ — only after the repo is **public or GHAS-enabled**: `gh variable set ENABLE_CODEQL --body true`; findings land under Security → Code scanning. (Skipped/neutral by default.)
 - [ ] **Turbo remote cache** _(opt-in)_ — `pnpm turbo login` + `pnpm turbo link` (Vercel) **or** set `TURBO_API`/`TURBO_TOKEN`/`TURBO_TEAM` (self-hosted); add `TURBO_REMOTE_CACHE_SIGNATURE_KEY` for signed artifacts.
 

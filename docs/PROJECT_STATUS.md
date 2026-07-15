@@ -145,7 +145,9 @@ pnpm --filter @repo/db db:migrate                   # apply any new migrations
 pnpm lint && pnpm type-check && pnpm build          # full gate (all must pass)
 ```
 
-To watch CI: `gh run watch <id> --exit-status` (the `gh` CLI is installed + authed).
+To watch CI: `gh run watch <id>`, then confirm with `gh run view <id> --json
+status,conclusion` — `watch --exit-status` alone has reported success on failed runs
+(the `gh` CLI is installed + authed).
 
 ## Known non-issues (don't chase these)
 
