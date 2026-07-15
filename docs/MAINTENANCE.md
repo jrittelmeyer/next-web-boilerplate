@@ -68,9 +68,11 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 The live list is [`BACKLOG.md`](BACKLOG.md). At release:
 
 - **TypeScript 7 cutover** — TS 7 GA'd as the native Go compiler but ships no JS
-  Compiler API yet, so `next build` cannot use it. Re-evaluate when **Next.js ships
-  TS 7 support** (expected with TS 7.1, ~Q4 2026). The `tsc` CLI alone is ~3.6×
-  faster, so the win is worth tracking.
+  Compiler API yet, so stable `next build` cannot use it. Experimental TS7 support
+  (`experimental.useTypeScriptCli`) landed in **Next canary 2026-07-10**; re-evaluate
+  when it reaches a **stable** Next release (TS 7.1, ~Q4 2026, restores the
+  programmatic API for the wider toolchain). The `tsc` CLI alone is ~3.6× faster, so
+  the win is worth tracking.
 - **Email bounce/complaint handling** — Resend already suppresses account-side; the
   optional app-side piece is a webhook → suppressions table.
 - The **e2e signup flake** — intermittent, absorbed by Playwright retries, not a code
@@ -82,9 +84,14 @@ Two review passes keep docs and code from drifting — run them on real need (a 
 upgrade, a batch of merged Renovate PRs) rather than on a calendar:
 
 - **Doc audit** — sweep for code↔doc drift: claims in `docs/` that no longer match
-  the code, duplication on the hot path, stale detail to archive.
+  the code, duplication on the hot path, stale detail to archive — plus **currency
+  drift** (claims the ecosystem moved out from under: upstream gates,
+  "current/latest" statements) and the **outward-facing consumer claims** (README
+  quickstart commands, badges, links).
 - **Project audit** — score the repo against a best-available bar and emit a
-  prioritized backlog of gaps.
+  prioritized backlog of gaps — including, post-launch, the **public-template
+  surface** (on-ramp truth, community files, automation actually alive) and a
+  re-check of externally-gated watch rows.
 
 The project audit ships as a committed agent skill (`.claude/skills/project-audit/`,
 alongside the checkpoint/tidy helpers); its SKILL.md is a plain-markdown procedure a

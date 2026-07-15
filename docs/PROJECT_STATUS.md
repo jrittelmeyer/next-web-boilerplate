@@ -48,7 +48,8 @@ _Last updated: 2026-07-14._
   don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
 - **The repo is maintenance-only.** Everything left in [BACKLOG.md](BACKLOG.md) is
   deferred or externally gated (app-side email bounce/complaint handling · TS7 cutover,
-  blocked on Next.js TS7 support). Reopen on real need: plan → sign-off → build.
+  blocked on TS7 support reaching **stable** Next — experimental in canary since
+  2026-07-10). Reopen on real need: plan → sign-off → build.
 
 ## Build progress
 

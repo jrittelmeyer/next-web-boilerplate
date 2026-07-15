@@ -16,16 +16,22 @@
   **not yet adoptable here.** TS 7's package IS the native **Go** compiler and **ships no JS
   Compiler API** — its `typescript` module exposes only `version`; `createProgram`/`readConfigFile`/
   `sys`/`transpileModule` are gone and there is no `lib/typescript.js` (the programmatic API moved
-  to `./unstable/*`). So `next build` fails at its TS-detection step (Next 16 embeds the classic
-  API). This is **known & expected**: every library-API consumer (Next, webpack loaders,
+  to `./unstable/*`). So `next build` fails at its TS-detection step (Next 16 stable embeds the
+  classic API). This is **known & expected**: every library-API consumer (Next, webpack loaders,
   Vue/Svelte/Astro/MDX/Angular) must stay on TS 6 until the stable programmatic API returns in
-  **TS 7.1 (~Q4 2026)** — Next tracks it in
-  [#95490](https://github.com/vercel/next.js/issues/95490) /
-  [#95633](https://github.com/vercel/next.js/discussions/95633). The `tsc` CLI itself is clean and
-  **~3.6× faster** (monorepo type-check 20.5s → 5.7s, cache-bypassed), so the win is real once Next
-  ships support. **Re-gate: on Next.js TS7 support, NOT TS GA.** (Mechanics learned: the pnpm
-  age gate re-validates the whole lockfile on every `pnpm run`/frozen install, not just `pnpm
-  install` — any early adoption needs a `minimumReleaseAgeExclude`.)
+  **TS 7.1 (~Q4 2026)**. **Upstream moved 2026-07-10:** Next merged **experimental TS7 support
+  into canary** ([#95639](https://github.com/vercel/next.js/pull/95639) — detects TS7 and offers
+  `experimental.useTypeScriptCli`, shelling out to the CLI instead of the JS API; auto-detect
+  planned before stable), closing the tracking issue
+  [#95490](https://github.com/vercel/next.js/issues/95490) as completed
+  ([#95633](https://github.com/vercel/next.js/discussions/95633) remains the discussion). Not in
+  any stable 16.2.x as of 2026-07-15. The `tsc` CLI itself is clean and
+  **~3.6× faster** (monorepo type-check 20.5s → 5.7s, cache-bypassed), so the win is real.
+  **Re-gate: on TS7 support reaching a *stable* Next release** (`useTypeScriptCli` or its
+  auto-detect successor) — potentially ahead of TS 7.1, since Next now shells to the CLI.
+  (Mechanics learned: the pnpm age gate re-validates the whole lockfile on every `pnpm
+  run`/frozen install, not just `pnpm install` — any early adoption needs a
+  `minimumReleaseAgeExclude`.)
 - **Maintenance-only** (Tier 3 **G**) — the honest "we're done" option: let Renovate drive
   deps, keep docs current, add steps as real needs surface. **The standing state since
   2026-07-12** — every locally-buildable row has shipped, so maintenance-only holds until an
@@ -53,7 +59,7 @@
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
 | B3 | Email | **Bounce/complaint handling** (deliverability follow-up) | SERVICES.md Resend | The verified sending domain + SPF/DKIM/DMARC recipe + deliverability proof shipped 2026-07-14 (shipped table below); the remaining optional piece is app-side bounce/complaint handling (a Resend webhook → `email_suppressions` table). Resend already suppresses hard-bounces/complaints account-side, so this is app-side *awareness* + halting pointless job retries, not primary deliverability. |
-| B4 | Toolchain | **TypeScript 7 cutover** | STACK.md | **Blocked on Next.js TS7 support (TS 7.1, ~Q4 2026)** — full detail in Watch above. |
+| B4 | Toolchain | **TypeScript 7 cutover** | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. |
 
 ### Shipped (strikethrough record — full rows in the PROJECT_STATUS table + archive/PHASE_HISTORY)
 

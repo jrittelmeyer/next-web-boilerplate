@@ -13,6 +13,12 @@ outputs are docs only (report + backlog + status pointers).
 
 ## 1. Inventory (docs first, then code)
 
+- **If a prior audit report exists, bound the surface via git first**: diff the
+  last-audited sha against HEAD. Code byte-identical to an already-verified tree
+  carries the prior pass's per-group findings by identity — spend the pass on
+  what actually changed, plus the checks below that *time alone* can invalidate
+  on an unchanged tree (currency, external gates, the live public surface).
+  State the bounding in the report.
 - Read `docs/PROJECT_STATUS.md`, `docs/BACKLOG.md`, `docs/VERIFICATION.md`, and
   **every** `docs/context/*.md`. Note each doc's checkable claims (file paths,
   line refs, behaviors, "X is verified/gated/opt-in").
@@ -24,6 +30,20 @@ outputs are docs only (report + backlog + status pointers).
   references, env-gating ("degrades gracefully"), counts (tests, scans, rules),
   and anything marked verified. Record every mismatch as **drift** (doc wrong)
   or **gap** (code missing what the doc promises).
+- **Public/consumer surface (when the repo is public or a template):** audit the
+  on-ramp as a first-time consumer hits it — README/getting-started quickstart
+  commands match the real scripts, badges + links resolve, community files
+  (CONTRIBUTING, SECURITY, CoC, issue/PR templates, FUNDING) present and current,
+  and claimed repo automation **actually alive**, not just configured (CI + code
+  scanning green on recent commits, dependency-update PRs actually arriving — a
+  committed config with a dead app is dormant, not done). Untriaged issues/PRs
+  and visibly stale dependencies are adoption-killers: score them.
+- **Goals & gates:** re-read the repo's stated goals (README/status) against
+  what the repo now is — goal drift is a finding, not a given. Re-check every
+  externally-gated watch/backlog row: has the upstream gate lifted since the
+  last pass (a release shipped, an issue closed)? Currency counts even on a
+  byte-identical tree — the bar is "best available **today**", and the
+  ecosystem moves between passes.
 
 ## 2. Feature groups & scoring
 
