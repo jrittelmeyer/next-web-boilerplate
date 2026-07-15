@@ -1,0 +1,3 @@
+# Renders the repo's Sponsor button once Settings → General → Features →
+# Sponsorships is enabled. PayPal has no native key here, so it rides `custom`.
+custom: ["https://paypal.me/JohnRittelmeyerDev"]

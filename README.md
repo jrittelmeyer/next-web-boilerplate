@@ -114,8 +114,9 @@ docker/              — Dockerfile + docker-compose for local dev
 
 ## Support this project
 
-If this boilerplate saved you time, a ⭐ on the repo helps others find it.
-Issues and PRs are just as valuable — see below.
+If this boilerplate saved you time, a ⭐ on the repo helps others find it, and you
+can [say thanks via PayPal](https://paypal.me/JohnRittelmeyerDev) (also behind the
+repo's Sponsor button). Issues and PRs are just as valuable — see below.
 
 ## Contributing
 

@@ -19,8 +19,8 @@ _Last updated: 2026-07-15._
   published as a fresh single-commit history (the full pre-launch history is archived
   privately). Post-publish hardening is on: secret scanning + push protection,
   CodeQL, vulnerability alerts, and a `main` ruleset that blocks force-pushes and
-  branch deletion. The README donation link is deferred until the owner's PayPal
-  account exists.
+  branch deletion. Donation link live 2026-07-15: `.github/FUNDING.yml` + README
+  point at the owner's PayPal.Me.
 - **Phases 1–2 complete & verified** — full-stack breadth (Steps 1–16) hardened to the
   100/100 production bar (Steps 17–29); the read-only Phase B audit found **no must-fix
   correctness bugs** ([archive/PHASE_B_AUDIT.md](archive/PHASE_B_AUDIT.md)).
@@ -119,7 +119,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Deploy · Fly.io | Real host deploy **PROVEN live 2026-07-13** — committed `fly.toml` + managed `fly postgres`; `/api/health` 200, prod headers, sign-up → user row on the test Fly app. See [context/DEPLOYMENT.md → Fly.io](context/DEPLOYMENT.md#flyio-worked-runbook) · [VERIFICATION.md](VERIFICATION.md) Phase 6. |
 | Verify · Stripe Phase 5 | Stripe test-mode live-verify **COMPLETE 2026-07-13** — checkout → webhook → row (+ idempotency), customer reuse, billing portal, test-clock dunning → `past_due`, webhook 400/503/429, A13 live cancel. See [VERIFICATION.md](VERIFICATION.md) Phase 5. |
 | Verify · Prod email domain | A real verified sending domain + SPF/DKIM/DMARC recipe; deliverability + hop-2 email-change delivery **proven 2026-07-14**. Remaining optional: app-side bounce/complaint handling. See SERVICES.md → Resend · [VERIFICATION.md](VERIFICATION.md) → Resend. |
-| Launch · Public template | **PUBLISHED 2026-07-14** — public GitHub template (fresh single-commit history; pre-launch history bundled + archived privately). Hardening on: secret scanning + push protection · CodeQL (first scan green) · vulnerability alerts · `main` ruleset (no force-push/delete) · topics + template flag. Proven by a fresh-consumer test: degit → install → `init-app` → build → tests, all green, keyless. Donation link deferred until the owner's PayPal exists. |
+| Launch · Public template | **PUBLISHED 2026-07-14** — public GitHub template (fresh single-commit history; pre-launch history bundled + archived privately). Hardening on: secret scanning + push protection · CodeQL (first scan green) · vulnerability alerts · `main` ruleset (no force-push/delete) · topics + template flag. Proven by a fresh-consumer test: degit → install → `init-app` → build → tests, all green, keyless. Donation link live 2026-07-15 — `.github/FUNDING.yml` (`custom:` PayPal.Me) + README Support section. |
 
 ## Fresh project on-ramp (clone → build a real app)
 
