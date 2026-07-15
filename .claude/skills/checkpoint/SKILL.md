@@ -13,14 +13,16 @@ session, or hand off cleanly with a resume prompt. Never do half of both.
 - `git status` first; stage only the files that belong to the finished work (no blind
   `git add -A` if anything unrelated is dirty). If the tree is clean, say so and go to step 2.
 - Message: conventional style matching `git log` (`feat(web): P2-N — …` / `chore: …`),
-  body = what/why + one-line verification note. End with the trailer:
-  `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
+  body = what/why + one-line verification note. **No `Co-Authored-By` trailers** —
+  commits carry the repo-local git identity only.
 - PS 5.1 gotcha: write the message to a scratchpad file and `git commit -F <file>`
   (see the session-tooling-gotchas memory — inline `-m` quoting breaks).
 - Push. **If this checkpoint ends the session** (step 2 says hand off), watch CI to
-  green now: `gh run list --commit <sha>` → the **CI** workflow run (NOT the skipped
-  CodeQL) → `gh run watch <id> --exit-status`. If instead you're continuing with more
-  work that ends in its own watched CI run, one watch at the end covers the tree.
+  green now: `gh run list --commit <full 40-char sha>` (a short sha silently matches
+  nothing) → the **CI** workflow run → `gh run watch <id>`, then **confirm** with
+  `gh run view <id> --json status,conclusion` (watch's `--exit-status` is unreliable).
+  If instead you're continuing with more work that ends in its own watched CI run, one
+  watch at the end covers the tree.
 - **Housekeeping (after push):** `pnpm cache:prune` — the Turbo cache has no native
   size cap and each build adds ~3.5 GB, so pruning at every checkpoint bounds it at
   the exact cadence it grows (a pre-push hook backstops it too). No-op when under cap.
@@ -60,5 +62,5 @@ doc/memory is lost. It must contain, in order:
 4. **Verification expectations** — the full gate + the exact live-loop shape, env facts
    (live keys, Docker containers, free ports, origin-exactness), and which memories to
    read before editing (name them).
-5. **Close-the-loop checklist** — docs to tick/update, commit style (`-F` + trailer),
-   push, the CI-watch commands, and what to propose next before stopping.
+5. **Close-the-loop checklist** — docs to tick/update, commit style (`-F`, no
+   trailers), push, the CI-watch commands, and what to propose next before stopping.
