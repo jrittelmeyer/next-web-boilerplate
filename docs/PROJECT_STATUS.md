@@ -154,7 +154,9 @@ status,conclusion` — `watch --exit-status` alone has reported success on faile
 ## Known non-issues (don't chase these)
 
 - `engines.node >=24` is advisory (no `engine-strict`); older Node only warns on install.
-- `dotenv-cli` pulls a deprecated transitive `@esbuild-kit/*` — benign, works fine.
+- `drizzle-kit` pulls a deprecated transitive `@esbuild-kit/*` loader — benign, works
+  fine; its vulnerable `esbuild` child is pinned by the 2026-07-15 override
+  ([MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
 - npm flags `@react-email/components` (+ ~21 subdeps) "deprecated" with a generic
   message — it is the canonical package per Resend/React Email docs and renders fine
   (verified via `email export`); the warning is cosmetic.

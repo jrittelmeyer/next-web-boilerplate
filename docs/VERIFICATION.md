@@ -90,7 +90,7 @@ The CI `verify` lane in one place, plus the dev tools that are wired but not par
 ### Supply chain
 
 - [ ] **Audit** — `pnpm audit --audit-level high --ignore-registry-errors`
-  - _Expect:_ exits **0** — known transitive advisories are allowlisted (this box: "2 moderate (2 ignored) | 1 high (1 ignored)"). A *new* high/critical turns it red.
+  - _Expect:_ exits **0** — `No known vulnerabilities found` (this box, 2026-07-15: the former transitive advisories are remediated by the pnpm `overrides:` trio and the `ignoreGhsas` allowlist is empty, so the audit guards those overrides live). A *new* high/critical turns it red.
 - [ ] **Renovate config valid** — `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`
   - _Expect:_ `Config validated successfully` (downloads the renovate package on first run).
 

@@ -18,7 +18,7 @@ packages/db/
       index.ts        — re-exports every schema file (the @repo/db/schema barrel)
     client.ts         — pg Pool + drizzle() instance
     index.ts          — re-exports: db client, schema, types
-  drizzle/            — generated SQL migrations + meta journal (committed to git)
+  drizzle/migrations/ — generated SQL migrations + meta/ journal (committed to git)
   drizzle.config.ts   — drizzle-kit config
   package.json
   tsconfig.json
