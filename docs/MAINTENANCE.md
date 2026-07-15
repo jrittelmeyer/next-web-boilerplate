@@ -50,7 +50,12 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 - **Install the Renovate (Mend) GitHub App** — without it, no update PRs ever arrive.
   Because `.github/renovate.json` is already committed, there's no onboarding PR —
   Renovate goes straight to the Dependency Dashboard issue and scheduled update PRs.
-  Validate config edits with
+  Choose **"Only selected repositories"** when installing: an "All repositories"
+  install defaults the Mend org to **Silent** mode (it scans but never creates
+  issues or PRs), and changing the GitHub-side repository access afterward does
+  *not* clear it — flip the mode to Interactive at
+  [developer.mend.io](https://developer.mend.io) if the dashboard issue never
+  appears. Validate config edits with
   `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
 - **Re-create the CI gate variables** (they're repo variables, not workflow content):
   `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, and optionally
