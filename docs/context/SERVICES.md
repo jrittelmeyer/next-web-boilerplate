@@ -796,8 +796,9 @@ silently letting jobs pile up. The heartbeat itself is defined as code in
 `@repo/observability` (see below).
 
 **Failed jobs, retries & where they land (A20).** A handler that **throws** signals failure;
-pg-boss retries it per the queue's retry policy. These queues use the **defaults** (`worker.ts`
-calls `boss.createQueue(queue)` with no options) — verified against `pg-boss@12.20.0`:
+pg-boss retries it per the queue's retry policy. These queues use the **default retry
+policy** (`worker.ts` sets only `deadLetter` — see below) — verified against
+`pg-boss@12.20.0`:
 - `retryLimit: 2` → **3 attempts total** before a job is given up on. This is why the handlers
   throw **only on a real error**: `welcome-email` / `delete-uploads` return (complete) on the
   unconfigured no-op so nothing retries, and throw on a genuine provider failure so pg-boss does.
@@ -807,9 +808,10 @@ calls `boss.createQueue(queue)` with no options) — verified against `pg-boss@1
   attempt.
 
 **Lifecycle / where they land:** `created → active → completed` on success; a throw goes to
-`retry` (attempts left) then **`failed`** (exhausted). Failed jobs are **not deleted** — they
-stay in `pgboss.job` (rolling into `pgboss.archive` after the ~14-day retention), so a failure
-is inspectable, never silent:
+`retry` (attempts left) then **`failed`** (exhausted) — and, since the DLQ wiring below, an
+exhausted job is also **copied to the `failed-jobs` dead-letter queue**. Failed jobs are
+**not deleted** — they stay in `pgboss.job` (rolling into `pgboss.archive` after the ~14-day
+retention), so a failure is inspectable, never silent:
 ```sql
 -- recent failures (the worker console shows handler errors live; this is the durable record)
 SELECT name, state, retry_count, created_on, completed_on, output
@@ -818,13 +820,25 @@ FROM pgboss.job WHERE state = 'failed' ORDER BY created_on DESC LIMIT 50;
 ```
 `boss.getJobById(queue, id)` fetches one job's row/state programmatically.
 
-**Requeue / dead-letter:** pg-boss does **not** auto-retry a job once it's `failed`. To
-reprocess, either `enqueue(JOBS.x, payload)` a fresh job, or give the queue a **dead-letter
-queue** so exhausted jobs route somewhere you watch — `boss.createQueue(queue, { deadLetter:
-"failed-jobs" })` (create the `failed-jobs` queue too), then `boss.work("failed-jobs", …)` to
-alert/inspect. Note the `boss.on("error", …)` handler and the BetterStack heartbeat cover the
-**worker process** (crashes / maintenance failures), *not* individual failed jobs — a DLQ or a
-periodic `state = 'failed'` query is what surfaces those.
+**Dead-letter queue — wired (A20 → shipped 2026-07-16, path-to-100 #3).** pg-boss does
+**not** auto-retry a job once it's `failed`, and nothing used to *watch* for exhausted jobs.
+Now the worker creates every job queue with `deadLetter: DEAD_LETTER_QUEUE` (`"failed-jobs"`,
+exported from `queues.ts` — deliberately NOT in `ALL_QUEUES`, so it can't dead-letter into
+itself), and watches the DLQ with `handlers/dead-letter.ts`: every arrival is
+`console.error`'d (the always-on sink Docker/BetterStack tail) and, when
+**`NEXT_PUBLIC_SENTRY_DSN`** is set, captured to Sentry via `@sentry/node` (the worker reuses
+the app's DSN — a DSN is not a secret, and reuse means zero new env surface; unset = exactly
+the old behavior). What a dead-lettered job carries: the **original payload in `data`**, the
+**final failure in `output`** (the consumer works with `includeMetadata: true`); the source
+queue name is *not* copied by pg-boss's dead-letter insert. Two convergence subtleties,
+verified against the installed `pg-boss@12.20.0` and live against a pre-existing database:
+`createQueue` is create-if-absent (`ON CONFLICT DO NOTHING`), so the worker **also calls
+`updateQueue(queue, { deadLetter })`** — that's what stamps the DLQ onto queues that existed
+before this wiring. The integration test (`__tests__/integration/dead-letter.test.ts`) proves
+the exhausted-job → DLQ round trip on real Postgres. To **reprocess** a dead-lettered job,
+`enqueue(JOBS.x, payload)` a fresh job with the payload from the DLQ row. Note the
+`boss.on("error", …)` handler and the BetterStack heartbeat cover the **worker process**
+(crashes / maintenance failures); the DLQ covers **individual exhausted jobs**.
 
 **Remove it** (drop the package + unhook the producers):
 1. Delete `packages/jobs/` and remove the `@repo/jobs` dependency from **both**

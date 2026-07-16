@@ -29,6 +29,17 @@ export const JOBS = {
 /** Every queue name, so the worker can create + register them in one loop. */
 export const ALL_QUEUES = Object.values(JOBS);
 
+/**
+ * The dead-letter queue (DLQ, A20 → wired 2026-07-16). The worker creates every
+ * queue in {@link ALL_QUEUES} with `deadLetter` set to this name, so a job that
+ * exhausts its retries is COPIED here (original payload in `data`, final failure
+ * in `output`) instead of dying silently in `state = 'failed'`. The worker
+ * watches it with `handlers/dead-letter.ts` (log + env-gated Sentry capture).
+ * Deliberately NOT in {@link ALL_QUEUES}: it must not dead-letter into itself,
+ * and producers never enqueue to it directly. See SERVICES.md → Jobs.
+ */
+export const DEAD_LETTER_QUEUE = "failed-jobs";
+
 /** Payload for the {@link JOBS.welcomeEmail} job. */
 export const welcomeEmailPayload = z.object({
   to: z.email(),

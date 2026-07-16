@@ -19,6 +19,7 @@
   "dependencies": {
     "@repo/db": "workspace:*",
     "@repo/email": "workspace:*",
+    "@sentry/node": "10.59.0",
     "drizzle-orm": "^0.45.2",
     "pg-boss": "12.20.0",
     "server-only": "^0.0.1",

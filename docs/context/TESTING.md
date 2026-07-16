@@ -256,13 +256,16 @@ describe("posts (integration)", () => {
 
 **`@repo/jobs` follows the same split (D7):**
 - **Unit** (`verify` lane, DB-free) — `vitest.config.ts` covers the pure parts: the job
-  contract (`queues.ts`) and the welcome-email handler with `@repo/email` mocked. Coverage is
-  scoped to `handlers/**` + `queues.ts`; the pg-boss I/O bootstrap is left to the integration test.
+  contract (`queues.ts`) and the handlers with their providers mocked (`@repo/email`,
+  `@sentry/node` for the DLQ consumer). Coverage is scoped to `handlers/**` + `queues.ts`;
+  the pg-boss I/O bootstrap is left to the integration tests.
 - **Integration** (`e2e` lane, real Postgres) — `vitest.integration.config.ts` (its own
-  `test:integration` script, like `@repo/db`) spins up pg-boss against the DB in an **isolated
-  `pgboss_test` schema** (dropped in `afterAll`), enqueues a job, and asserts the worker
-  processes it and the payload survives the round-trip. CI runs it in the `e2e` job right after
-  the `@repo/db` integration tests. See [SERVICES.md](SERVICES.md) → Background jobs.
+  `test:integration` script, like `@repo/db`) spins up pg-boss against the DB in **isolated
+  schemas** (dropped in `afterAll`): `worker.test.ts` (`pgboss_test`) enqueues a job and
+  asserts the payload survives the round-trip; `dead-letter.test.ts` (`pgboss_test_dlq`)
+  proves an exhausted job (retries spent) is copied to the dead-letter queue with its
+  original payload. CI runs them in the `e2e` job right after the `@repo/db` integration
+  tests. See [SERVICES.md](SERVICES.md) → Background jobs.
 
 ## Playwright Pattern
 

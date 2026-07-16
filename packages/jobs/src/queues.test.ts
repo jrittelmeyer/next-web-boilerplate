@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { ALL_QUEUES, JOBS, welcomeEmailPayload } from "./queues";
+import { ALL_QUEUES, DEAD_LETTER_QUEUE, JOBS, welcomeEmailPayload } from "./queues";
 
 describe("job contract", () => {
   it("lists the welcome-email queue in ALL_QUEUES", () => {
     expect(ALL_QUEUES).toContain(JOBS.welcomeEmail);
+  });
+
+  it("keeps the DLQ out of ALL_QUEUES (it must not dead-letter into itself)", () => {
+    expect(ALL_QUEUES).not.toContain(DEAD_LETTER_QUEUE);
   });
 
   it("accepts a valid welcome-email payload", () => {
