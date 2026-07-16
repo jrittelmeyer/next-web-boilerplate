@@ -1,6 +1,20 @@
 import type { FieldValues, UseFormSetError } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
-import { applyFieldErrors } from "./forms";
+import { applyFieldErrors, FieldActionError } from "./forms";
+
+describe("FieldActionError (A7)", () => {
+  it("carries the message and fieldErrors through a throw", () => {
+    const err = new FieldActionError("Please fix the fields below.", { title: "Required" });
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toBe("Please fix the fields below.");
+    expect(err.fieldErrors).toEqual({ title: "Required" });
+  });
+
+  it("leaves fieldErrors undefined for a field-less error", () => {
+    const err = new FieldActionError("Unauthorized");
+    expect(err.fieldErrors).toBeUndefined();
+  });
+});
 
 describe("applyFieldErrors (A7)", () => {
   it("calls setError once per field with its message", () => {

@@ -16,6 +16,7 @@ import { type CreatePostInput, createPostSchema } from "@repo/validators";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { applyFieldErrors, FieldActionError } from "@/lib/forms";
 import { useTRPC } from "@/lib/trpc/client";
 import { deletePost, updatePost } from "@/server/actions/post";
 import {
@@ -53,7 +54,8 @@ export function PostItem({ post }: { post: PostListItem }) {
       formData.set("title", values.title);
       formData.set("content", values.content);
       const result = await updatePost(formData);
-      if ("error" in result) throw new Error(result.error);
+      // Carry the A7 per-field `fieldErrors` along so onError can map them inline.
+      if ("error" in result) throw new FieldActionError(result.error, result.fieldErrors);
       return result.data;
     },
     onMutate: async (values) => {
@@ -70,7 +72,16 @@ export function PostItem({ post }: { post: PostListItem }) {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       // Reopen the editor (with the user's draft intact) so they can retry or cancel.
       setIsEditing(true);
-      setError(mutationError.message);
+      // A7 — per-field server errors render inline (RHF setError → <FormMessage/>);
+      // a field-less error (Forbidden, rate-limit) stays in the row-level banner.
+      const fieldErrors =
+        mutationError instanceof FieldActionError ? mutationError.fieldErrors : undefined;
+      if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+        applyFieldErrors(form.setError, fieldErrors);
+        setError(null);
+      } else {
+        setError(mutationError.message);
+      }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey }),
   });

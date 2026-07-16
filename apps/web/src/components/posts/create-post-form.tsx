@@ -12,11 +12,11 @@ import {
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
-import { type CreatePostInput, createPostSchema, type FieldErrors } from "@repo/validators";
+import { type CreatePostInput, createPostSchema } from "@repo/validators";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { applyFieldErrors } from "@/lib/forms";
+import { applyFieldErrors, FieldActionError } from "@/lib/forms";
 import { useTRPC } from "@/lib/trpc/client";
 import { createPost } from "@/server/actions/post";
 import { type PostListData, type PostListItem, prependPostToCache } from "./post-cache";
@@ -25,17 +25,6 @@ type Status =
   | { kind: "idle" }
   | { kind: "error"; message: string }
   | { kind: "success"; title: string };
-
-// Carries the action's per-field `fieldErrors` (A7) through the mutation's throw →
-// onError path so it can be mapped to inline RHF field messages there. Falls back to
-// the form-level `status` banner when the error has no field errors (e.g. Unauthorized).
-class FieldActionError extends Error {
-  readonly fieldErrors?: FieldErrors;
-  constructor(message: string, fieldErrors?: FieldErrors) {
-    super(message);
-    this.fieldErrors = fieldErrors;
-  }
-}
 
 // Create form for the example `posts` entity. Validates with the shared schema
 // (zodResolver), then submits to the auth-gated `createPost` Server Action via a

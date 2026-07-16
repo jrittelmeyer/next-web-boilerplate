@@ -155,10 +155,11 @@ export async function createPost(formData: FormData): Promise<CreateResult> {
 
 /**
  * Update a post (D1 — author-only edit). Mirrors `createPost`'s gate/limit/validate
- * shape, then authorizes by the same row-level ownership check `deletePost` uses
- * (admin override is the same one-liner). Re-indexes the updated row on write so
- * search stays in sync; `updatedAt` is bumped automatically by the schema's
- * `$onUpdate`. Returns the typed `{ error } | { data }` shape the UI already handles.
+ * shape — including the A7 `fieldErrors` map on a validation failure, which the edit
+ * form maps inline — then authorizes by the same row-level ownership check
+ * `deletePost` uses (admin override is the same one-liner). Re-indexes the updated
+ * row on write so search stays in sync; `updatedAt` is bumped automatically by the
+ * schema's `$onUpdate`. Returns the shared `ActionResult` the UI already handles.
  */
 export async function updatePost(formData: FormData): Promise<UpdateResult> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -174,8 +175,10 @@ export async function updatePost(formData: FormData): Promise<UpdateResult> {
     title: formData.get("title"),
     content: formData.get("content"),
   });
+  // A7 — same convention as createPost: surface EVERY failing field via the
+  // `fieldErrors` map so the edit form applies them inline (RHF setError).
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return { error: "Please fix the fields below.", fieldErrors: zodFieldErrors(parsed.error) };
   }
 
   // Row-level authorization: look up the owner + org before writing, exactly like

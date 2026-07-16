@@ -186,13 +186,15 @@ via `<FormMessage/>` (never a toast — field validation stays inline; a field-l
 `error`, e.g. `Unauthorized`, stays a form-level banner). `applyFieldErrors` from
 `@/lib/forms` is the one-liner: `setError(field, { message })` per entry.
 
-**Worked example:** `server/actions/post.ts` `createPost` + `components/posts/
-create-post-form.tsx`. `createPost` also demonstrates a **server-only** field rule the
-client schema can't check without a round-trip — a per-workspace unique title —
-returning `fieldErrors: { title }` mapped inline to the title input. The mutation
-carries `fieldErrors` on the thrown error into `onError`, which calls
-`applyFieldErrors`. (`updatePost` keeps the older first-issue shape — the convention
-is opt-in.)
+**Worked examples:** `server/actions/post.ts` `createPost` + `components/posts/
+create-post-form.tsx`, and `updatePost` + the inline edit form in
+`components/posts/post-item.tsx` (adopted 2026-07-16 — both post writes share the
+convention). `createPost` also demonstrates a **server-only** field rule the client
+schema can't check without a round-trip — a per-workspace unique title — returning
+`fieldErrors: { title }` mapped inline to the title input. Each mutation carries
+`fieldErrors` on the thrown error (`FieldActionError` from `@/lib/forms`) into
+`onError`, which calls `applyFieldErrors`; a field-less error (Unauthorized,
+Forbidden, rate-limit) falls back to the form-level banner.
 
 ## Client-Side Usage
 

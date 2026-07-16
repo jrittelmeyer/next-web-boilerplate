@@ -10,7 +10,7 @@
 >   Working agreements → [../AGENTS.md](../AGENTS.md) ·
 >   Backlog → [BACKLOG.md](BACKLOG.md)
 
-_Last updated: 2026-07-15._
+_Last updated: 2026-07-16._
 
 ## Where we are
 
@@ -126,6 +126,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Verify · Prod email domain | A real verified sending domain + SPF/DKIM/DMARC recipe; deliverability + hop-2 email-change delivery **proven 2026-07-14**. Remaining optional: app-side bounce/complaint handling. See SERVICES.md → Resend · [VERIFICATION.md](VERIFICATION.md) → Resend. |
 | Launch · Public template | **PUBLISHED 2026-07-14** — public GitHub template (fresh single-commit history; pre-launch history bundled + archived privately). Hardening on: secret scanning + push protection · CodeQL (first scan green) · vulnerability alerts · `main` ruleset (no force-push/delete) · topics + template flag. Proven by a fresh-consumer test: degit → install → `init-app` → build → tests, all green, keyless. Donation link live 2026-07-15 — `.github/FUNDING.yml` (`custom:` PayPal.Me) + README Support section. |
 | Maintenance · Dependabot | **3 transitive-only alerts remediated 2026-07-15** via temporary pnpm `overrides:` (`effect: 3.21.4` HIGH via uploadthing · `"postcss@<8.5.10": 8.5.15` via next's own pin · `"@esbuild-kit/core-utils>esbuild": 0.25.12` via drizzle-kit) — no upstream fix exists for any; the `ignoreGhsas` allowlist emptied the same day so `pnpm audit` guards the overrides live. Removal conditions → [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done). |
+| Path-to-100 · #1 | `updatePost` → A7 `fieldErrors` — validation failures now map every failing field (`zodFieldErrors`), the edit form applies them inline via the shared `FieldActionError` (`@/lib/forms`); both post writes share the convention. 2026-07-16. See [context/API.md](context/API.md#typed-field-errors--the-actionresult-convention-a7). |
 
 ## Fresh project on-ramp (clone → build a real app)
 

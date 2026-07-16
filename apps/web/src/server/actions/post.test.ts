@@ -308,10 +308,22 @@ describe("updatePost", () => {
     });
   });
 
-  it("returns a validation error for invalid input", async () => {
+  it("maps a validation failure to per-field errors, every field (A7)", async () => {
+    getSession.mockResolvedValue({ user: { id: "u1" } });
+    const r = await updatePost(formData({ id: "p1", title: "", content: "" }));
+    expect(r).toEqual({
+      error: "Please fix the fields below.",
+      fieldErrors: { title: "Title is required", content: "Content is required" },
+    });
+  });
+
+  it("maps a single failing field without dragging the others in (A7)", async () => {
     getSession.mockResolvedValue({ user: { id: "u1" } });
     const r = await updatePost(formData({ id: "p1", title: "", content: "C" }));
-    expect((r as { error: string }).error).toMatch(/title/i);
+    expect(r).toEqual({
+      error: "Please fix the fields below.",
+      fieldErrors: { title: "Title is required" },
+    });
   });
 
   it("returns not-found when the post is missing", async () => {
