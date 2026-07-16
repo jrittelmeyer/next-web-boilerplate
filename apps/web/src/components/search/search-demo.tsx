@@ -15,11 +15,13 @@ type IndexStatus =
 
 // Client demo for the search scaffold: a search box reads via the tRPC
 // `search.search` query (server/trpc/routers/search.ts) over the real `posts`
-// index, and the button bulk-rebuilds that index from the database via the
-// auth-gated `reindexPosts` action — handy after `db:seed`, which is DB-only.
-// Both degrade gracefully — logged-out reindex shows "Unauthorized"; unset env
+// index, and — for admins only (`canReindex`, resolved server-side by the page)
+// — a button bulk-rebuilds that index from the database via the ADMIN-gated
+// `reindexPosts` action, handy after `db:seed`, which is DB-only. Hiding the
+// button is UX; the Server Action's `requireAdmin()` is the authority (a
+// non-admin invoking the action directly gets a typed "Forbidden"). Unset env
 // shows "not configured". Create posts on /posts to index them on write.
-export function SearchDemo() {
+export function SearchDemo({ canReindex }: { canReindex: boolean }) {
   const trpc = useTRPC();
   const [term, setTerm] = useState("");
   const [query, setQuery] = useState("");
@@ -58,32 +60,34 @@ export function SearchDemo() {
         <Button type="submit">Search</Button>
       </form>
 
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onIndex}
-          disabled={indexStatus.kind === "indexing"}
-        >
-          {indexStatus.kind === "indexing" ? "Reindexing…" : "Reindex posts from database"}
-        </Button>
-        {indexStatus.kind === "done" ? (
-          <p className="text-sm text-muted-foreground" role="status">
-            Reindexed {indexStatus.indexed} posts.
-          </p>
-        ) : null}
-        {indexStatus.kind === "error" ? (
-          <p className="text-sm text-destructive" role="alert">
-            {indexStatus.message}
-          </p>
-        ) : null}
-      </div>
+      {canReindex ? (
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onIndex}
+            disabled={indexStatus.kind === "indexing"}
+          >
+            {indexStatus.kind === "indexing" ? "Reindexing…" : "Reindex posts from database"}
+          </Button>
+          {indexStatus.kind === "done" ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              Reindexed {indexStatus.indexed} posts.
+            </p>
+          ) : null}
+          {indexStatus.kind === "error" ? (
+            <p className="text-sm text-destructive" role="alert">
+              {indexStatus.message}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2" aria-live="polite">
         {query.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Type a query and hit Search. Reindex from the database (or create posts on /posts) first
-            if you get no results.
+            Type a query and hit Search. Create posts on /posts first if you get no results
+            {canReindex ? " (or reindex from the database above)" : ""}.
           </p>
         ) : search.isFetching ? (
           <p className="text-sm text-muted-foreground">Searching…</p>

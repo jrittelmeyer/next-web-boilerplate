@@ -13,6 +13,7 @@ const {
   postsFindFirst,
   memberFindFirst,
   rateLimitMock,
+  requireAdmin,
   isSearchConfigured,
   getSearchClient,
   ensurePostsIndexSettings,
@@ -28,6 +29,7 @@ const {
   postsFindFirst: vi.fn(),
   memberFindFirst: vi.fn(),
   rateLimitMock: vi.fn(),
+  requireAdmin: vi.fn(),
   isSearchConfigured: vi.fn(),
   getSearchClient: vi.fn(),
   ensurePostsIndexSettings: vi.fn(),
@@ -54,6 +56,8 @@ vi.mock("@repo/db", () => ({
   },
 }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: rateLimitMock }));
+// reindexPosts is admin-gated (2026-07-16); the other post actions never touch rbac.
+vi.mock("@/lib/rbac", () => ({ requireAdmin }));
 vi.mock("@/lib/search", () => ({
   isSearchConfigured,
   getSearchClient,
@@ -482,13 +486,20 @@ describe("deletePost", () => {
 });
 
 describe("reindexPosts", () => {
-  it("rejects an unauthenticated caller", async () => {
-    getSession.mockResolvedValue(null);
-    expect(await reindexPosts()).toEqual({ error: "Unauthorized" });
+  // What requireAdmin resolves for an authorized caller: identity (session) +
+  // the authoritative DB role — the same shape admin.test.ts uses.
+  const adminCaller = { session: { user: { id: "u1" } }, role: "admin" as const };
+
+  it("returns Forbidden when requireAdmin fails (signed-out OR non-admin)", async () => {
+    // requireAdmin collapses both cases to null — the action can't tell them
+    // apart, and mustn't: authority is the DB role, not the session.
+    requireAdmin.mockResolvedValue(null);
+    expect(await reindexPosts()).toEqual({ error: "Forbidden" });
+    expect(rateLimitMock).not.toHaveBeenCalled();
   });
 
-  it("blocks when the per-user rate limit is exceeded", async () => {
-    getSession.mockResolvedValue({ user: { id: "u1" } });
+  it("blocks when the per-admin rate limit is exceeded", async () => {
+    requireAdmin.mockResolvedValue(adminCaller);
     rateLimitMock.mockResolvedValue({ success: false, limit: 3, remaining: 0, reset: 0 });
     expect(await reindexPosts()).toEqual({
       error: "Too many requests. Please wait a moment and try again.",
@@ -498,13 +509,13 @@ describe("reindexPosts", () => {
   });
 
   it("returns an error when search is not configured", async () => {
-    getSession.mockResolvedValue({ user: { id: "u1" } });
+    requireAdmin.mockResolvedValue(adminCaller);
     isSearchConfigured.mockReturnValue(false);
     expect(await reindexPosts()).toEqual({ error: "Search is not configured" });
   });
 
   it("applies the pinned index settings, then indexes all rows", async () => {
-    getSession.mockResolvedValue({ user: { id: "u1" } });
+    requireAdmin.mockResolvedValue(adminCaller);
     isSearchConfigured.mockReturnValue(true);
     dbSelect.mockReturnValue({
       from: () => Promise.resolve([{ id: "p1", title: "T", content: "C" }]),
@@ -523,7 +534,7 @@ describe("reindexPosts", () => {
   });
 
   it("returns indexed: 0 (but still pins settings) when there are no posts", async () => {
-    getSession.mockResolvedValue({ user: { id: "u1" } });
+    requireAdmin.mockResolvedValue(adminCaller);
     isSearchConfigured.mockReturnValue(true);
     dbSelect.mockReturnValue({ from: () => Promise.resolve([]) });
     const { addDocuments, updateSettings } = mockSearchClientOk();
@@ -533,7 +544,7 @@ describe("reindexPosts", () => {
   });
 
   it("returns an error when the settings update fails", async () => {
-    getSession.mockResolvedValue({ user: { id: "u1" } });
+    requireAdmin.mockResolvedValue(adminCaller);
     isSearchConfigured.mockReturnValue(true);
     dbSelect.mockReturnValue({
       from: () => Promise.resolve([{ id: "p1", title: "T", content: "C" }]),
@@ -547,7 +558,7 @@ describe("reindexPosts", () => {
   });
 
   it("returns an error message when reindexing throws", async () => {
-    getSession.mockResolvedValue({ user: { id: "u1" } });
+    requireAdmin.mockResolvedValue(adminCaller);
     isSearchConfigured.mockReturnValue(true);
     dbSelect.mockReturnValue({ from: () => Promise.reject(new Error("db boom")) });
     expect(await reindexPosts()).toEqual({ error: "db boom" });

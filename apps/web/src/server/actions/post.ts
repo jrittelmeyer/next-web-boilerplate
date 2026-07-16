@@ -15,6 +15,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { headers } from "next/headers";
 import { getActiveOrganizationId, getOrgRole, isOrgAdminRole } from "@/lib/organization";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireAdmin } from "@/lib/rbac";
 import {
   ensurePostsIndexSettings,
   getSearchClient,
@@ -289,17 +290,22 @@ export async function deletePost(postId: string): Promise<DeleteResult> {
  * `createPost` is born with the pinned shape — reindex stays the unconditional
  * repair for a drifted/stale index.
  *
- * Any signed-in user may reindex — the /search demo exposes the button and the
- * operation is an idempotent repair, so the abuse vector is cost, not authority.
- * The per-user cap is tighter than create/update (3/min vs 10/min) because one call
- * is a full-table scan + bulk index write. A real app would gate this on
- * `requireAdmin()` instead (two-line swap — see setUserRole in actions/admin.ts).
+ * Admin-only (2026-07-16, supersedes the P1-2 any-signed-in-user demo decision):
+ * a full-table scan + bulk index write is an operator repair, not a user feature,
+ * so it's gated on `requireAdmin()` — the authoritative DB role check — exactly
+ * like `setUserRole` (actions/admin.ts). The /search page hides the button for
+ * non-admins; the gate here is the authority either way. The per-admin cap stays
+ * tighter than create/update (3/min vs 10/min) because one call rebuilds the
+ * whole index.
  */
 export async function reindexPosts(): Promise<ReindexResult> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { error: "Unauthorized" };
+  const admin = await requireAdmin();
+  if (!admin) return { error: "Forbidden" };
 
-  const limit = await rateLimit(`post:reindex:${session.user.id}`, { limit: 3, windowSec: 60 });
+  const limit = await rateLimit(`post:reindex:${admin.session.user.id}`, {
+    limit: 3,
+    windowSec: 60,
+  });
   if (!limit.success) {
     return { error: "Too many requests. Please wait a moment and try again." };
   }

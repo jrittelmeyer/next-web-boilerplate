@@ -688,16 +688,21 @@ a new field searchable, extend `PostDocument`, add the field to
 re-adding documents — Meilisearch rebuilds the index from stored documents).
 
 **Demo:** a public scaffold route at `/search` (like `/uploads`, `/billing`,
-`/state`) — a search box (the tRPC query) plus a "Reindex posts from
-database" button (`reindexPosts`). Logged-out reindex shows "Unauthorized"; past the
-3/min cap it shows "Too many requests…"; an unset env shows "not configured". Create
-posts on `/posts` to index them on write. Delete when a real search surface lands.
+`/state`) — a search box (the tRPC query) plus, **for admins only**, a "Reindex
+posts from database" button (`reindexPosts`). Past the 3/min cap the button shows
+"Too many requests…"; an unset env shows "not configured". Create posts on `/posts`
+to index them on write. Delete when a real search surface lands.
 
-**Who may reindex (P1-2 decision):** any signed-in user, rate-limited — the demo flow
-after `db:seed` depends on the button, and the operation is an idempotent upsert
-repair, so the abuse vector is cost (capped), not authority. A real app should
-admin-gate it instead: swap the session check for `requireAdmin()` exactly as
-`setUserRole` does (`server/actions/admin.ts`).
+**Who may reindex: admins (2026-07-16, supersedes the P1-2 any-signed-in-user demo
+decision).** A full-table scan + bulk index write is an operator repair, not a user
+feature, so `reindexPosts` is gated on `requireAdmin()` — the authoritative DB role
+check — exactly like `setUserRole` (`server/actions/admin.ts`); a non-admin invoking
+the action gets a typed "Forbidden". The `/search` page resolves the same check
+server-side and hides the button for non-admins (UX only — the action gate is the
+authority). The 3/min per-admin rate limit stays: even an operator repair shouldn't
+hammer full DB→Meilisearch rebuilds. After `db:seed` (which seeds no admin),
+reindex as an admin — the first admin is promoted out-of-band via manual SQL
+(AUTH.md → RBAC) — or simply create a post on `/posts` to index on write.
 
 **Local engine** (`docker/docker-compose.yml`, service `meilisearch` →
 `nwb-meilisearch`): runs with `MEILI_ENV=development` (keeps the search-preview UI
