@@ -336,7 +336,10 @@ All are optional and independent; the app keeps building/running if you skip any
 > a real deploy has a public callback URL, so the prod path works there. **The delete paths
 > are unaffected** — `deleteUpload` + the `delete-uploads` job both call `UTApi().deleteFiles()`
 > (a direct server→UT API call, no inbound callback), so Rows 3–4 verify identically in dev
-> or prod.
+> or prod. **Local prod-build workaround:** `UPLOADTHING_CALLBACK_URL` + a tunnel — the
+> worked runbook is in SERVICES.md → Uploadthing (source-verified mechanics; its one-time
+> live proof is the open BACKLOG row #4). The keyless `/uploads` surface is e2e-pinned by
+> `e2e/uploads.spec.ts` (2026-07-16).
 
 - [x] Create an app at uploadthing.com → **API Keys** → copy the token. Set `UPLOADTHING_TOKEN="…"` in `.env`; restart. _Verified 2026-07-07: live token (app `bd7mdm8njh`, region `sea1`) into root `.env`. `UPLOADTHING_TOKEN` is a **plain server var → restart, not rebuild** (the client `UploadButton` hits the same-origin `/api/uploadthing`; nothing is `NEXT_PUBLIC`). Both the web server (`dotenv -e ../../.env`) and the standalone worker (`packages/jobs/src/load-env.ts` loads root `.env`) pick it up — the worker logged `injected env (13) from ..\..\.env`._
 - [x] Sign in → `/uploads` → upload an image (≤4 MB) → succeeds; a row lands in the **`uploads`** table (check `pnpm --filter @repo/db db:studio`, keyed by storage `key`, idempotent). _Verified 2026-07-07 (Playwright-driven, `next dev` for the dev-stream callback — see ⚠️ above; RESEND blanked from bash → fresh signup gets an immediate session): a 1×1 PNG uploaded → `onUploadComplete` fired via the dev stream (`POST /api/uploadthing?slug=imageUploader 200` → `handleCallbackRequest: Sent callback result to UploadThing`) → one `uploads` row landed (`key=KdFsS5…Ahki`, `name=ut-test.png`, `size=70`, `type=image/png`, `url=<ufs.sh>`), the file's `ufs.sh` URL returned **200**, and the "Your uploads" card rendered its thumbnail. Idempotency is code-guaranteed (`onConflictDoUpdate(target: uploads.key)`) + covered by the DB integration test — a callback redelivery can't be forced live, so it wasn't re-driven._

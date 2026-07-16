@@ -515,8 +515,9 @@ the deliberate inverse of `deleteUpload`'s fail-closed stance. Surfaced by
 `components/account/avatar-card.tsx` on `/account` and rendered via the `@repo/ui`
 `Avatar` primitive there **and** in the dashboard-header user menu (both fall back to
 the user's initial). Like `imageUploader`, the write leg's `onUploadComplete` is
-**dev-only on localhost** (VERIFICATION.md ⚠️); the render + `removeUserAvatar` paths
-work on any build.
+**dev-only on localhost** (VERIFICATION.md ⚠️) unless the callback is tunneled —
+see the `UPLOADTHING_CALLBACK_URL` runbook below; the render + `removeUserAvatar`
+paths work on any build.
 
 **Styling:** the prebuilt stylesheet is imported by every surface that mounts an
 `UploadButton` (`import "@uploadthing/react/styles.css"` — the `/uploads` demo page and
@@ -567,7 +568,36 @@ env-gated Stripe/email/OAuth providers):
 
 **Local testing:** `GET /api/uploadthing` returns the route config without a
 token (verifies the handler mounts); a real upload needs a token + a signed-in
-session + a file, so it's exercised only when `UPLOADTHING_TOKEN` is set.
+session + a file, so it's exercised only when `UPLOADTHING_TOKEN` is set. The
+keyless surface (page renders, button mounts + settles, signed-in empty list) is
+pinned by `e2e/uploads.spec.ts` (path-to-100 #4a) — CI runs it tokenless on every
+push.
+
+**Prod-build callback on a local box — the tunnel runbook (path-to-100 #4b).**
+On a prod build (`next start`), `onUploadComplete` runs only when Uploadthing's
+cloud can POST **into** your route handler — on localhost it can't, so the
+`uploads` row is never written (the VERIFICATION.md ⚠️ box; the exact analog of
+"Stripe webhooks need `stripe listen`"). The override is **`UPLOADTHING_CALLBACK_URL`**
+— verified in the installed `uploadthing@7.7.4` source: `createRouteHandler`'s
+`config.callbackUrl` ("the full, absolute URL to where your route handler is
+hosted... override if the automatic detection fails") resolves through an Effect
+`ConfigProvider` that falls back to `UPLOADTHING_`-prefixed constant-case env vars,
+so the env var needs **zero code change** (explicit `config:` would take
+precedence). Worked recipe:
+
+1. Start a quick tunnel to the app: `cloudflared tunnel --url http://localhost:3000`
+   (no account needed; note the `https://<name>.trycloudflare.com` URL it prints) —
+   ngrok works identically.
+2. Start the prod server with the override (runtime var → restart, not rebuild):
+   `UPLOADTHING_CALLBACK_URL="https://<name>.trycloudflare.com/api/uploadthing"`
+   alongside the live `UPLOADTHING_TOKEN`.
+3. Sign in → `/uploads` → upload. UT's cloud now POSTs the completion callback
+   through the tunnel (`x-uploadthing-hook: callback`) → `onUploadComplete` runs →
+   the `uploads` row lands (the "Your uploads" card shows it after the refresh).
+
+**Status: authored (not yet live-proven)** — the one-time live proof (the
+Stripe-webhook precedent) is tracked on the open BACKLOG row #4; the env-var
+mechanics above are source-verified, not guessed.
 
 **Account deletion cleans up files (P2-2 caveat, closed by P2-3):** deleting a
 user cascades the `uploads` **rows** away; the remote **files** are handled by the
