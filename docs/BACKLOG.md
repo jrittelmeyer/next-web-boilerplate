@@ -69,7 +69,6 @@
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
-| B1 | State | **Wire the `persist` recipe to a real slice** | STATE.md | Ship STATE.md's own hydration-safe recipe (`sidebarOpen`, `partialize`, `skipHydration`+`rehydrate`) as a working example + no-mismatch test; doc flips recipe → example. Recovers State +1 → 100. [Program #2](archive/PATH_TO_100_2026-07-15.md). S |
 | B1 | Jobs | **Wire the dead-letter queue** | SERVICES.md → Jobs | Create queues with `deadLetter` per the A20 recipe + one watched DLQ consumer (log + env-gated Sentry) + exhausted-job test. Recovers Jobs +1 → 100. [Program #3](archive/PATH_TO_100_2026-07-15.md). S/M |
 | B1 | Uploads | **`uploads.spec.ts` e2e + verified prod-callback runbook** | SERVICES.md → Uploadthing · VERIFICATION.md | The only integration with zero e2e coverage; plus UT callback-URL override + tunnel recipe live-verified once (the Stripe-webhook precedent). Recovers Uploads +2 → 100. [Program #4](archive/PATH_TO_100_2026-07-15.md). S+S |
 | B1 | Search | **Admin-gate `reindexPosts`** | SERVICES.md → Meilisearch | Supersede the P1-2 any-signed-in-user demo decision: RBAC-gate the reindex action + hide the button for non-admins. Recovers Search +1 → 100. [Program #5](archive/PATH_TO_100_2026-07-15.md). S |
@@ -86,6 +85,7 @@
 | Band | Upgrade | Shipped | See |
 | --- | --- | --- | --- |
 | B1 | ~~`updatePost` → `fieldErrors` error shape~~ — A7 convention adopted in `updatePost` + inline mapping in the edit form (`FieldActionError` shared via `@/lib/forms`); program row #1, first Wave-1 row shipped. | 2026-07-16 | API.md → Typed field errors · PROJECT_STATUS Path-to-100 · #1 |
+| B1 | ~~Wire the `persist` recipe to a real slice~~ — `ui-store` persists `sidebarOpen` hydration-safely (`skipHydration` + `<StoreRehydration/>`); unit tests pin the partialize/no-storage subtleties, `state.spec.ts` proves reload persistence with zero hydration errors; program row #2. | 2026-07-16 | STATE.md → Middleware decision · PROJECT_STATUS Path-to-100 · #2 |
 | B1 | ~~Enable CodeQL~~ — `ENABLE_CODEQL` flipped the day the repo went public (code scanning is free on public repos); the pre-publish git-history secrets scan happened as part of the launch. | 2026-07-14 | DEPLOYMENT.md → CI/CD · PROJECT_STATUS launch row |
 | B3 | ~~Production sending domain + deliverability~~ — a real verified domain + SPF/DKIM/DMARC recipe; deliverability + the hop-2 email-change delivery gap (open since 2026-07-05) proven/closed live. Bounce/complaint handling remains open (row above). | 2026-07-14 | [SERVICES.md → Resend](context/SERVICES.md) · [VERIFICATION.md](VERIFICATION.md) → Resend |
 | B1 | ~~Real host deploy~~ — **PROVEN live on Fly.io** (test app, managed `fly postgres`; `/api/health` 200 + sign-up→DB confirmed). Vercel/Railway/VPS paths stay authored. | 2026-07-13 | [DEPLOYMENT.md → Fly.io](context/DEPLOYMENT.md#flyio-worked-runbook) · [VERIFICATION.md](VERIFICATION.md) Phase 6 |

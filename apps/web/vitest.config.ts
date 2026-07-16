@@ -73,6 +73,7 @@ export default defineConfig({
         "src/server/realtime/sse.ts",
         "src/lib/subscription.ts",
         "src/lib/user-agent.ts",
+        "src/stores/ui-store.ts",
       ],
       reporter: ["text", "json", "lcov"],
       thresholds: { lines: 95, functions: 95, branches: 88, statements: 95 },

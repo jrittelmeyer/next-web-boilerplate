@@ -259,8 +259,10 @@ shipped. The full record is [`context/DECISIONS.md`](context/DECISIONS.md); high
 - **Prisma, Clerk/NextAuth, BullMQ/Redis, hosted realtime** — each displaced by a
   leaner or more self-contained equivalent (Drizzle, Better Auth, pg-boss, SSE over
   LISTEN/NOTIFY), with the reasoning recorded.
-- **Zustand `persist`** — causes SSR hydration mismatches; documented as an opt-in
-  recipe rather than wired.
+- ~~**Zustand `persist`** — causes SSR hydration mismatches; documented as an opt-in
+  recipe rather than wired.~~ **Wired 2026-07-16** (path-to-100 #2): the hydration-safe
+  shape (`skipHydration` + post-paint `<StoreRehydration/>`) ships live on `ui-store`,
+  with unit + e2e proof. See STATE.md → Middleware decision.
 - **TS 7** — GA'd, but ships no JS Compiler API yet, so `next build` can't use it;
   the cutover is a tracked backlog item gated on Next.js support.
 - **Client-side Stripe SDK, org teams/dynamic roles, per-org billing, Turbo remote

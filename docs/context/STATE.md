@@ -94,7 +94,8 @@ provider — its stores are plain hooks.
 ### The store pattern
 
 See [`apps/web/src/stores/ui-store.ts`](../../apps/web/src/stores/ui-store.ts) for the
-canonical example. Shape:
+canonical example (the real file additionally wraps `persist` — see the middleware
+decision below). The minimal shape:
 
 ```ts
 import { create } from "zustand";
@@ -138,37 +139,42 @@ Notes:
   (`"ui/toggleSidebar"`). Gated by `enabled: process.env.NODE_ENV === "development"`
   so it's inert in production. No extra dependency — it ships inside `zustand/middleware`.
 
-- **`persist` — intentionally NOT wired (opt-in).** Persisting a store to
-  `localStorage` is a deliberate per-store decision, omitted from the default scaffold
-  because it reintroduces an **SSR hydration mismatch**: the server renders with the
-  store's initial state, but the client rehydrates the persisted value, so the first
-  client render can disagree with the server HTML. To add it to a specific store,
-  wrap with `persist` **inside** `devtools` and handle hydration:
+- **`persist` — wired to `ui-store` as the shipped example (2026-07-16,
+  hydration-safe).** Persisting a store to `localStorage` reintroduces an **SSR
+  hydration mismatch** risk: the server renders with the store's initial state, but
+  a naively-rehydrated client would render the persisted value, so the first client
+  render can disagree with the server HTML. The scaffold ships the safe shape in
+  [`ui-store.ts`](../../apps/web/src/stores/ui-store.ts) — `persist` wrapped
+  **inside** `devtools`:
 
   ```ts
-  import { create } from "zustand";
-  import { createJSONStorage, devtools, persist } from "zustand/middleware";
-
-  export const useUiStore = create<UiState>()(
-    devtools(
-      persist(
-        (set) => ({ /* ...as above... */ }),
-        {
-          name: "ui-store",                                   // localStorage key
-          storage: createJSONStorage(() => localStorage),
-          partialize: (s) => ({ sidebarOpen: s.sidebarOpen }), // persist data, not actions
-          skipHydration: true,                                 // see note
-        },
-      ),
-      { name: "ui-store", enabled: process.env.NODE_ENV === "development" },
-    ),
-  );
+  persist(
+    (set) => ({ /* ...state + actions as above... */ }),
+    {
+      name: "ui-store",                                   // localStorage key
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({ sidebarOpen: s.sidebarOpen }), // persist data, not actions
+      skipHydration: true,                                 // see note
+    },
+  ),
   ```
 
-  With `skipHydration: true`, call `useUiStore.persist.rehydrate()` from a top-level
-  `"use client"` effect (or gate persisted UI behind a `mounted` flag) so the first
-  paint matches the server and React doesn't throw a hydration error. Only persist
-  genuine client preferences — **never** server data (that's still TanStack Query's job).
+  With `skipHydration: true` the server HTML and the FIRST client render both use
+  the store defaults — no mismatch — and **`<StoreRehydration/>`**
+  ([`components/store-rehydration.tsx`](../../apps/web/src/components/store-rehydration.tsx),
+  mounted once in the `[locale]` layout) calls `persist.rehydrate()` from a
+  post-paint effect to load the persisted value; add one line there per additional
+  persisted store. Two subtleties the unit tests pin
+  ([`ui-store.test.ts`](../../apps/web/src/stores/ui-store.test.ts)): `partialize`
+  persists the **data slice only** (never actions), and in a realm with no working
+  `localStorage` (SSR/prerender, storage-disabled browsers) `createJSONStorage`
+  degrades gracefully but the store's **`persist` API is never attached** — which is
+  why `<StoreRehydration/>` optional-chains (`persist?.rehydrate()`). The e2e proof
+  is [`e2e/state.spec.ts`](../../apps/web/e2e/state.spec.ts): the preference
+  survives a reload with zero hydration errors. Only persist genuine client
+  preferences — **never** server data (that's still TanStack Query's job). **Opt
+  out** by unwrapping `persist` in the store and deleting `<StoreRehydration/>` +
+  its layout mount.
 
 - **`immer`** is an optional Zustand peer for mutable-style `set` drafts. Not installed;
   the spread-based `set` above is enough for the scaffold. Add `immer` only if a store

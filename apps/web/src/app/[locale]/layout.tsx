@@ -6,6 +6,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { PostHogProvider } from "@/components/observability/posthog-provider";
+import { StoreRehydration } from "@/components/store-rehydration";
 import { type Locale, routing } from "@/i18n/routing";
 import { siteConfig, siteUrl } from "@/lib/site";
 import { TRPCReactProvider } from "@/lib/trpc/client";
@@ -105,6 +106,10 @@ export default async function LocaleLayout({
           {/* App-wide transient notifications (A1). Inside ThemeProvider so toasts
               follow light/dark; a portal leaf, so tree position is otherwise moot. */}
           <Toaster />
+          {/* Post-paint rehydration for persisted Zustand stores (STATE.md →
+              persist). Renders nothing; placement outside the provider stack is
+              deliberate — it only touches the store. */}
+          <StoreRehydration />
         </ThemeProvider>
       </body>
     </html>

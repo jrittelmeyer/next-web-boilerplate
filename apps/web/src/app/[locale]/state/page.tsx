@@ -19,7 +19,8 @@ export default function StatePage() {
           <CardTitle>Zustand store demo</CardTitle>
           <CardDescription>
             Two components, one global <code className="font-mono text-xs">useUiStore</code>.
-            Toggling either keeps both in sync.
+            Toggling either keeps both in sync — and the preference persists across reloads (the
+            hydration-safe <code className="font-mono text-xs">persist</code> recipe, STATE.md).
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
