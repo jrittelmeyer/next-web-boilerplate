@@ -42,6 +42,18 @@ describe("handleWelcomeEmail", () => {
     );
   });
 
+  it("completes without throwing for a SUPPRESSED recipient — no retries, no DLQ (#8)", async () => {
+    sendWelcomeEmail.mockResolvedValue({
+      error: "Recipient address is suppressed",
+      suppressed: true,
+    });
+    // Email IS configured — suppression must terminate the job on its own, before
+    // the unconfigured/no-op branch is even consulted.
+    isEmailConfigured.mockReturnValue(true);
+
+    await expect(handleWelcomeEmail({ to: "bounced@example.com" })).resolves.toBeUndefined();
+  });
+
   it("rejects an invalid payload before attempting to send", async () => {
     await expect(handleWelcomeEmail({ to: "not-an-email" })).rejects.toThrow();
     expect(sendWelcomeEmail).not.toHaveBeenCalled();

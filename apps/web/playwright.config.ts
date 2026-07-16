@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { EMAIL_CAPTURE_DIR } from "./e2e/support/email-capture";
+import { RESEND_WEBHOOK_TEST_SECRET } from "./e2e/support/resend-webhook";
 
 // E2E specs live in apps/web/e2e as `*.spec.ts` (Vitest owns `*.test.*` in the
 // packages). By default the webServer boots the production build on :3000;
@@ -30,19 +31,20 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: "**/magic-link.spec.ts",
+      testIgnore: ["**/magic-link.spec.ts", "**/email-suppression.spec.ts"],
     },
-    // Magic link (path-to-100 #6): its spec runs ONLY against the second,
-    // email-capturing server below — the main suite's :3000 server stays keyless
-    // (email unconfigured), which is itself load-bearing: auth.spec.ts asserts the
-    // affordance is HIDDEN there, and signup must keep yielding an immediate session.
+    // Magic link (path-to-100 #6) + email suppression (#8): these specs run ONLY
+    // against the second, email-capturing server below — the main suite's :3000
+    // server stays keyless (email unconfigured), which is itself load-bearing:
+    // auth.spec.ts asserts the affordance is HIDDEN there, and signup must keep
+    // yielding an immediate session.
     ...(process.env.E2E_BASE_URL
       ? []
       : [
           {
             name: "chromium-email",
             use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:3001" },
-            testMatch: "**/magic-link.spec.ts",
+            testMatch: ["**/magic-link.spec.ts", "**/email-suppression.spec.ts"],
           },
         ]),
   ],
@@ -74,6 +76,10 @@ export default defineConfig({
             RESEND_API_KEY: "re_e2e_capture_only",
             EMAIL_FROM: "E2E <e2e@example.com>",
             EMAIL_TEST_CAPTURE_DIR: EMAIL_CAPTURE_DIR,
+            // Path-to-100 #8: arms /api/resend/webhook signature verification AND
+            // the send helper's suppression consult on this server only; the
+            // email-suppression spec self-signs event payloads against it.
+            RESEND_WEBHOOK_SECRET: RESEND_WEBHOOK_TEST_SECRET,
           },
         },
       ],

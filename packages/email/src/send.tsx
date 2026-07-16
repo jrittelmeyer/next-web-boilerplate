@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { render } from "@react-email/render";
+import { isEmailSuppressed } from "@repo/db";
 import type { ReactElement } from "react";
 import { getResend } from "./client";
 import { ChangeEmail } from "./templates/change-email";
@@ -26,8 +27,14 @@ import { WelcomeEmail } from "./templates/welcome";
  * (and, outside production, log the action link so flows like verify/reset can be
  * completed locally without an email provider). This keeps the whole app building
  * and running with email env unset.
+ *
+ * `suppressed` (path-to-100 #8) marks the error as a do-not-send skip — the address
+ * hard-bounced or complained (see the `email_suppressions` table) — so callers that
+ * retry on error (the jobs worker) can tell "provider failed, retry" from "recipient
+ * unreachable, stop". Optional discriminant: existing `"data" in result` checks are
+ * unaffected.
  */
-type SendResult = { error: string } | { data: { id: string } };
+type SendResult = { error: string; suppressed?: true } | { data: { id: string } };
 
 /** True when both Resend env vars are present (so a real send can happen). */
 export function isEmailConfigured(): boolean {
@@ -80,6 +87,29 @@ async function send(
   if (!isEmailConfigured()) {
     logUnconfigured(meta.action, options.to, meta.url);
     return { error: NOT_CONFIGURED };
+  }
+
+  // Suppression consult (path-to-100 #8), gated on the SAME env var that enables the
+  // webhook feeding the list (RESEND_WEBHOOK_SECRET): unset — the default — means no
+  // suppression events can ever arrive, so we skip the lookup entirely (zero DB
+  // queries; behavior byte-identical to before #8). Sits BEFORE the capture seam so
+  // E2E observes it: a suppressed recipient produces no capture file. Fails OPEN — a
+  // broken lookup must never block legitimate sends; the provider's own account-side
+  // suppression is the backstop.
+  if (process.env.RESEND_WEBHOOK_SECRET) {
+    try {
+      if (await isEmailSuppressed(options.to)) {
+        console.warn(
+          `[email] ${meta.action} for ${options.to} skipped — address is suppressed (bounced/complained; see email_suppressions).`,
+        );
+        return { error: `Recipient address is suppressed: ${options.to}`, suppressed: true };
+      }
+    } catch (err) {
+      console.warn(
+        `[email] suppression lookup failed for ${options.to} — sending anyway:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 
   const captureDir = process.env.EMAIL_TEST_CAPTURE_DIR;

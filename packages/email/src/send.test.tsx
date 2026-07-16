@@ -2,6 +2,16 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock the suppression lookup seam (path-to-100 #8) — these are unit tests, so no
+// Postgres: the real round-trip lives in packages/db's integration suite. The mock
+// resolves false by default so every pre-#8 test in this file behaves exactly as
+// before (and the consult is gated off anyway while RESEND_WEBHOOK_SECRET is unset).
+const { isEmailSuppressedMock } = vi.hoisted(() => ({
+  isEmailSuppressedMock: vi.fn().mockResolvedValue(false),
+}));
+vi.mock("@repo/db", () => ({ isEmailSuppressed: isEmailSuppressedMock }));
+
 import {
   sendChangeEmailConfirmationEmail,
   sendDeleteAccountVerificationEmail,
@@ -141,5 +151,62 @@ describe("send helpers — EMAIL_TEST_CAPTURE_DIR seam (path-to-100 #6)", () => 
     expect(result).toHaveProperty("error");
     expect(await readdir(captureDir)).toHaveLength(0);
     vi.restoreAllMocks();
+  });
+});
+
+describe("send helpers — suppression consult (path-to-100 #8)", () => {
+  let captureDir: string;
+
+  // Configured + capture-diverted (so "the send happened" is observable as a file,
+  // with no Resend/network), with the webhook secret set to arm the consult — the
+  // exact posture of the E2E's :3001 server.
+  beforeEach(async () => {
+    captureDir = await mkdtemp(path.join(tmpdir(), "email-suppress-"));
+    vi.stubEnv("RESEND_API_KEY", "re_test_capture");
+    vi.stubEnv("EMAIL_FROM", "Test <test@example.com>");
+    vi.stubEnv("EMAIL_TEST_CAPTURE_DIR", captureDir);
+    vi.stubEnv("RESEND_WEBHOOK_SECRET", "whsec_test");
+    isEmailSuppressedMock.mockReset().mockResolvedValue(false);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    await rm(captureDir, { recursive: true, force: true });
+  });
+
+  it("returns the typed suppressed result and does NOT send when the address is listed", async () => {
+    isEmailSuppressedMock.mockResolvedValue(true);
+    const result = await sendWelcomeEmail({ to: TO, name: "Ada" });
+    expect(result).toEqual({ error: `Recipient address is suppressed: ${TO}`, suppressed: true });
+    expect(isEmailSuppressedMock).toHaveBeenCalledWith(TO);
+    expect(await readdir(captureDir)).toHaveLength(0); // the send never happened
+  });
+
+  it("sends normally when the address is not listed", async () => {
+    const result = await sendWelcomeEmail({ to: TO, name: "Ada" });
+    expect(result).toHaveProperty("data");
+    expect(isEmailSuppressedMock).toHaveBeenCalledTimes(1);
+    expect(await readdir(captureDir)).toHaveLength(1);
+  });
+
+  it("never queries the list while RESEND_WEBHOOK_SECRET is unset (the default)", async () => {
+    vi.stubEnv("RESEND_WEBHOOK_SECRET", "");
+    const result = await sendWelcomeEmail({ to: TO, name: "Ada" });
+    expect(result).toHaveProperty("data");
+    expect(isEmailSuppressedMock).not.toHaveBeenCalled();
+    expect(await readdir(captureDir)).toHaveLength(1);
+  });
+
+  it("fails OPEN when the lookup errors — the send proceeds with a logged warning", async () => {
+    isEmailSuppressedMock.mockRejectedValue(new Error("connection refused"));
+    const result = await sendWelcomeEmail({ to: TO, name: "Ada" });
+    expect(result).toHaveProperty("data");
+    expect(await readdir(captureDir)).toHaveLength(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("suppression lookup failed"),
+      "connection refused",
+    );
   });
 });

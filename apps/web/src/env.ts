@@ -39,6 +39,12 @@ export const env = createEnv({
     // is a bare address or "Name <address>" (see lib/env-schema.ts).
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: emailFromSchema,
+    // Resend webhook signing secret (path-to-100 #8) — the svix `whsec_…` value from
+    // the Resend dashboard → Webhooks. Optional: set it to (a) authenticate
+    // POST /api/resend/webhook (bounce/complaint → email_suppressions) and (b) turn
+    // on the send helper's suppression consult. Unset → the route answers 503 and
+    // sends never query the list (see SERVICES.md → Resend).
+    RESEND_WEBHOOK_SECRET: z.string().optional(),
     // Payments (Stripe). Optional: the app builds/runs without Stripe; Checkout
     // and the webhook degrade gracefully when these are unset (see lib/stripe.ts).
     STRIPE_SECRET_KEY: z.string().optional(),

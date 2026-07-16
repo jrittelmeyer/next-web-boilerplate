@@ -1,5 +1,6 @@
 export * from "./audit-log";
 export * from "./auth";
+export * from "./email-suppressions";
 export * from "./notifications";
 export * from "./organization";
 export * from "./passkey";

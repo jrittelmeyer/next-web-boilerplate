@@ -384,12 +384,23 @@ The wiring (`playwright.config.ts`):
   the start script's `dotenv -e ../../.env` (dotenv-cli never overrides already-set
   vars), so a populated local root `.env` can't leak real creds in.
 - A **second project** (`chromium-email`, baseURL :3001) runs *only*
-  `e2e/magic-link.spec.ts`; the main `chromium` project ignores it. The main :3000
-  server stays keyless — itself load-bearing (auth.spec.ts asserts the magic-link
-  affordance is hidden there, and signup must keep yielding an immediate session).
+  `e2e/magic-link.spec.ts` + `e2e/email-suppression.spec.ts`; the main `chromium`
+  project ignores them. The main :3000 server stays keyless — itself load-bearing
+  (auth.spec.ts asserts the magic-link affordance is hidden there, and signup must
+  keep yielding an immediate session).
 - The spec + config share the directory constant and a polling reader via
   `e2e/support/email-capture.ts`. In `E2E_BASE_URL` mode both the second server and the
   project are dropped (an external server has no capture directory to read).
+
+**The suppression E2E (path-to-100 #8)** rides the same :3001 server, which also
+carries a fake-but-well-formed `RESEND_WEBHOOK_SECRET` (shared constant in
+`e2e/support/resend-webhook.ts`). The spec **self-signs** a Permanent-bounce payload —
+the svix scheme is just HMAC-SHA256 over `` `${id}.${timestamp}.${rawBody}` `` with
+the base64-decoded secret, ~6 lines of `node:crypto` — and POSTs it through the
+route's **real** verification path (plus a tampered-signature 400 check), then proves
+the suppressed address yields **no capture file** while a control address still does.
+Suppression rows persist across runs by design, so the spec uses unique per-run
+addresses. CI-honest: no provider, no network, no new dependency.
 
 ## Accessibility (axe)
 

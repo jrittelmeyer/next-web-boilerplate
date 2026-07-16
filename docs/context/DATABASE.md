@@ -394,6 +394,36 @@ account deletion / email-change completion / sign-in (see
   **own** Postgres (already holds `user.email`), so recording old→new email here is safe and
   is the point of the record.
 
+## Email suppressions (`email_suppressions` — do-not-send list, migration 0016)
+
+`schema/email-suppressions.ts` is the do-not-send list behind bounce/complaint
+handling (path-to-100 #8): written by the signature-verified `/api/resend/webhook`
+route via `recordEmailSuppression()`, consulted by `@repo/email`'s `send()` via
+`isEmailSuppressed()` — both helpers live in `@repo/db` (`src/email-suppressions.ts`)
+because writer and reader sit in different packages, the `recordAuditEvent` precedent.
+See [SERVICES.md](SERVICES.md#bounce--complaint-handling-path-to-100-8).
+
+- **`email_suppressions`** — `id` (uuid PK), `email` (text, **NOT NULL UNIQUE**,
+  stored lowercase — the helpers normalize, so the unique constraint doubles as the
+  lookup index), `reason` (text, typed to the `SuppressionReason` union
+  `bounce | complaint | provider` in the helper but **not** a `pgEnum` — the
+  `audit_log.action` posture), `detail` (the provider's message), `email_id` (the
+  Resend send id), `created_at` (FIRST suppressed), `last_event_at` (latest event —
+  the upsert refreshes reason/detail/email_id/last_event_at and keeps created_at).
+- **`email` is FK-less — deliberately.** A suppression is about the ADDRESS, not an
+  account: it must survive user deletion, and most suppressed addresses (org invites,
+  sign-up typos) never had a `user` row at all. Same denormalized posture as `audit_log`.
+- **Upsert semantics** — `onConflictDoUpdate` on the unique `email`, so a redelivered
+  webhook event (Resend retries on non-2xx) is idempotent. `last_event_at` uses the
+  **DB clock** (`now()`), matching the column default — mixing the app clock in let
+  the timestamp run backwards under clock skew (caught by the integration test).
+- **Write posture** — unlike best-effort `recordAuditEvent`, `recordEmailSuppression`
+  **throws** on failure: the webhook route 500s and the provider redelivers
+  (at-least-once), which is what you want for a dropped suppression.
+- **Un-suppress** — delete the row (recipe in SERVICES.md → Resend).
+- DB-backed coverage: `packages/db/__tests__/integration/email-suppressions.test.ts`
+  (case-insensitive round-trip, idempotent upsert, latest-event refresh).
+
 ## Notifications (`notifications` — realtime SSE example, migration 0015)
 
 `schema/notifications.ts` is the **persisted backbone** of the realtime notifications

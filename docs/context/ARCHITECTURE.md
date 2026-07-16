@@ -104,7 +104,7 @@ Drizzle schema definitions, database client, and migration files. Imported by `a
 Better Auth configuration, session type definitions, and auth utilities. The Next.js middleware lives in `apps/web` but imports session helpers from here. Imports `@repo/email` to send verification / password-reset / welcome emails from the Better Auth lifecycle callbacks (see [AUTH.md](AUTH.md)).
 
 ### `packages/email` → `@repo/email`
-React Email templates plus the (lazy) Resend client and the send helpers. Imported server-side only. Templates are React components that render to HTML.
+React Email templates plus the (lazy) Resend client and the send helpers. Imported server-side only. Templates are React components that render to HTML. Imports `@repo/db` for the suppression consult (#8): `send()` checks `isEmailSuppressed()` before every configured send (see [SERVICES.md](SERVICES.md)).
 
 ### `packages/jobs` → `@repo/jobs`
 pg-boss background jobs (D7). Two halves: the app imports only the thin `enqueue()`
@@ -231,7 +231,7 @@ Convention: Vitest owns `*.test.*`, Playwright owns `*.spec.*`. See
 - `packages/*` → can import from `@repo/validators` and `@repo/ui`; never from `apps/web`
 - `packages/db` → no other `@repo/*` imports (pure Drizzle + Postgres)
 - `packages/auth` → may import from `@repo/db` (needs DB adapter), `@repo/email` (sends verification / reset emails from Better Auth callbacks), and `@repo/jobs` (enqueues the welcome email, D7). One-directional: `@repo/email`/`@repo/jobs` never import `@repo/auth`, so there's no cycle.
-- `packages/email` → no `@repo/*` imports except `@repo/validators` (for email data schemas)
+- `packages/email` → may import from `@repo/validators` (email data schemas) and `@repo/db` (the `email_suppressions` consult, #8; acyclic — `@repo/db` imports no `@repo/*` package)
 - `packages/jobs` → may import `@repo/email` (job handlers send email); exposes only `enqueue()` to the app
 - `packages/observability` → no `@repo/*` imports; never imported by anything (standalone scripts)
 - `tooling/*` → no runtime imports; config files only
@@ -248,6 +248,7 @@ Browser
     → /api/trpc/[trpc]  — tRPC handler
     → /api/auth/[...all] — Better Auth handler
     → /api/stripe/webhook — Stripe webhook handler
+    → /api/resend/webhook — Resend webhook handler (bounces/complaints → suppressions, #8)
     → /api/uploadthing  — Uploadthing handler
 ```
 
@@ -262,4 +263,4 @@ Browser
 - `@repo/validators` → `.` (`src/index.ts`)
 - `@repo/ui` → **subpath-only** (no `.`): `./components/*`, `./lib/*`, `./hooks/*`, `./globals.css`
 - `@repo/tailwind-config` → `./base` (`base.css`); `@repo/typescript-config` → `./base` `./nextjs` `./react-library`; `@repo/eslint-config` → `./next`
-- `@repo/email` → `.` (`src/index.ts` → `getResend()` (lazy client) + `isEmailConfigured` + the `send*` helpers, **server-only**), `./templates/*` (`src/templates/*.tsx`). Ships raw `.tsx` (no build step) like `@repo/ui`, so it's in `next.config.ts` `transpilePackages`
+- `@repo/email` → `.` (`src/index.ts` → `getResend()` (lazy client) + `isEmailConfigured` + the `send*` helpers + the re-exported `WebhookEventPayload` type, **server-only**), `./templates/*` (`src/templates/*.tsx`). Ships raw `.tsx` (no build step) like `@repo/ui`, so it's in `next.config.ts` `transpilePackages`
