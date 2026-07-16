@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SearchDemo } from "@/components/search/search-demo";
 import { requireAdmin } from "@/lib/rbac";
 
@@ -17,17 +18,19 @@ import { requireAdmin } from "@/lib/rbac";
 // Meilisearch (docker/docker-compose.yml) + MEILISEARCH_HOST/API_KEY; without
 // them the page still renders and degrades gracefully. Delete this when a real
 // search surface lands. See SERVICES.md.
-export default async function SearchPage() {
+export default async function SearchPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("Search.page");
   const canReindex = (await requireAdmin()) !== null;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Search demo</CardTitle>
+          <CardTitle>{t("title")}</CardTitle>
           <CardDescription>
-            Full-text search over the <code>posts</code> index via Meilisearch. Create posts on
-            /posts to index them on write; admins can bulk-reindex from the database.
+            {t.rich("description", { code: (chunks) => <code>{chunks}</code> })}
           </CardDescription>
         </CardHeader>
         <CardContent>

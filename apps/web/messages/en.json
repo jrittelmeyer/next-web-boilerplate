@@ -18,7 +18,10 @@
     "resetPassword": "Reset password",
     "goodbye": "Account deleted",
     "dashboard": "Dashboard",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "account": "Account",
+    "organization": "Organization",
+    "acceptInvitation": "Accept invitation"
   },
   "Auth": {
     "common": {
@@ -163,5 +166,478 @@
     "statusLive": "Live",
     "statusConnecting": "Connecting…",
     "statusOffline": "Reconnecting…"
+  },
+  "Account": {
+    "page": {
+      "title": "Account",
+      "subtitle": "Manage your profile and security settings.",
+      "profileTitle": "Profile",
+      "profileDescription": "Your display name and the email you sign in with.",
+      "emailLabel": "Email",
+      "verified": " · verified",
+      "unverified": " · unverified",
+      "verifiedHint": "We'll first send a confirmation link to your current address; the change takes effect after you open it and then verify the new address.",
+      "unverifiedHint": "Your email isn't verified yet, so the change takes effect immediately.",
+      "passwordTitle": "Password",
+      "passwordDescription": "Change the password you use to sign in.",
+      "passwordDescriptionSocial": "You signed in with a social provider, so there is no password to change.",
+      "passwordResetPointer": "To set a password for email sign-in, use the <link>password reset</link> flow."
+    },
+    "avatar": {
+      "photo": "Photo",
+      "remove": "Remove",
+      "removing": "Removing…",
+      "removed": "Photo removed.",
+      "updated": "Photo updated.",
+      "hint": "JPG, PNG or GIF, up to 2MB."
+    },
+    "name": {
+      "label": "Display name",
+      "placeholder": "Ada Lovelace",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved — your name is now “{name}”."
+    },
+    "email": {
+      "label": "New email",
+      "placeholder": "you@example.com",
+      "submit": "Update email",
+      "saving": "Saving…",
+      "error": "Could not change your email. Please try again.",
+      "updated": "Email updated.",
+      "confirmationSent": "We sent a confirmation link to your current email address. Open it to continue — then we'll email {email} a final verification link to finish the change."
+    },
+    "password": {
+      "current": "Current password",
+      "new": "New password",
+      "submit": "Update password",
+      "updating": "Updating…",
+      "error": "Could not change your password. Check your current password.",
+      "updated": "Password updated — other sessions have been signed out."
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "description": "Add a one-time code from an authenticator app to your sign-in for an extra layer of security.",
+      "descriptionSocial": "Two-factor authentication protects password sign-in, so it isn't available on a social-only account.",
+      "socialPointer": "To use two-factor authentication, first set a password for email sign-in via the <link>password reset</link> flow.",
+      "enable": "Enable two-factor authentication",
+      "scanHint": "Scan this QR code with your authenticator app, then enter the 6-digit code it shows to finish.",
+      "manualKey": "Can’t scan? Enter this key manually:",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "123456",
+      "verifyAndEnable": "Verify and enable",
+      "verifying": "Verifying…",
+      "cancel": "Cancel",
+      "errorStart": "Could not start setup. Check your password and try again.",
+      "errorVerify": "That code didn't match. Try the current code from your app.",
+      "errorDisable": "Could not disable. Check your password and try again.",
+      "errorRegenerate": "Could not regenerate. Check your password and try again.",
+      "enabledLabel": "Enabled.",
+      "enabledDescription": "You’ll be asked for a code from your authenticator app when you sign in.",
+      "regenerate": "Regenerate backup codes",
+      "disable": "Disable",
+      "disabling": "Disabling…",
+      "done": "Done",
+      "confirmPassword": "Confirm your password",
+      "startDescription": "Confirm your password to begin setup.",
+      "continue": "Continue",
+      "starting": "Starting…",
+      "regenerateDescription": "This replaces your existing backup codes — the old ones stop working immediately.",
+      "generateCodes": "Generate new codes",
+      "generating": "Generating…",
+      "disableDescription": "You'll no longer be asked for a code when you sign in.",
+      "backupTitle": "Backup codes",
+      "backupHint": "Save these somewhere safe. Each works once if you lose access to your authenticator. They’re shown only now.",
+      "copyCodes": "Copy codes",
+      "copied": "Copied"
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Sign in without a password using your device’s biometrics or a security key. Passkeys work alongside your existing sign-in methods.",
+      "empty": "You haven’t added any passkeys yet.",
+      "synced": "Synced across your devices",
+      "thisDevice": "This device only",
+      "added": "Added {date}",
+      "nameLabel": "Name",
+      "nameOptional": "(optional)",
+      "namePlaceholder": "e.g. MacBook Touch ID",
+      "add": "Add a passkey",
+      "waiting": "Waiting for your device…",
+      "unnamed": "Unnamed passkey",
+      "rename": "Rename",
+      "remove": "Remove",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "editName": "Passkey name",
+      "unsupported": "This browser doesn’t support passkeys.",
+      "errorAdd": "Could not add a passkey. Please try again.",
+      "errorRename": "Could not rename the passkey. Please try again.",
+      "errorRemove": "Could not remove the passkey. Please try again."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "description": "Devices currently signed in to your account. Revoking one signs that device out; pages it already has open may take a few minutes to notice.",
+      "current": "Current session",
+      "ipUnknown": "IP unknown",
+      "meta": "{ip} · signed in {signedIn} · last active {lastActive}",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "revoked": "Session revoked.",
+      "revokeError": "Could not revoke the session.",
+      "signOutOthers": "Sign out all other sessions",
+      "signingOut": "Signing out…",
+      "signedOutOthers": "Signed out all other sessions."
+    },
+    "privacy": {
+      "title": "Privacy & data",
+      "description": "Control how your usage is tracked and export your data.",
+      "analyticsTitle": "Product analytics",
+      "checking": "Checking your current preference…",
+      "enabled": "Enabled — anonymous product-usage events help us improve the app.",
+      "disabled": "Disabled — no analytics events are collected.",
+      "disable": "Disable analytics",
+      "enable": "Enable analytics",
+      "dataTitle": "Your data",
+      "dataDescription": "Download a copy of the data associated with your account — profile, sessions, posts, uploads, subscriptions, and more — as a JSON file.",
+      "download": "Download my data",
+      "preparing": "Preparing…",
+      "downloaded": "Your data export has been downloaded."
+    },
+    "delete": {
+      "title": "Delete account",
+      "description": "Permanently delete your account and all of its data — profile, posts, uploads, sessions, and subscription records.",
+      "emailNote": "We'll email you a confirmation link; nothing is deleted until you open it.",
+      "immediateNote": "This takes effect immediately and cannot be undone.",
+      "confirmPassword": "Confirm your password",
+      "phraseLabel": "Type <strong>{phrase}</strong> to confirm",
+      "reveal": "Delete account…",
+      "submit": "Permanently delete account",
+      "deleting": "Deleting…",
+      "cancel": "Cancel",
+      "emailSent": "We sent a confirmation link to your email address. Your account will be deleted when you open it in a browser where you're signed in — the link works once and expires in 24 hours.",
+      "errorPassword": "Incorrect password.",
+      "errorFreshness": "For security, deleting your account needs a recent sign-in. Sign out, sign back in, and try again.",
+      "errorGeneric": "Could not delete your account. Please try again."
+    }
+  },
+  "Admin": {
+    "page": {
+      "title": "Admin area",
+      "description": "Signed in as {email} (role: {role}). Promote or demote any user below — you can't change your own role.",
+      "auditLink": "Audit log →",
+      "empty": "No users on this page."
+    },
+    "role": {
+      "you": "(you)",
+      "makeUser": "Make user",
+      "makeAdmin": "Make admin",
+      "updated": "Role updated to {role}."
+    },
+    "ban": {
+      "banned": "Banned",
+      "ban": "Ban",
+      "unban": "Unban",
+      "reasonPlaceholder": "Reason (optional)",
+      "reasonLabel": "Ban reason",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "bannedToast": "User banned. Their sessions were revoked.",
+      "unbannedToast": "User unbanned."
+    },
+    "impersonate": {
+      "button": "Impersonate"
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Security-relevant events, newest first.",
+      "backLink": "← Admin",
+      "empty": "No events on this page.",
+      "colEvent": "Event",
+      "colActorTarget": "Actor → Target",
+      "colTime": "Time",
+      "byActor": "by {actor}",
+      "bySystem": "by system"
+    },
+    "pagination": {
+      "label": "Pagination",
+      "newest": "← Newest",
+      "older": "Older →"
+    }
+  },
+  "Organization": {
+    "page": {
+      "title": "Organization",
+      "subtitle": "Manage the active organization’s members and invitations."
+    },
+    "manager": {
+      "loading": "Loading organization…",
+      "emptyTitle": "No organization selected",
+      "emptyDescription": "You're in your Personal workspace. Create an organization, or switch to one from the workspace menu in the header, to manage its members and invitations.",
+      "create": "Create organization",
+      "yourRole": "your role:"
+    },
+    "members": {
+      "title": "Members",
+      "description": "People with access to this organization.",
+      "you": "You",
+      "roleLabel": "Member role",
+      "roleMember": "Member",
+      "roleAdmin": "Admin",
+      "remove": "Remove",
+      "removing": "Removing…",
+      "errorRole": "Could not update the member's role.",
+      "errorRemove": "Could not remove the member."
+    },
+    "invite": {
+      "title": "Invite a member",
+      "description": "They’ll join once they accept the invitation.",
+      "emailNote": "We'll email them a link.",
+      "offlineNote": "Email is off, so copy the invite link from the list below to share it.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "teammate@example.com",
+      "roleLabel": "Role",
+      "roleMember": "Member",
+      "roleAdmin": "Admin",
+      "submit": "Send invite",
+      "submitting": "Inviting…",
+      "error": "Could not send the invitation.",
+      "sent": "Invitation sent to {email}.",
+      "created": "Invitation created for {email}. Copy its link from the list below to share it."
+    },
+    "invitations": {
+      "title": "Pending invitations",
+      "description": "People invited who haven’t joined yet.",
+      "empty": "No pending invitations.",
+      "expires": "expires {date}",
+      "copyLink": "Copy link",
+      "copied": "Copied!",
+      "cancel": "Cancel",
+      "canceling": "Canceling…",
+      "errorCancel": "Could not cancel the invitation."
+    },
+    "settings": {
+      "nameTitle": "Organization name",
+      "nameDescription": "The display name your members see.",
+      "nameLabel": "Name",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Name updated.",
+      "errorRename": "Could not rename the organization.",
+      "dangerTitle": "Danger zone",
+      "dangerOwner": "Deleting the organization removes it and all its memberships. This can't be undone.",
+      "dangerMember": "Leaving removes your access to this organization. An owner or admin would have to re-invite you.",
+      "confirmLabel": "Type <strong>{name}</strong> to confirm",
+      "delete": "Delete organization",
+      "deleting": "Deleting…",
+      "errorDelete": "Could not delete the organization.",
+      "leave": "Leave organization",
+      "leaving": "Leaving…",
+      "errorLeave": "Could not leave the organization."
+    },
+    "create": {
+      "title": "Create organization",
+      "description": "A workspace you can invite teammates to. You’ll be its owner.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Acme Inc",
+      "slugLabel": "Slug",
+      "slugPlaceholder": "acme-inc",
+      "slugDescription": "The unique identifier for this organization.",
+      "submit": "Create organization",
+      "submitting": "Creating…",
+      "error": "Could not create the organization. The slug may be taken."
+    },
+    "switcher": {
+      "srLabel": "Switch workspace",
+      "workspace": "Workspace",
+      "personal": "Personal",
+      "fallbackName": "Organization",
+      "create": "Create organization…",
+      "manage": "Manage organization"
+    },
+    "acceptPage": {
+      "invalidTitle": "Invitation not found",
+      "invalidDescription": "This invitation link is invalid. Ask an organization admin to send a new one.",
+      "usedTitle": "Invitation already used",
+      "usedDescription": "This invitation is no longer pending ({status}). Ask an admin to send a new one if you still need access.",
+      "expiredTitle": "Invitation expired",
+      "expiredDescription": "This invitation has expired. Ask an organization admin to send a new one.",
+      "joinTitle": "Join {org}",
+      "joinDescription": "You've been invited to join {org} as {role}.",
+      "goToDashboard": "Go to your dashboard"
+    },
+    "accept": {
+      "signInPrompt": "Sign in as <strong>{email}</strong> to accept this invitation.",
+      "signIn": "Sign in",
+      "createAccount": "Create an account",
+      "mismatch": "This invitation is for <strong>{invited}</strong>, but you’re signed in as <strong>{signedIn}</strong>. Switch accounts to accept it.",
+      "switchAccount": "Sign out & switch account",
+      "acceptPrompt": "Accept as <strong>{email}</strong> to join <strong>{org}</strong>.",
+      "accept": "Accept invitation",
+      "joining": "Joining…",
+      "error": "Could not accept the invitation. It may have expired."
+    }
+  },
+  "Posts": {
+    "page": {
+      "title": "Posts",
+      "description": "Read via the public tRPC query, newest first."
+    },
+    "composer": {
+      "title": "New post",
+      "signedIn": "Signed in as {email} — publishing indexes the post for search.",
+      "signedOut": "Not signed in — publishing returns “Unauthorized”.",
+      "loading": "Loading…"
+    },
+    "form": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "A great post title",
+      "contentLabel": "Content",
+      "contentPlaceholder": "Write something…",
+      "submit": "Publish post",
+      "submitting": "Publishing…",
+      "notSignedIn": "Not signed in — publishing returns “Unauthorized”.",
+      "published": "Published “{title}”."
+    },
+    "item": {
+      "titleLabel": "Title",
+      "contentLabel": "Content",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "meta": "by {author} · {date}",
+      "unknownAuthor": "unknown"
+    },
+    "list": {
+      "error": "Failed to load posts: {message}",
+      "empty": "No posts yet. Publish one above, or run <code>pnpm --filter @repo/db db:seed</code>.",
+      "loadMore": "Load more",
+      "loading": "Loading…"
+    },
+    "skeleton": {
+      "loading": "Loading posts"
+    },
+    "stats": {
+      "unavailable": "Post count unavailable.",
+      "count": "{total, plural, one {# post} other {# posts}} published.",
+      "cachedHint": "(cached via <code>\"use cache\"</code>, revalidated on write)"
+    }
+  },
+  "Uploads": {
+    "page": {
+      "title": "Upload demo",
+      "description": "Upload an image (max 4MB) via Uploadthing. Requires sign-in.",
+      "listTitle": "Your uploads",
+      "listDescription": "Files you've uploaded. Deleting removes the file from storage and the record here."
+    },
+    "demo": {
+      "uploaded": "Uploaded: {url}",
+      "done": "done",
+      "error": "Error: {message}"
+    },
+    "list": {
+      "empty": "No uploads yet — files you upload above will show up here.",
+      "file": "file",
+      "meta": "{size} · uploaded {date}",
+      "delete": "Delete",
+      "deleting": "Deleting…"
+    }
+  },
+  "Search": {
+    "page": {
+      "title": "Search demo",
+      "description": "Full-text search over the <code>posts</code> index via Meilisearch. Create posts on /posts to index them on write; admins can bulk-reindex from the database."
+    },
+    "demo": {
+      "placeholder": "Search the example index…",
+      "submit": "Search",
+      "reindex": "Reindex posts from database",
+      "reindexing": "Reindexing…",
+      "reindexed": "Reindexed {count} posts.",
+      "emptyHint": "Type a query and hit Search. Create posts on /posts first if you get no results.",
+      "emptyHintAdmin": "Type a query and hit Search. Create posts on /posts first if you get no results (or reindex from the database above).",
+      "searching": "Searching…",
+      "notConfigured": "Search is not configured.",
+      "noResults": "No results for “{query}”. Did you reindex from the database?"
+    }
+  },
+  "Billing": {
+    "page": {
+      "title": "Billing demo",
+      "description": "Start a hosted Stripe Checkout session for an example $10/mo plan.",
+      "subscriptionTitle": "Your subscription",
+      "status": "Status: {status}",
+      "renews": "renews {date}"
+    },
+    "subscribe": {
+      "button": "Subscribe",
+      "redirecting": "Redirecting…"
+    },
+    "manage": {
+      "button": "Manage billing",
+      "redirecting": "Redirecting…"
+    },
+    "success": {
+      "title": "Subscription started",
+      "description": "Thanks! Your Checkout session completed.",
+      "descriptionWithId": "Thanks! Your Checkout session completed ({id}).",
+      "body": "Subscription access is confirmed server-side by the Stripe webhook."
+    }
+  },
+  "Premium": {
+    "signedOut": {
+      "title": "Premium content",
+      "description": "Sign in to see whether your plan unlocks this.",
+      "cta": "Sign in"
+    },
+    "unlocked": {
+      "title": "Pro content unlocked",
+      "description": "You have an active subscription, so this premium section is available.",
+      "body": "Swap this for the real gated feature. The gate is a single call —<code>hasActiveSubscription(userId)</code>— so any Server Component, Server Action, or tRPC procedure can reuse it."
+    },
+    "locked": {
+      "title": "This content is for subscribers",
+      "description": "Your account has no active subscription. Subscribe to unlock premium content.",
+      "cta": "View plans"
+    }
+  },
+  "StateDemo": {
+    "title": "Zustand store demo",
+    "description": "Two components, one global <code>useUiStore</code>. Toggling either keeps both in sync — and the preference persists across reloads (the hydration-safe <code>persist</code> recipe, STATE.md).",
+    "componentA": "Component A",
+    "componentB": "Component B",
+    "status": "Sidebar is <strong>{state}</strong>.",
+    "open": "open",
+    "closed": "closed",
+    "toggle": "Toggle sidebar"
+  },
+  "Observability": {
+    "page": {
+      "title": "Observability demo",
+      "description": "Error tracking (Sentry), structured logging (BetterStack), and analytics + feature flags (PostHog). Each button is a no-op until its env vars are set."
+    },
+    "demo": {
+      "captureError": "Capture a test error (Sentry)",
+      "sendLog": "Send a structured log (BetterStack)",
+      "captureEvent": "Capture an event (PostHog)",
+      "throwError": "Throw a render error (test boundary)",
+      "statusSentry": "Captured a test exception → Sentry (no-op without a DSN).",
+      "statusLogFailed": "Log failed: {error}",
+      "statusLog": "Sent a structured log → BetterStack (console output without creds).",
+      "statusPosthog": "Captured an analytics event → PostHog (no-op without a key).",
+      "flagLine": "Server-evaluated feature flag <code>example-flag</code>: <strong>{label}</strong>",
+      "flagOn": "on",
+      "flagOff": "off",
+      "flagUnconfigured": "unconfigured"
+    }
+  },
+  "Error": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. You can try again, or head back home.",
+    "tryAgain": "Try again",
+    "goHome": "Go home"
   }
 }

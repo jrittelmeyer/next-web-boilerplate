@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 
 export type OrgInvitation = {
@@ -33,6 +34,8 @@ export function PendingInvitations({
   invitations: OrgInvitation[];
   canManage: boolean;
 }) {
+  const t = useTranslations("Organization.invitations");
+  const format = useFormatter();
   const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -67,7 +70,7 @@ export function PendingInvitations({
     });
     setPendingId(null);
     if (err) {
-      setError(err.message ?? "Could not cancel the invitation.");
+      setError(err.message ?? t("errorCancel"));
       return;
     }
     setRemovedIds((prev) => new Set([...prev, invitation.id]));
@@ -76,12 +79,12 @@ export function PendingInvitations({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pending invitations</CardTitle>
-        <CardDescription>People invited who haven&rsquo;t joined yet.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No pending invitations.</p>
+          <p className="text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {pending.map((invitation) => (
@@ -92,8 +95,8 @@ export function PendingInvitations({
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm font-medium">{invitation.email}</span>
                   <span className="text-xs text-muted-foreground">
-                    <span className="capitalize">{invitation.role}</span> · expires{" "}
-                    {invitation.expiresAt.toLocaleDateString()}
+                    <span className="capitalize">{invitation.role}</span> ·{" "}
+                    {t("expires", { date: format.dateTime(invitation.expiresAt, "dateOnly") })}
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -103,7 +106,7 @@ export function PendingInvitations({
                     size="sm"
                     onClick={() => void copyLink(invitation)}
                   >
-                    {copiedId === invitation.id ? "Copied!" : "Copy link"}
+                    {copiedId === invitation.id ? t("copied") : t("copyLink")}
                   </Button>
                   {canManage ? (
                     <Button
@@ -113,7 +116,7 @@ export function PendingInvitations({
                       disabled={pendingId === invitation.id}
                       onClick={() => void cancel(invitation)}
                     >
-                      {pendingId === invitation.id ? "Canceling…" : "Cancel"}
+                      {pendingId === invitation.id ? t("canceling") : t("cancel")}
                     </Button>
                   ) : null}
                 </div>

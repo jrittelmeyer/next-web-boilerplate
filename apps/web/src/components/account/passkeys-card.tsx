@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Input } from "@repo/ui/components/input";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 
@@ -43,18 +44,8 @@ export type PasskeyRow = {
 
 // A synced passkey (iCloud Keychain / Google Password Manager / 1Password) reports
 // deviceType "multiDevice" and/or backedUp; otherwise it's bound to this authenticator.
-function deviceHint(row: PasskeyRow): string {
-  return row.deviceType === "multiDevice" || row.backedUp
-    ? "Synced across your devices"
-    : "This device only";
-}
-
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function isSynced(row: PasskeyRow): boolean {
+  return row.deviceType === "multiDevice" || row.backedUp;
 }
 
 // Cancelling the browser passkey prompt (or letting it time out) surfaces as this code — a
@@ -65,6 +56,7 @@ function isCancellation(error: { code?: string; message?: string } | null): bool
 }
 
 export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[] }) {
+  const t = useTranslations("Account.passkeys");
   const router = useRouter();
   const [passkeys, setPasskeys] = useState<PasskeyRow[]>(initialPasskeys);
   const [name, setName] = useState("");
@@ -86,7 +78,7 @@ export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[
     // is not worth surfacing.
     if (!result || result.error || !result.data) {
       if (result?.error && !isCancellation(result.error)) {
-        setError(result.error.message ?? "Could not add a passkey. Please try again.");
+        setError(result.error.message ?? t("errorAdd"));
       }
       return;
     }
@@ -110,7 +102,7 @@ export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[
     const trimmed = nextName.trim();
     const { error: updateError } = await authClient.passkey.updatePasskey({ id, name: trimmed });
     if (updateError) {
-      setError(updateError.message ?? "Could not rename the passkey. Please try again.");
+      setError(updateError.message ?? t("errorRename"));
       return false;
     }
     setPasskeys((prev) => prev.map((p) => (p.id === id ? { ...p, name: trimmed || null } : p)));
@@ -122,7 +114,7 @@ export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[
     setError(null);
     const { error: deleteError } = await authClient.passkey.deletePasskey({ id });
     if (deleteError) {
-      setError(deleteError.message ?? "Could not remove the passkey. Please try again.");
+      setError(deleteError.message ?? t("errorRemove"));
       return;
     }
     setPasskeys((prev) => prev.filter((p) => p.id !== id));
@@ -132,11 +124,8 @@ export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Passkeys</CardTitle>
-        <CardDescription>
-          Sign in without a password using your device&rsquo;s biometrics or a security key.
-          Passkeys work alongside your existing sign-in methods.
-        </CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {passkeys.length > 0 ? (
@@ -146,7 +135,7 @@ export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">You haven&rsquo;t added any passkeys yet.</p>
+          <p className="text-sm text-muted-foreground">{t("empty")}</p>
         )}
 
         {supported ? (
@@ -154,18 +143,19 @@ export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[
             <div className="flex flex-wrap items-end gap-2">
               <div className="flex flex-col gap-1">
                 <label htmlFor="passkey-name" className="text-sm font-medium">
-                  Name <span className="font-normal text-muted-foreground">(optional)</span>
+                  {t("nameLabel")}{" "}
+                  <span className="font-normal text-muted-foreground">{t("nameOptional")}</span>
                 </label>
                 <Input
                   id="passkey-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. MacBook Touch ID"
+                  placeholder={t("namePlaceholder")}
                   className="max-w-xs"
                 />
               </div>
               <Button type="button" onClick={() => void onAdd()} disabled={busy}>
-                {busy ? "Waiting for your device…" : "Add a passkey"}
+                {busy ? t("waiting") : t("add")}
               </Button>
             </div>
             {error ? (
@@ -175,9 +165,7 @@ export function PasskeysCard({ initialPasskeys }: { initialPasskeys: PasskeyRow[
             ) : null}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            This browser doesn&rsquo;t support passkeys.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("unsupported")}</p>
         )}
       </CardContent>
     </Card>
@@ -195,6 +183,8 @@ function PasskeyItem({
   onRename: (id: string, name: string) => Promise<boolean>;
   onDelete: (id: string) => void | Promise<void>;
 }) {
+  const t = useTranslations("Account.passkeys");
+  const format = useFormatter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.name ?? "");
   const [saving, setSaving] = useState(false);
@@ -219,14 +209,14 @@ function PasskeyItem({
           <Input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Passkey name"
-            aria-label="Passkey name"
+            placeholder={t("editName")}
+            aria-label={t("editName")}
             className="max-w-xs"
             autoFocus
           />
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("saving") : t("save")}
             </Button>
             <Button
               type="button"
@@ -238,24 +228,25 @@ function PasskeyItem({
                 setEditing(false);
               }}
             >
-              Cancel
+              {t("cancel")}
             </Button>
           </div>
         </form>
       ) : (
         <>
           <div className="flex flex-col">
-            <span className="text-sm font-medium">{row.name || "Unnamed passkey"}</span>
+            <span className="text-sm font-medium">{row.name || t("unnamed")}</span>
             <span className="text-xs text-muted-foreground">
-              {deviceHint(row)} · Added {formatDate(row.createdAt)}
+              {isSynced(row) ? t("synced") : t("thisDevice")} ·{" "}
+              {t("added", { date: format.dateTime(row.createdAt, "dateOnly") })}
             </span>
           </div>
           <div className="flex gap-2">
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
-              Rename
+              {t("rename")}
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => void onDelete(row.id)}>
-              Remove
+              {t("remove")}
             </Button>
           </div>
         </>

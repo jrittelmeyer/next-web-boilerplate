@@ -107,3 +107,20 @@ test("changing the password re-gates sign-in to the new credentials", async () =
   await signIn(page, { ...user, email: changedEmail, password: newPassword });
   await expect(page.getByText(`Signed in as ${changedEmail}`)).toBeVisible();
 });
+
+test("the account surface renders in Spanish with locale-formatted dates (path-to-100 #7)", async () => {
+  // Piggybacks on the serial lifecycle's signed-in session — no extra signup
+  // against the 5-per-60s limiter. Spot-checks the full-surface es coverage on a
+  // signed-in page: localized <title> + chrome, and the sessions card's meta line
+  // rendering through the A32 "short" named format (a Spanish abbreviated-month
+  // date, not the old English-only toLocaleString()).
+  await page.goto("/es/account");
+  await expect(page).toHaveTitle(/^Cuenta ·/);
+  await expect(page.getByRole("heading", { name: "Cuenta" })).toBeVisible();
+
+  // Match the meta line (date follows), not the card description that shares the
+  // "sesión iniciada" words.
+  const meta = page.getByText(/sesión iniciada \d/).first();
+  await expect(meta).toBeVisible();
+  await expect(meta).toContainText(/\d{1,2} (ene|feb|mar|abr|may|jun|jul|ago|sept?|oct|nov|dic)/);
+});

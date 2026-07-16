@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { toast } from "@repo/ui/components/sonner";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 
@@ -38,6 +39,8 @@ export type SessionRow = {
 // doesn't — reproduced across prod builds, so the local filter is the UI's truth).
 // The revoke outcome surfaces as a toast (A1).
 export function SessionsCard({ sessions }: { sessions: SessionRow[] }) {
+  const t = useTranslations("Account.sessions");
+  const format = useFormatter();
   const router = useRouter();
   // Which revoke is in flight: a session id, "others", or none.
   const [pending, setPending] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export function SessionsCard({ sessions }: { sessions: SessionRow[] }) {
     setPending(key);
     const { error } = await call();
     if (error) {
-      toast.error(error.message ?? "Could not revoke the session.");
+      toast.error(error.message ?? t("revokeError"));
       setPending(null);
       return;
     }
@@ -71,11 +74,8 @@ export function SessionsCard({ sessions }: { sessions: SessionRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sessions</CardTitle>
-        <CardDescription>
-          Devices currently signed in to your account. Revoking one signs that device out; pages it
-          already has open may take a few minutes to notice.
-        </CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <ul className="flex flex-col gap-3">
@@ -89,13 +89,16 @@ export function SessionsCard({ sessions }: { sessions: SessionRow[] }) {
                   {s.device}
                   {s.isCurrent ? (
                     <span className="ml-2 rounded-full border px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                      Current session
+                      {t("current")}
                     </span>
                   ) : null}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {s.ipAddress || "IP unknown"} · signed in {s.createdAt.toLocaleString()} · last
-                  active {s.updatedAt.toLocaleString()}
+                  {t("meta", {
+                    ip: s.ipAddress || t("ipUnknown"),
+                    signedIn: format.dateTime(s.createdAt, "short"),
+                    lastActive: format.dateTime(s.updatedAt, "short"),
+                  })}
                 </span>
               </div>
               {s.isCurrent || s.token === null ? null : (
@@ -107,13 +110,13 @@ export function SessionsCard({ sessions }: { sessions: SessionRow[] }) {
                   onClick={() => {
                     const token = s.token;
                     if (token) {
-                      void revoke(s.id, [s.id], "Session revoked.", () =>
+                      void revoke(s.id, [s.id], t("revoked"), () =>
                         authClient.revokeSession({ token }),
                       );
                     }
                   }}
                 >
-                  {pending === s.id ? "Revoking…" : "Revoke"}
+                  {pending === s.id ? t("revoking") : t("revoke")}
                 </Button>
               )}
             </li>
@@ -129,12 +132,12 @@ export function SessionsCard({ sessions }: { sessions: SessionRow[] }) {
                 void revoke(
                   "others",
                   others.map((o) => o.id),
-                  "Signed out all other sessions.",
+                  t("signedOutOthers"),
                   () => authClient.revokeOtherSessions(),
                 )
               }
             >
-              {pending === "others" ? "Signing out…" : "Sign out all other sessions"}
+              {pending === "others" ? t("signingOut") : t("signOutOthers")}
             </Button>
           </div>
         ) : null}

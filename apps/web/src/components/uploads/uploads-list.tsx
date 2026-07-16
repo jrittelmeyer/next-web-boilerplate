@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import Image from "next/image";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { deleteUpload } from "@/server/actions/uploads";
@@ -33,6 +34,8 @@ function formatBytes(bytes: number): string {
 // `router.refresh()` reconciles server truth in the background — the UI must not
 // gate on the refresh committing (Next 16.2.9 race, see AUTH.md).
 export function UploadsList({ rows }: { rows: UploadRow[] }) {
+  const t = useTranslations("Uploads.list");
+  const format = useFormatter();
   const router = useRouter();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [pending, setPending] = useState<string | null>(null);
@@ -55,11 +58,7 @@ export function UploadsList({ rows }: { rows: UploadRow[] }) {
   }
 
   if (visible.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No uploads yet — files you upload above will show up here.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">{t("empty")}</p>;
   }
 
   return (
@@ -86,7 +85,7 @@ export function UploadsList({ rows }: { rows: UploadRow[] }) {
                 />
               ) : (
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border text-xs text-muted-foreground">
-                  file
+                  {t("file")}
                 </div>
               )}
               <div className="flex min-w-0 flex-col gap-0.5">
@@ -99,7 +98,10 @@ export function UploadsList({ rows }: { rows: UploadRow[] }) {
                   {row.name}
                 </a>
                 <span className="truncate text-xs text-muted-foreground">
-                  {formatBytes(row.size)} · uploaded {row.createdAt.toLocaleString()}
+                  {t("meta", {
+                    size: formatBytes(row.size),
+                    date: format.dateTime(row.createdAt, "short"),
+                  })}
                 </span>
               </div>
             </div>
@@ -110,7 +112,7 @@ export function UploadsList({ rows }: { rows: UploadRow[] }) {
               disabled={pending !== null}
               onClick={() => void remove(row.id)}
             >
-              {pending === row.id ? "Deleting…" : "Delete"}
+              {pending === row.id ? t("deleting") : t("delete")}
             </Button>
           </li>
         ))}

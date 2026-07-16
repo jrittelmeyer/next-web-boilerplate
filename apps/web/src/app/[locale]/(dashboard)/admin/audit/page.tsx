@@ -18,7 +18,7 @@ import {
 import { and, desc, eq, lt, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { notFound } from "next/navigation";
-import { setRequestLocale } from "next-intl/server";
+import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { describeAuditEvent } from "@/lib/audit-format";
 import { decodeKeysetCursor, encodeKeysetCursor } from "@/lib/keyset-cursor";
@@ -52,14 +52,6 @@ const PAGE_SIZE = 20;
 // this — user.id is text, which accepts any value.) Canonical 8-4-4-4-12 hex.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Deterministic, server-rendered timestamp (no client JS → no hydration drift). UTC so
-// the value doesn't shift with the server's locale/zone.
-const timestampFormat = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
 export default async function AdminAuditPage({
   params,
   searchParams,
@@ -69,6 +61,12 @@ export default async function AdminAuditPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("Admin.audit");
+  const tPagination = await getTranslations("Admin.pagination");
+  // Deterministic, server-rendered timestamp (no client JS → no hydration drift):
+  // the A32 "short" named format under the request config's global UTC timeZone —
+  // locale-aware where the old hand-rolled en-US Intl instance wasn't.
+  const format = await getFormatter();
   const admin = await requireAdmin();
   if (!admin) notFound();
 
@@ -119,21 +117,21 @@ export default async function AdminAuditPage({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle>Audit log</CardTitle>
-            <CardDescription>Security-relevant events, newest first.</CardDescription>
+            <CardTitle>{t("title")}</CardTitle>
+            <CardDescription>{t("description")}</CardDescription>
           </div>
           <Link
             href="/admin"
             className="shrink-0 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
-            ← Admin
+            {t("backLink")}
           </Link>
         </div>
       </CardHeader>
       <CardContent>
         {events.length === 0 ? (
           // A stale/past-the-end cursor lands here — render gracefully; "Newest" recovers.
-          <p className="py-3 text-sm text-muted-foreground">No events on this page.</p>
+          <p className="py-3 text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
           // A26: real <table> (not a <ul> of flex rows) so the tabular data carries proper
           // column-header semantics for assistive tech. Event/actor cells wrap; only the
@@ -141,9 +139,9 @@ export default async function AdminAuditPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Event</TableHead>
-                <TableHead>Actor → Target</TableHead>
-                <TableHead className="text-right">Time</TableHead>
+                <TableHead>{t("colEvent")}</TableHead>
+                <TableHead>{t("colActorTarget")}</TableHead>
+                <TableHead className="text-right">{t("colTime")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -161,7 +159,7 @@ export default async function AdminAuditPage({
                       {detail ? <span className="text-muted-foreground"> · {detail}</span> : null}
                     </TableCell>
                     <TableCell className="whitespace-normal text-muted-foreground">
-                      {actor ? `by ${actor}` : "by system"}
+                      {actor ? t("byActor", { actor }) : t("bySystem")}
                       {target && target !== actor ? ` → ${target}` : null}
                     </TableCell>
                     <TableCell className="text-right align-top">
@@ -169,7 +167,7 @@ export default async function AdminAuditPage({
                         dateTime={e.createdAt.toISOString()}
                         className="whitespace-nowrap text-xs text-muted-foreground"
                       >
-                        {timestampFormat.format(e.createdAt)} UTC
+                        {format.dateTime(e.createdAt, "short")} UTC
                       </time>
                     </TableCell>
                   </TableRow>
@@ -180,7 +178,7 @@ export default async function AdminAuditPage({
         )}
         {(cursor || olderHref) && (
           <nav
-            aria-label="Pagination"
+            aria-label={tPagination("label")}
             className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm"
           >
             {cursor ? (
@@ -188,7 +186,7 @@ export default async function AdminAuditPage({
                 href="/admin/audit"
                 className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                ← Newest
+                {tPagination("newest")}
               </Link>
             ) : (
               <span aria-hidden="true" />
@@ -198,7 +196,7 @@ export default async function AdminAuditPage({
                 href={olderHref}
                 className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                Older →
+                {tPagination("older")}
               </Link>
             )}
           </nav>

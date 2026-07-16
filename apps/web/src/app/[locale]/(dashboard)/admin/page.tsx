@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/card";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { BanControl } from "@/components/admin/ban-control";
 import { ImpersonateControl } from "@/components/admin/impersonate-control";
 import { RoleControl } from "@/components/admin/role-control";
@@ -56,6 +56,8 @@ export default async function AdminPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("Admin.page");
+  const tPagination = await getTranslations("Admin.pagination");
   const admin = await requireAdmin();
   if (!admin) notFound();
 
@@ -99,17 +101,16 @@ export default async function AdminPage({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle>Admin area</CardTitle>
+            <CardTitle>{t("title")}</CardTitle>
             <CardDescription>
-              Signed in as {admin.session.user.email} (role: {admin.role}). Promote or demote any
-              user below — you can&apos;t change your own role.
+              {t("description", { email: admin.session.user.email, role: admin.role })}
             </CardDescription>
           </div>
           <Link
             href="/admin/audit"
             className="shrink-0 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
-            Audit log →
+            {t("auditLink")}
           </Link>
         </div>
       </CardHeader>
@@ -117,7 +118,7 @@ export default async function AdminPage({
         {users.length === 0 ? (
           // A stale/past-the-end cursor (e.g. the last row on this page was deleted)
           // lands here — render the empty page gracefully; "Newest" recovers.
-          <p className="py-3 text-sm text-muted-foreground">No users on this page.</p>
+          <p className="py-3 text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {users.map((u) => (
@@ -148,7 +149,7 @@ export default async function AdminPage({
         )}
         {(cursor || olderHref) && (
           <nav
-            aria-label="Pagination"
+            aria-label={tPagination("label")}
             className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm"
           >
             {cursor ? (
@@ -156,7 +157,7 @@ export default async function AdminPage({
                 href="/admin"
                 className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                ← Newest
+                {tPagination("newest")}
               </Link>
             ) : (
               <span aria-hidden="true" />
@@ -166,7 +167,7 @@ export default async function AdminPage({
                 href={olderHref}
                 className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                Older →
+                {tPagination("older")}
               </Link>
             )}
           </nav>

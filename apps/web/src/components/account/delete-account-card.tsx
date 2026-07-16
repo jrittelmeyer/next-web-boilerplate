@@ -22,6 +22,7 @@ import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
 import { toast } from "@repo/ui/components/sonner";
 import { type DeleteAccountInput, deleteAccountSchema } from "@repo/validators";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -36,18 +37,19 @@ type Status =
   | { kind: "email-sent" };
 
 /**
- * Map the deleteUser error codes the card can actually provoke to actionable copy.
- * SESSION_EXPIRED is the no-password freshness gate (OAuth-only user, session older
- * than `session.freshAge`, 24h default) — deletion isn't blocked, it just needs a
- * recent sign-in; a supplied password skips that gate entirely, so the password
- * variant never sees it.
+ * Map the deleteUser error codes the card can actually provoke to actionable copy
+ * (as message keys under Account.delete). SESSION_EXPIRED is the no-password
+ * freshness gate (OAuth-only user, session older than `session.freshAge`, 24h
+ * default) — deletion isn't blocked, it just needs a recent sign-in; a supplied
+ * password skips that gate entirely, so the password variant never sees it.
  */
-function friendlyError(error: { code?: string; message?: string }): string {
-  if (error.code === "INVALID_PASSWORD") return "Incorrect password.";
-  if (error.code === "SESSION_EXPIRED") {
-    return "For security, deleting your account needs a recent sign-in. Sign out, sign back in, and try again.";
-  }
-  return error.message ?? "Could not delete your account. Please try again.";
+function friendlyErrorKey(error: {
+  code?: string;
+  message?: string;
+}): "errorPassword" | "errorFreshness" | null {
+  if (error.code === "INVALID_PASSWORD") return "errorPassword";
+  if (error.code === "SESSION_EXPIRED") return "errorFreshness";
+  return null;
 }
 
 // Danger-zone account deletion (P2-2). Calls Better Auth's `deleteUser` via the
@@ -73,6 +75,7 @@ export function DeleteAccountCard({
   hasPassword: boolean;
   emailConfigured: boolean;
 }) {
+  const t = useTranslations("Account.delete");
   const [revealed, setRevealed] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [phrase, setPhrase] = useState("");
@@ -93,7 +96,8 @@ export function DeleteAccountCard({
       callbackURL: "/goodbye",
     });
     if (error) {
-      toast.error(friendlyError(error));
+      const key = friendlyErrorKey(error);
+      toast.error(key ? t(key) : (error.message ?? t("errorGeneric")));
       return;
     }
     if (data?.message === "Verification email sent") {
@@ -130,13 +134,9 @@ export function DeleteAccountCard({
   return (
     <Card className="border-destructive/50">
       <CardHeader>
-        <CardTitle>Delete account</CardTitle>
+        <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
-          Permanently delete your account and all of its data — profile, posts, uploads, sessions,
-          and subscription records.{" "}
-          {emailConfigured
-            ? "We'll email you a confirmation link; nothing is deleted until you open it."
-            : "This takes effect immediately and cannot be undone."}
+          {t("description")} {emailConfigured ? t("emailNote") : t("immediateNote")}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -153,7 +153,7 @@ export function DeleteAccountCard({
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Confirm your password</FormLabel>
+                      <FormLabel>{t("confirmPassword")}</FormLabel>
                       <FormControl>
                         <Input type="password" autoComplete="current-password" {...field} />
                       </FormControl>
@@ -163,10 +163,10 @@ export function DeleteAccountCard({
                 />
                 <div className="flex gap-2">
                   <Button type="submit" variant="destructive" disabled={busy}>
-                    {busy ? "Deleting…" : "Permanently delete account"}
+                    {busy ? t("deleting") : t("submit")}
                   </Button>
                   <Button type="button" variant="outline" disabled={busy} onClick={cancel}>
-                    Cancel
+                    {t("cancel")}
                   </Button>
                 </div>
               </form>
@@ -175,7 +175,10 @@ export function DeleteAccountCard({
             <form onSubmit={onPhraseSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor={phraseId}>
-                  Type <span className="font-semibold">{CONFIRM_PHRASE}</span> to confirm
+                  {t.rich("phraseLabel", {
+                    phrase: CONFIRM_PHRASE,
+                    strong: (chunks) => <span className="font-semibold">{chunks}</span>,
+                  })}
                 </Label>
                 <Input
                   id={phraseId}
@@ -190,10 +193,10 @@ export function DeleteAccountCard({
                   variant="destructive"
                   disabled={busy || phrase.trim() !== CONFIRM_PHRASE}
                 >
-                  {busy ? "Deleting…" : "Permanently delete account"}
+                  {busy ? t("deleting") : t("submit")}
                 </Button>
                 <Button type="button" variant="outline" disabled={busy} onClick={cancel}>
-                  Cancel
+                  {t("cancel")}
                 </Button>
               </div>
             </form>
@@ -208,15 +211,13 @@ export function DeleteAccountCard({
                 setRevealed(true);
               }}
             >
-              Delete account…
+              {t("reveal")}
             </Button>
           </div>
         )}
         {status.kind === "email-sent" ? (
           <p className="text-sm text-muted-foreground" role="status">
-            We sent a confirmation link to your email address. Your account will be deleted when you
-            open it in a browser where you're signed in — the link works once and expires in 24
-            hours.
+            {t("emailSent")}
           </p>
         ) : null}
       </CardContent>

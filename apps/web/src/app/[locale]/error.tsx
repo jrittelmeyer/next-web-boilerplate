@@ -3,6 +3,7 @@
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import * as Sentry from "@sentry/nextjs";
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { Link } from "@/i18n/navigation";
 
@@ -16,6 +17,7 @@ export default function ErrorBoundary({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("Error");
   useEffect(() => {
     Sentry.captureException(error);
   }, [error]);
@@ -23,15 +25,15 @@ export default function ErrorBoundary({
   return (
     <main>
       <EmptyState
-        title="Something went wrong"
-        description="An unexpected error occurred. You can try again, or head back home."
+        title={t("title")}
+        description={t("description")}
         action={
           <>
             <Button type="button" onClick={reset}>
-              Try again
+              {t("tryAgain")}
             </Button>
             <Button asChild variant="outline">
-              <Link href="/">Go home</Link>
+              <Link href="/">{t("goHome")}</Link>
             </Button>
           </>
         }

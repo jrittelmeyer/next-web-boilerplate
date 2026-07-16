@@ -2,6 +2,7 @@
 
 import { authClient } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 
@@ -28,6 +29,7 @@ export function AcceptInvitationClient({
   orgName: string;
   signedInEmail: string | null;
 }) {
+  const t = useTranslations("Organization.accept");
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export function AcceptInvitationClient({
     const { error: err } = await authClient.organization.acceptInvitation({ invitationId });
     if (err) {
       setPending(false);
-      setError(err.message ?? "Could not accept the invitation. It may have expired.");
+      setError(err.message ?? t("error"));
       return;
     }
     // Make the newly joined org the active workspace, then land on its manage page.
@@ -58,20 +60,23 @@ export function AcceptInvitationClient({
     router.refresh();
   }
 
+  const strong = (chunks: React.ReactNode) => (
+    <span className="font-medium text-foreground">{chunks}</span>
+  );
+
   if (signedInEmail === null) {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          Sign in as <span className="font-medium text-foreground">{invitedEmail}</span> to accept
-          this invitation.
+          {t.rich("signInPrompt", { email: invitedEmail, strong })}
         </p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button asChild>
-            <Link href={`/login?redirectTo=${encodeURIComponent(returnTo)}`}>Sign in</Link>
+            <Link href={`/login?redirectTo=${encodeURIComponent(returnTo)}`}>{t("signIn")}</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href={`/signup?redirectTo=${encodeURIComponent(returnTo)}`}>
-              Create an account
+              {t("createAccount")}
             </Link>
           </Button>
         </div>
@@ -83,10 +88,7 @@ export function AcceptInvitationClient({
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          This invitation is for <span className="font-medium text-foreground">{invitedEmail}</span>
-          , but you&rsquo;re signed in as{" "}
-          <span className="font-medium text-foreground">{signedInEmail}</span>. Switch accounts to
-          accept it.
+          {t.rich("mismatch", { invited: invitedEmail, signedIn: signedInEmail, strong })}
         </p>
         <div>
           <Button
@@ -95,7 +97,7 @@ export function AcceptInvitationClient({
             disabled={pending}
             onClick={() => void switchAccount()}
           >
-            Sign out &amp; switch account
+            {t("switchAccount")}
           </Button>
         </div>
       </div>
@@ -105,12 +107,11 @@ export function AcceptInvitationClient({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Accept as <span className="font-medium text-foreground">{signedInEmail}</span> to join{" "}
-        <span className="font-medium text-foreground">{orgName}</span>.
+        {t.rich("acceptPrompt", { email: signedInEmail, org: orgName, strong })}
       </p>
       <div>
         <Button type="button" disabled={pending} onClick={() => void accept()}>
-          {pending ? "Joining…" : "Accept invitation"}
+          {pending ? t("joining") : t("accept")}
         </Button>
       </div>
       {error ? (

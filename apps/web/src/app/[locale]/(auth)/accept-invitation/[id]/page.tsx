@@ -11,11 +11,20 @@ import {
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AcceptInvitationClient } from "@/components/organization/accept-invitation-client";
 import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 
-export const metadata: Metadata = { title: "Accept invitation" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string; locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Metadata" });
+  return { title: t("acceptInvitation") };
+}
 
 // Public invitation-accept surface (Tier 4 · Band 4), rendered at /accept-invitation/[id]
 // (config.ts's invitationAcceptUrl points here). It lives in the (auth) group to reuse the
@@ -31,6 +40,7 @@ export default async function AcceptInvitationPage({
 }) {
   const { id, locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("Organization.acceptPage");
   const session = await auth.api.getSession({ headers: await headers() });
 
   const invite = await db.query.invitation.findFirst({
@@ -58,23 +68,23 @@ export default async function AcceptInvitationPage({
   let body: { title: string; description: string; children?: React.ReactNode };
   if (invalid) {
     body = {
-      title: "Invitation not found",
-      description: "This invitation link is invalid. Ask an organization admin to send a new one.",
+      title: t("invalidTitle"),
+      description: t("invalidDescription"),
     };
   } else if (notPending) {
     body = {
-      title: "Invitation already used",
-      description: `This invitation is no longer pending (${invite.status}). Ask an admin to send a new one if you still need access.`,
+      title: t("usedTitle"),
+      description: t("usedDescription", { status: invite.status }),
     };
   } else if (expired) {
     body = {
-      title: "Invitation expired",
-      description: "This invitation has expired. Ask an organization admin to send a new one.",
+      title: t("expiredTitle"),
+      description: t("expiredDescription"),
     };
   } else {
     body = {
-      title: `Join ${org.name}`,
-      description: `You've been invited to join ${org.name} as ${invite.role ?? "member"}.`,
+      title: t("joinTitle", { org: org.name }),
+      description: t("joinDescription", { org: org.name, role: invite.role ?? "member" }),
       children: (
         <AcceptInvitationClient
           invitationId={invite.id}
@@ -96,7 +106,7 @@ export default async function AcceptInvitationPage({
       <CardContent className="flex flex-col gap-4">
         {body.children ?? (
           <Link href="/dashboard" className="text-sm text-foreground underline underline-offset-4">
-            Go to your dashboard
+            {t("goToDashboard")}
           </Link>
         )}
       </CardContent>

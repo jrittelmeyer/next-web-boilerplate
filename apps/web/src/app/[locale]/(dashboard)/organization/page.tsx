@@ -3,9 +3,19 @@ import { isEmailConfigured } from "@repo/email";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { OrganizationManager } from "@/components/organization/organization-manager";
+import type { Locale } from "@/i18n/routing";
 
-export const metadata: Metadata = { title: "Organization" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Metadata" });
+  return { title: t("organization") };
+}
 
 // Organization management surface (Tier 4 · Band 4), inside the (dashboard) shell. The
 // layout is the authoritative session gate; we re-read it here (cheap under the Step-19
@@ -14,7 +24,14 @@ export const metadata: Metadata = { title: "Organization" };
 // switching the active org from the header updates this page without a full reload. Only
 // `emailConfigured` is resolved server-side, to shape the invite copy (email-off → the
 // copyable accept link). This is a REAL surface (like /account), not a throwaway demo.
-export default async function OrganizationPage() {
+export default async function OrganizationPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("Organization.page");
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     redirect("/login");
@@ -23,10 +40,8 @@ export default async function OrganizationPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Organization</h1>
-        <p className="text-muted-foreground">
-          Manage the active organization&rsquo;s members and invitations.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
       <OrganizationManager emailConfigured={isEmailConfigured()} />
     </div>

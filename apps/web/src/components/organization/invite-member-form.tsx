@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 import { type InviteMemberInput, inviteMemberSchema } from "@repo/validators";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -46,6 +47,7 @@ type Status =
 // (the org refetch). The success copy branches on `emailConfigured` so the email-off
 // path tells the user to share the copyable link instead of waiting for a mail.
 export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean }) {
+  const t = useTranslations("Organization.invite");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const form = useForm<InviteMemberInput>({
     resolver: zodResolver(inviteMemberSchema),
@@ -61,7 +63,7 @@ export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean
     if (error) {
       setStatus({
         kind: "error",
-        message: error.message ?? "Could not send the invitation.",
+        message: error.message ?? t("error"),
       });
       return;
     }
@@ -76,12 +78,9 @@ export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invite a member</CardTitle>
+        <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
-          They&rsquo;ll join once they accept the invitation.
-          {emailConfigured
-            ? " We'll email them a link."
-            : " Email is off, so copy the invite link from the list below to share it."}
+          {t("description")} {emailConfigured ? t("emailNote") : t("offlineNote")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,12 +95,12 @@ export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean
               name="email"
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t("emailLabel")}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
                       autoComplete="off"
-                      placeholder="teammate@example.com"
+                      placeholder={t("emailPlaceholder")}
                       {...field}
                     />
                   </FormControl>
@@ -114,7 +113,7 @@ export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean
               name="role"
               render={({ field }) => (
                 <FormItem className="sm:w-36">
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel>{t("roleLabel")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="w-full">
@@ -122,8 +121,8 @@ export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="member">{t("roleMember")}</SelectItem>
+                      <SelectItem value="admin">{t("roleAdmin")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -135,7 +134,7 @@ export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean
               disabled={form.formState.isSubmitting}
               className="sm:mt-[1.625rem]"
             >
-              {form.formState.isSubmitting ? "Inviting…" : "Send invite"}
+              {form.formState.isSubmitting ? t("submitting") : t("submit")}
             </Button>
           </form>
         </Form>
@@ -146,12 +145,12 @@ export function InviteMemberForm({ emailConfigured }: { emailConfigured: boolean
         ) : null}
         {status.kind === "sent" ? (
           <p className="mt-3 text-sm text-muted-foreground" role="status">
-            Invitation sent to {status.email}.
+            {t("sent", { email: status.email })}
           </p>
         ) : null}
         {status.kind === "created" ? (
           <p className="mt-3 text-sm text-muted-foreground" role="status">
-            Invitation created for {status.email}. Copy its link from the list below to share it.
+            {t("created", { email: status.email })}
           </p>
         ) : null}
       </CardContent>

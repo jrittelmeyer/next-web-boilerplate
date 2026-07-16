@@ -4,6 +4,7 @@ import "@uploadthing/react/styles.css";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { UploadButton } from "@/lib/uploadthing-client";
@@ -24,6 +25,7 @@ export function AvatarCard({
   name: string;
   email: string;
 }) {
+  const t = useTranslations("Account.avatar");
   const router = useRouter();
   const [current, setCurrent] = useState<string | null>(image);
   const [removing, setRemoving] = useState(false);
@@ -41,13 +43,13 @@ export function AvatarCard({
       toast.error(result.error);
       return;
     }
-    toast.success("Photo removed.");
+    toast.success(t("removed"));
     router.refresh();
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm font-medium">Photo</span>
+      <span className="text-sm font-medium">{t("photo")}</span>
       <div className="flex items-center gap-4">
         <Avatar className="size-16">
           {current ? <AvatarImage src={current} alt="" /> : null}
@@ -61,7 +63,7 @@ export function AvatarCard({
                 // The DB write lands via onUploadComplete; show the new file now.
                 const url = res[0]?.ufsUrl;
                 if (url) setCurrent(url);
-                toast.success("Photo updated.");
+                toast.success(t("updated"));
                 router.refresh();
               }}
               onUploadError={(error: Error) => {
@@ -76,11 +78,11 @@ export function AvatarCard({
                 disabled={removing}
                 onClick={() => void remove()}
               >
-                {removing ? "Removing…" : "Remove"}
+                {removing ? t("removing") : t("remove")}
               </Button>
             ) : null}
           </div>
-          <p className="text-xs text-muted-foreground">JPG, PNG or GIF, up to 2MB.</p>
+          <p className="text-xs text-muted-foreground">{t("hint")}</p>
         </div>
       </div>
     </div>

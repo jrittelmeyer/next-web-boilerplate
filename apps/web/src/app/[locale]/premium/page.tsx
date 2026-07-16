@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/card";
 import { Lock, Sparkles } from "lucide-react";
 import { headers } from "next/headers";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { hasActiveSubscription } from "@/lib/subscription";
 
@@ -22,6 +22,7 @@ import { hasActiveSubscription } from "@/lib/subscription";
 export default async function PremiumPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("Premium");
   const session = await auth.api.getSession({ headers: await headers() });
   const entitled = session ? await hasActiveSubscription(session.user.id) : false;
 
@@ -32,13 +33,13 @@ export default async function PremiumPage({ params }: { params: Promise<{ locale
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="size-5" aria-hidden /> Premium content
+              <Lock className="size-5" aria-hidden /> {t("signedOut.title")}
             </CardTitle>
-            <CardDescription>Sign in to see whether your plan unlocks this.</CardDescription>
+            <CardDescription>{t("signedOut.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/login?redirectTo=/premium">Sign in</Link>
+              <Link href="/login?redirectTo=/premium">{t("signedOut.cta")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -47,16 +48,14 @@ export default async function PremiumPage({ params }: { params: Promise<{ locale
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="size-5 text-primary" aria-hidden /> Pro content unlocked
+              <Sparkles className="size-5 text-primary" aria-hidden /> {t("unlocked.title")}
             </CardTitle>
-            <CardDescription>
-              You have an active subscription, so this premium section is available.
-            </CardDescription>
+            <CardDescription>{t("unlocked.description")}</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Swap this for the real gated feature. The gate is a single call —
-            <code className="mx-1 rounded bg-muted px-1 py-0.5">hasActiveSubscription(userId)</code>
-            — so any Server Component, Server Action, or tRPC procedure can reuse it.
+            {t.rich("unlocked.body", {
+              code: (chunks) => <code className="mx-1 rounded bg-muted px-1 py-0.5">{chunks}</code>,
+            })}
           </CardContent>
         </Card>
       ) : (
@@ -64,15 +63,13 @@ export default async function PremiumPage({ params }: { params: Promise<{ locale
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="size-5" aria-hidden /> This content is for subscribers
+              <Lock className="size-5" aria-hidden /> {t("locked.title")}
             </CardTitle>
-            <CardDescription>
-              Your account has no active subscription. Subscribe to unlock premium content.
-            </CardDescription>
+            <CardDescription>{t("locked.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/billing">View plans</Link>
+              <Link href="/billing">{t("locked.cta")}</Link>
             </Button>
           </CardContent>
         </Card>

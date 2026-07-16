@@ -25,6 +25,7 @@ import {
   twoFactorCodeSchema,
   twoFactorPasswordSchema,
 } from "@repo/validators";
+import { useTranslations } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -69,6 +70,7 @@ export function TwoFactorCard({
   enabled: boolean;
   hasPassword: boolean;
 }) {
+  const t = useTranslations("Account.twoFactor");
   const router = useRouter();
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [mode, setMode] = useState<Mode>("idle");
@@ -110,7 +112,7 @@ export function TwoFactorCard({
       password: values.password,
     });
     if (enableError || !data) {
-      setError(enableError?.message ?? "Could not start setup. Check your password and try again.");
+      setError(enableError?.message ?? t("errorStart"));
       return;
     }
     setEnrollData({ totpURI: data.totpURI, backupCodes: data.backupCodes });
@@ -122,9 +124,7 @@ export function TwoFactorCard({
     setError(null);
     const { error: verifyError } = await authClient.twoFactor.verifyTotp({ code: values.code });
     if (verifyError) {
-      setError(
-        verifyError.message ?? "That code didn't match. Try the current code from your app.",
-      );
+      setError(verifyError.message ?? t("errorVerify"));
       return;
     }
     setIsEnabled(true);
@@ -138,7 +138,7 @@ export function TwoFactorCard({
       password: values.password,
     });
     if (disableError) {
-      setError(disableError.message ?? "Could not disable. Check your password and try again.");
+      setError(disableError.message ?? t("errorDisable"));
       return;
     }
     setIsEnabled(false);
@@ -152,7 +152,7 @@ export function TwoFactorCard({
       password: values.password,
     });
     if (genError || !data) {
-      setError(genError?.message ?? "Could not regenerate. Check your password and try again.");
+      setError(genError?.message ?? t("errorRegenerate"));
       return;
     }
     setRegenCodes(data.backupCodes);
@@ -161,43 +161,36 @@ export function TwoFactorCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Two-factor authentication</CardTitle>
-        <CardDescription>
-          {hasPassword
-            ? "Add a one-time code from an authenticator app to your sign-in for an extra layer of security."
-            : "Two-factor authentication protects password sign-in, so it isn't available on a social-only account."}
-        </CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{hasPassword ? t("description") : t("descriptionSocial")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {!hasPassword ? (
           <p className="text-sm text-muted-foreground">
-            To use two-factor authentication, first set a password for email sign-in via the{" "}
-            <a href="/forgot-password" className="text-foreground underline underline-offset-4">
-              password reset
-            </a>{" "}
-            flow.
+            {t.rich("socialPointer", {
+              link: (chunks) => (
+                <a href="/forgot-password" className="text-foreground underline underline-offset-4">
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         ) : !isEnabled ? (
           // ---- Disabled: enroll flow -------------------------------------------------
           mode === "idle" ? (
             <div>
               <Button type="button" onClick={() => start("enrollPassword")}>
-                Enable two-factor authentication
+                {t("enable")}
               </Button>
             </div>
           ) : mode === "enrollVerify" && enrollData ? (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                Scan this QR code with your authenticator app, then enter the 6-digit code it shows
-                to finish.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("scanHint")}</p>
               <div className="flex w-fit justify-center rounded-md border bg-white p-4">
                 <QRCodeSVG value={enrollData.totpURI} size={180} />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
-                  Can&rsquo;t scan? Enter this key manually:
-                </span>
+                <span className="text-sm font-medium">{t("manualKey")}</span>
                 <code className="w-fit rounded bg-muted px-2 py-1 font-mono text-sm break-all">
                   {manualKeyFromTotpUri(enrollData.totpURI)}
                 </code>
@@ -214,12 +207,12 @@ export function TwoFactorCard({
                     name="code"
                     render={({ field }) => (
                       <FormItem className="max-w-xs">
-                        <FormLabel>Verification code</FormLabel>
+                        <FormLabel>{t("codeLabel")}</FormLabel>
                         <FormControl>
                           <Input
                             inputMode="numeric"
                             autoComplete="one-time-code"
-                            placeholder="123456"
+                            placeholder={t("codePlaceholder")}
                             {...field}
                           />
                         </FormControl>
@@ -234,10 +227,10 @@ export function TwoFactorCard({
                   ) : null}
                   <div className="flex gap-2">
                     <Button type="submit" disabled={codeForm.formState.isSubmitting}>
-                      {codeForm.formState.isSubmitting ? "Verifying…" : "Verify and enable"}
+                      {codeForm.formState.isSubmitting ? t("verifying") : t("verifyAndEnable")}
                     </Button>
                     <Button type="button" variant="outline" onClick={toIdle}>
-                      Cancel
+                      {t("cancel")}
                     </Button>
                   </div>
                 </form>
@@ -247,10 +240,10 @@ export function TwoFactorCard({
             // mode === "enrollPassword"
             <PasswordForm
               form={passwordForm}
-              label="Confirm your password"
-              description="Confirm your password to begin setup."
-              submitLabel="Continue"
-              pendingLabel="Starting…"
+              label={t("confirmPassword")}
+              description={t("startDescription")}
+              submitLabel={t("continue")}
+              pendingLabel={t("starting")}
               error={error}
               onSubmit={onEnrollPassword}
               onCancel={toIdle}
@@ -260,10 +253,8 @@ export function TwoFactorCard({
           // ---- Enabled: status + manage ---------------------------------------------
           <div className="flex flex-col gap-4">
             <p className="text-sm" role="status">
-              <span className="font-medium text-foreground">Enabled.</span>{" "}
-              <span className="text-muted-foreground">
-                You&rsquo;ll be asked for a code from your authenticator app when you sign in.
-              </span>
+              <span className="font-medium text-foreground">{t("enabledLabel")}</span>{" "}
+              <span className="text-muted-foreground">{t("enabledDescription")}</span>
             </p>
             {mode === "regenerate" ? (
               regenCodes ? (
@@ -271,17 +262,17 @@ export function TwoFactorCard({
                   <BackupCodesPanel codes={regenCodes} />
                   <div>
                     <Button type="button" variant="outline" onClick={toIdle}>
-                      Done
+                      {t("done")}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <PasswordForm
                   form={passwordForm}
-                  label="Confirm your password"
-                  description="This replaces your existing backup codes — the old ones stop working immediately."
-                  submitLabel="Generate new codes"
-                  pendingLabel="Generating…"
+                  label={t("confirmPassword")}
+                  description={t("regenerateDescription")}
+                  submitLabel={t("generateCodes")}
+                  pendingLabel={t("generating")}
                   error={error}
                   onSubmit={onRegenerate}
                   onCancel={toIdle}
@@ -290,10 +281,10 @@ export function TwoFactorCard({
             ) : mode === "disable" ? (
               <PasswordForm
                 form={passwordForm}
-                label="Confirm your password"
-                description="You'll no longer be asked for a code when you sign in."
-                submitLabel="Disable"
-                pendingLabel="Disabling…"
+                label={t("confirmPassword")}
+                description={t("disableDescription")}
+                submitLabel={t("disable")}
+                pendingLabel={t("disabling")}
                 destructive
                 error={error}
                 onSubmit={onDisable}
@@ -302,10 +293,10 @@ export function TwoFactorCard({
             ) : (
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => start("regenerate")}>
-                  Regenerate backup codes
+                  {t("regenerate")}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => start("disable")}>
-                  Disable
+                  {t("disable")}
                 </Button>
               </div>
             )}
@@ -339,6 +330,7 @@ function PasswordForm({
   onSubmit: (values: TwoFactorPasswordInput) => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslations("Account.twoFactor");
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
@@ -375,7 +367,7 @@ function PasswordForm({
             disabled={form.formState.isSubmitting}
             onClick={onCancel}
           >
-            Cancel
+            {t("cancel")}
           </Button>
         </div>
       </form>
@@ -386,6 +378,7 @@ function PasswordForm({
 // Show recovery codes once, with a copy affordance. These are the only way back in if
 // the authenticator is lost, so the copy makes it easy to stash them somewhere safe.
 function BackupCodesPanel({ codes }: { codes: string[] }) {
+  const t = useTranslations("Account.twoFactor");
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -400,11 +393,8 @@ function BackupCodesPanel({ codes }: { codes: string[] }) {
 
   return (
     <div className="flex max-w-md flex-col gap-2 rounded-md border p-3">
-      <span className="text-sm font-medium">Backup codes</span>
-      <p className="text-xs text-muted-foreground">
-        Save these somewhere safe. Each works once if you lose access to your authenticator.
-        They&rsquo;re shown only now.
-      </p>
+      <span className="text-sm font-medium">{t("backupTitle")}</span>
+      <p className="text-xs text-muted-foreground">{t("backupHint")}</p>
       <ul className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-sm">
         {codes.map((code) => (
           <li key={code}>{code}</li>
@@ -412,7 +402,7 @@ function BackupCodesPanel({ codes }: { codes: string[] }) {
       </ul>
       <div>
         <Button type="button" variant="outline" size="sm" onClick={() => void copy()}>
-          {copied ? "Copied" : "Copy codes"}
+          {copied ? t("copied") : t("copyCodes")}
         </Button>
       </div>
     </div>

@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Check, ChevronsUpDown, Plus, Settings } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { CreateOrgDialog } from "./create-org-dialog";
@@ -27,6 +28,7 @@ import { CreateOrgDialog } from "./create-org-dialog";
 // memory). refresh() only reconciles the server-rendered surfaces (e.g. post.list
 // scoping) in the background. A failed switch rolls the selection back.
 export function OrgSwitcher() {
+  const t = useTranslations("Organization.switcher");
   const router = useRouter();
   const { data: organizations } = authClient.useListOrganizations();
   const { data: activeOrg } = authClient.useActiveOrganization();
@@ -38,10 +40,10 @@ export function OrgSwitcher() {
   const activeId = optimisticId !== undefined ? optimisticId : (activeOrg?.id ?? null);
   const activeName =
     activeId === null
-      ? "Personal"
+      ? t("personal")
       : (organizations?.find((org) => org.id === activeId)?.name ??
         activeOrg?.name ??
-        "Organization");
+        t("fallbackName"));
 
   async function switchTo(organizationId: string | null) {
     if (organizationId === activeId) return;
@@ -65,16 +67,16 @@ export function OrgSwitcher() {
             size="sm"
             disabled={pending}
             className="max-w-48 justify-between gap-2"
-            aria-label="Switch workspace"
+            aria-label={t("srLabel")}
           >
             <span className="truncate">{activeName}</span>
             <ChevronsUpDown className="size-4 shrink-0 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+          <DropdownMenuLabel>{t("workspace")}</DropdownMenuLabel>
           <DropdownMenuItem onSelect={() => void switchTo(null)}>
-            <span className="flex-1">Personal</span>
+            <span className="flex-1">{t("personal")}</span>
             {activeId === null ? <Check className="size-4" /> : null}
           </DropdownMenuItem>
           {organizations && organizations.length > 0 ? (
@@ -100,13 +102,13 @@ export function OrgSwitcher() {
             }}
           >
             <Plus className="size-4" />
-            Create organization…
+            {t("create")}
           </DropdownMenuItem>
           {activeId !== null ? (
             <DropdownMenuItem asChild>
               <Link href="/organization">
                 <Settings className="size-4" />
-                Manage organization
+                {t("manage")}
               </Link>
             </DropdownMenuItem>
           ) : null}

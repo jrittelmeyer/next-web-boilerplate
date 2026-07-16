@@ -14,6 +14,7 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/components/sonner";
 import { type ChangePasswordInput, changePasswordSchema } from "@repo/validators";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 
 // Signed-in password change. Auth mutations go through the Better Auth client (the
@@ -22,6 +23,7 @@ import { useForm } from "react-hook-form";
 // `revokeOtherSessions` signs out the account's other sessions on a successful change
 // (the secure default after a credential rotation). The outcome surfaces as a toast (A1).
 export function ChangePasswordForm() {
+  const t = useTranslations("Account.password");
   const form = useForm<ChangePasswordInput>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: { currentPassword: "", newPassword: "" },
@@ -34,10 +36,10 @@ export function ChangePasswordForm() {
       revokeOtherSessions: true,
     });
     if (error) {
-      toast.error(error.message ?? "Could not change your password. Check your current password.");
+      toast.error(error.message ?? t("error"));
       return;
     }
-    toast.success("Password updated — other sessions have been signed out.");
+    toast.success(t("updated"));
     form.reset({ currentPassword: "", newPassword: "" });
   }
 
@@ -49,7 +51,7 @@ export function ChangePasswordForm() {
           name="currentPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Current password</FormLabel>
+              <FormLabel>{t("current")}</FormLabel>
               <FormControl>
                 <Input type="password" autoComplete="current-password" {...field} />
               </FormControl>
@@ -62,7 +64,7 @@ export function ChangePasswordForm() {
           name="newPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>New password</FormLabel>
+              <FormLabel>{t("new")}</FormLabel>
               <FormControl>
                 <Input type="password" autoComplete="new-password" {...field} />
               </FormControl>
@@ -71,7 +73,7 @@ export function ChangePasswordForm() {
           )}
         />
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Updating…" : "Update password"}
+          {form.formState.isSubmitting ? t("updating") : t("submit")}
         </Button>
       </form>
     </Form>

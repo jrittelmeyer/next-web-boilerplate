@@ -9,6 +9,7 @@ import {
 } from "@repo/ui/components/card";
 import { desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 import { SubscribeButton } from "@/components/billing/subscribe-button";
 
@@ -23,7 +24,11 @@ import { SubscribeButton } from "@/components/billing/subscribe-button";
 // customer portal via `createBillingPortalSession`. The card's gate is the row's
 // existence: no subscription has ever been recorded → nothing to manage.
 // Delete this when a real billing surface lands. See docs/context/SERVICES.md.
-export default async function BillingPage() {
+export default async function BillingPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("Billing.page");
+  const format = await getFormatter();
   const session = await auth.api.getSession({ headers: await headers() });
   const subscription = session
     ? await db.query.subscriptions.findFirst({
@@ -37,10 +42,8 @@ export default async function BillingPage() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Billing demo</CardTitle>
-          <CardDescription>
-            Start a hosted Stripe Checkout session for an example $10/mo plan.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <SubscribeButton />
@@ -50,11 +53,13 @@ export default async function BillingPage() {
       {subscription ? (
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Your subscription</CardTitle>
+            <CardTitle>{t("subscriptionTitle")}</CardTitle>
             <CardDescription>
-              Status: {subscription.status}
+              {t("status", { status: subscription.status })}
               {subscription.currentPeriodEnd
-                ? ` · renews ${subscription.currentPeriodEnd.toLocaleDateString()}`
+                ? ` · ${t("renews", {
+                    date: format.dateTime(subscription.currentPeriodEnd, "dateOnly"),
+                  })}`
                 : null}
             </CardDescription>
           </CardHeader>

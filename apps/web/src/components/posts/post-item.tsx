@@ -14,6 +14,7 @@ import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 import { type CreatePostInput, createPostSchema } from "@repo/validators";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { applyFieldErrors, FieldActionError } from "@/lib/forms";
@@ -36,6 +37,8 @@ import {
 // ownership, so editing/deleting another author's post optimistically changes the row
 // then rolls back on the typed "Forbidden" — a live demo of the rollback path.
 export function PostItem({ post }: { post: PostListItem }) {
+  const t = useTranslations("Posts.item");
+  const format = useFormatter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const queryKey = trpc.post.list.infiniteQueryKey();
@@ -122,7 +125,7 @@ export function PostItem({ post }: { post: PostListItem }) {
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t("titleLabel")}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -135,7 +138,7 @@ export function PostItem({ post }: { post: PostListItem }) {
               name="content"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Content</FormLabel>
+                  <FormLabel>{t("contentLabel")}</FormLabel>
                   <FormControl>
                     <Textarea rows={4} {...field} />
                   </FormControl>
@@ -145,7 +148,7 @@ export function PostItem({ post }: { post: PostListItem }) {
             />
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={editMutation.isPending}>
-                {editMutation.isPending ? "Saving…" : "Save"}
+                {editMutation.isPending ? t("saving") : t("save")}
               </Button>
               <Button
                 type="button"
@@ -157,7 +160,7 @@ export function PostItem({ post }: { post: PostListItem }) {
                   form.reset({ title: post.title, content: post.content });
                 }}
               >
-                Cancel
+                {t("cancel")}
               </Button>
             </div>
             {error ? (
@@ -177,7 +180,10 @@ export function PostItem({ post }: { post: PostListItem }) {
         <p className="font-medium">{post.title}</p>
         <p className="text-sm text-muted-foreground">{post.content}</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          by {post.authorName ?? "unknown"} · {post.createdAt.toLocaleString()}
+          {t("meta", {
+            author: post.authorName ?? t("unknownAuthor"),
+            date: format.dateTime(post.createdAt, "short"),
+          })}
         </p>
         {error ? (
           <p className="mt-1 text-sm text-destructive" role="alert">
@@ -196,7 +202,7 @@ export function PostItem({ post }: { post: PostListItem }) {
             setIsEditing(true);
           }}
         >
-          Edit
+          {t("edit")}
         </Button>
         <Button
           type="button"
@@ -205,7 +211,7 @@ export function PostItem({ post }: { post: PostListItem }) {
           onClick={() => deleteMutation.mutate()}
           disabled={deleteMutation.isPending}
         >
-          {deleteMutation.isPending ? "Deleting…" : "Delete"}
+          {deleteMutation.isPending ? t("deleting") : t("delete")}
         </Button>
       </div>
     </li>

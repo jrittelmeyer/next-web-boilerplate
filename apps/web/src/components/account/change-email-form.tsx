@@ -14,6 +14,7 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/components/sonner";
 import { type ChangeEmailInput, changeEmailSchema } from "@repo/validators";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "@/i18n/navigation";
@@ -39,6 +40,7 @@ type Status =
 //     clicking THAT applies the change. So the copy points the user at their current inbox,
 //     not the new one. See AUTH.md → Account page.
 export function ChangeEmailForm({ emailVerified }: { emailVerified: boolean }) {
+  const t = useTranslations("Account.email");
   const router = useRouter();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const form = useForm<ChangeEmailInput>({
@@ -54,7 +56,7 @@ export function ChangeEmailForm({ emailVerified }: { emailVerified: boolean }) {
       callbackURL: "/account",
     });
     if (error) {
-      toast.error(error.message ?? "Could not change your email. Please try again.");
+      toast.error(error.message ?? t("error"));
       return;
     }
 
@@ -63,7 +65,7 @@ export function ChangeEmailForm({ emailVerified }: { emailVerified: boolean }) {
       setStatus({ kind: "confirmation-sent", newEmail: values.newEmail });
     } else {
       // Applied in place — re-read the server session so the page shows the new address.
-      toast.success("Email updated.");
+      toast.success(t("updated"));
       router.refresh();
     }
   }
@@ -76,21 +78,25 @@ export function ChangeEmailForm({ emailVerified }: { emailVerified: boolean }) {
           name="newEmail"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>New email</FormLabel>
+              <FormLabel>{t("label")}</FormLabel>
               <FormControl>
-                <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder={t("placeholder")}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Saving…" : "Update email"}
+          {form.formState.isSubmitting ? t("saving") : t("submit")}
         </Button>
         {status.kind === "confirmation-sent" ? (
           <p className="text-sm text-muted-foreground" role="status">
-            We sent a confirmation link to your current email address. Open it to continue — then
-            we'll email {status.newEmail} a final verification link to finish the change.
+            {t("confirmationSent", { email: status.newEmail })}
           </p>
         ) : null}
       </form>

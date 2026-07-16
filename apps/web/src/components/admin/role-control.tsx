@@ -3,6 +3,7 @@
 import type { Role } from "@repo/db/schema";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
+import { useTranslations } from "next-intl";
 import { useOptimistic, useTransition } from "react";
 import { setUserRole } from "@/server/actions/admin";
 
@@ -27,15 +28,16 @@ export function RoleControl({
   role: Role;
   currentUserId: string;
 }) {
+  const t = useTranslations("Admin.role");
   const [, startTransition] = useTransition();
   const [optimisticRole, setOptimisticRole] = useOptimistic(role);
 
   if (userId === currentUserId) {
-    return <span className="text-xs text-muted-foreground">(you)</span>;
+    return <span className="text-xs text-muted-foreground">{t("you")}</span>;
   }
 
   const nextRole: Role = optimisticRole === "admin" ? "user" : "admin";
-  const label = optimisticRole === "admin" ? "Make user" : "Make admin";
+  const label = optimisticRole === "admin" ? t("makeUser") : t("makeAdmin");
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -51,7 +53,7 @@ export function RoleControl({
               toast.error(result.error);
               return;
             }
-            toast.success(`Role updated to ${nextRole}.`);
+            toast.success(t("updated", { role: nextRole }));
           });
         }}
       >

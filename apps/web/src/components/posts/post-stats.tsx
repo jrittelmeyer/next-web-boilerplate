@@ -2,6 +2,7 @@ import { db } from "@repo/db";
 import { posts } from "@repo/db/schema";
 import { count } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 /**
  * Cached aggregate read — the `"use cache"` showcase (D4 · Next 16 Cache Components).
@@ -35,18 +36,20 @@ async function getPostStats(): Promise<{ total: number | null }> {
 /**
  * Async server component that renders the cached count. Wrap it in <Suspense> on the
  * page so the surrounding card chrome stays in the Partial-Prerender static shell while
- * this streams in.
+ * this streams in. Takes the locale as a prop and re-anchors it itself
+ * (setRequestLocale) so translations resolve even when this renders outside the
+ * page's shell pass (regeneration after an updateTag("posts") bust).
  */
-export async function PostStats() {
+export async function PostStats({ locale }: { locale: string }) {
+  setRequestLocale(locale);
+  const t = await getTranslations("Posts.stats");
   const { total } = await getPostStats();
 
   return (
     <p className="text-sm text-muted-foreground">
-      {total === null
-        ? "Post count unavailable."
-        : `${total} post${total === 1 ? "" : "s"} published.`}{" "}
+      {total === null ? t("unavailable") : t("count", { total })}{" "}
       <span className="text-xs">
-        (cached via <code>&quot;use cache&quot;</code>, revalidated on write)
+        {t.rich("cachedHint", { code: (chunks) => <code>{chunks}</code> })}
       </span>
     </p>
   );

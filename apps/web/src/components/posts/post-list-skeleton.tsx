@@ -1,4 +1,5 @@
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { useTranslations } from "next-intl";
 
 // Component-level loading placeholder for the posts feed (Band-2 A14). It mirrors the
 // bordered-card shape of a real <PostItem> row (title line + content line + meta line)
@@ -13,8 +14,9 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 const ROW_KEYS = ["a", "b", "c"];
 
 export function PostListSkeleton() {
+  const t = useTranslations("Posts.skeleton");
   return (
-    <div className="flex flex-col gap-3" role="status" aria-label="Loading posts">
+    <div className="flex flex-col gap-3" role="status" aria-label={t("loading")}>
       {ROW_KEYS.map((key) => (
         <div key={key} className="rounded-md border p-4">
           <Skeleton className="h-4 w-1/3" />

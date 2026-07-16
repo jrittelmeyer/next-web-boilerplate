@@ -14,6 +14,7 @@ import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 import { type CreatePostInput, createPostSchema } from "@repo/validators";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { applyFieldErrors, FieldActionError } from "@/lib/forms";
@@ -36,6 +37,7 @@ export function CreatePostForm({
 }: {
   currentUser: { id: string; name: string } | null;
 }) {
+  const t = useTranslations("Posts.form");
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const queryKey = trpc.post.list.infiniteQueryKey();
@@ -109,9 +111,9 @@ export function CreatePostForm({
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Title</FormLabel>
+              <FormLabel>{t("titleLabel")}</FormLabel>
               <FormControl>
-                <Input placeholder="A great post title" {...field} />
+                <Input placeholder={t("titlePlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -122,22 +124,18 @@ export function CreatePostForm({
           name="content"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Content</FormLabel>
+              <FormLabel>{t("contentLabel")}</FormLabel>
               <FormControl>
-                <Textarea placeholder="Write something…" rows={4} {...field} />
+                <Textarea placeholder={t("contentPlaceholder")} rows={4} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button type="submit" disabled={createMutation.isPending}>
-          {createMutation.isPending ? "Publishing…" : "Publish post"}
+          {createMutation.isPending ? t("submitting") : t("submit")}
         </Button>
-        {!currentUser ? (
-          <p className="text-sm text-muted-foreground">
-            Not signed in — publishing returns “Unauthorized”.
-          </p>
-        ) : null}
+        {!currentUser ? <p className="text-sm text-muted-foreground">{t("notSignedIn")}</p> : null}
         {status.kind === "error" ? (
           <p className="text-sm text-destructive" role="alert">
             {status.message}
@@ -145,7 +143,7 @@ export function CreatePostForm({
         ) : null}
         {status.kind === "success" ? (
           <p className="text-sm text-muted-foreground" role="status">
-            Published “{status.title}”.
+            {t("published", { title: status.title })}
           </p>
         ) : null}
       </form>

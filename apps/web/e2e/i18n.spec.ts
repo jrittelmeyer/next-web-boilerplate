@@ -44,6 +44,17 @@ test("public pages expose hreflang alternates in the head", async ({ page }) => 
   await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveCount(1);
 });
 
+test("the posts demo page renders in Spanish under /es (path-to-100 #7)", async ({ page }) => {
+  // Full-surface coverage: the demo/scaffold routes are translated too. Both
+  // assertions live in the PPR static shell (composer card title + posts card
+  // description), so this stays DB-free like the rest of the file.
+  await page.goto("/es/posts");
+  await expect(page.getByText("Nueva publicación")).toBeVisible();
+  await expect(
+    page.getByText("Se leen mediante la consulta pública de tRPC, las más recientes primero."),
+  ).toBeVisible();
+});
+
 test("an unauthenticated /es/dashboard visit bounces to the es login carrying redirectTo", async ({
   page,
 }) => {

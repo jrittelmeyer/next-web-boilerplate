@@ -3,6 +3,7 @@
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/components/sonner";
+import { useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition } from "react";
 import { banUser, unbanUser } from "@/server/actions/admin";
 
@@ -27,6 +28,7 @@ export function BanControl({
   banned: boolean;
   currentUserId: string;
 }) {
+  const t = useTranslations("Admin.ban");
   const [, startTransition] = useTransition();
   const [optimisticBanned, setOptimisticBanned] = useOptimistic(banned);
   const [reasonOpen, setReasonOpen] = useState(false);
@@ -42,7 +44,7 @@ export function BanControl({
         toast.error(result.error);
         return;
       }
-      toast.success("User unbanned.");
+      toast.success(t("unbannedToast"));
     });
   }
 
@@ -60,7 +62,7 @@ export function BanControl({
       }
       setReasonOpen(false);
       setReason("");
-      toast.success("User banned. Their sessions were revoked.");
+      toast.success(t("bannedToast"));
     });
   }
 
@@ -68,10 +70,10 @@ export function BanControl({
     return (
       <div className="flex items-center gap-2">
         <span className="rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-          Banned
+          {t("banned")}
         </span>
         <Button type="button" variant="outline" size="sm" onClick={runUnban}>
-          Unban
+          {t("unban")}
         </Button>
       </div>
     );
@@ -90,13 +92,13 @@ export function BanControl({
           autoFocus
           value={reason}
           onChange={(event) => setReason(event.target.value)}
-          placeholder="Reason (optional)"
-          aria-label="Ban reason"
+          placeholder={t("reasonPlaceholder")}
+          aria-label={t("reasonLabel")}
           maxLength={500}
           className="h-8 w-40 text-xs"
         />
         <Button type="submit" variant="destructive" size="sm">
-          Confirm
+          {t("confirm")}
         </Button>
         <Button
           type="button"
@@ -107,7 +109,7 @@ export function BanControl({
             setReason("");
           }}
         >
-          Cancel
+          {t("cancel")}
         </Button>
       </form>
     );
@@ -115,7 +117,7 @@ export function BanControl({
 
   return (
     <Button type="button" variant="outline" size="sm" onClick={() => setReasonOpen(true)}>
-      Ban
+      {t("ban")}
     </Button>
   );
 }

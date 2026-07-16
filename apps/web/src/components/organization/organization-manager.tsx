@@ -4,6 +4,7 @@ import { authClient } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Building2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { CreateOrgDialog } from "./create-org-dialog";
 import { InviteMemberForm } from "./invite-member-form";
@@ -19,12 +20,13 @@ import { PendingInvitations } from "./pending-invitations";
 // (derived from the members list) gates the management controls for UX only; Better Auth
 // re-checks authority on every endpoint (see lib/organization / orgProcedure).
 export function OrganizationManager({ emailConfigured }: { emailConfigured: boolean }) {
+  const t = useTranslations("Organization.manager");
   const { data: session } = authClient.useSession();
   const { data: org, isPending } = authClient.useActiveOrganization();
   const [createOpen, setCreateOpen] = useState(false);
 
   if (isPending && !org) {
-    return <p className="text-sm text-muted-foreground">Loading organization…</p>;
+    return <p className="text-sm text-muted-foreground">{t("loading")}</p>;
   }
 
   if (!org) {
@@ -32,11 +34,11 @@ export function OrganizationManager({ emailConfigured }: { emailConfigured: bool
       <>
         <EmptyState
           icon={<Building2 className="size-10" />}
-          title="No organization selected"
-          description="You're in your Personal workspace. Create an organization, or switch to one from the workspace menu in the header, to manage its members and invitations."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
           action={
             <Button type="button" onClick={() => setCreateOpen(true)}>
-              Create organization
+              {t("create")}
             </Button>
           }
         />
@@ -59,8 +61,8 @@ export function OrganizationManager({ emailConfigured }: { emailConfigured: bool
           <span className="font-mono">{org.slug}</span>
           {myRole ? (
             <>
-              {" · your role: "}
-              <span className="capitalize">{myRole}</span>
+              {" · "}
+              {t("yourRole")} <span className="capitalize">{myRole}</span>
             </>
           ) : null}
         </p>

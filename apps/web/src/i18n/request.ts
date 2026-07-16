@@ -17,9 +17,14 @@ export default getRequestConfig(async ({ requestLocale }) => {
     // Named value formats, inherited app-wide (the bare <NextIntlClientProvider>
     // auto-picks them up from here), so `format.dateTime(d, "short")` renders the
     // same on the server and the client. `short` ≈ the old `toLocaleString()`
-    // (date + time). See docs/context/I18N.md → Formatting dates, numbers & currency.
+    // (date + time); `dateOnly` ≈ a medium `toLocaleDateString()` (no time), for
+    // dates where the clock is noise (passkey added, invitation expiry, renewal).
+    // See docs/context/I18N.md → Formatting dates, numbers & currency.
     formats: {
-      dateTime: { short: { dateStyle: "medium", timeStyle: "short" } },
+      dateTime: {
+        short: { dateStyle: "medium", timeStyle: "short" },
+        dateOnly: { dateStyle: "medium" },
+      },
     },
     // A global default timeZone is REQUIRED for absolute times: without it a date
     // SSRs in the server's zone but hydrates in the user's → markup mismatch (and a

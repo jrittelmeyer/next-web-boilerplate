@@ -3,6 +3,7 @@
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useTRPC } from "@/lib/trpc/client";
 import { reindexPosts } from "@/server/actions/post";
@@ -22,6 +23,7 @@ type IndexStatus =
 // non-admin invoking the action directly gets a typed "Forbidden"). Unset env
 // shows "not configured". Create posts on /posts to index them on write.
 export function SearchDemo({ canReindex }: { canReindex: boolean }) {
+  const t = useTranslations("Search.demo");
   const trpc = useTRPC();
   const [term, setTerm] = useState("");
   const [query, setQuery] = useState("");
@@ -53,11 +55,11 @@ export function SearchDemo({ canReindex }: { canReindex: boolean }) {
       >
         <Input
           name="q"
-          placeholder="Search the example index…"
+          placeholder={t("placeholder")}
           value={term}
           onChange={(e) => setTerm(e.target.value)}
         />
-        <Button type="submit">Search</Button>
+        <Button type="submit">{t("submit")}</Button>
       </form>
 
       {canReindex ? (
@@ -68,11 +70,11 @@ export function SearchDemo({ canReindex }: { canReindex: boolean }) {
             onClick={onIndex}
             disabled={indexStatus.kind === "indexing"}
           >
-            {indexStatus.kind === "indexing" ? "Reindexing…" : "Reindex posts from database"}
+            {indexStatus.kind === "indexing" ? t("reindexing") : t("reindex")}
           </Button>
           {indexStatus.kind === "done" ? (
             <p className="text-sm text-muted-foreground" role="status">
-              Reindexed {indexStatus.indexed} posts.
+              {t("reindexed", { count: indexStatus.indexed })}
             </p>
           ) : null}
           {indexStatus.kind === "error" ? (
@@ -86,17 +88,14 @@ export function SearchDemo({ canReindex }: { canReindex: boolean }) {
       <div className="flex flex-col gap-2" aria-live="polite">
         {query.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Type a query and hit Search. Create posts on /posts first if you get no results
-            {canReindex ? " (or reindex from the database above)" : ""}.
+            {canReindex ? t("emptyHintAdmin") : t("emptyHint")}
           </p>
         ) : search.isFetching ? (
-          <p className="text-sm text-muted-foreground">Searching…</p>
+          <p className="text-sm text-muted-foreground">{t("searching")}</p>
         ) : search.data && !search.data.configured ? (
-          <p className="text-sm text-muted-foreground">Search is not configured.</p>
+          <p className="text-sm text-muted-foreground">{t("notConfigured")}</p>
         ) : search.data && search.data.hits.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No results for “{query}”. Did you reindex from the database?
-          </p>
+          <p className="text-sm text-muted-foreground">{t("noResults", { query })}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {search.data?.hits.map((hit) => (

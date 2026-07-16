@@ -9,7 +9,9 @@ import {
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { headers } from "next/headers";
 import { connection } from "next/server";
-import { Suspense } from "react";
+import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Suspense, use } from "react";
 import { POSTS_PAGE_SIZE } from "@/components/posts/constants";
 import { CreatePostForm } from "@/components/posts/create-post-form";
 import { PostList } from "@/components/posts/post-list";
@@ -25,19 +27,29 @@ import { getQueryClient, HydrateClient, trpc } from "@/lib/trpc/server";
 // boundary and streams in. So `next build` stays green with the DB down (the dynamic
 // reads are deferred to request time; the cached count degrades via PostStats' try/catch)
 // while the shell paints instantly. Delete when a real surface lands.
-export default function PostsPage() {
+//
+// i18n note: the sync component reads params via React's use() (the next-intl pattern
+// for non-async pages) so setRequestLocale runs before useTranslations. The locale is
+// ALSO passed into the async Suspense children — they render outside the shell pass
+// (request-time streaming / regeneration), so they re-anchor the locale themselves
+// rather than relying on the shell's setRequestLocale call.
+export default function PostsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = use(params);
+  setRequestLocale(locale);
+  const t = useTranslations("Posts.page");
+
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 p-8">
       <Suspense fallback={<ComposerCardFallback />}>
-        <ComposerCard />
+        <ComposerCard locale={locale} />
       </Suspense>
 
       <Card>
         <CardHeader>
-          <CardTitle>Posts</CardTitle>
-          <CardDescription>Read via the public tRPC query, newest first.</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
           <Suspense fallback={<Skeleton className="h-4 w-40" />}>
-            <PostStats />
+            <PostStats locale={locale} />
           </Suspense>
         </CardHeader>
         <CardContent>
@@ -54,18 +66,18 @@ export default function PostsPage() {
 // form's submit affordance. Isolated behind a Suspense boundary so it streams without
 // blocking the static shell. The optimistic-create temp row needs the author's id +
 // display name; pass them down (null when signed out, which also gates the form).
-async function ComposerCard() {
+async function ComposerCard({ locale }: { locale: string }) {
+  setRequestLocale(locale);
+  const t = await getTranslations("Posts.composer");
   const session = await auth.api.getSession({ headers: await headers() });
   const currentUser = session ? { id: session.user.id, name: session.user.name } : null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New post</CardTitle>
+        <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
-          {session
-            ? `Signed in as ${session.user.email} — publishing indexes the post for search.`
-            : "Not signed in — publishing returns “Unauthorized”."}
+          {session ? t("signedIn", { email: session.user.email }) : t("signedOut")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -77,11 +89,13 @@ async function ComposerCard() {
 
 // Static-shell placeholder for the composer card while its session read streams in.
 function ComposerCardFallback() {
+  const t = useTranslations("Posts.composer");
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New post</CardTitle>
-        <CardDescription>Loading…</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("loading")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Skeleton className="h-24 w-full" />

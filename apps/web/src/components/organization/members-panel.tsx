@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 export type OrgMember = {
@@ -42,6 +43,7 @@ export function MembersPanel({
   currentUserId: string | undefined;
   canManage: boolean;
 }) {
+  const t = useTranslations("Organization.members");
   const [optimisticRoles, setOptimisticRoles] = useState<Record<string, string>>({});
   const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function MembersPanel({
         delete next[member.id];
         return next;
       });
-      setError(err.message ?? "Could not update the member's role.");
+      setError(err.message ?? t("errorRole"));
     }
   }
 
@@ -76,7 +78,7 @@ export function MembersPanel({
     });
     setPendingId(null);
     if (err) {
-      setError(err.message ?? "Could not remove the member.");
+      setError(err.message ?? t("errorRemove"));
       return;
     }
     setRemovedIds((prev) => new Set([...prev, member.id]));
@@ -85,8 +87,8 @@ export function MembersPanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Members</CardTitle>
-        <CardDescription>People with access to this organization.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <ul className="flex flex-col gap-3">
@@ -114,7 +116,7 @@ export function MembersPanel({
                       {member.user.name || member.user.email}
                       {isSelf ? (
                         <span className="ml-2 rounded-full border px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                          You
+                          {t("you")}
                         </span>
                       ) : null}
                     </span>
@@ -132,12 +134,12 @@ export function MembersPanel({
                         if (next !== role) void changeRole(member, next);
                       }}
                     >
-                      <SelectTrigger className="w-28" aria-label="Member role">
+                      <SelectTrigger className="w-28" aria-label={t("roleLabel")}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="member">{t("roleMember")}</SelectItem>
+                        <SelectItem value="admin">{t("roleAdmin")}</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
@@ -153,7 +155,7 @@ export function MembersPanel({
                       disabled={pendingId === member.id}
                       onClick={() => void remove(member)}
                     >
-                      {pendingId === member.id ? "Removing…" : "Remove"}
+                      {pendingId === member.id ? t("removing") : t("remove")}
                     </Button>
                   ) : null}
                 </div>

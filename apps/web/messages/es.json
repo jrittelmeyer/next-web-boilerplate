@@ -18,7 +18,10 @@
     "resetPassword": "Restablecer contraseña",
     "goodbye": "Cuenta eliminada",
     "dashboard": "Panel",
-    "notifications": "Notificaciones"
+    "notifications": "Notificaciones",
+    "account": "Cuenta",
+    "organization": "Organización",
+    "acceptInvitation": "Aceptar invitación"
   },
   "Auth": {
     "common": {
@@ -163,5 +166,478 @@
     "statusLive": "En vivo",
     "statusConnecting": "Conectando…",
     "statusOffline": "Reconectando…"
+  },
+  "Account": {
+    "page": {
+      "title": "Cuenta",
+      "subtitle": "Gestiona tu perfil y tu configuración de seguridad.",
+      "profileTitle": "Perfil",
+      "profileDescription": "Tu nombre visible y el correo con el que inicias sesión.",
+      "emailLabel": "Correo electrónico",
+      "verified": " · verificado",
+      "unverified": " · sin verificar",
+      "verifiedHint": "Primero enviaremos un enlace de confirmación a tu dirección actual; el cambio se aplica después de abrirlo y verificar la nueva dirección.",
+      "unverifiedHint": "Tu correo aún no está verificado, así que el cambio se aplica de inmediato.",
+      "passwordTitle": "Contraseña",
+      "passwordDescription": "Cambia la contraseña que usas para iniciar sesión.",
+      "passwordDescriptionSocial": "Iniciaste sesión con un proveedor social, así que no hay contraseña que cambiar.",
+      "passwordResetPointer": "Para establecer una contraseña para el inicio de sesión con correo, usa el flujo de <link>restablecimiento de contraseña</link>."
+    },
+    "avatar": {
+      "photo": "Foto",
+      "remove": "Quitar",
+      "removing": "Quitando…",
+      "removed": "Foto eliminada.",
+      "updated": "Foto actualizada.",
+      "hint": "JPG, PNG o GIF, de hasta 2MB."
+    },
+    "name": {
+      "label": "Nombre visible",
+      "placeholder": "Ada Lovelace",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Guardado: tu nombre ahora es “{name}”."
+    },
+    "email": {
+      "label": "Nuevo correo",
+      "placeholder": "tu@ejemplo.com",
+      "submit": "Actualizar correo",
+      "saving": "Guardando…",
+      "error": "No se pudo cambiar tu correo. Inténtalo de nuevo.",
+      "updated": "Correo actualizado.",
+      "confirmationSent": "Enviamos un enlace de confirmación a tu dirección de correo actual. Ábrelo para continuar; después enviaremos a {email} un enlace de verificación final para completar el cambio."
+    },
+    "password": {
+      "current": "Contraseña actual",
+      "new": "Nueva contraseña",
+      "submit": "Actualizar contraseña",
+      "updating": "Actualizando…",
+      "error": "No se pudo cambiar tu contraseña. Revisa tu contraseña actual.",
+      "updated": "Contraseña actualizada: se ha cerrado la sesión en los demás dispositivos."
+    },
+    "twoFactor": {
+      "title": "Autenticación de dos factores",
+      "description": "Añade un código de un solo uso de una aplicación de autenticación a tu inicio de sesión para una capa extra de seguridad.",
+      "descriptionSocial": "La autenticación de dos factores protege el inicio de sesión con contraseña, así que no está disponible en una cuenta solo social.",
+      "socialPointer": "Para usar la autenticación de dos factores, primero establece una contraseña para el inicio de sesión con correo mediante el flujo de <link>restablecimiento de contraseña</link>.",
+      "enable": "Activar la autenticación de dos factores",
+      "scanHint": "Escanea este código QR con tu aplicación de autenticación y luego introduce el código de 6 dígitos que muestra para terminar.",
+      "manualKey": "¿No puedes escanearlo? Introduce esta clave manualmente:",
+      "codeLabel": "Código de verificación",
+      "codePlaceholder": "123456",
+      "verifyAndEnable": "Verificar y activar",
+      "verifying": "Verificando…",
+      "cancel": "Cancelar",
+      "errorStart": "No se pudo iniciar la configuración. Revisa tu contraseña e inténtalo de nuevo.",
+      "errorVerify": "Ese código no coincide. Prueba con el código actual de tu aplicación.",
+      "errorDisable": "No se pudo desactivar. Revisa tu contraseña e inténtalo de nuevo.",
+      "errorRegenerate": "No se pudo regenerar. Revisa tu contraseña e inténtalo de nuevo.",
+      "enabledLabel": "Activada.",
+      "enabledDescription": "Se te pedirá un código de tu aplicación de autenticación al iniciar sesión.",
+      "regenerate": "Regenerar códigos de respaldo",
+      "disable": "Desactivar",
+      "disabling": "Desactivando…",
+      "done": "Hecho",
+      "confirmPassword": "Confirma tu contraseña",
+      "startDescription": "Confirma tu contraseña para empezar la configuración.",
+      "continue": "Continuar",
+      "starting": "Empezando…",
+      "regenerateDescription": "Esto reemplaza tus códigos de respaldo actuales: los antiguos dejan de funcionar de inmediato.",
+      "generateCodes": "Generar códigos nuevos",
+      "generating": "Generando…",
+      "disableDescription": "Ya no se te pedirá un código al iniciar sesión.",
+      "backupTitle": "Códigos de respaldo",
+      "backupHint": "Guárdalos en un lugar seguro. Cada uno funciona una sola vez si pierdes el acceso a tu aplicación de autenticación. Solo se muestran ahora.",
+      "copyCodes": "Copiar códigos",
+      "copied": "Copiados"
+    },
+    "passkeys": {
+      "title": "Claves de acceso",
+      "description": "Inicia sesión sin contraseña usando la biometría de tu dispositivo o una llave de seguridad. Las claves de acceso funcionan junto a tus métodos de inicio de sesión actuales.",
+      "empty": "Aún no has añadido ninguna clave de acceso.",
+      "synced": "Sincronizada entre tus dispositivos",
+      "thisDevice": "Solo este dispositivo",
+      "added": "Añadida el {date}",
+      "nameLabel": "Nombre",
+      "nameOptional": "(opcional)",
+      "namePlaceholder": "p. ej. Touch ID del MacBook",
+      "add": "Añadir una clave de acceso",
+      "waiting": "Esperando tu dispositivo…",
+      "unnamed": "Clave de acceso sin nombre",
+      "rename": "Renombrar",
+      "remove": "Quitar",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "editName": "Nombre de la clave de acceso",
+      "unsupported": "Este navegador no admite claves de acceso.",
+      "errorAdd": "No se pudo añadir una clave de acceso. Inténtalo de nuevo.",
+      "errorRename": "No se pudo renombrar la clave de acceso. Inténtalo de nuevo.",
+      "errorRemove": "No se pudo quitar la clave de acceso. Inténtalo de nuevo."
+    },
+    "sessions": {
+      "title": "Sesiones",
+      "description": "Dispositivos con sesión iniciada en tu cuenta. Revocar una cierra la sesión de ese dispositivo; las páginas que ya tenga abiertas pueden tardar unos minutos en notarlo.",
+      "current": "Sesión actual",
+      "ipUnknown": "IP desconocida",
+      "meta": "{ip} · sesión iniciada {signedIn} · última actividad {lastActive}",
+      "revoke": "Revocar",
+      "revoking": "Revocando…",
+      "revoked": "Sesión revocada.",
+      "revokeError": "No se pudo revocar la sesión.",
+      "signOutOthers": "Cerrar todas las demás sesiones",
+      "signingOut": "Cerrando sesión…",
+      "signedOutOthers": "Se cerraron todas las demás sesiones."
+    },
+    "privacy": {
+      "title": "Privacidad y datos",
+      "description": "Controla cómo se registra tu uso y exporta tus datos.",
+      "analyticsTitle": "Analítica del producto",
+      "checking": "Comprobando tu preferencia actual…",
+      "enabled": "Activada: eventos anónimos de uso del producto nos ayudan a mejorar la aplicación.",
+      "disabled": "Desactivada: no se recopilan eventos de analítica.",
+      "disable": "Desactivar analítica",
+      "enable": "Activar analítica",
+      "dataTitle": "Tus datos",
+      "dataDescription": "Descarga una copia de los datos asociados a tu cuenta — perfil, sesiones, publicaciones, archivos subidos, suscripciones y más — como un archivo JSON.",
+      "download": "Descargar mis datos",
+      "preparing": "Preparando…",
+      "downloaded": "Tu exportación de datos se ha descargado."
+    },
+    "delete": {
+      "title": "Eliminar cuenta",
+      "description": "Elimina permanentemente tu cuenta y todos sus datos: perfil, publicaciones, archivos subidos, sesiones y registros de suscripción.",
+      "emailNote": "Te enviaremos un enlace de confirmación por correo; no se elimina nada hasta que lo abras.",
+      "immediateNote": "Esto surte efecto de inmediato y no se puede deshacer.",
+      "confirmPassword": "Confirma tu contraseña",
+      "phraseLabel": "Escribe <strong>{phrase}</strong> para confirmar",
+      "reveal": "Eliminar cuenta…",
+      "submit": "Eliminar cuenta permanentemente",
+      "deleting": "Eliminando…",
+      "cancel": "Cancelar",
+      "emailSent": "Enviamos un enlace de confirmación a tu dirección de correo. Tu cuenta se eliminará cuando lo abras en un navegador con tu sesión iniciada; el enlace funciona una sola vez y caduca en 24 horas.",
+      "errorPassword": "Contraseña incorrecta.",
+      "errorFreshness": "Por seguridad, eliminar tu cuenta requiere un inicio de sesión reciente. Cierra sesión, vuelve a iniciarla e inténtalo de nuevo.",
+      "errorGeneric": "No se pudo eliminar tu cuenta. Inténtalo de nuevo."
+    }
+  },
+  "Admin": {
+    "page": {
+      "title": "Área de administración",
+      "description": "Sesión iniciada como {email} (rol: {role}). Promociona o degrada a cualquier usuario de abajo — no puedes cambiar tu propio rol.",
+      "auditLink": "Registro de auditoría →",
+      "empty": "No hay usuarios en esta página."
+    },
+    "role": {
+      "you": "(tú)",
+      "makeUser": "Hacer usuario",
+      "makeAdmin": "Hacer administrador",
+      "updated": "Rol actualizado a {role}."
+    },
+    "ban": {
+      "banned": "Bloqueado",
+      "ban": "Bloquear",
+      "unban": "Desbloquear",
+      "reasonPlaceholder": "Motivo (opcional)",
+      "reasonLabel": "Motivo del bloqueo",
+      "confirm": "Confirmar",
+      "cancel": "Cancelar",
+      "bannedToast": "Usuario bloqueado. Sus sesiones fueron revocadas.",
+      "unbannedToast": "Usuario desbloqueado."
+    },
+    "impersonate": {
+      "button": "Suplantar"
+    },
+    "audit": {
+      "title": "Registro de auditoría",
+      "description": "Eventos relevantes para la seguridad, los más recientes primero.",
+      "backLink": "← Administración",
+      "empty": "No hay eventos en esta página.",
+      "colEvent": "Evento",
+      "colActorTarget": "Actor → Objetivo",
+      "colTime": "Hora",
+      "byActor": "por {actor}",
+      "bySystem": "por el sistema"
+    },
+    "pagination": {
+      "label": "Paginación",
+      "newest": "← Más recientes",
+      "older": "Más antiguos →"
+    }
+  },
+  "Organization": {
+    "page": {
+      "title": "Organización",
+      "subtitle": "Gestiona los miembros y las invitaciones de la organización activa."
+    },
+    "manager": {
+      "loading": "Cargando organización…",
+      "emptyTitle": "Ninguna organización seleccionada",
+      "emptyDescription": "Estás en tu espacio Personal. Crea una organización, o cambia a una desde el menú de espacios de trabajo en la cabecera, para gestionar sus miembros e invitaciones.",
+      "create": "Crear organización",
+      "yourRole": "tu rol:"
+    },
+    "members": {
+      "title": "Miembros",
+      "description": "Personas con acceso a esta organización.",
+      "you": "Tú",
+      "roleLabel": "Rol del miembro",
+      "roleMember": "Miembro",
+      "roleAdmin": "Administrador",
+      "remove": "Quitar",
+      "removing": "Quitando…",
+      "errorRole": "No se pudo actualizar el rol del miembro.",
+      "errorRemove": "No se pudo quitar al miembro."
+    },
+    "invite": {
+      "title": "Invitar a un miembro",
+      "description": "Se unirán cuando acepten la invitación.",
+      "emailNote": "Les enviaremos un enlace por correo.",
+      "offlineNote": "El correo está desactivado, así que copia el enlace de invitación de la lista de abajo para compartirlo.",
+      "emailLabel": "Correo electrónico",
+      "emailPlaceholder": "companero@ejemplo.com",
+      "roleLabel": "Rol",
+      "roleMember": "Miembro",
+      "roleAdmin": "Administrador",
+      "submit": "Enviar invitación",
+      "submitting": "Invitando…",
+      "error": "No se pudo enviar la invitación.",
+      "sent": "Invitación enviada a {email}.",
+      "created": "Invitación creada para {email}. Copia su enlace de la lista de abajo para compartirlo."
+    },
+    "invitations": {
+      "title": "Invitaciones pendientes",
+      "description": "Personas invitadas que aún no se han unido.",
+      "empty": "No hay invitaciones pendientes.",
+      "expires": "caduca el {date}",
+      "copyLink": "Copiar enlace",
+      "copied": "¡Copiado!",
+      "cancel": "Cancelar",
+      "canceling": "Cancelando…",
+      "errorCancel": "No se pudo cancelar la invitación."
+    },
+    "settings": {
+      "nameTitle": "Nombre de la organización",
+      "nameDescription": "El nombre visible que ven tus miembros.",
+      "nameLabel": "Nombre",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Nombre actualizado.",
+      "errorRename": "No se pudo renombrar la organización.",
+      "dangerTitle": "Zona de peligro",
+      "dangerOwner": "Eliminar la organización la borra junto con todas sus membresías. Esto no se puede deshacer.",
+      "dangerMember": "Salir elimina tu acceso a esta organización. Un propietario o administrador tendría que invitarte de nuevo.",
+      "confirmLabel": "Escribe <strong>{name}</strong> para confirmar",
+      "delete": "Eliminar organización",
+      "deleting": "Eliminando…",
+      "errorDelete": "No se pudo eliminar la organización.",
+      "leave": "Salir de la organización",
+      "leaving": "Saliendo…",
+      "errorLeave": "No se pudo salir de la organización."
+    },
+    "create": {
+      "title": "Crear organización",
+      "description": "Un espacio de trabajo al que puedes invitar a tu equipo. Serás su propietario.",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Acme Inc",
+      "slugLabel": "Slug",
+      "slugPlaceholder": "acme-inc",
+      "slugDescription": "El identificador único de esta organización.",
+      "submit": "Crear organización",
+      "submitting": "Creando…",
+      "error": "No se pudo crear la organización. Puede que el slug ya esté en uso."
+    },
+    "switcher": {
+      "srLabel": "Cambiar de espacio de trabajo",
+      "workspace": "Espacio de trabajo",
+      "personal": "Personal",
+      "fallbackName": "Organización",
+      "create": "Crear organización…",
+      "manage": "Gestionar organización"
+    },
+    "acceptPage": {
+      "invalidTitle": "Invitación no encontrada",
+      "invalidDescription": "Este enlace de invitación no es válido. Pide a un administrador de la organización que envíe uno nuevo.",
+      "usedTitle": "Invitación ya utilizada",
+      "usedDescription": "Esta invitación ya no está pendiente ({status}). Pide a un administrador que envíe una nueva si todavía necesitas acceso.",
+      "expiredTitle": "Invitación caducada",
+      "expiredDescription": "Esta invitación ha caducado. Pide a un administrador de la organización que envíe una nueva.",
+      "joinTitle": "Únete a {org}",
+      "joinDescription": "Te han invitado a unirte a {org} como {role}.",
+      "goToDashboard": "Ir a tu panel"
+    },
+    "accept": {
+      "signInPrompt": "Inicia sesión como <strong>{email}</strong> para aceptar esta invitación.",
+      "signIn": "Iniciar sesión",
+      "createAccount": "Crear una cuenta",
+      "mismatch": "Esta invitación es para <strong>{invited}</strong>, pero tienes la sesión iniciada como <strong>{signedIn}</strong>. Cambia de cuenta para aceptarla.",
+      "switchAccount": "Cerrar sesión y cambiar de cuenta",
+      "acceptPrompt": "Acepta como <strong>{email}</strong> para unirte a <strong>{org}</strong>.",
+      "accept": "Aceptar invitación",
+      "joining": "Uniéndote…",
+      "error": "No se pudo aceptar la invitación. Puede que haya caducado."
+    }
+  },
+  "Posts": {
+    "page": {
+      "title": "Publicaciones",
+      "description": "Se leen mediante la consulta pública de tRPC, las más recientes primero."
+    },
+    "composer": {
+      "title": "Nueva publicación",
+      "signedIn": "Sesión iniciada como {email} — publicar indexa la publicación para la búsqueda.",
+      "signedOut": "Sin sesión iniciada — publicar devuelve “Unauthorized”.",
+      "loading": "Cargando…"
+    },
+    "form": {
+      "titleLabel": "Título",
+      "titlePlaceholder": "Un gran título",
+      "contentLabel": "Contenido",
+      "contentPlaceholder": "Escribe algo…",
+      "submit": "Publicar",
+      "submitting": "Publicando…",
+      "notSignedIn": "Sin sesión iniciada — publicar devuelve “Unauthorized”.",
+      "published": "Se publicó “{title}”."
+    },
+    "item": {
+      "titleLabel": "Título",
+      "contentLabel": "Contenido",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleting": "Eliminando…",
+      "meta": "por {author} · {date}",
+      "unknownAuthor": "desconocido"
+    },
+    "list": {
+      "error": "No se pudieron cargar las publicaciones: {message}",
+      "empty": "Aún no hay publicaciones. Publica una arriba o ejecuta <code>pnpm --filter @repo/db db:seed</code>.",
+      "loadMore": "Cargar más",
+      "loading": "Cargando…"
+    },
+    "skeleton": {
+      "loading": "Cargando publicaciones"
+    },
+    "stats": {
+      "unavailable": "Recuento de publicaciones no disponible.",
+      "count": "{total, plural, one {# publicación publicada} other {# publicaciones publicadas}}.",
+      "cachedHint": "(en caché mediante <code>\"use cache\"</code>, revalidado al escribir)"
+    }
+  },
+  "Uploads": {
+    "page": {
+      "title": "Demo de subidas",
+      "description": "Sube una imagen (máx. 4MB) mediante Uploadthing. Requiere iniciar sesión.",
+      "listTitle": "Tus archivos subidos",
+      "listDescription": "Archivos que has subido. Eliminar quita el archivo del almacenamiento y el registro de aquí."
+    },
+    "demo": {
+      "uploaded": "Subido: {url}",
+      "done": "hecho",
+      "error": "Error: {message}"
+    },
+    "list": {
+      "empty": "Aún no hay archivos subidos — los archivos que subas arriba aparecerán aquí.",
+      "file": "archivo",
+      "meta": "{size} · subido el {date}",
+      "delete": "Eliminar",
+      "deleting": "Eliminando…"
+    }
+  },
+  "Search": {
+    "page": {
+      "title": "Demo de búsqueda",
+      "description": "Búsqueda de texto completo sobre el índice <code>posts</code> mediante Meilisearch. Crea publicaciones en /posts para indexarlas al escribir; los administradores pueden reindexar en bloque desde la base de datos."
+    },
+    "demo": {
+      "placeholder": "Busca en el índice de ejemplo…",
+      "submit": "Buscar",
+      "reindex": "Reindexar publicaciones desde la base de datos",
+      "reindexing": "Reindexando…",
+      "reindexed": "Se reindexaron {count} publicaciones.",
+      "emptyHint": "Escribe una consulta y pulsa Buscar. Crea publicaciones en /posts primero si no obtienes resultados.",
+      "emptyHintAdmin": "Escribe una consulta y pulsa Buscar. Crea publicaciones en /posts primero si no obtienes resultados (o reindexa desde la base de datos arriba).",
+      "searching": "Buscando…",
+      "notConfigured": "La búsqueda no está configurada.",
+      "noResults": "No hay resultados para “{query}”. ¿Reindexaste desde la base de datos?"
+    }
+  },
+  "Billing": {
+    "page": {
+      "title": "Demo de facturación",
+      "description": "Inicia una sesión de Stripe Checkout alojada para un plan de ejemplo de 10 $/mes.",
+      "subscriptionTitle": "Tu suscripción",
+      "status": "Estado: {status}",
+      "renews": "se renueva el {date}"
+    },
+    "subscribe": {
+      "button": "Suscribirse",
+      "redirecting": "Redirigiendo…"
+    },
+    "manage": {
+      "button": "Gestionar facturación",
+      "redirecting": "Redirigiendo…"
+    },
+    "success": {
+      "title": "Suscripción iniciada",
+      "description": "¡Gracias! Tu sesión de Checkout se completó.",
+      "descriptionWithId": "¡Gracias! Tu sesión de Checkout se completó ({id}).",
+      "body": "El acceso a la suscripción se confirma en el servidor mediante el webhook de Stripe."
+    }
+  },
+  "Premium": {
+    "signedOut": {
+      "title": "Contenido premium",
+      "description": "Inicia sesión para ver si tu plan lo desbloquea.",
+      "cta": "Iniciar sesión"
+    },
+    "unlocked": {
+      "title": "Contenido Pro desbloqueado",
+      "description": "Tienes una suscripción activa, así que esta sección premium está disponible.",
+      "body": "Sustituye esto por la funcionalidad real restringida. La puerta es una sola llamada —<code>hasActiveSubscription(userId)</code>— así que cualquier Server Component, Server Action o procedimiento de tRPC puede reutilizarla."
+    },
+    "locked": {
+      "title": "Este contenido es para suscriptores",
+      "description": "Tu cuenta no tiene una suscripción activa. Suscríbete para desbloquear el contenido premium.",
+      "cta": "Ver planes"
+    }
+  },
+  "StateDemo": {
+    "title": "Demo del store de Zustand",
+    "description": "Dos componentes, un único <code>useUiStore</code> global. Alternar cualquiera mantiene ambos sincronizados — y la preferencia persiste entre recargas (la receta <code>persist</code> segura para la hidratación, STATE.md).",
+    "componentA": "Componente A",
+    "componentB": "Componente B",
+    "status": "La barra lateral está <strong>{state}</strong>.",
+    "open": "abierta",
+    "closed": "cerrada",
+    "toggle": "Alternar barra lateral"
+  },
+  "Observability": {
+    "page": {
+      "title": "Demo de observabilidad",
+      "description": "Seguimiento de errores (Sentry), registro estructurado (BetterStack) y analítica + feature flags (PostHog). Cada botón no hace nada hasta que sus variables de entorno estén configuradas."
+    },
+    "demo": {
+      "captureError": "Capturar un error de prueba (Sentry)",
+      "sendLog": "Enviar un registro estructurado (BetterStack)",
+      "captureEvent": "Capturar un evento (PostHog)",
+      "throwError": "Lanzar un error de renderizado (probar el boundary)",
+      "statusSentry": "Se capturó una excepción de prueba → Sentry (sin efecto sin un DSN).",
+      "statusLogFailed": "Falló el registro: {error}",
+      "statusLog": "Se envió un registro estructurado → BetterStack (salida por consola sin credenciales).",
+      "statusPosthog": "Se capturó un evento de analítica → PostHog (sin efecto sin una clave).",
+      "flagLine": "Feature flag evaluado en el servidor <code>example-flag</code>: <strong>{label}</strong>",
+      "flagOn": "activado",
+      "flagOff": "desactivado",
+      "flagUnconfigured": "sin configurar"
+    }
+  },
+  "Error": {
+    "title": "Algo salió mal",
+    "description": "Ocurrió un error inesperado. Puedes intentarlo de nuevo o volver al inicio.",
+    "tryAgain": "Intentar de nuevo",
+    "goHome": "Ir al inicio"
   }
 }

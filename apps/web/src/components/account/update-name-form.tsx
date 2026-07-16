@@ -13,10 +13,12 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/components/sonner";
 import { type UpdateNameInput, updateNameSchema } from "@repo/validators";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { updateUserName } from "@/server/actions/user";
 
 export function UpdateNameForm({ defaultName }: { defaultName?: string }) {
+  const t = useTranslations("Account.name");
   const form = useForm<UpdateNameInput>({
     resolver: zodResolver(updateNameSchema),
     defaultValues: { name: defaultName ?? "" },
@@ -36,7 +38,7 @@ export function UpdateNameForm({ defaultName }: { defaultName?: string }) {
       return;
     }
 
-    toast.success(`Saved — your name is now “${result.data.name}”.`);
+    toast.success(t("saved", { name: result.data.name }));
     form.reset({ name: result.data.name });
   }
 
@@ -48,16 +50,16 @@ export function UpdateNameForm({ defaultName }: { defaultName?: string }) {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Display name</FormLabel>
+              <FormLabel>{t("label")}</FormLabel>
               <FormControl>
-                <Input placeholder="Ada Lovelace" {...field} />
+                <Input placeholder={t("placeholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Saving…" : "Save"}
+          {form.formState.isSubmitting ? t("saving") : t("save")}
         </Button>
       </form>
     </Form>

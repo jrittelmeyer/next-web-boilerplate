@@ -22,6 +22,7 @@ import {
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { type CreateOrganizationInput, createOrganizationSchema } from "@repo/validators";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "@/i18n/navigation";
@@ -40,6 +41,7 @@ export function CreateOrgDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("Organization.create");
   const router = useRouter();
   const [slugEdited, setSlugEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +57,7 @@ export function CreateOrgDialog({
       slug: values.slug,
     });
     if (created.error) {
-      setError(
-        created.error.message ?? "Could not create the organization. The slug may be taken.",
-      );
+      setError(created.error.message ?? t("error"));
       return;
     }
     // Make the new org the caller's active workspace before leaving the dialog.
@@ -88,10 +88,8 @@ export function CreateOrgDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create organization</DialogTitle>
-          <DialogDescription>
-            A workspace you can invite teammates to. You&rsquo;ll be its owner.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -100,10 +98,10 @@ export function CreateOrgDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("nameLabel")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Acme Inc"
+                      placeholder={t("namePlaceholder")}
                       autoComplete="organization"
                       {...field}
                       onChange={(event) => {
@@ -125,10 +123,10 @@ export function CreateOrgDialog({
               name="slug"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Slug</FormLabel>
+                  <FormLabel>{t("slugLabel")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="acme-inc"
+                      placeholder={t("slugPlaceholder")}
                       {...field}
                       onChange={(event) => {
                         setSlugEdited(true);
@@ -136,7 +134,7 @@ export function CreateOrgDialog({
                       }}
                     />
                   </FormControl>
-                  <FormDescription>The unique identifier for this organization.</FormDescription>
+                  <FormDescription>{t("slugDescription")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -148,7 +146,7 @@ export function CreateOrgDialog({
             ) : null}
             <DialogFooter>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Creating…" : "Create organization"}
+                {form.formState.isSubmitting ? t("submitting") : t("submit")}
               </Button>
             </DialogFooter>
           </form>

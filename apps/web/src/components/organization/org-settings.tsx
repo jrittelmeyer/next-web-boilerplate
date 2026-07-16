@@ -11,6 +11,7 @@ import {
 } from "@repo/ui/components/card";
 import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 
@@ -31,6 +32,7 @@ export function OrgSettings({
   isOwner: boolean;
   isMember: boolean;
 }) {
+  const t = useTranslations("Organization.settings");
   const router = useRouter();
 
   return (
@@ -38,12 +40,8 @@ export function OrgSettings({
       {isOwner ? <RenameCard orgId={orgId} orgName={orgName} /> : null}
       <Card className="border-destructive/40">
         <CardHeader>
-          <CardTitle>Danger zone</CardTitle>
-          <CardDescription>
-            {isOwner
-              ? "Deleting the organization removes it and all its memberships. This can't be undone."
-              : "Leaving removes your access to this organization. An owner or admin would have to re-invite you."}
-          </CardDescription>
+          <CardTitle>{t("dangerTitle")}</CardTitle>
+          <CardDescription>{isOwner ? t("dangerOwner") : t("dangerMember")}</CardDescription>
         </CardHeader>
         <CardContent>
           {isOwner ? (
@@ -66,6 +64,7 @@ async function leaveToDashboard(router: ReturnType<typeof useRouter>) {
 }
 
 function RenameCard({ orgId, orgName }: { orgId: string; orgName: string }) {
+  const t = useTranslations("Organization.settings");
   const [name, setName] = useState(orgName);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<
@@ -85,7 +84,7 @@ function RenameCard({ orgId, orgName }: { orgId: string; orgName: string }) {
     });
     setSaving(false);
     if (error) {
-      setStatus({ kind: "error", message: error.message ?? "Could not rename the organization." });
+      setStatus({ kind: "error", message: error.message ?? t("errorRename") });
       return;
     }
     setStatus({ kind: "saved" });
@@ -94,13 +93,13 @@ function RenameCard({ orgId, orgName }: { orgId: string; orgName: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Organization name</CardTitle>
-        <CardDescription>The display name your members see.</CardDescription>
+        <CardTitle>{t("nameTitle")}</CardTitle>
+        <CardDescription>{t("nameDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex flex-1 flex-col gap-2">
-            <Label htmlFor="org-name">Name</Label>
+            <Label htmlFor="org-name">{t("nameLabel")}</Label>
             <Input
               id="org-name"
               value={name}
@@ -111,7 +110,7 @@ function RenameCard({ orgId, orgName }: { orgId: string; orgName: string }) {
             />
           </div>
           <Button type="button" disabled={saving || unchanged} onClick={() => void save()}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t("saving") : t("save")}
           </Button>
         </div>
         {status.kind === "error" ? (
@@ -121,7 +120,7 @@ function RenameCard({ orgId, orgName }: { orgId: string; orgName: string }) {
         ) : null}
         {status.kind === "saved" ? (
           <p className="text-sm text-muted-foreground" role="status">
-            Name updated.
+            {t("saved")}
           </p>
         ) : null}
       </CardContent>
@@ -138,6 +137,7 @@ function DeleteOrg({
   orgName: string;
   onDone: () => void;
 }) {
+  const t = useTranslations("Organization.settings");
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +148,7 @@ function DeleteOrg({
     const { error: err } = await authClient.organization.delete({ organizationId: orgId });
     if (err) {
       setPending(false);
-      setError(err.message ?? "Could not delete the organization.");
+      setError(err.message ?? t("errorDelete"));
       return;
     }
     onDone();
@@ -158,7 +158,10 @@ function DeleteOrg({
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
         <Label htmlFor="confirm-delete">
-          Type <span className="font-medium text-foreground">{orgName}</span> to confirm
+          {t.rich("confirmLabel", {
+            name: orgName,
+            strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+          })}
         </Label>
         <Input
           id="confirm-delete"
@@ -174,7 +177,7 @@ function DeleteOrg({
           disabled={pending || confirm !== orgName}
           onClick={() => void remove()}
         >
-          {pending ? "Deleting…" : "Delete organization"}
+          {pending ? t("deleting") : t("delete")}
         </Button>
       </div>
       {error ? (
@@ -187,6 +190,7 @@ function DeleteOrg({
 }
 
 function LeaveOrg({ orgId, onDone }: { orgId: string; onDone: () => void }) {
+  const t = useTranslations("Organization.settings");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -196,7 +200,7 @@ function LeaveOrg({ orgId, onDone }: { orgId: string; onDone: () => void }) {
     const { error: err } = await authClient.organization.leave({ organizationId: orgId });
     if (err) {
       setPending(false);
-      setError(err.message ?? "Could not leave the organization.");
+      setError(err.message ?? t("errorLeave"));
       return;
     }
     onDone();
@@ -206,7 +210,7 @@ function LeaveOrg({ orgId, onDone }: { orgId: string; onDone: () => void }) {
     <div className="flex flex-col gap-3">
       <div>
         <Button type="button" variant="destructive" disabled={pending} onClick={() => void leave()}>
-          {pending ? "Leaving…" : "Leave organization"}
+          {pending ? t("leaving") : t("leave")}
         </Button>
       </div>
       {error ? (

@@ -13,6 +13,7 @@ import { and, desc, eq, gt } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AvatarCard } from "@/components/account/avatar-card";
 import { ChangeEmailForm } from "@/components/account/change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
@@ -22,14 +23,26 @@ import { PrivacyCard } from "@/components/account/privacy-card";
 import { SessionsCard } from "@/components/account/sessions-card";
 import { TwoFactorCard } from "@/components/account/two-factor-card";
 import { UpdateNameForm } from "@/components/account/update-name-form";
+import type { Locale } from "@/i18n/routing";
 import { describeUserAgent } from "@/lib/user-agent";
 
-export const metadata: Metadata = { title: "Account" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Metadata" });
+  return { title: t("account") };
+}
 
 // Real account/settings surface (M3), inside the (dashboard) shell. The layout is
 // the authoritative gate; we re-read the session here too (cheap under the Step-19
 // cookie cache) for defense-in-depth and to render the user's details.
-export default async function AccountPage() {
+export default async function AccountPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("Account.page");
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     redirect("/login");
@@ -92,14 +105,14 @@ export default async function AccountPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
-        <p className="text-muted-foreground">Manage your profile and security settings.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Your display name and the email you sign in with.</CardDescription>
+          <CardTitle>{t("profileTitle")}</CardTitle>
+          <CardDescription>{t("profileDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <AvatarCard
@@ -110,17 +123,15 @@ export default async function AccountPage() {
           <UpdateNameForm defaultName={session.user.name} />
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium">
-              Email
+              {t("emailLabel")}
               <span className="ml-2 font-normal text-muted-foreground">
                 {session.user.email}
-                {session.user.emailVerified ? " · verified" : " · unverified"}
+                {session.user.emailVerified ? t("verified") : t("unverified")}
               </span>
             </span>
             <ChangeEmailForm emailVerified={session.user.emailVerified} />
             <span className="text-xs text-muted-foreground">
-              {session.user.emailVerified
-                ? "We'll first send a confirmation link to your current address; the change takes effect after you open it and then verify the new address."
-                : "Your email isn't verified yet, so the change takes effect immediately."}
+              {session.user.emailVerified ? t("verifiedHint") : t("unverifiedHint")}
             </span>
           </div>
         </CardContent>
@@ -128,11 +139,9 @@ export default async function AccountPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Password</CardTitle>
+          <CardTitle>{t("passwordTitle")}</CardTitle>
           <CardDescription>
-            {hasPassword
-              ? "Change the password you use to sign in."
-              : "You signed in with a social provider, so there is no password to change."}
+            {hasPassword ? t("passwordDescription") : t("passwordDescriptionSocial")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -140,11 +149,16 @@ export default async function AccountPage() {
             <ChangePasswordForm />
           ) : (
             <p className="text-sm text-muted-foreground">
-              To set a password for email sign-in, use the{" "}
-              <a href="/forgot-password" className="text-foreground underline underline-offset-4">
-                password reset
-              </a>{" "}
-              flow.
+              {t.rich("passwordResetPointer", {
+                link: (chunks) => (
+                  <a
+                    href="/forgot-password"
+                    className="text-foreground underline underline-offset-4"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              })}
             </p>
           )}
         </CardContent>

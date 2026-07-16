@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { createBillingPortalSession } from "@/server/actions/billing";
 
@@ -9,6 +10,7 @@ type Status = { kind: "idle" } | { kind: "error"; message: string } | { kind: "r
 // P2-4b: same action-call-then-redirect shape as SubscribeButton — the portal is
 // Stripe-hosted, so there's no client SDK; the action returns a short-lived URL.
 export function ManageBillingButton() {
+  const t = useTranslations("Billing.manage");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   async function onManage() {
@@ -31,7 +33,7 @@ export function ManageBillingButton() {
         onClick={onManage}
         disabled={status.kind === "redirecting"}
       >
-        {status.kind === "redirecting" ? "Redirecting…" : "Manage billing"}
+        {status.kind === "redirecting" ? t("redirecting") : t("button")}
       </Button>
       {status.kind === "error" ? (
         <p className="text-sm text-destructive" role="alert">

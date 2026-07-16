@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useTRPC } from "@/lib/trpc/client";
 import { POSTS_PAGE_SIZE } from "./constants";
 import { PostItem } from "./post-item";
@@ -13,6 +14,7 @@ import { PostListSkeleton } from "./post-list-skeleton";
 // Each row (edit/delete + optimistic cache updates) lives in <PostItem>; this
 // component owns the list shell + the keyset "Load more".
 export function PostList() {
+  const t = useTranslations("Posts.list");
   const trpc = useTRPC();
   const posts = useInfiniteQuery(
     trpc.post.list.infiniteQueryOptions(
@@ -29,7 +31,7 @@ export function PostList() {
   if (posts.isError) {
     return (
       <p className="text-sm text-destructive" role="alert">
-        Failed to load posts: {posts.error.message}
+        {t("error", { message: posts.error.message })}
       </p>
     );
   }
@@ -39,7 +41,7 @@ export function PostList() {
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No posts yet. Publish one above, or run <code>pnpm --filter @repo/db db:seed</code>.
+        {t.rich("empty", { code: (chunks) => <code>{chunks}</code> })}
       </p>
     );
   }
@@ -60,7 +62,7 @@ export function PostList() {
           onClick={() => posts.fetchNextPage()}
           disabled={posts.isFetchingNextPage}
         >
-          {posts.isFetchingNextPage ? "Loading…" : "Load more"}
+          {posts.isFetchingNextPage ? t("loading") : t("loadMore")}
         </Button>
       ) : null}
     </div>

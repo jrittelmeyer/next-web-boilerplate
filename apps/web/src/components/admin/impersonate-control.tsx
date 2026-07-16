@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
+import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { impersonateUser } from "@/server/actions/admin";
 
@@ -21,6 +22,7 @@ export function ImpersonateControl({
   role: string;
   currentUserId: string;
 }) {
+  const t = useTranslations("Admin.impersonate");
   const [isPending, startTransition] = useTransition();
 
   if (userId === currentUserId || role === "admin") return null;
@@ -39,7 +41,7 @@ export function ImpersonateControl({
 
   return (
     <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={run}>
-      Impersonate
+      {t("button")}
     </Button>
   );
 }

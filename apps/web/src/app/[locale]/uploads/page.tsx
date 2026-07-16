@@ -11,6 +11,7 @@ import {
 } from "@repo/ui/components/card";
 import { desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { UploadDemo } from "@/components/uploads/upload-demo";
 import { UploadsList } from "@/components/uploads/uploads-list";
 
@@ -25,7 +26,10 @@ import { UploadsList } from "@/components/uploads/uploads-list";
 // The prebuilt Uploadthing stylesheet is imported here (not via the `withUt`
 // Tailwind plugin, which targets a v3-style JS config) because the app is on
 // Tailwind v4 (CSS-config). It styles the .ut-* classes self-containedly.
-export default async function UploadsPage() {
+export default async function UploadsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("Uploads.page");
   const session = await auth.api.getSession({ headers: await headers() });
   const rows = session
     ? await db.query.uploads.findMany({
@@ -39,10 +43,8 @@ export default async function UploadsPage() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Upload demo</CardTitle>
-          <CardDescription>
-            Upload an image (max 4MB) via Uploadthing. Requires sign-in.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
           <UploadDemo />
@@ -52,10 +54,8 @@ export default async function UploadsPage() {
       {session ? (
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Your uploads</CardTitle>
-            <CardDescription>
-              Files you've uploaded. Deleting removes the file from storage and the record here.
-            </CardDescription>
+            <CardTitle>{t("listTitle")}</CardTitle>
+            <CardDescription>{t("listDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <UploadsList rows={rows} />

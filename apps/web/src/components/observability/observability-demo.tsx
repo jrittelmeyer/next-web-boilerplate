@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import * as Sentry from "@sentry/nextjs";
+import { useTranslations } from "next-intl";
 import posthog from "posthog-js";
 import { useState } from "react";
 import { logExampleEvent } from "@/server/actions/observability";
@@ -12,6 +13,7 @@ interface ObservabilityDemoProps {
 }
 
 export function ObservabilityDemo({ exampleFlag }: ObservabilityDemoProps) {
+  const t = useTranslations("Observability.demo");
   const [status, setStatus] = useState<string | null>(null);
   const [throwOnRender, setThrowOnRender] = useState(false);
 
@@ -25,43 +27,48 @@ export function ObservabilityDemo({ exampleFlag }: ObservabilityDemoProps) {
   // NEXT_PUBLIC_SENTRY_DSN is unset — the SDK initialized disabled.
   function captureError() {
     Sentry.captureException(new Error("Observability demo: test client exception"));
-    setStatus("Captured a test exception → Sentry (no-op without a DSN).");
+    setStatus(t("statusSentry"));
   }
 
   // BetterStack: structured server log via a Server Action.
   async function sendLog() {
     const result = await logExampleEvent();
-    setStatus(
-      "error" in result
-        ? `Log failed: ${result.error}`
-        : "Sent a structured log → BetterStack (console output without creds).",
-    );
+    setStatus("error" in result ? t("statusLogFailed", { error: result.error }) : t("statusLog"));
   }
 
   // PostHog: capture a custom analytics event. Queued/no-op without a key.
   function captureEvent() {
     posthog.capture("observability_demo_event", { source: "observability-demo" });
-    setStatus("Captured an analytics event → PostHog (no-op without a key).");
+    setStatus(t("statusPosthog"));
   }
 
-  const flagLabel = exampleFlag === "unconfigured" ? "unconfigured" : exampleFlag ? "on" : "off";
+  const flagLabel =
+    exampleFlag === "unconfigured"
+      ? t("flagUnconfigured")
+      : exampleFlag
+        ? t("flagOn")
+        : t("flagOff");
 
   return (
     <div className="flex flex-col gap-3">
       <Button type="button" variant="outline" onClick={captureError}>
-        Capture a test error (Sentry)
+        {t("captureError")}
       </Button>
       <Button type="button" variant="outline" onClick={sendLog}>
-        Send a structured log (BetterStack)
+        {t("sendLog")}
       </Button>
       <Button type="button" variant="outline" onClick={captureEvent}>
-        Capture an event (PostHog)
+        {t("captureEvent")}
       </Button>
       <Button type="button" variant="destructive" onClick={() => setThrowOnRender(true)}>
-        Throw a render error (test boundary)
+        {t("throwError")}
       </Button>
       <p className="text-muted-foreground text-sm">
-        Server-evaluated feature flag <code>example-flag</code>: <strong>{flagLabel}</strong>
+        {t.rich("flagLine", {
+          label: flagLabel,
+          code: (chunks) => <code>{chunks}</code>,
+          strong: (chunks) => <strong>{chunks}</strong>,
+        })}
       </p>
       {status ? <p className="text-sm">{status}</p> : null}
     </div>
