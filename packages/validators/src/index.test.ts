@@ -8,6 +8,7 @@ import {
   createPostSchema,
   deleteAccountSchema,
   inviteMemberSchema,
+  magicLinkRequestSchema,
   notificationPayloadSchema,
   setUserRoleSchema,
   twoFactorBackupCodeSchema,
@@ -151,6 +152,22 @@ describe("deleteAccountSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0]?.message).toBe("Password is required");
+    }
+  });
+});
+
+describe("magicLinkRequestSchema", () => {
+  it("accepts a valid email", () => {
+    expect(magicLinkRequestSchema.parse({ email: "ada@example.com" })).toEqual({
+      email: "ada@example.com",
+    });
+  });
+
+  it("rejects an invalid email with the expected message", () => {
+    const result = magicLinkRequestSchema.safeParse({ email: "not-an-email" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe("Enter a valid email address");
     }
   });
 });

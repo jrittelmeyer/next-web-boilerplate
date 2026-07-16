@@ -75,6 +75,18 @@ export const forgotPasswordSchema = z.object({
 
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
+/**
+ * Magic-link sign-in request (path-to-100 #6) — the login page's email-only
+ * magic-link mode. Same shape as forgotPasswordSchema but deliberately its own
+ * schema: each auth flow owns its validator, so one flow's future field never
+ * leaks into another's form.
+ */
+export const magicLinkRequestSchema = z.object({
+  email: z.email("Enter a valid email address"),
+});
+
+export type MagicLinkRequestInput = z.infer<typeof magicLinkRequestSchema>;
+
 export const resetPasswordSchema = z.object({
   password: z
     .string()

@@ -1,10 +1,14 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { render } from "@react-email/render";
 import type { ReactElement } from "react";
 import { getResend } from "./client";
 import { ChangeEmail } from "./templates/change-email";
 import { DeleteAccount } from "./templates/delete-account";
 import { EmailChangedNotice } from "./templates/email-changed-notice";
+import { MagicLinkEmail } from "./templates/magic-link";
 import { OrganizationInvitation } from "./templates/organization-invitation";
 import { ResetPasswordEmail } from "./templates/reset-password";
 import { VerifyEmail } from "./templates/verify-email";
@@ -45,6 +49,25 @@ function logUnconfigured(action: string, to: string, url?: string): void {
   }
 }
 
+/**
+ * TEST-ONLY capture seam (path-to-100 #6). When EMAIL_TEST_CAPTURE_DIR is set (and
+ * email is otherwise configured), sends are written as one JSON file each —
+ * `{ action, to, subject, url }` — instead of calling Resend, so E2E can drive
+ * email-delivered flows (the magic-link spec) with no provider, no network, and no
+ * real key. Engaged only by the E2E config (fake creds + this dir on a second
+ * webServer); never set it in a real deployment — it silently diverts delivery.
+ * Unset (the default everywhere) this function is byte-identical to before.
+ */
+async function captureSend(
+  captureDir: string,
+  entry: { action: string; to: string; subject: string; url?: string },
+): Promise<SendResult> {
+  await mkdir(captureDir, { recursive: true });
+  const file = path.join(captureDir, `${Date.now()}-${randomUUID()}.json`);
+  await writeFile(file, JSON.stringify(entry), "utf8");
+  return { data: { id: `captured:${path.basename(file)}` } };
+}
+
 async function send(
   options: {
     to: string;
@@ -57,6 +80,16 @@ async function send(
   if (!isEmailConfigured()) {
     logUnconfigured(meta.action, options.to, meta.url);
     return { error: NOT_CONFIGURED };
+  }
+
+  const captureDir = process.env.EMAIL_TEST_CAPTURE_DIR;
+  if (captureDir) {
+    return captureSend(captureDir, {
+      action: meta.action,
+      to: options.to,
+      subject: options.subject,
+      url: meta.url,
+    });
   }
 
   // Plain-text alternative part (P1-3): render the same tree with html-to-text so
@@ -237,6 +270,25 @@ export function sendOrganizationInvitationEmail(params: {
       ),
     },
     { action: "organization invitation", url: params.url },
+  );
+}
+
+/**
+ * Magic-link sign-in (path-to-100 #6). Wired to the Better Auth `magicLink()`
+ * plugin's `sendMagicLink`, which `@repo/auth` registers ONLY when email is
+ * configured — a sign-in link that can never be delivered must never be offered, so
+ * with email unset the plugin (and the login-page affordance) is absent entirely and
+ * this helper's unconfigured fallback should never be hit from the real flow. No
+ * `name`: the recipient may not have an account yet (sign-up-via-link).
+ */
+export function sendMagicLinkEmail(params: { to: string; url: string }): Promise<SendResult> {
+  return send(
+    {
+      to: params.to,
+      subject: "Your sign-in link",
+      react: <MagicLinkEmail url={params.url} />,
+    },
+    { action: "magic-link sign-in", url: params.url },
   );
 }
 

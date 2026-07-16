@@ -18,6 +18,7 @@ import {
   sendChangeEmailConfirmationEmail,
   sendDeleteAccountVerificationEmail,
   sendEmailChangedNoticeEmail,
+  sendMagicLinkEmail,
   sendNewEmailVerificationEmail,
   sendOrganizationInvitationEmail,
   sendPasswordResetEmail,
@@ -27,7 +28,14 @@ import { enqueue, JOBS } from "@repo/jobs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { admin, captcha, haveIBeenPwned, organization, twoFactor } from "better-auth/plugins";
+import {
+  admin,
+  captcha,
+  haveIBeenPwned,
+  magicLink,
+  organization,
+  twoFactor,
+} from "better-auth/plugins";
 // The pure, env-driven config pieces live in config.ts so they can be unit-tested
 // without this module's server-only/DB/email imports (P3-3).
 import {
@@ -351,6 +359,13 @@ export const auth = betterAuth({
       "/send-verification-email": { window: 60, max: 3 },
       "/change-email": { window: 60, max: 3 },
       "/delete-user": { window: 60, max: 3 },
+      // Magic link (path-to-100 #6). The send endpoint is an unauthenticated,
+      // email-keyed trigger — the same abuse/enumeration surface as
+      // /request-password-reset, so it gets the same tightest bucket (this customRule
+      // overrides the plugin's own 5/min default). Verify consumes a single-use token
+      // (atomic, not brute-forceable), so its cap is abuse-limiting only.
+      "/sign-in/magic-link": { window: 60, max: 3 },
+      "/magic-link/verify": { window: 60, max: 10 },
       // Two-factor (Tier 4 · Band 2): tighten the sensitive endpoints. enable/disable
       // are password-gated state changes; verify-totp / verify-backup-code are the
       // brute-forceable sign-in challenge, so they get the tightest bucket.
@@ -468,6 +483,28 @@ export const auth = betterAuth({
     // and it still leaves nextCookies() genuinely last at runtime (the spread is empty when
     // unconfigured). See config.ts captchaOptions() + AUTH.md → Bot protection / CAPTCHA.
     ...(turnstileCaptcha ? [captcha(turnstileCaptcha)] : []),
+    // Magic-link sign-in (path-to-100 #6, promoting the A18 recipe). CONDITIONALLY
+    // registered on the same gate as requireEmailVerification: a sign-in link that can
+    // never be delivered must never be offered, so with email unset the endpoints
+    // don't exist and the login page hides the affordance (it reads the same gate).
+    // Defaults kept: 5-minute single-use tokens (stored in the existing `verification`
+    // model — no new table) and sign-up-via-link ON (an unknown address gets an
+    // account; the link click inherently verifies it, and a constant "check your
+    // email" response avoids account enumeration — set `disableSignUp: true` to keep
+    // account creation on the signup form only). Sits BELOW the captcha spread by the
+    // same tuple-position reasoning as above (neither conditional plugin contributes
+    // $Infer augmentations, so only their position relative to the plugins ABOVE
+    // matters); when both are configured, captchaOptions() lists /sign-in/magic-link
+    // so the send endpoint is also bot-protected. See AUTH.md → Magic link.
+    ...(isEmailConfigured()
+      ? [
+          magicLink({
+            sendMagicLink: async ({ email, url }) => {
+              await sendMagicLinkEmail({ to: email, url });
+            },
+          }),
+        ]
+      : []),
     nextCookies(),
   ],
 });

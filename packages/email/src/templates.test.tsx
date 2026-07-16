@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ChangeEmail } from "./templates/change-email";
 import { DeleteAccount } from "./templates/delete-account";
 import { EmailChangedNotice } from "./templates/email-changed-notice";
+import { MagicLinkEmail } from "./templates/magic-link";
 import { OrganizationInvitation } from "./templates/organization-invitation";
 import { ResetPasswordEmail } from "./templates/reset-password";
 import { VerifyEmail } from "./templates/verify-email";
@@ -102,12 +103,21 @@ const fixtures: Fixture[] = [
     htmlIncludes: [INVITER, ORG, ROLE, URL],
     textIncludes: [INVITER, ORG, URL],
   },
+  {
+    // No NAME: the magic-link template deliberately takes no recipient name (the
+    // address may not have an account yet — see the template's doc comment).
+    label: "magic-link",
+    element: <MagicLinkEmail url={URL} />,
+    defaults: <MagicLinkEmail />,
+    htmlIncludes: [URL],
+    textIncludes: [URL],
+  },
 ];
 
 describe("email template render smoke tests", () => {
   // Guard: if a template is added or removed, this fixture list must keep pace.
   it("covers every template", () => {
-    expect(fixtures).toHaveLength(8);
+    expect(fixtures).toHaveLength(9);
   });
 
   it.each(fixtures)("$label renders non-empty HTML with its dynamic content", async ({

@@ -1,5 +1,10 @@
 import { passkeyClient } from "@better-auth/passkey/client";
-import { adminClient, organizationClient, twoFactorClient } from "better-auth/client/plugins";
+import {
+  adminClient,
+  magicLinkClient,
+  organizationClient,
+  twoFactorClient,
+} from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 // No baseURL: the client targets the current origin, which is correct for a
@@ -22,8 +27,20 @@ import { createAuthClient } from "better-auth/react";
 // these client methods (see auth.ts admin() comment); impersonation, being a session-cookie
 // swap the client plugin is built to manage (it flips $sessionSignal to refetch useSession),
 // uses the client method. The client roles (admin/user) mirror the server's default AC.
+// magicLinkClient() mirrors the server's magicLink() plugin, exposing the typed
+// `authClient.signIn.magicLink({ email, callbackURL })`. Registered UNCONDITIONALLY even
+// though the server side is env-gated (client plugins only add typed method surface — there
+// is no per-request cost and no tuple-position hazard here); with email unset the server
+// endpoint doesn't exist, but the login page hides the affordance behind the same gate, so
+// nothing ever calls it.
 export const authClient = createAuthClient({
-  plugins: [organizationClient(), twoFactorClient(), passkeyClient(), adminClient()],
+  plugins: [
+    organizationClient(),
+    twoFactorClient(),
+    passkeyClient(),
+    adminClient(),
+    magicLinkClient(),
+  ],
 });
 
 export const { signIn, signUp, signOut, useSession, requestPasswordReset, resetPassword } =

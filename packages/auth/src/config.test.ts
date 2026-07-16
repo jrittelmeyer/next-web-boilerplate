@@ -191,11 +191,19 @@ describe("captchaOptions", () => {
     expect(captchaOptions()).toBeUndefined();
   });
 
-  it("builds Cloudflare Turnstile options from the secret, defaulting endpoints", () => {
+  it("builds Cloudflare Turnstile options with the explicit endpoint list", () => {
     vi.stubEnv("TURNSTILE_SECRET_KEY", "sk-turnstile");
+    // The plugin's three defaults restated (an explicit list replaces them) plus the
+    // magic-link send endpoint (#6) — see the captchaOptions doc comment.
     expect(captchaOptions()).toEqual({
       provider: "cloudflare-turnstile",
       secretKey: "sk-turnstile",
+      endpoints: [
+        "/sign-up/email",
+        "/sign-in/email",
+        "/request-password-reset",
+        "/sign-in/magic-link",
+      ],
     });
   });
 });

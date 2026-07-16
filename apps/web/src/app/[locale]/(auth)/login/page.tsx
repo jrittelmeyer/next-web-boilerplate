@@ -1,3 +1,4 @@
+import { isEmailConfigured } from "@repo/email";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { LoginForm } from "@/components/auth/login-form";
@@ -32,6 +33,9 @@ export default async function LoginPage({
       redirectTo={safeRedirectPath(redirectTo)}
       providers={configuredOAuthProviders()}
       captchaSiteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+      // The same gate that registers the magicLink() plugin (@repo/auth) — the
+      // affordance and the endpoint appear/disappear together (path-to-100 #6).
+      magicLinkEnabled={isEmailConfigured()}
     />
   );
 }

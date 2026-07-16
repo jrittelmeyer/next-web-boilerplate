@@ -4,6 +4,7 @@ export {
   sendChangeEmailConfirmationEmail,
   sendDeleteAccountVerificationEmail,
   sendEmailChangedNoticeEmail,
+  sendMagicLinkEmail,
   sendNewEmailVerificationEmail,
   sendOrganizationInvitationEmail,
   sendPasswordResetEmail,

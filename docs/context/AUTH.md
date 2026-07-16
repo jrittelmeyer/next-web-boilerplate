@@ -294,28 +294,63 @@ Better Auth has a plugin system. Common ones already configured or easy to add:
   user **ban** + **impersonation**; the platform role model stays the authoritative gate —
   see [Admin plugin — ban & impersonation](#admin-plugin--ban--impersonation-tier-4--band-4) below)
 - `captcha()` — **enabled when configured** (Cloudflare Turnstile bot-protection on
-  sign-up / sign-in / password-reset; registered only when `TURNSTILE_SECRET_KEY` is set —
-  see [Bot protection — CAPTCHA](#bot-protection--captcha-cloudflare-turnstile-tier-4--band-2) below)
+  sign-up / sign-in / password-reset / magic-link send; registered only when `TURNSTILE_SECRET_KEY`
+  is set — see [Bot protection — CAPTCHA](#bot-protection--captcha-cloudflare-turnstile-tier-4--band-2) below)
+- `magicLink()` — **enabled when configured** (passwordless emailed sign-in link; registered
+  only when email is configured — see [Magic link](#magic-link-sign-in-env-gated-path-to-100-6) below)
 
-### Magic link / email OTP (recipe)
+### Magic link sign-in (env-gated, path-to-100 #6)
 
-Passwordless sign-in via a one-time emailed **link** (`magicLink()`) or **code**
-(`emailOTP()`) — an alternative or supplement to email+password, and the email-based sibling
-of passkeys (`passkey()`, fully passwordless). **Docs-only here** (not wired in the
-boilerplate); both are a small addition and reuse the existing `@repo/email` send path.
+Passwordless sign-in via a one-time emailed link — **wired 2026-07-16** (promoting the A18
+recipe; its `emailOTP()` sibling stays a recipe below). The email-based sibling of passkeys,
+an alternative or supplement to email+password.
 
-**Server** — add to `packages/auth/src/auth.ts` `plugins: […]`, imported from
-`better-auth/plugins`:
+- **Registration is env-gated on `isEmailConfigured()`** — the same gate as
+  [`requireEmailVerification`](#email-verification): a sign-in link that can never be
+  delivered must never be offered, so with email unset the `/sign-in/magic-link` +
+  `/magic-link/verify` endpoints don't exist and the login page hides the affordance (the
+  page resolves the same gate server-side and passes `magicLinkEnabled` to the form).
+- **Tuple position:** the conditional spread sits with the `captcha()` spread — after every
+  `$Infer`-contributing plugin, before `nextCookies()`. Neither conditional plugin
+  contributes `$Infer` augmentations, so only their position relative to the plugins
+  *above* them matters (see the plugins-array comment in `auth.ts`).
+- **Send path:** `sendMagicLink` → `@repo/email`'s `sendMagicLinkEmail`
+  (`templates/magic-link.tsx`). The template carries **no recipient name** — the address
+  may not have an account yet.
+- **Defaults kept:** 5-minute single-use tokens (consumed atomically), stored in the
+  existing `verification` model — **no new table, no migration**. **Sign-up-via-link is ON**
+  (the plugin default): an unknown address gets an account and the click inherently
+  verifies it, and the response is uniform either way (no account enumeration). Set
+  `disableSignUp: true` to keep account creation on the signup form only — but note the
+  unknown-address response then diverges.
+- **Rate limits** (`rateLimit.customRules`): `/sign-in/magic-link` 3/min — an
+  unauthenticated, email-keyed trigger, the `/request-password-reset` posture (this
+  customRule overrides the plugin's own 5/min default); `/magic-link/verify` 10/min
+  (abuse-limiting only — the token is single-use, not brute-forceable).
+- **CAPTCHA parity:** when Turnstile is configured, `captchaOptions()` (config.ts) lists
+  `/sign-in/magic-link` among the protected endpoints and the magic-link request form
+  renders the same widget as the login form.
+- **Client:** `magicLinkClient()` in `client.ts` → typed
+  `authClient.signIn.magicLink({ email, callbackURL })`. Registered unconditionally
+  (client plugins only add typed method surface); the UI affordance is what's gated.
+- **UI:** the login form's "Email me a sign-in link" button swaps the card to an
+  email-only request form (the `TwoFactorChallenge` whole-card-swap pattern) with a
+  neutral "Check your inbox" sent state — the `ForgotPasswordForm` posture.
+- **E2E:** `e2e/magic-link.spec.ts` runs in the `chromium-email` Playwright project
+  against a second webServer whose fake Resend creds + `EMAIL_TEST_CAPTURE_DIR` divert
+  sends to JSON files ([TESTING.md → Email capture](TESTING.md#email-capture-the-magic-link-e2e-path-to-100-6));
+  covers request → captured link → session (a sign-up-via-link journey) plus replay
+  rejection. The hidden-when-unconfigured half is asserted in `auth.spec.ts` against the
+  keyless main server.
+
+### Email OTP (recipe)
+
+The emailed-**code** variant (`emailOTP()`) is **docs-only** (not wired); it's a small
+addition reusing the same `@repo/email` send path:
 
 ```typescript
-import { magicLink, emailOTP } from "better-auth/plugins";
+import { emailOTP } from "better-auth/plugins";
 
-magicLink({
-  // Reuse @repo/email — add a template + send helper (the sign-in analog of VerifyEmail).
-  sendMagicLink: async ({ email, url }) => {
-    await sendMagicLinkEmail({ to: email, url });
-  },
-}),
 emailOTP({
   // `type` is "sign-in" | "email-verification" | "forget-password".
   sendVerificationOTP: async ({ email, otp, type }) => {
@@ -324,17 +359,13 @@ emailOTP({
 }),
 ```
 
-**Client** — add `magicLinkClient()` / `emailOTPClient()` from `better-auth/client/plugins`
-to the `authClient` factory, then call `authClient.signIn.magicLink({ email })` (link) or
-`authClient.emailOtp.sendVerificationOtp(...)` + `authClient.signIn.emailOtp(...)` (code).
+**Client** — add `emailOTPClient()` from `better-auth/client/plugins` to the `authClient`
+factory, then `authClient.emailOtp.sendVerificationOtp(...)` + `authClient.signIn.emailOtp(...)`.
 
-**Degradation posture** — the repo's throughline: both send email, so they're only useful when
-email is configured. Gate registration (or at least the UI affordance) on `isEmailConfigured()`
-exactly like [`requireEmailVerification`](#email-verification) — with email unset the send
-no-ops and the app still builds/runs. **Rate-limit the send endpoints** like the P2-6 resend
-affordance (`auth.ts` `rateLimit.customRules`, 3/min): an unauthenticated, email-keyed trigger
-is an abuse/enumeration surface, so keep the constant-time, no-enumeration posture. Full option
-set: the Better Auth docs (`/docs/plugins/magic-link`, `/docs/plugins/email-otp`).
+**Degradation posture** — follow the wired magic link exactly: gate registration on
+`isEmailConfigured()` (conditional spread in the same tuple position), rate-limit the send
+endpoint 3/min, keep the constant, no-enumeration UI response. Full option set: the Better
+Auth docs (`/docs/plugins/email-otp`).
 
 ## Auth hardening (Step 19)
 

@@ -364,6 +364,33 @@ The DB-backed **CI** lane (the `e2e` job — every PR and push to `main`) provid
 integration tests, then `pnpm test:e2e`. See
 [DEPLOYMENT.md](DEPLOYMENT.md#cicd-github-actions).
 
+### Email capture — the magic-link E2E (path-to-100 #6)
+
+Email-delivered flows can't be E2E'd keyless — the link lives in the email. The suite
+solves this with a **test-only capture seam** in `@repo/email`'s single `send()`
+chokepoint (`packages/email/src/send.tsx`): when **`EMAIL_TEST_CAPTURE_DIR`** is set
+(and email is otherwise configured), every send is written as one JSON file —
+`{ action, to, subject, url }` — instead of calling Resend. Unset (the default
+everywhere), the code path is byte-identical; never set it in a real deployment — it
+silently diverts delivery.
+
+The wiring (`playwright.config.ts`):
+
+- A **second webServer** boots the *same* keyless build on **:3001** with fake
+  `RESEND_API_KEY`/`EMAIL_FROM` (flipping `isEmailConfigured()` on — registering the
+  `magicLink()` plugin and the login affordance), `BETTER_AUTH_URL=http://localhost:3001`
+  (trusted-origin + the links inside captured emails), and `EMAIL_TEST_CAPTURE_DIR`
+  pointing at the gitignored `apps/web/e2e/.email-capture/`. These env entries win over
+  the start script's `dotenv -e ../../.env` (dotenv-cli never overrides already-set
+  vars), so a populated local root `.env` can't leak real creds in.
+- A **second project** (`chromium-email`, baseURL :3001) runs *only*
+  `e2e/magic-link.spec.ts`; the main `chromium` project ignores it. The main :3000
+  server stays keyless — itself load-bearing (auth.spec.ts asserts the magic-link
+  affordance is hidden there, and signup must keep yielding an immediate session).
+- The spec + config share the directory constant and a polling reader via
+  `e2e/support/email-capture.ts`. In `E2E_BASE_URL` mode both the second server and the
+  project are dropped (an external server has no capture directory to read).
+
 ## Accessibility (axe)
 
 `e2e/a11y.spec.ts` scans pages with **`@axe-core/playwright`** (axe-core) and fails on

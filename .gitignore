@@ -38,6 +38,8 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+# E2E email-capture output (the magic-link spec's second webServer writes here)
+.email-capture/
 
 # OS
 .DS_Store

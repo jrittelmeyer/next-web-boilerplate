@@ -85,6 +85,17 @@
       "sentDescription": "Si existe una cuenta con ese correo, te hemos enviado un enlace para restablecer tu contraseña.",
       "sentHint": "El enlace caduca pronto. Sin el correo configurado, la URL de restablecimiento se registra en el servidor en desarrollo."
     },
+    "magicLink": {
+      "button": "Envíame un enlace de inicio de sesión",
+      "title": "Iniciar sesión con correo",
+      "description": "Introduce tu correo y te enviaremos un enlace de un solo uso para iniciar sesión.",
+      "submit": "Enviar enlace de inicio de sesión",
+      "submitting": "Enviando…",
+      "error": "No se pudo enviar el enlace de inicio de sesión. Inténtalo de nuevo.",
+      "sentTitle": "Revisa tu bandeja de entrada",
+      "sentDescription": "Te hemos enviado un enlace de un solo uso para iniciar sesión.",
+      "sentHint": "El enlace funciona una sola vez y caduca en 5 minutos."
+    },
     "resetPassword": {
       "title": "Establecer una nueva contraseña",
       "description": "Elige una nueva contraseña para tu cuenta.",

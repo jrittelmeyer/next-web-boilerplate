@@ -35,6 +35,16 @@ test("signing out re-gates the protected area", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
 });
 
+test("the magic-link affordance is hidden when email is unconfigured", async ({ page }) => {
+  // This server (:3000) runs keyless, so isEmailConfigured() is false: the magicLink()
+  // plugin isn't registered and the login page must not offer a link it can't deliver
+  // (path-to-100 #6). The configured half runs in the chromium-email project against
+  // the :3001 capture server (magic-link.spec.ts).
+  await page.goto("/login");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Email me a sign-in link" })).toHaveCount(0);
+});
+
 test("a logged-out visitor is redirected from /dashboard to /login", async ({ page }) => {
   await page.goto("/dashboard");
 

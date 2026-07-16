@@ -13,6 +13,8 @@ import {
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import {
+  type MagicLinkRequestInput,
+  magicLinkRequestSchema,
   type SignInInput,
   signInSchema,
   twoFactorBackupCodeSchema,
@@ -44,15 +46,21 @@ export function LoginForm({
   redirectTo,
   providers,
   captchaSiteKey,
+  magicLinkEnabled,
 }: {
   redirectTo: string;
   providers: OAuthProvider[];
   captchaSiteKey?: string;
+  // Magic link (path-to-100 #6): resolved server-side by the login page from the SAME
+  // gate that registers the magicLink() plugin (isEmailConfigured), so the affordance
+  // only renders when the endpoint actually exists.
+  magicLinkEnabled?: boolean;
 }) {
   const t = useTranslations("Auth.login");
   const tc = useTranslations("Auth.common");
   const router = useRouter();
   const [challenge, setChallenge] = useState(false);
+  const [magicLinkMode, setMagicLinkMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // CAPTCHA (A12): token for the x-captcha-response header on the initial /sign-in/email
   // call. The 2FA challenge and passkey sign-in are not captcha-protected endpoints.
@@ -90,6 +98,19 @@ export function LoginForm({
 
   if (challenge) {
     return <TwoFactorChallenge redirectTo={redirectTo} onCancel={() => setChallenge(false)} />;
+  }
+
+  // Whole-card swap, the TwoFactorChallenge pattern: the magic-link request renders its
+  // own AuthCard so its RHF-controlled email input mounts fresh instead of being reused
+  // across the two forms.
+  if (magicLinkMode) {
+    return (
+      <MagicLinkRequest
+        redirectTo={redirectTo}
+        captchaSiteKey={captchaSiteKey}
+        onCancel={() => setMagicLinkMode(false)}
+      />
+    );
   }
 
   return (
@@ -164,6 +185,126 @@ export function LoginForm({
       </Form>
       <SocialSignIn providers={providers} redirectTo={redirectTo} />
       <PasskeySignIn redirectTo={redirectTo} />
+      {magicLinkEnabled ? <MagicLinkButton onClick={() => setMagicLinkMode(true)} /> : null}
+    </AuthCard>
+  );
+}
+
+// The magic-link affordance on the main card (path-to-100 #6). Its own component only
+// so it can read the Auth.magicLink namespace; hidden entirely (by the parent) when
+// email is unconfigured — a sign-in link that can never be delivered is never offered.
+function MagicLinkButton({ onClick }: { onClick: () => void }) {
+  const t = useTranslations("Auth.magicLink");
+  return (
+    <Button type="button" variant="outline" className="w-full" onClick={onClick}>
+      {t("button")}
+    </Button>
+  );
+}
+
+// The magic-link request step (path-to-100 #6): email-only form → neutral sent state
+// (mirrors ForgotPasswordForm — same no-enumeration posture; with sign-up-via-link on,
+// the response is uniform anyway). The send endpoint is captcha-protected when
+// Turnstile is configured (config.ts captchaOptions lists /sign-in/magic-link), so the
+// widget renders here exactly like the parent form's. `callbackURL` rides inside the
+// emailed link and is where the verify endpoint lands the now-signed-in user; it's the
+// page-sanitized redirectTo, so the open-redirect guard already covers it.
+function MagicLinkRequest({
+  redirectTo,
+  captchaSiteKey,
+  onCancel,
+}: {
+  redirectTo: string;
+  captchaSiteKey?: string;
+  onCancel: () => void;
+}) {
+  const t = useTranslations("Auth.magicLink");
+  const tc = useTranslations("Auth.common");
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<CaptchaWidgetHandle>(null);
+  const form = useForm<MagicLinkRequestInput>({
+    resolver: zodResolver(magicLinkRequestSchema),
+    defaultValues: { email: "" },
+  });
+
+  async function onSubmit(values: MagicLinkRequestInput) {
+    setError(null);
+    const { error: sendError } = await signIn.magicLink({
+      email: values.email,
+      callbackURL: redirectTo,
+      ...(captchaToken
+        ? { fetchOptions: { headers: { "x-captcha-response": captchaToken } } }
+        : {}),
+    });
+    // Single-use token — reset for the next attempt either way.
+    captchaRef.current?.reset();
+    if (sendError) {
+      // Real failures only (rate limit, captcha, transport) — an unknown address is
+      // NOT an error with sign-up-via-link enabled, so this stays enumeration-safe.
+      setError(sendError.message ?? t("error"));
+      return;
+    }
+    setSent(true);
+  }
+
+  const backToSignIn = (
+    <button
+      type="button"
+      onClick={onCancel}
+      className="text-foreground underline-offset-4 hover:underline"
+    >
+      {tc("backToSignIn")}
+    </button>
+  );
+
+  if (sent) {
+    return (
+      <AuthCard title={t("sentTitle")} description={t("sentDescription")} footer={backToSignIn}>
+        <p className="text-sm text-muted-foreground">{t("sentHint")}</p>
+      </AuthCard>
+    );
+  }
+
+  return (
+    <AuthCard title={t("title")} description={t("description")} footer={backToSignIn}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{tc("email")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    placeholder={tc("emailPlaceholder")}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {captchaSiteKey ? (
+            <CaptchaWidget ref={captchaRef} siteKey={captchaSiteKey} onToken={setCaptchaToken} />
+          ) : null}
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button
+            type="submit"
+            disabled={form.formState.isSubmitting || (Boolean(captchaSiteKey) && !captchaToken)}
+          >
+            {form.formState.isSubmitting ? t("submitting") : t("submit")}
+          </Button>
+        </form>
+      </Form>
     </AuthCard>
   );
 }

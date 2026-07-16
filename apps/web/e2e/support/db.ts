@@ -1,5 +1,5 @@
 import { db } from "@repo/db";
-import { type AuditAction, auditLog, notifications, user } from "@repo/db/schema";
+import { type AuditAction, auditLog, notifications, rateLimit, user } from "@repo/db/schema";
 import { eq, like } from "drizzle-orm";
 
 /**
@@ -81,6 +81,20 @@ export async function seedAuditRows(
 /** Delete seeded audit rows by their namespaced `targetId` prefix (leftover-safe re-runs). */
 export async function deleteAuditRows(idPrefix: string): Promise<void> {
   await db.delete(auditLog).where(like(auditLog.targetId, `${idPrefix}-%`));
+}
+
+/**
+ * Clear the magic-link endpoints' persisted limiter counters (the `rate_limit` table —
+ * Better Auth `storage: "database"`) by DIRECT delete, the same sanctioned out-of-band
+ * path as the other helpers. The 3/min send cap is deliberately tight (AUTH.md → Magic
+ * link) and the DB-backed window SLIDES (every allowed request refreshes lastRequest),
+ * so a back-to-back local run — or a serial retry, which re-sends — inherits the
+ * previous run's count and would trip 429 without this reset. Keys are `<ip>|<path>`,
+ * so the LIKE suffix match only ever touches these two endpoints' counters.
+ */
+export async function resetMagicLinkRateLimit(): Promise<void> {
+  await db.delete(rateLimit).where(like(rateLimit.key, "%/sign-in/magic-link"));
+  await db.delete(rateLimit).where(like(rateLimit.key, "%/magic-link/verify"));
 }
 
 /**

@@ -166,16 +166,29 @@ export function isCaptchaConfigured(): boolean {
 /**
  * Build the Better Auth `captcha()` options for Cloudflare Turnstile, or `undefined`
  * when unconfigured (so auth.ts can conditionally spread it into the plugins array).
- * Provider is fixed to cloudflare-turnstile; `endpoints` is omitted so the plugin's
- * defaults apply (/sign-up/email, /sign-in/email, /request-password-reset). The token
- * arrives in the `x-captcha-response` request header (set by the client widget) and is
- * verified server-side against Cloudflare's siteverify — no secret ever reaches the
- * browser. A fork can tighten it further with `allowedHostnames` / `expectedAction`.
+ * Provider is fixed to cloudflare-turnstile. `endpoints` restates the plugin's three
+ * defaults (/sign-up/email, /sign-in/email, /request-password-reset — an explicit
+ * list REPLACES the defaults) and adds the magic-link send endpoint (#6): the same
+ * class of unauthenticated, email-keyed trigger, so when BOTH captcha and email are
+ * configured, bot protection covers it too. With magic link unregistered (email
+ * unset) the extra entry is inert — nothing serves that path. The token arrives in
+ * the `x-captcha-response` request header (set by the client widget) and is verified
+ * server-side against Cloudflare's siteverify — no secret ever reaches the browser.
+ * A fork can tighten it further with `allowedHostnames` / `expectedAction`.
  */
 export function captchaOptions(): CloudflareTurnstileOptions | undefined {
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
   if (!secretKey) return undefined;
-  return { provider: "cloudflare-turnstile", secretKey };
+  return {
+    provider: "cloudflare-turnstile",
+    secretKey,
+    endpoints: [
+      "/sign-up/email",
+      "/sign-in/email",
+      "/request-password-reset",
+      "/sign-in/magic-link",
+    ],
+  };
 }
 
 /**

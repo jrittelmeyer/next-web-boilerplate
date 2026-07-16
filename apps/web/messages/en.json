@@ -85,6 +85,17 @@
       "sentDescription": "If an account exists for that email, we’ve sent a link to reset your password.",
       "sentHint": "The link expires shortly. Without email configured, the reset URL is logged to the server in development."
     },
+    "magicLink": {
+      "button": "Email me a sign-in link",
+      "title": "Sign in with email",
+      "description": "Enter your email and we’ll send you a one-time sign-in link.",
+      "submit": "Send sign-in link",
+      "submitting": "Sending…",
+      "error": "Could not send the sign-in link. Please try again.",
+      "sentTitle": "Check your inbox",
+      "sentDescription": "We’ve sent a one-time sign-in link to your email.",
+      "sentHint": "The link works once and expires in 5 minutes."
+    },
     "resetPassword": {
       "title": "Set a new password",
       "description": "Choose a new password for your account.",

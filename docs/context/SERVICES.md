@@ -179,7 +179,7 @@ Offline (no keys), the verification path can be exercised with
 ```text
 packages/email/src/
   client.ts                   — import "server-only" + lazy getResend() (guarded singleton)
-  send.tsx                    — isEmailConfigured() + sendVerificationEmail / sendPasswordResetEmail / sendWelcomeEmail / sendChangeEmailConfirmationEmail / sendNewEmailVerificationEmail / sendEmailChangedNoticeEmail / sendDeleteAccountVerificationEmail / sendOrganizationInvitationEmail
+  send.tsx                    — isEmailConfigured() + sendVerificationEmail / sendPasswordResetEmail / sendWelcomeEmail / sendChangeEmailConfirmationEmail / sendNewEmailVerificationEmail / sendEmailChangedNoticeEmail / sendDeleteAccountVerificationEmail / sendOrganizationInvitationEmail / sendMagicLinkEmail — plus the TEST-ONLY EMAIL_TEST_CAPTURE_DIR seam (see TESTING.md → Email capture)
   index.ts                    — re-exports getResend + the send helpers + isEmailConfigured
   templates/welcome.tsx       — WelcomeEmail
   templates/verify-email.tsx  — VerifyEmail (sign-up email verification link)
@@ -189,6 +189,7 @@ packages/email/src/
   templates/email-changed-notice.tsx— EmailChangedNotice (M7: out-of-band "your email was changed" alert to the OLD address; informational, no link)
   templates/delete-account.tsx— DeleteAccount (P2-2: confirm-account-deletion link; only sent when email is configured — see AUTH.md → Danger zone)
   templates/organization-invitation.tsx — OrganizationInvitation (org invite accept-link; degrades to the UI's copyable link when email is unset — see AUTH.md → Organizations)
+  templates/magic-link.tsx    — MagicLinkEmail (#6: one-time sign-in link; no recipient name — the address may not have an account yet. See AUTH.md → Magic link)
 ```
 (Each template has a named export for app use + a default export for the preview CLI.)
 
@@ -221,10 +222,11 @@ text-only clients). Best-effort: if the plain-text render throws, the send proce
 HTML-only with a logged warning. Preview the text output with the same export CLI:
 add `--plainText` to the `email export` command below.
 
-**Render tests (A5):** `src/templates.test.tsx` renders all 8 templates to both HTML
+**Render tests (A5):** `src/templates.test.tsx` renders all 9 templates to both HTML
 and plain-text — the same `@react-email/render` calls used above — asserting non-empty
 output with the dynamic content (name, links); `src/send.test.tsx` locks the
-unconfigured → `{ error }` degradation contract across every helper. Run with
+unconfigured → `{ error }` degradation contract across every helper plus the
+`EMAIL_TEST_CAPTURE_DIR` seam's write-instead-of-send contract (#6). Run with
 `pnpm --filter @repo/email test` (coverage-gated in CI — see [TESTING.md](TESTING.md#coverage)).
 
 **Dev preview** — interactive template preview in the browser (opt-in, not part of
