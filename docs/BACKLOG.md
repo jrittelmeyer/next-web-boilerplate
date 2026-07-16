@@ -33,9 +33,12 @@
   run`/frozen install, not just `pnpm install` — any early adoption needs a
   `minimumReleaseAgeExclude`.)
 - **Maintenance-only** (Tier 3 **G**) — the honest "we're done" option: let Renovate drive
-  deps, keep docs current, add steps as real needs surface. **The standing state since
-  2026-07-12** — every locally-buildable row has shipped, so maintenance-only holds until an
-  external prerequisite unblocks a row below. Reopen on real need.
+  deps, keep docs current, add steps as real needs surface. Standing state 2026-07-12 →
+  2026-07-15; **SUPERSEDED 2026-07-15 by the path-to-100 program** (owner decision): the
+  seven audit passes plateaued at 99.35 because the last 13 points sat behind won't-fix
+  classifications, so each was re-litigated — all 13 proved recoverable
+  ([archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)). Maintenance-only
+  resumes when the program's rows ship and a scoring pass verifies them.
 - **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is intermittently flaky
   (absorbed by `retries:2`, but it twice burned 2 of 3 CI attempts). **Not a code bug** — a
   fragile signup+redirect timing flow on modest runners. Harden **only if it ever turns a lane
@@ -53,18 +56,31 @@
 > strikethrough line in the table at the bottom — the record is the PROJECT_STATUS
 > build-progress table + the doc in "See"; don't re-expand them here.
 >
-> **The open set, ordered** (both the value÷effort and breadth-of-value lenses now agree —
-> every other row has shipped): **1) Email bounce/complaint handling** — the one unbuilt
-> app-side piece; common want, low urgency (Resend already suppresses account-side).
-> **2) TypeScript 7 cutover** — the broadest win (every clone's build gets the
-> native-compiler speedup) but hard-gated on Next.js TS7 support (see Watch).
+> **The open set, ordered** — the **path-to-100 program** (2026-07-15, owner-directed):
+> 11 rows recovering the 13 audit points locked behind won't-fix/deferred classifications;
+> per-row re-analysis, risk flags, and done-criteria live in
+> [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md) — don't duplicate
+> them here. Sequenced breadth-first in four waves: **Wave 1 (B1)** five small universal
+> fixes · **Wave 2 (B2)** magic link + i18n completion · **Wave 3 (B3)** bounce handling +
+> opt-in OTel + CSP mode · **Wave 4 (B4)** per-org billing. The **TypeScript 7 cutover**
+> stays outside the program (externally gated, costs no points; see Watch).
 
 ### Open rows
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
-| B3 | Email | **Bounce/complaint handling** (deliverability follow-up) | SERVICES.md Resend | The verified sending domain + SPF/DKIM/DMARC recipe + deliverability proof shipped 2026-07-14 (shipped table below); the remaining optional piece is app-side bounce/complaint handling (a Resend webhook → `email_suppressions` table). Resend already suppresses hard-bounces/complaints account-side, so this is app-side *awareness* + halting pointless job retries, not primary deliverability. |
-| B4 | Toolchain | **TypeScript 7 cutover** | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. |
+| B1 | API | **`updatePost` → `fieldErrors` error shape** | API.md | Adopt the A7 `zodFieldErrors` convention (today: first-issue string only, `post.ts:178`) + inline mapping in the edit form + tests. Recovers API +1 → 100. [Program #1](archive/PATH_TO_100_2026-07-15.md). S |
+| B1 | State | **Wire the `persist` recipe to a real slice** | STATE.md | Ship STATE.md's own hydration-safe recipe (`sidebarOpen`, `partialize`, `skipHydration`+`rehydrate`) as a working example + no-mismatch test; doc flips recipe → example. Recovers State +1 → 100. [Program #2](archive/PATH_TO_100_2026-07-15.md). S |
+| B1 | Jobs | **Wire the dead-letter queue** | SERVICES.md → Jobs | Create queues with `deadLetter` per the A20 recipe + one watched DLQ consumer (log + env-gated Sentry) + exhausted-job test. Recovers Jobs +1 → 100. [Program #3](archive/PATH_TO_100_2026-07-15.md). S/M |
+| B1 | Uploads | **`uploads.spec.ts` e2e + verified prod-callback runbook** | SERVICES.md → Uploadthing · VERIFICATION.md | The only integration with zero e2e coverage; plus UT callback-URL override + tunnel recipe live-verified once (the Stripe-webhook precedent). Recovers Uploads +2 → 100. [Program #4](archive/PATH_TO_100_2026-07-15.md). S+S |
+| B1 | Search | **Admin-gate `reindexPosts`** | SERVICES.md → Meilisearch | Supersede the P1-2 any-signed-in-user demo decision: RBAC-gate the reindex action + hide the button for non-admins. Recovers Search +1 → 100. [Program #5](archive/PATH_TO_100_2026-07-15.md). S |
+| B2 | Auth | **Wire magic-link sign-in (env-gated)** | AUTH.md | Promote the A18 recipe: `magicLink()` gated on email config (hidden when Resend unset); the conditional-plugin **tuple-position gotcha applies**; e2e via test-only send capture. Recovers Auth +1 → 100. [Program #6](archive/PATH_TO_100_2026-07-15.md). M |
+| B2 | i18n | **Full-surface message coverage** | I18N.md | Extend en/es catalogs beyond the primary journey; swap the six `toLocale*` English-only sites to `useFormatter`; extend the i18n e2e. Recovers i18n +1 → 100. [Program #7](archive/PATH_TO_100_2026-07-15.md). M |
+| B3 | Email | **Bounce/complaint handling** (deliverability follow-up) | SERVICES.md Resend | The verified sending domain + SPF/DKIM/DMARC recipe + deliverability proof shipped 2026-07-14 (shipped table below); the remaining app-side piece: a signature-verified Resend webhook → `email_suppressions` table → send helper consults it → jobs halt retries. Resend already suppresses account-side. Recovers Email +1 → 100. [Program #8](archive/PATH_TO_100_2026-07-15.md). M |
+| B3 | Observability | **Opt-in OpenTelemetry** | SERVICES.md → Observability | OTel in `instrumentation.ts` behind `OTEL_EXPORTER_OTLP_ENDPOINT` (unset = today's exact behavior). **Risk: Sentry-SDK OTel coexistence** — the plan's core question; verify against a local collector. Recovers Obs +1 → 100. [Program #9](archive/PATH_TO_100_2026-07-15.md). M |
+| B3 | Security | **`CSP_MODE=nonce` as a first-class mode** | SECURITY.md | Promote the verified nonce recipe to an env-gated mode (default stays static + `'unsafe-inline'`); opt-in CI lane e2e-verifies the nonce matrix. **Risk: proxy complexity; nonce pages render dynamic** (inherent). Recovers Security +1 → 100. [Program #10](archive/PATH_TO_100_2026-07-15.md). M/L |
+| B4 | Payments | **Per-org billing** | SERVICES.md → Stripe | Org-scoped subscriptions: nullable `subscriptions.organizationId`, org-context checkout (owner/admin), webhook mapping, `hasOrgSubscription` gating, org-aware billing page; Stripe-CLI live-verify per the Phase-5 method. Seat-quantity billing explicitly out of scope. Recovers Payments +2 → 100. [Program #11](archive/PATH_TO_100_2026-07-15.md). L |
+| B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
 
 ### Shipped (strikethrough record — full rows in the PROJECT_STATUS table + archive/PHASE_HISTORY)
 

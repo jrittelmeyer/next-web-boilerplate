@@ -4,12 +4,13 @@ Production-ready Next.js monorepo starter for complex web applications. Every
 architectural decision is documented in `docs/context/`. Read the relevant context
 file before working in that area.
 
-> **Status:** feature-complete and in maintenance mode. Every integration is built and
-> has been verified end-to-end — see [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
-> for exactly what's in place, [docs/VERIFICATION.md](docs/VERIFICATION.md) for the
-> hands-on proof checklist, and [docs/BACKLOG.md](docs/BACKLOG.md) for what's
-> deliberately deferred. New work reopens on real need: plan → sign-off → build.
-> The maintenance framework itself is [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+> **Status:** feature-complete; the **path-to-100 program** (2026-07-15) is the active
+> work — 11 banded rows recovering the audit points previously classified won't-fix
+> (see [docs/BACKLOG.md](docs/BACKLOG.md)). Every integration is built and has been
+> verified end-to-end — see [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for
+> exactly what's in place and [docs/VERIFICATION.md](docs/VERIFICATION.md) for the
+> hands-on proof checklist. Each row goes plan → sign-off → build; maintenance mode
+> ([docs/MAINTENANCE.md](docs/MAINTENANCE.md)) resumes when the program completes.
 
 ## Working agreements
 

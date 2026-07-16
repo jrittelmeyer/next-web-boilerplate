@@ -47,10 +47,14 @@ _Last updated: 2026-07-15._
   lane is live since A28). **CodeQL is live** — `ENABLE_CODEQL` is set on the public
   repo (code scanning is free once public); the variable gate stays so private forks
   don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
-- **The repo is maintenance-only.** Everything left in [BACKLOG.md](BACKLOG.md) is
-  deferred or externally gated (app-side email bounce/complaint handling · TS7 cutover,
-  blocked on TS7 support reaching **stable** Next — experimental in canary since
-  2026-07-10). Reopen on real need: plan → sign-off → build.
+- **The path-to-100 program is active (owner decision, 2026-07-15).** Seven audit
+  passes plateaued at 99.35 because the last 13 points sat behind won't-fix/deferred
+  classifications; each was re-litigated and **all 13 proved recoverable** — 11 rows
+  (10 new + the email B3 row), banded in [BACKLOG.md](BACKLOG.md), per-row analysis +
+  risk flags in [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md).
+  Each row goes plan → sign-off → build; maintenance-only resumes when a scoring pass
+  verifies the program. The TS7 cutover stays outside it (externally gated — stable-Next
+  TS7 support; experimental in canary since 2026-07-10).
 
 ## Build progress
 
