@@ -32,13 +32,14 @@ _Last updated: 2026-07-15._
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row is SHIPPED (2026-07-07 → 13)** — including the
-  A23–A31 polish rows, A32, and A13. Six `/project-audit` passes graded the repo
-  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3/100** (2026-07-08 · 07-12 · 07-12B · 07-14 ·
-  07-14B post-launch · **07-15, first under the upgraded skill** — git-bounding +
-  public-surface + goals-and-gates checks are now mandatory; the pass caught the moved
-  TS7 upstream gate, confirmed Renovate/CI/CodeQL alive, and found zero new backlog
-  rows for the third consecutive time; reports in [docs/archive/](archive/), latest:
-  [PROJECT_AUDIT_2026-07-15.md](archive/PROJECT_AUDIT_2026-07-15.md)).
+  A23–A31 polish rows, A32, and A13. Seven `/project-audit` passes graded the repo
+  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35/100** (2026-07-08 · 07-12 · 07-12B ·
+  07-14 · 07-14B post-launch · 07-15 · **07-15B, same-day delta** — proved the
+  Dependabot override trio end-to-end (alerts fixed on GitHub, clean audit, lockfile
+  resolutions) and the funding surface live; **zero drift found, a first** — Docs & DX
+  99 → 100; zero new backlog rows for the fourth consecutive time; reports in
+  [docs/archive/](archive/), latest:
+  [PROJECT_AUDIT_2026-07-15B.md](archive/PROJECT_AUDIT_2026-07-15B.md)).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) — rows
   at the bottom of the table below.
