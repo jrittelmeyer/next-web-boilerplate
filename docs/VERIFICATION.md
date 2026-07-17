@@ -210,9 +210,9 @@ $env:PORT=3100; $env:AUTH_TRUSTED_ORIGINS="http://localhost:3100"; pnpm --filter
 For each: **sign up → copy key(s) into root `.env` → restart the app → assert it lights up.**
 All are optional and independent; the app keeps building/running if you skip any.
 
-### Resend (email) — unlocks verification, reset, welcome, two-hop email change
+### Resend (email) — unlocks verification, reset, welcome, two-hop email change, magic link, bounce/complaint suppression
 
-> ✅ **Section COMPLETE (2026-07-01 → 05; hop-2 delivery closed 2026-07-14).** All rows
+> ✅ **Section COMPLETE (2026-07-01 → 05; hop-2 delivery closed 2026-07-14; magic link + bounce/complaint added 2026-07-16).** All rows
 > verified on this box against fresh prod builds on **:3000** (origin-exact — real form POSTs
 > pass the origin check), inbox side via a real inbox: welcome **send path**
 > 2026-07-01 (worker → real Resend message id); signup flip + resend button + verify-link →
@@ -246,6 +246,21 @@ All are optional and independent; the app keeps building/running if you skip any
     `docker exec nwb-postgres psql -U postgres -d appdb -c "UPDATE \"user\" SET email_verified=true WHERE email='you@example.com';"`
   - _Verified 2026-07-05 (M6/M7 live): hop-1 **"Confirm your email change"** (the dedicated template) delivered to the **old** address's real inbox and click-approved; the sandbox sender can't deliver hop-2 to a non-owner address (silent 403, ⚠️ above), so the real Better-Auth-generated hop-2 link was captured via a temporary server-side log (reverted, never committed) and clicked in the requesting browser → change applied (`get-session` → new address, `emailVerified: true`), the old address received **"Your email address was changed"**, and the **other** session was revoked (probed alive pre-click → null after) while the clicking session survived. The only unproven leg was hop-2 **delivery**, now **closed 2026-07-14** (next bullet)._
   - _Hop-2 **delivery** verified 2026-07-14 (a real sending domain verified in Resend; `EMAIL_FROM` switched to a `noreply@` address on it). Full two-hop driven live end-to-end via curl + the real inbox: sign-up → verify (stateless JWT link) → `change-email` → hop-1 **"Confirm your email change"** delivered to the old `+alias` and approved → hop-2 **"Confirm your new email address" delivered to the new `+alias` inbox** and clicked → change applied (`get-session` + DB `user` row → new address, `email_verified=true`; `audit_log` recorded `user.email_changed`). Deliverability proven independently: a domain send landed in **INBOX** (SPF/DKIM/DMARC aligned, observed) and Resend reported the non-owner `+alias` sends **Delivered**. New-domain **greylisting** deferred first-contact to each new recipient by a few minutes (warmup, expected — not a misconfig). The two hop links were read directly from the recipient inbox; servers stopped + the throwaway test user removed afterwards._
+- [x] **Magic-link sign-in** (env-gated on email config): with Resend set, `/login` shows
+  "Email me a sign-in link" → request → link in the email signs you in; the link is
+  single-use. _Verified live 2026-07-16 on a fresh :3100 prod build (real key): the
+  affordance renders and `/sign-in/magic-link` returned `{status:true}` (real send);
+  full request → captured link → session → replay-rejection loop proven in
+  `e2e/magic-link.spec.ts` via the test-only capture seam. Mechanics →
+  [context/AUTH.md](context/AUTH.md#magic-link-sign-in-env-gated-path-to-100-6)._
+- [x] **Bounce/complaint suppression** (`POST /api/resend/webhook`, gated on
+  `RESEND_WEBHOOK_SECRET`): a permanent-bounce or complaint event adds the address to
+  `email_suppressions`; every send helper then skips it. _Verified live 2026-07-16 on
+  :3100 (minted secret): signed bounce POST → 200 → suppression row via psql; tampered
+  signature → 400; a real magic-link request to the suppressed address returned the
+  neutral `{status:true}` with the logged skip and no Resend send. The
+  genuine-Resend-origin proof (needs a public tunnel) stays an optional rider —
+  [SERVICES.md → Resend](context/SERVICES.md#bounce--complaint-handling-path-to-100-8)._
 - [x] **Degraded check** (regression guard): with the keys removed, all of the above no-op gracefully and signup returns to the immediate-session path. _Verified 2026-07-05 on the same prod build with the key blanked **from bash** (`RESEND_API_KEY="" pnpm --filter web start` — PowerShell `$env:X=""` DELETES the var and dotenv-cli would reload the live key): signup → immediate session → `/dashboard` (no "check your inbox"); `/forgot-password` renders its neutral sent state with nothing dispatched. Throwaway user removed afterwards._
 
 ### Sentry (errors/traces)

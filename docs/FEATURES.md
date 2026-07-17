@@ -48,7 +48,7 @@ GA'd without the JS Compiler API that `next build` needs (tracked in
 
 ## Database & data safety
 
-- PostgreSQL + **Drizzle ORM** (node-postgres `Pool`), schema in `@repo/db`, 16
+- PostgreSQL + **Drizzle ORM** (node-postgres `Pool`), schema in `@repo/db`, 17
   committed migrations — `db:migrate` works on a fresh clone with no codegen step.
 - A **copy-me example entity (`posts`)** demonstrating the full stack of patterns:
   keyset (cursor) pagination, composite + FK indexes, optimistic UI, an atomic
@@ -70,7 +70,8 @@ climbed:
 - Email/password with **email verification**, password reset, and a
   **compromised-password (HIBP) check**.
 - **OAuth** (GitHub + Google) — env-gated: each provider registers only when its
-  key pair is present.
+  key pair is present — and **magic-link sign-in**, env-gated on email config so the
+  affordance and endpoints appear/disappear together.
 - **Two-factor auth** (TOTP + backup codes, inline enroll + sign-in challenge,
   trust-device opt-in) and **passkeys / WebAuthn** (no new env vars, no CSP changes).
 - **Organizations / multi-tenancy** — teams, per-org roles, invitations with a
@@ -136,7 +137,8 @@ without a schema language. One convention, applied everywhere.
 
 ## Internationalization
 
-- **next-intl** with `[locale]` path routing (`en` + `es` shipped), per-locale SEO
+- **next-intl** with `[locale]` path routing (`en` + `es` shipped, **full-surface
+  message coverage** — identical key trees across locales), per-locale SEO
   (hreflang, localized sitemap), locale-aware date/number formatting, and a
   `LanguageSwitcher`.
 - `localePrefix: "as-needed"` keeps default-locale URLs unprefixed — adding i18n
@@ -164,9 +166,12 @@ prerequisite. → [`context/SERVICES.md`](context/SERVICES.md)
 ## Email
 
 - **Resend + React Email**: typed JSX templates, a plain-text part on every send,
-  verification/reset/welcome/email-change flows wired, and a production
+  verification/reset/welcome/email-change/magic-link flows wired, and a production
   **deliverability recipe** (SPF/DKIM/DMARC) that has been proven against a real
   sending domain.
+- **Bounce/complaint suppression**: a signature-verified Resend webhook feeds an
+  `email_suppressions` do-not-send list that every send helper consults — permanent
+  bounces and complaints stop future sends instead of eroding sender reputation.
 - Fully graceful: with no API key, sends log-and-no-op, sign-up yields an immediate
   session, and org invitations fall back to a copyable accept link.
 
@@ -176,11 +181,13 @@ prerequisite. → [`context/SERVICES.md`](context/SERVICES.md)
 
 - **Uploadthing** file uploads persisted to an `uploads` table, with a read path,
   remote-first fail-closed deletion, and avatar wiring.
-- **Meilisearch** with index settings as code, indexing on DB write, and a
-  rate-limited bulk reindex action.
+- **Meilisearch** with index settings as code, indexing on DB write, and an
+  admin-gated, rate-limited bulk reindex action.
 - **pg-boss background jobs** (`@repo/jobs`): a worker + thin `enqueue()` helper,
-  welcome-email and Stripe-cancel jobs as worked examples, and a slim esbuild-bundled
-  worker image (~169 MB vs ~1.57 GB naive).
+  welcome-email and Stripe-cancel jobs as worked examples, a **dead-letter queue**
+  with a watched consumer (console + env-gated Sentry) so exhausted jobs surface
+  instead of vanishing, and a slim esbuild-bundled worker image (~169 MB vs ~1.57 GB
+  naive).
 
 **Why pg-boss over BullMQ/Redis or a hosted queue:** zero new infrastructure — it
 reuses your Postgres. If the worker is down, jobs queue and drain later; the app
