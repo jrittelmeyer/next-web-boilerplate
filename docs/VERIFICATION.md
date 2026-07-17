@@ -372,8 +372,13 @@ All are optional and independent; the app keeps building/running if you skip any
 > are unaffected** — `deleteUpload` + the `delete-uploads` job both call `UTApi().deleteFiles()`
 > (a direct server→UT API call, no inbound callback), so Rows 3–4 verify identically in dev
 > or prod. **Local prod-build workaround:** `UPLOADTHING_CALLBACK_URL` + a tunnel — the
-> worked runbook is in SERVICES.md → Uploadthing (source-verified mechanics; its one-time
-> live proof is the open BACKLOG row #4). The keyless `/uploads` surface is e2e-pinned by
+> worked runbook is in SERVICES.md → Uploadthing. **Live-proven 2026-07-17 (program #4b —
+> closes the prod-callback gap above):** cloudflared quick tunnel → prod `next start` :3000
+> with the override → a signed-in 70-byte-PNG upload's completion callback POSTed in
+> through the tunnel (the prod server logged `handleCallbackRequest` → "Sent callback
+> result to UploadThing") → the `uploads` row landed (`key=KdFsS5…RnF0`) and the "Your
+> uploads" card rendered it; Delete then swept row + file (the real `ufs.sh` URL
+> 200 → **404**), storage back to 0. The keyless `/uploads` surface is e2e-pinned by
 > `e2e/uploads.spec.ts` (2026-07-16).
 
 - [x] Create an app at uploadthing.com → **API Keys** → copy the token. Set `UPLOADTHING_TOKEN="…"` in `.env`; restart. _Verified 2026-07-07: live token (app `bd7mdm8njh`, region `sea1`) into root `.env`. `UPLOADTHING_TOKEN` is a **plain server var → restart, not rebuild** (the client `UploadButton` hits the same-origin `/api/uploadthing`; nothing is `NEXT_PUBLIC`). Both the web server (`dotenv -e ../../.env`) and the standalone worker (`packages/jobs/src/load-env.ts` loads root `.env`) pick it up — the worker logged `injected env (13) from ..\..\.env`._

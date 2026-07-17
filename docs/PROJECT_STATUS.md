@@ -47,16 +47,16 @@ _Last updated: 2026-07-17._
   lane is live since A28). **CodeQL is live** — `ENABLE_CODEQL` is set on the public
   repo (code scanning is free once public); the variable gate stays so private forks
   don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
-- **The path-to-100 program (owner decision, 2026-07-15) has SHIPPED all 11 build
-  rows — #1–#11, 2026-07-16 → 17.** Seven audit passes plateaued at 99.35 because the
-  last 13 points sat behind won't-fix/deferred classifications; each was re-litigated
-  and **all 13 proved recoverable** ([archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)
-  holds the per-row analysis). The one open remainder is **#4b** — the one-time live
-  Uploadthing tunnel proof (runbook committed; blocked on the owner opening a tunnel —
-  see [BACKLOG.md](BACKLOG.md)); Uploads can only score 100 once it runs. Next: a
-  `/project-audit` scoring pass verifies the program, then maintenance-only resumes.
-  The TS7 cutover stays outside it (externally gated — stable-Next TS7 support;
-  experimental in canary since 2026-07-10).
+- **The path-to-100 program (owner decision, 2026-07-15) is BUILD-COMPLETE — all 11
+  rows #1–#11 shipped 2026-07-16 → 17, and the last remainder, #4b (the one-time live
+  Uploadthing tunnel proof), closed 2026-07-17** (owner-approved cloudflared tunnel;
+  see [VERIFICATION.md](VERIFICATION.md) → Uploadthing). Seven audit passes plateaued
+  at 99.35 because the last 13 points sat behind won't-fix/deferred classifications;
+  each was re-litigated and **all 13 proved recoverable**
+  ([archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md) holds the
+  per-row analysis). Next: a `/project-audit` scoring pass verifies the program, then
+  maintenance-only resumes. The TS7 cutover stays outside it (externally gated —
+  stable-Next TS7 support; experimental in canary since 2026-07-10).
 
 ## Build progress
 
@@ -132,7 +132,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Path-to-100 · #2 | Zustand `persist` wired to `ui-store` (hydration-safe: `partialize` + `skipHydration` + post-paint `<StoreRehydration/>` in the `[locale]` layout, optional-chained — the persist API is absent when storage is unavailable, verified in the installed zustand v5). Unit tests pin partialize/skipHydration/no-storage; `e2e/state.spec.ts` proves reload persistence with zero hydration errors. 2026-07-16. See [context/STATE.md](context/STATE.md#middleware-decision). |
 | Path-to-100 · #5 | `reindexPosts` admin-gated (`requireAdmin()`, the `setUserRole` convention — supersedes the P1-2 any-signed-in-user demo decision); `/search` resolves the same check server-side and hides the button for non-admins. Live-verified: logged-out/non-admin hidden → psql promote → same session sees the button (fresh DB role read) → "Reindexed 12 posts." against real Meilisearch. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#meilisearch). |
 | Path-to-100 · #3 | Jobs dead-letter queue wired — worker creates every queue with `deadLetter: "failed-jobs"` **and** `updateQueue`-converges pre-existing databases (`createQueue` is `ON CONFLICT DO NOTHING`, verified in installed pg-boss 12.20.0 + live: all 4 queues stamped); watched DLQ consumer logs + captures to Sentry via `@sentry/node` 10.59.0 when `NEXT_PUBLIC_SENTRY_DSN` is set (reused — zero new env). Integration test proves exhausted job → DLQ with original payload on real Postgres. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#background-jobs--repojobs--pg-boss-d7). |
-| Path-to-100 · #4a | `e2e/uploads.spec.ts` — the last zero-e2e integration covered: keyless CI-honest spec (page renders logged-out, UploadButton mounts + settles past "Loading…", signed-in "Your uploads" empty state); 2/2 with `UPLOADTHING_TOKEN` explicitly blanked. The #4b callback runbook is **authored** (`UPLOADTHING_CALLBACK_URL`, source-verified in installed 7.7.4) — its one-time live tunnel proof stays an open BACKLOG row (agent sandbox blocked opening the tunnel). 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#uploadthing-file-uploads) · [VERIFICATION.md](VERIFICATION.md). |
+| Path-to-100 · #4a | `e2e/uploads.spec.ts` — the last zero-e2e integration covered: keyless CI-honest spec (page renders logged-out, UploadButton mounts + settles past "Loading…", signed-in "Your uploads" empty state); 2/2 with `UPLOADTHING_TOKEN` explicitly blanked. The #4b callback runbook (`UPLOADTHING_CALLBACK_URL`, source-verified in installed 7.7.4) was authored 2026-07-16 and its one-time live tunnel proof **ran 2026-07-17** (owner-approved cloudflared tunnel: callback POSTed through the tunnel on a prod build → `uploads` row landed; Delete swept row + file — dated box in VERIFICATION.md). 2026-07-16 → 17. See [context/SERVICES.md](context/SERVICES.md#uploadthing-file-uploads) · [VERIFICATION.md](VERIFICATION.md). |
 | Path-to-100 · #6 | Magic-link sign-in wired (promotes the A18 recipe) — `magicLink()` env-gated on `isEmailConfigured()` so affordance + endpoints appear/disappear together; capture-seam e2e (second :3001 webServer) + live :3100 send proof. 2026-07-16. See [context/AUTH.md](context/AUTH.md#magic-link-sign-in-env-gated-path-to-100-6) · [context/TESTING.md](context/TESTING.md#email-capture--the-magic-link-e2e-path-to-100-6). |
 | Path-to-100 · #7 | i18n full-surface coverage — en/es catalogs extended to every `[locale]` surface (identical 485-key trees, en byte-identical); all six `toLocale*` sites → the A32 named formats (+ `dateOnly`); es e2e chrome + signed-in date spot-check. 2026-07-16. See [context/I18N.md](context/I18N.md). |
 | Path-to-100 · #8 | Email bounce/complaint handling — signature-verified `POST /api/resend/webhook` (zero new deps) → `email_suppressions` (migration 0016) → every `send*` helper consults `isEmailSuppressed()` (env-gated on `RESEND_WEBHOOK_SECRET`, fail-open); jobs complete instead of retrying suppressed sends; self-signed-svix e2e + live :3100 proof. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#bounce--complaint-handling-path-to-100-8) · [context/DATABASE.md](context/DATABASE.md#email-suppressions-email_suppressions--do-not-send-list-migration-0016). |

@@ -751,9 +751,13 @@ precedence). Worked recipe:
    through the tunnel (`x-uploadthing-hook: callback`) → `onUploadComplete` runs →
    the `uploads` row lands (the "Your uploads" card shows it after the refresh).
 
-**Status: authored (not yet live-proven)** — the one-time live proof (the
-Stripe-webhook precedent) is tracked on the open BACKLOG row #4; the env-var
-mechanics above are source-verified, not guessed.
+**Status: LIVE-PROVEN 2026-07-17** (program #4b) — run once end-to-end on this
+box: cloudflared quick tunnel → prod `next start` on :3000 with the override →
+a signed-in upload's completion callback POSTed in through the tunnel (the prod
+server logged `handleCallbackRequest` → "Sent callback result to UploadThing")
+→ the `uploads` row landed and the "Your uploads" card rendered it; the
+follow-up Delete swept row + file (`ufs.sh` 200 → 404). Dated record:
+VERIFICATION.md → Uploadthing.
 
 **Account deletion cleans up files (P2-2 caveat, closed by P2-3):** deleting a
 user cascades the `uploads` **rows** away; the remote **files** are handled by the

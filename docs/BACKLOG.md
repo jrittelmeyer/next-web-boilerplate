@@ -59,23 +59,23 @@
 > **The path-to-100 program** (2026-07-15, owner-directed) — 11 rows recovering the 13
 > audit points locked behind won't-fix/deferred classifications (per-row re-analysis in
 > [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)) — **shipped all
-> 11 build rows 2026-07-16 → 17** (strikethrough table below). The only open program
-> remainder is **#4b**, the one-time live Uploadthing tunnel proof (first row below —
-> blocked on the owner). Next: the `/project-audit` scoring pass verifies the program.
-> The **TypeScript 7 cutover** stays outside the program (externally gated, costs no
-> points; see Watch).
+> 11 build rows 2026-07-16 → 17** (strikethrough table below), and the last remainder —
+> **#4b, the one-time live Uploadthing tunnel proof — closed 2026-07-17** (owner-approved
+> tunnel; strikethrough row below). **The program's build work is fully complete**; next:
+> the `/project-audit` scoring pass verifies it. The **TypeScript 7 cutover** stays
+> outside the program (externally gated, costs no points; see Watch).
 
 ### Open rows
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
-| B1 | Uploads | **UT prod-callback runbook: the one-time live proof** (remaining half of program #4) | SERVICES.md → Uploadthing · VERIFICATION.md | 4a (`uploads.spec.ts`, keyless e2e) **shipped 2026-07-16** and the `UPLOADTHING_CALLBACK_URL` + tunnel runbook is **authored with source-verified mechanics** (installed 7.7.4: Effect ConfigProvider maps the env var; zero code change). Remaining: run it once live (cloudflared/ngrok quick tunnel → upload → callback POST through the tunnel → `uploads` row) + date the VERIFICATION.md box. **Blocked 2026-07-16: the agent sandbox denied opening a public tunnel** — needs the owner to allow it (settings rule), run the tunnel himself, or say which tunnel tool to use. Recovers the last Uploads +1 → 100. [Program #4](archive/PATH_TO_100_2026-07-15.md). S |
 | B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
 
 ### Shipped (strikethrough record — full rows in the PROJECT_STATUS table + archive/PHASE_HISTORY)
 
 | Band | Upgrade | Shipped | See |
 | --- | --- | --- | --- |
+| B1 | ~~UT prod-callback tunnel proof (program #4b)~~ — the one-time live proof run on this box (owner-approved tunnel): cloudflared quick tunnel → prod `next start` :3000 + `UPLOADTHING_CALLBACK_URL` override → the completion callback POSTed in through the tunnel (prod server logged the callback result sent) → `uploads` row landed + card rendered; Delete swept row + file (`ufs.sh` 200→404). Recovers the last Uploads +1 — **program #4 fully closed; no open program rows remain.** | 2026-07-17 | SERVICES.md → Uploadthing · VERIFICATION.md → Uploadthing |
 | B4 | ~~Per-org billing~~ — `subscriptions` owned by exactly one of user/org (migration 0017, XOR `num_nonnulls` check — org rows carry NO `userId`, so member deletion can't cascade/cancel org billing); org-context checkout/portal (owner/admin gate before the config gate), webhook `metadata.organizationId` mapping, `hasOrgSubscription` + context-aware `/premium`, org-aware `/billing`, org-delete → the A13 cancel job (`organizationHooks`); Stripe-CLI live-verified per the Phase-5 method + keyless `e2e/billing-org.spec.ts`; program row #11 — **ALL 11 program build rows now shipped**; only the #4b tunnel proof (above) remains open before the scoring pass. | 2026-07-17 | SERVICES.md → Stripe · PROJECT_STATUS Path-to-100 · #11 |
 | B3 | ~~`CSP_MODE=nonce` as a first-class mode~~ — the verified nonce recipe promoted to a build-time env-gated mode (`.example` deleted; shared `src/lib/csp.ts` directive list; default static CSP byte-identical; nonce keeps the `"use cache"` showcase via `experimental.useCache`); `e2e/csp-nonce.spec.ts` matrix in the `ENABLE_CSP_NONCE` CI lane (ON here); program row #10, Wave 3 complete. | 2026-07-17 | SECURITY.md → CSP strategy · PROJECT_STATUS Path-to-100 · #10 |
 | B3 | ~~Opt-in OpenTelemetry~~ — OTLP/HTTP trace export behind `OTEL_EXPORTER_OTLP_ENDPOINT` (runtime; unset = prior behavior): a `BatchSpanProcessor` on **Sentry's own OTel provider** (`openTelemetrySpanProcessors`, source-verified) — the flagged Sentry-coexistence risk dissolved (one provider, works DSN-less); verified against a local collector in all three env states, incl. dual export to a Sentry sink + the collector simultaneously; program row #9, Wave 3 continues. | 2026-07-16 | SERVICES.md → OpenTelemetry · PROJECT_STATUS Path-to-100 · #9 |
