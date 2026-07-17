@@ -8,21 +8,26 @@
 ## Where the headers live
 
 All security headers are set in **`apps/web/next.config.ts`** via `headers()`,
-applied to every response (`source: "/:path*"`). They are **static** (no
-per-request value), so every route stays statically renderable (see the CSP
-strategy note below). The Sentry wrapper (`withSentryConfig`) wraps this config; it
+applied to every response (`source: "/:path*"`). In the default **static CSP
+mode** they are all static (no per-request value), so every route stays
+statically renderable; in **`CSP_MODE=nonce`** the CSP alone moves to the proxy
+(per-request nonce — see the CSP strategy section below) while the other headers
+stay in the config. The directive list itself lives in
+**`apps/web/src/lib/csp.ts`** (`buildCsp(nonce?)`), shared by both emitters so
+they can't drift. The Sentry wrapper (`withSentryConfig`) wraps this config; it
 doesn't touch the headers.
 
 There **is** one edge middleware — `apps/web/src/proxy.ts` (Next 16 renamed the
-`middleware` file convention to `proxy`) — but it does **not** set the security headers:
-it composes the optimistic auth-cookie gate (a fast redirect for protected/auth pages,
-see [AUTH.md](AUTH.md)) with next-intl's locale routing (see [I18N.md](I18N.md)). Since
-i18n its `matcher` is **broad** — `'/((?!api|_next|_vercel|.*\\..*).*)'`, nearly every
-HTML route — because locale negotiation must run everywhere. That does **not** make
-routes dynamic: a rewrite/redirect decision doesn't opt a route out of prerendering
-(the `[locale]` pages stay statically prerendered via `generateStaticParams` +
-`setRequestLocale`). What forces dynamic rendering is a page *reading* per-request data
-— which is exactly the nonce upgrade's cost below.
+`middleware` file convention to `proxy`) — which composes the optimistic
+auth-cookie gate (a fast redirect for protected/auth pages, see [AUTH.md](AUTH.md))
+with next-intl's locale routing (see [I18N.md](I18N.md)); in nonce mode it also
+mints the per-request CSP. Since i18n its `matcher` is **broad** —
+`'/((?!api|_next|_vercel|.*\\..*).*)'`, nearly every HTML route — because locale
+negotiation must run everywhere. That does **not** make routes dynamic: a
+rewrite/redirect decision doesn't opt a route out of prerendering (the `[locale]`
+pages stay statically prerendered via `generateStaticParams` +
+`setRequestLocale`). What forces dynamic rendering is a page *reading* per-request
+data — which is exactly nonce mode's cost below.
 
 If you deploy behind your own edge/reverse proxy, you *can* set these there
 instead — but config-level headers travel with the app (including the Docker
@@ -58,8 +63,9 @@ branches on `const isDev = process.env.NODE_ENV !== "production"`:
 
 ## Content-Security-Policy
 
-The CSP is built from a directive array in `next.config.ts`. Current directives
-(production variant):
+The CSP is built by `buildCsp()` in `apps/web/src/lib/csp.ts` (one directive list
+for both modes; only `script-src` differs). Current directives (production
+variant, default static mode):
 
 | Directive | Value | Notes |
 | --- | --- | --- |
@@ -98,85 +104,80 @@ stream **authenticates the session** and streams **only that user's** notificati
 strictly by `session.user.id`), and the publish helper uses **parameterized `pg_notify`**
 so a channel name can't inject SQL. See [API.md](API.md#realtime--server-sent-events-sse-tier-4--a22).
 
-## CSP strategy: static vs nonce (and the upgrade path)
+## CSP strategy: static vs nonce (the `CSP_MODE` switch)
 
-This boilerplate ships a **static CSP** with **`script-src 'self' 'unsafe-inline'`**.
-That `'unsafe-inline'` is a deliberate tradeoff, not an oversight:
+The CSP ships in **two supported modes**, selected by the **build-time** env var
+`CSP_MODE` (path-to-100 #10; validated in `env.ts` — a typo fails the build):
+
+| | `CSP_MODE` unset / `static` (default) | `CSP_MODE=nonce` |
+| --- | --- | --- |
+| `script-src` | `'self' 'unsafe-inline'` + allowlist | `'self' 'nonce-<per-request>' 'strict-dynamic'` + allowlist (no `'unsafe-inline'`) |
+| Emitted by | `next.config.ts` `headers()` (static value) | `proxy.ts` (fresh nonce every request; the config omits its CSP so the two policies never collide) |
+| Rendering | static routes + Partial Prerender shells (`cacheComponents: true`) | **every page renders dynamically** (`cacheComponents: false` + `experimental.useCache`) |
+| Everything else | identical — same `buildCsp()` directive list (`src/lib/csp.ts`), same non-CSP headers, `style-src` keeps `'unsafe-inline'` in both (inline `style=` attributes can't be nonced; low-risk) | |
+
+**Why the default keeps `'unsafe-inline'`** — a deliberate tradeoff, not an oversight:
 
 - **Why not hashes?** Next.js App Router injects inline `<script>` tags whose
   content is generated per render (RSC flight data, hydration bootstrap). They
   can't be hash-pinned ahead of time.
-- **Why not a nonce?** A nonce-based strict CSP (`script-src 'nonce-…'
-  'strict-dynamic'`) is the gold standard, but the nonce must be generated **per
-  request in the proxy (middleware)** and read back when rendering. **Reading** it
-  (`headers()` in the layout) opts routes into **dynamic rendering**, which regresses
-  this repo's static-generation / full-route-cache posture (the `/` landing page
-  prerenders statically). The existing broad proxy matcher (i18n) isn't the problem —
-  a middleware rewrite doesn't make a route dynamic; the per-request *read* in the
-  document shell is.
-- **The deeper conflict: `cacheComponents`.** A per-request nonce has to live in
-  the **document shell's** inline scripts (next-themes' pre-paint script + Next's
-  bootstrap), so the shell itself must render per-request — the exact opposite of
-  Cache Components' static-shell model. Reading the nonce in the root layout
-  **fails the production build** under `cacheComponents: true` (`Route
-  "/_not-found": Uncached data was accessed outside of <Suspense>`). So the nonce
-  upgrade is **not a one-file flip here** — it's a deliberate reversal of D4 (Cache
-  Components), spelled out in step 4 below and in [DECISIONS.md](DECISIONS.md) (the
-  "CSP: static … default; nonce upgrade …" decision).
+- **Why the nonce costs prerendering.** A nonce-based strict CSP is the gold
+  standard, but the nonce must be minted **per request in the proxy** and *read
+  back* when rendering — and it has to reach the **document shell's** inline
+  scripts (next-themes' pre-paint script + Next's bootstrap), so the shell itself
+  must render per-request. That is the exact opposite of Cache Components'
+  static-shell model: reading the nonce in the layout **fails the production
+  build** under `cacheComponents: true` (`Route "/_not-found": Uncached data was
+  accessed outside of <Suspense>`). The broad proxy matcher (i18n) isn't the
+  problem — a middleware rewrite doesn't make a route dynamic; the per-request
+  *read* in the shell is. See [DECISIONS.md](DECISIONS.md) (the CSP decision).
 
-For most apps the static CSP is the right default. **If your threat model wants the
-stronger script-src**, the upgrade ships in-repo as a ready recipe —
-**[`apps/web/src/proxy.csp-nonce.ts.example`](../../apps/web/src/proxy.csp-nonce.ts.example)**.
+For most apps the static default is right. **If your threat model wants the
+gold-standard `script-src`, build with `CSP_MODE=nonce`** — locally
+(`CSP_MODE=nonce pnpm build`), or bake it into the image
+(`docker build --build-arg CSP_MODE=nonce …`).
 
-> ✅ **i18n-aware (reworked 2026-07-12) — a drop-in again.** The `.example` now *is*
-> the current `proxy.ts` (next-intl's `handleI18nRouting` + the `METADATA_SEGMENTS`
-> guard + the locale-stripped auth gate — see [I18N.md](I18N.md)) with the nonce CSP
-> layered **around** the i18n hand-off: it augments the request headers with the nonce
-> (`x-nonce` + `Content-Security-Policy`), hands the augmented request to next-intl so
-> it forwards them to the render, then sets the CSP on the response. Swapping it in
-> keeps locale routing intact (`/es/*` still works); an earlier revision carried only
-> the pre-i18n auth gate and would have deleted locale routing.
+### How nonce mode works (the moving parts)
 
-It layers the nonce CSP onto the (locale-aware) auth-cookie gate. It's a verified, scoped
-change — but, per the conflict above, **a real reversal of Cache Components, not a
-one-file flip**. To adopt it:
+- **`proxy.ts`** — after the auth-gate short-circuits (redirects carry no
+  script-bearing body), it mints `Buffer.from(crypto.randomUUID()).toString("base64")`,
+  builds the CSP via `buildCsp(nonce)`, forwards nonce + CSP on the **request**
+  headers (`x-nonce` + `Content-Security-Policy` — Next reads the nonce from the
+  latter and stamps it on every `<script>` it injects), hands the augmented
+  request to next-intl's `handleI18nRouting`, and sets the CSP on the response.
+- **`app/[locale]/layout.tsx`** — reads `(await headers()).get("x-nonce")` and
+  passes it to `<ThemeProvider nonce={…}>` for next-themes' pre-paint inline
+  script (the one manual `<script>` in the tree; the `@repo/ui` wrapper spreads
+  the prop through). PostHog needs nothing — it's bundled, loaded by the nonced
+  bootstrap, so `'strict-dynamic'` trusts it transitively. In static mode this
+  read is dead code, so the static/PPR posture is untouched.
+- **`next.config.ts`** — in nonce mode drops its CSP header entry, sets
+  `cacheComponents: false`, and enables `experimental.useCache` so the D4
+  `"use cache"` showcase (`post-stats.tsx` + the `updateTag("posts")` busts)
+  **keeps compiling and caching** — `useCache` merely *defaults from*
+  `cacheComponents`; an explicit `true` survives it being off (verified in the
+  installed Next 16.2.9). Nonce mode gives up the static/PPR posture, **not** the
+  function cache. It also bakes the resolved mode into every bundle via `env:
+  { CSP_MODE: … }`.
 
-1. **Replace `proxy.ts`** with the `.example`'s contents. Per request it generates
-   a nonce (`Buffer.from(crypto.randomUUID()).toString("base64")`), builds the CSP
-   with `script-src 'self' 'nonce-<nonce>' 'strict-dynamic'` (drops `'unsafe-inline'`
-   for scripts; **keeps** it for `style-src`), forwards the nonce on the request
-   headers (so Next stamps it on its own injected scripts) plus an `x-nonce` header,
-   and sets the `Content-Security-Policy` response header. Its `matcher` is broadened
-   to all routes except `api`/`_next`/static files.
-2. **Remove the `Content-Security-Policy` entry** from `securityHeaders` in
-   `next.config.ts` (keep the other static headers) so the static and per-request
-   CSPs don't collide. API/`_next` routes then ship no CSP — fine, they serve no
-   page scripts.
-3. **In the document-shell layout** (`app/[locale]/layout.tsx` since i18n — already
-   `async`, it awaits `params`), read the nonce
-   (`(await headers()).get("x-nonce")`) and pass it to any inline script. The only
-   one in the default tree is next-themes' pre-paint script — its provider takes a
-   `nonce` prop and the `@repo/ui` `ThemeProvider` spreads props through, so
-   `<ThemeProvider nonce={nonce} …>` is all it needs. PostHog needs nothing
-   (bundled, loaded by the nonced bootstrap → trusted via `'strict-dynamic'`).
-4. **Turn Cache Components off and unwind D4** — required (see the conflict above).
-   The layout's `headers()` read fails the build with `cacheComponents: true`, so:
-   set `cacheComponents: false` in `next.config.ts`; remove the `"use cache"`
-   directive + `cacheLife`/`cacheTag` from `components/posts/post-stats.tsx`; and
-   drop the `updateTag("posts")` calls in `server/actions/post.ts` (keep
-   `revalidatePath("/posts")`, or use Next 16's two-arg `revalidateTag`). If your
-   fork doesn't use D4's `"use cache"` showcase, this is just `cacheComponents: false`.
+**`CSP_MODE` is build-time, like `NEXT_PUBLIC_*`:** setting it at `next start`
+time is **silently ignored** (verified: a static build started with
+`CSP_MODE=nonce` serves byte-identical static headers). Rebuild to change modes.
+`turbo.json` lists it in the build task's `env`, so the two modes get distinct
+Turbo cache entries.
 
-The `.example` file carries these steps inline plus a verification recipe, and
-follows Next.js's official "Content Security Policy" guide. **Verified end-to-end**
-(2026-06-27; re-verified against the i18n proxy 2026-07-12): with the recipe + D4
-unwind applied, a prod build serves a per-request `'nonce-…' 'strict-dynamic'` CSP
-(no script `'unsafe-inline'`) on **both** the unprefixed default locale and `/es`;
-every `<script>` tag (external chunks + next-themes' inline pre-paint) carries that
-per-request nonce; the `/en`→`/` and locale-aware auth redirects still fire; and
-`/[locale]` builds dynamic (`ƒ`). Documented here — and in
-[DECISIONS.md](DECISIONS.md) (the CSP decision) — so the upgrade is a known, scoped
-change, not a rediscovery.
+**Verified end-to-end** (recipe 2026-06-27; i18n rework 2026-07-12; as a
+first-class mode **2026-07-17**): a `CSP_MODE=nonce` prod build serves a
+per-request `'nonce-…' 'strict-dynamic'` CSP (no script `'unsafe-inline'`) on
+**both** the unprefixed default locale and `/es`, rotating every request; every
+`<script>` tag (external chunks + next-themes' inline pre-paint) carries that
+request's nonce; the primary journeys (landing/theme, signup → dashboard, posts
+create incl. the `updateTag` cache bust, account) run with **zero console CSP
+violations**; and the locale-aware auth redirects still fire. The
+`e2e/csp-nonce.spec.ts` matrix pins all of this in the variable-gated
+**`csp-nonce` CI lane** (`ENABLE_CSP_NONCE`, on in this repo — see
+[DEPLOYMENT.md](DEPLOYMENT.md)); the default e2e lane keeps proving the static
+mode.
 
 ## CSP violation reporting (opt-in)
 
@@ -371,7 +372,8 @@ Of the three cross-origin isolation headers, **only COOP ships**; CORP and COEP 
   `{ key: "Cross-Origin-Resource-Policy", value: "same-origin" }`.
 
 The unconditional header set (including COOP) is regression-guarded by
-`apps/web/e2e/security-headers.spec.ts`.
+`apps/web/e2e/security-headers.spec.ts` — its assertions are CSP-mode-agnostic, so
+it runs in both the default `e2e` lane and the `csp-nonce` lane.
 
 ## security.txt (RFC 9116)
 

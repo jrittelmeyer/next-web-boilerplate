@@ -10,7 +10,7 @@
 >   Working agreements → [../AGENTS.md](../AGENTS.md) ·
 >   Backlog → [BACKLOG.md](BACKLOG.md)
 
-_Last updated: 2026-07-16._
+_Last updated: 2026-07-17._
 
 ## Where we are
 
@@ -107,7 +107,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Tier 4 · B4 (admin plugin) | `admin()` adopted to augment RBAC — fresh-gated direct ban writes · plugin impersonation (≤5-min residual documented); migration 0014. 2026-07-10. See [context/AUTH.md](context/AUTH.md#admin-plugin--ban--impersonation-tier-4--band-4). |
 | Tier 4 · B4 (i18n) | next-intl `[locale]` path routing (`as-needed`, en + es), partial primary-journey coverage, per-locale SEO, `LanguageSwitcher`. 2026-07-11. See [context/I18N.md](context/I18N.md). |
 | Tier 4 · A12 (CAPTCHA) | Opt-in Cloudflare Turnstile via Better Auth `captcha()` (conditional spread last before `nextCookies()`); dummy-test-key-verified. 2026-07-11. See [context/AUTH.md](context/AUTH.md#bot-protection--captcha-cloudflare-turnstile-tier-4--band-2). |
-| Tier 4 · B3 (CSP nonce) | Nonce-CSP recipe reworked for the i18n proxy; re-verified end-to-end on `:3100`, then reverted — default stays the static CSP. 2026-07-12. See [context/SECURITY.md](context/SECURITY.md#csp-strategy-static-vs-nonce-and-the-upgrade-path). |
+| Tier 4 · B3 (CSP nonce) | Nonce-CSP recipe reworked for the i18n proxy; re-verified end-to-end on `:3100`, then reverted — default stays the static CSP. 2026-07-12. Promoted to the first-class `CSP_MODE=nonce` (Path-to-100 · #10 below). See [context/SECURITY.md](context/SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch). |
 | Tier 4 · A22 (realtime) | SSE notifications — Postgres LISTEN/NOTIFY → per-user bus → `EventSource` → query cache; persisted `notifications` table (migration 0015). 2026-07-12. See [context/API.md](context/API.md#realtime--server-sent-events-sse-tier-4--a22). |
 | Tier 4 · A23 (realtime) | SSE reconnect backfill — every re-open after the first invalidates `notification.list` (self-healing delivery). 2026-07-11. See API.md → Realtime · STATE.md. |
 | Tier 4 · A24 (realtime) | Authoritative unread-count badge — `notification.unreadCount` as SQL `count()`, reconciled in lockstep with the list. 2026-07-11. See API.md → Realtime · STATE.md. |
@@ -135,6 +135,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Path-to-100 · #7 | i18n full-surface coverage — en/es catalogs extended to every `[locale]` surface (identical 485-key trees, en byte-identical); all six `toLocale*` sites → the A32 named formats (+ `dateOnly`); es e2e chrome + signed-in date spot-check. 2026-07-16. See [context/I18N.md](context/I18N.md). |
 | Path-to-100 · #8 | Email bounce/complaint handling — signature-verified `POST /api/resend/webhook` (zero new deps) → `email_suppressions` (migration 0016) → every `send*` helper consults `isEmailSuppressed()` (env-gated on `RESEND_WEBHOOK_SECRET`, fail-open); jobs complete instead of retrying suppressed sends; self-signed-svix e2e + live :3100 proof. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#bounce--complaint-handling-path-to-100-8) · [context/DATABASE.md](context/DATABASE.md#email-suppressions-email_suppressions--do-not-send-list-migration-0016). |
 | Path-to-100 · #9 | Opt-in OpenTelemetry — OTLP/HTTP trace export gated on `OTEL_EXPORTER_OTLP_ENDPOINT` (runtime knob, no rebuild; unset = prior behavior exactly): `lib/otel.ts` adds a `BatchSpanProcessor` to **Sentry's own OTel provider** via the SDK's `openTelemetrySpanProcessors` option (source-verified in 10.59.0) — one provider/sampler, no double-instrumentation; works DSN-less (sampler gates on `tracesSampleRate`, not DSN). Live matrix vs a local collector: baseline inert · OTLP-only spans (keyless build) · dual export (Sentry-sink `transaction` envelopes + collector spans from the same requests); `OTEL_SERVICE_NAME` honored. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#opentelemetry-export-opt-in-path-to-100-9). |
+| Path-to-100 · #10 | `CSP_MODE=nonce` as a first-class **build-time** mode (M4's recipe promoted; the inert `.example` deleted) — one shared directive list (`src/lib/csp.ts`) feeds both the static config header (default, byte-identical to pre-#10) and the proxy's per-request `'nonce-…' 'strict-dynamic'` CSP; nonce builds set `cacheComponents: false` + `experimental.useCache` so the D4 `"use cache"` showcase **keeps caching** (only the static/PPR posture is given up; `useCache`-survives-`cacheComponents:false` source-verified in Next 16.2.9). Baked via config `env` → runtime override is a verified no-op. New `e2e/csp-nonce.spec.ts` matrix (rotating nonce both locales · no script `'unsafe-inline'` · every `<script>` stamped · journeys with zero console violations) runs in the variable-gated `csp-nonce` CI lane (`ENABLE_CSP_NONCE`, ON here). 2026-07-17. See [context/SECURITY.md](context/SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch). |
 
 ## Fresh project on-ramp (clone → build a real app)
 

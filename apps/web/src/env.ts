@@ -84,6 +84,16 @@ export const env = createEnv({
     // legacy LOGTAIL_SOURCE_TOKEN/LOGTAIL_URL names are also read by the SDK.
     BETTER_STACK_SOURCE_TOKEN: z.string().optional(),
     BETTER_STACK_INGESTING_URL: z.url().optional(),
+    // Content-Security-Policy mode (path-to-100 #10). BUILD-time knob: "static"
+    // (default) keeps the config-level CSP with script-src 'unsafe-inline' and the
+    // static/PPR rendering posture; "nonce" moves the CSP to the proxy (per-request
+    // 'nonce-…' 'strict-dynamic', no script 'unsafe-inline') and builds with
+    // cacheComponents off — pages render dynamically. next.config.ts bakes the
+    // resolved mode into the bundles, so setting this at `next start` time is
+    // ignored (NEXT_PUBLIC_-style semantics): rebuild to change modes. Validated
+    // here so a typo ("CSP_MODE=Nonce") fails the build instead of silently
+    // degrading to static. See SECURITY.md → CSP strategy.
+    CSP_MODE: z.enum(["static", "nonce"]).optional(),
     // Bot protection — Cloudflare Turnstile CAPTCHA (A12). Optional: unset (the
     // default) → the Better Auth captcha() plugin is NOT registered and the widget
     // never renders, so sign-up / sign-in / password-reset behave exactly as before.

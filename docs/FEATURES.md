@@ -212,9 +212,11 @@ builds and runs with the worker never started.
 
 ## Security
 
-- Full security-header set with a documented **static CSP default** and a
-  **verified nonce-CSP upgrade recipe** (`'strict-dynamic'`, shipped as an inert
-  `.example` file with its real costs documented — see below).
+- Full security-header set with **two supported CSP modes**: the **static default**
+  (`'unsafe-inline'`, keeps the static/PPR rendering posture) and the env-gated
+  **`CSP_MODE=nonce`** (per-request `'nonce-…' 'strict-dynamic'`, no script
+  `'unsafe-inline'` — the gold standard; pages render dynamically), each proven by
+  its own CI lane. One shared directive list so the modes can't drift.
 - COOP cross-origin isolation, `security.txt` (RFC 9116), opt-in CSP violation
   reporting, and app-level **rate limiting** (in-memory by default, Upstash Redis as
   the distributed driver, hardened client-IP resolution behind proxies).
@@ -234,8 +236,8 @@ builds and runs with the worker never started.
   + E2E need only the local Docker Postgres.
 - CI lanes: `verify` (lint, type-check, manypkg pin-consistency, **knip** dead-code
   gate, build), `audit`, `e2e`, `docker-image` (builds both images, health-smokes
-  them against a throwaway Postgres, Trivy-gates), and opt-in visual / perf / CodeQL /
-  GHCR-publish lanes.
+  them against a throwaway Postgres, Trivy-gates), and opt-in visual / CSP-nonce /
+  perf / CodeQL / GHCR-publish lanes.
 - Git hooks: lint-staged pre-commit, type-check pre-push, commit-message sanity.
 
 → [`context/TESTING.md`](context/TESTING.md) · [`context/DEPLOYMENT.md`](context/DEPLOYMENT.md)
@@ -264,8 +266,8 @@ shipped. The full record is [`context/DECISIONS.md`](context/DECISIONS.md); high
   tool if typed hrefs are ever wanted.
 - **Nonce CSP as the default** — the gold-standard CSP conflicts with Cache
   Components' static-shell model (a per-request nonce forces per-request shells). It
-  ships as a *verified, documented recipe* instead of a silent default, with the real
-  trade-off spelled out.
+  ships as the first-class **`CSP_MODE=nonce`** build instead of a silent default
+  (path-to-100 #10, 2026-07-17), with the real trade-off spelled out.
 - **Prisma, Clerk/NextAuth, BullMQ/Redis, hosted realtime** — each displaced by a
   leaner or more self-contained equivalent (Drizzle, Better Auth, pg-boss, SSE over
   LISTEN/NOTIFY), with the reasoning recorded.

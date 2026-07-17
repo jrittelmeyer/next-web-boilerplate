@@ -185,6 +185,73 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
+  csp-nonce:
+    name: E2E (CSP nonce mode)
+    runs-on: ubuntu-latest
+    # Variable-gated (the ENABLE_CODEQL / ENABLE_VISUAL pattern) — ON in this repo.
+    # Proves the CSP_MODE=nonce build end-to-end on every PR/push: builds the app in
+    # nonce mode (CSP_MODE is BUILD-time; the e2e lane above covers the static
+    # default) and runs the nonce matrix — per-request rotating nonce, no script
+    # 'unsafe-inline', every <script> stamped, primary journeys with zero CSP
+    # violations (e2e/csp-nonce.spec.ts; playwright.config.ts scopes the run in this
+    # mode). A fork that doesn't use nonce mode can leave the variable unset — the
+    # lane stays off and the pipeline is self-contained without it. To enable:
+    # `gh variable set ENABLE_CSP_NONCE --body true`. See DEPLOYMENT.md → CI/CD +
+    # SECURITY.md → CSP strategy.
+    if: ${{ vars.ENABLE_CSP_NONCE == 'true' }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: appdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Same throwaway CI values as the e2e lane — plus the mode under test.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/appdb
+      BETTER_AUTH_SECRET: ci-better-auth-secret-min-32-characters-long
+      BETTER_AUTH_URL: http://localhost:3000
+      CSP_MODE: nonce
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply database migrations
+        run: pnpm --filter @repo/db db:migrate
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      # Turbo's `test:e2e` dependsOn `build`, and CSP_MODE is in the build task's
+      # env list (turbo.json) — so this builds the app in nonce mode (a distinct
+      # Turbo cache key from the static build) and boots it for the matrix spec.
+      - run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-csp-nonce
+          path: apps/web/playwright-report/
+          retention-days: 7
+
   docker-image:
     name: Docker image (build · smoke · scan · SBOM)
     runs-on: ubuntu-latest

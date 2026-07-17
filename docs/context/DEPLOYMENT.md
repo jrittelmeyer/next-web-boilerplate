@@ -72,6 +72,12 @@ UPSTASH_REDIS_REST_TOKEN=""
 # Bot protection — Cloudflare Turnstile CAPTCHA (optional; A12 — set BOTH to enable)
 TURNSTILE_SECRET_KEY=""              # server: siteverify secret
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=""    # client widget key (build-time inlined)
+
+# Security — CSP mode (optional; path-to-100 #10). BUILD-time, like NEXT_PUBLIC_*:
+# bake it into the build (`CSP_MODE=nonce pnpm build` / docker --build-arg); a runtime
+# value is ignored. unset/static = config CSP + static/PPR posture; nonce = per-request
+# 'nonce-…' 'strict-dynamic' CSP from the proxy, pages render dynamic. SECURITY.md.
+CSP_MODE=""
 ```
 
 **Managed Postgres & pooling.** The `DATABASE_URL` above is a direct local connection. On a
@@ -251,6 +257,9 @@ Multi-stage build on `node:24-alpine` (corepack-pinned pnpm from `packageManager
 2. **deps** — `pnpm fetch` (lockfile-only, cached) then `pnpm install --frozen-lockfile --offline`.
 3. **builder** — `pnpm build` with `SKIP_ENV_VALIDATION=1`, `NEXT_TELEMETRY_DISABLED=1`,
    and **`BUILD_STANDALONE=1`** (see below). No real secrets are needed or baked in.
+   The CSP mode is chosen here too — `docker build --build-arg CSP_MODE=nonce …` bakes
+   the nonce-CSP build into the image (`CSP_MODE` is build-time; see
+   [SECURITY.md](SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch)).
 4. **runner** — minimal image; runs as the **non-root `nextjs`** user (uid 1001),
    `CMD ["node", "apps/web/server.js"]`, listens on `:3000` (`PORT`/`HOSTNAME=0.0.0.0`).
    The base image's bundled **`npm` CLI is removed** (`rm -rf …/node_modules/npm` +
@@ -275,7 +284,9 @@ are **not** part of standalone — the Dockerfile copies them alongside the serv
 
 > **Turbo strict env mode:** Turborepo 2.x filters env vars not declared in
 > `turbo.json`. `SKIP_ENV_VALIDATION` / `BUILD_STANDALONE` are in `globalPassThroughEnv`
-> and the app's validated vars are in the `build` task's `env`, so they reach
+> and the app's validated vars (incl. `CSP_MODE`, which must also key the build's
+> cache — a static and a nonce build are different artifacts) are in the `build`
+> task's `env`, so they reach
 > `next build` (whether set by the Docker `ENV`, a CI job env, or the host). Without
 > this, `next build` never sees them — the failure is silent until the build errors on
 > "missing" env. A root `.env` loaded by `dotenv-cli` sidesteps it locally (the file
@@ -472,9 +483,13 @@ on failure). This is what makes the Step-13 observability stack carry real traff
 ## CI/CD (GitHub Actions)
 
 `.github/workflows/ci.yml` has four always-on jobs (`verify`, `audit`, `e2e`,
-`docker-image`) plus two variable-gated jobs — `visual` (`ENABLE_VISUAL`, **on in this
-repo** since A28 committed the Linux baselines, 2026-07-12 — runs on every PR/push; a
-fresh fork starts with it off) and the still-dormant `perf` (`ENABLE_PERF`); a separate
+`docker-image`) plus three variable-gated jobs — `visual` (`ENABLE_VISUAL`, **on in
+this repo** since A28 committed the Linux baselines, 2026-07-12), `csp-nonce`
+(`ENABLE_CSP_NONCE`, **on in this repo** since path-to-100 #10, 2026-07-17 — builds
+the app with `CSP_MODE=nonce` and runs the `e2e/csp-nonce.spec.ts` matrix against a
+throwaway Postgres, proving the nonce mode on every PR/push while the always-on
+`e2e` lane keeps proving the static default; a fork that never uses nonce mode
+leaves the variable unset) and the still-dormant `perf` (`ENABLE_PERF`); a separate
 `.github/workflows/codeql.yml` runs static analysis (see
 [Dependency & security automation](#dependency--security-automation-step-26)).
 All workflow actions are **pinned to full commit SHAs** (P1-5) with the release
@@ -542,6 +557,18 @@ Playwright report is uploaded as an artifact. **Meilisearch is intentionally abs
 `e2e/posts.spec.ts`). Concurrency keeps PR runs (`refs/pull/N/merge`) and main runs
 (`refs/heads/main`) in distinct groups, and `cancel-in-progress` collapses superseded
 pushes on a PR, so broadening to PRs doesn't pile up.
+
+**`csp-nonce`** — the **nonce-mode twin of `e2e`**, variable-gated on
+`ENABLE_CSP_NONCE` (**on in this repo**; path-to-100 #10). Same shape (postgres
+service, migrations, chromium, `pnpm test:e2e`) with `CSP_MODE: nonce` in the job
+env: Turbo's `test:e2e` → `build` dependency builds the app **in nonce mode** (a
+distinct Turbo cache key), and `playwright.config.ts` scopes the run to
+`e2e/csp-nonce.spec.ts` (the nonce matrix: rotating per-request nonce on both
+locales, no script `'unsafe-inline'`, every `<script>` stamped, primary journeys
+with zero console CSP violations) plus the mode-agnostic
+`security-headers.spec.ts`. `CSP_MODE` is **build-time**, which is why this is a
+separate lane with its own build rather than extra specs in the `e2e` lane. See
+[SECURITY.md → CSP strategy](SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch).
 
 **`docker-image`** — builds, smoke-tests, and vulnerability-scans the **production
 image** on every PR and push (parallel to the other jobs; no `needs`). CI used to never

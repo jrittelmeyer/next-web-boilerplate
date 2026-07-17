@@ -288,6 +288,16 @@ Every spec except the DB-free `home.spec.ts`, `security-headers.spec.ts`, and
 the DB-backed E2E lane (the `e2e` job — every PR and push to main), which runs against a
 Postgres service.
 
+**One spec never runs in the default suite:** `csp-nonce.spec.ts` (path-to-100 #10)
+asserts the `CSP_MODE=nonce` build's per-request-nonce matrix, so
+`playwright.config.ts` routes it to its own project **only when `CSP_MODE=nonce`**
+(and then runs *just* it + the mode-agnostic `security-headers.spec.ts`, against a
+single webServer — the email-capture server isn't started). CI runs it in the
+variable-gated `csp-nonce` lane, which builds the app in nonce mode
+([DEPLOYMENT.md](DEPLOYMENT.md#cicd-github-actions)); locally:
+`CSP_MODE=nonce CI=true pnpm --filter web test:e2e` (bash — the mode must reach the
+Turbo-driven build).
+
 **Admin bootstrap (D2).** `e2e/admin.spec.ts` needs a logged-in admin, but promotion is
 never self-service (no UI or seed admin). It signs up users through the UI, then
 promotes one via a **direct DB write** — `promoteToAdmin(email)` in `e2e/support/db.ts`,

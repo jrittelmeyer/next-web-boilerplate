@@ -15,6 +15,16 @@ import { RESEND_WEBHOOK_TEST_SECRET } from "./e2e/support/resend-webhook";
 // email-capture directory for the magic-link spec to read.
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
+// CSP_MODE=nonce (path-to-100 #10) flips the run to the nonce-CSP matrix: the
+// suite becomes csp-nonce.spec.ts + the mode-agnostic security-headers.spec.ts,
+// against a single webServer whose build (Turbo `test:e2e` dependsOn `build`,
+// CSP_MODE passes through) was made in nonce mode. The default suite is not run
+// here — its static-CSP server counterpart already covers it — and the
+// email-capture server isn't needed. CSP_MODE is BUILD-time: running this
+// against a static build fails immediately (no nonce in the header), it cannot
+// silently pass.
+const cspNonceMode = process.env.CSP_MODE === "nonce";
+
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
@@ -27,27 +37,42 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
   },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-      testIgnore: ["**/magic-link.spec.ts", "**/email-suppression.spec.ts"],
-    },
-    // Magic link (path-to-100 #6) + email suppression (#8): these specs run ONLY
-    // against the second, email-capturing server below — the main suite's :3000
-    // server stays keyless (email unconfigured), which is itself load-bearing:
-    // auth.spec.ts asserts the affordance is HIDDEN there, and signup must keep
-    // yielding an immediate session.
-    ...(process.env.E2E_BASE_URL
-      ? []
-      : [
-          {
-            name: "chromium-email",
-            use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:3001" },
-            testMatch: ["**/magic-link.spec.ts", "**/email-suppression.spec.ts"],
-          },
-        ]),
-  ],
+  projects: cspNonceMode
+    ? [
+        {
+          name: "chromium-csp-nonce",
+          use: { ...devices["Desktop Chrome"] },
+          testMatch: ["**/csp-nonce.spec.ts", "**/security-headers.spec.ts"],
+        },
+      ]
+    : [
+        {
+          name: "chromium",
+          use: { ...devices["Desktop Chrome"] },
+          testIgnore: [
+            "**/magic-link.spec.ts",
+            "**/email-suppression.spec.ts",
+            // Nonce-CSP matrix (#10): only meaningful against a CSP_MODE=nonce
+            // build — the project above runs it; the default static-CSP suite
+            // must not.
+            "**/csp-nonce.spec.ts",
+          ],
+        },
+        // Magic link (path-to-100 #6) + email suppression (#8): these specs run ONLY
+        // against the second, email-capturing server below — the main suite's :3000
+        // server stays keyless (email unconfigured), which is itself load-bearing:
+        // auth.spec.ts asserts the affordance is HIDDEN there, and signup must keep
+        // yielding an immediate session.
+        ...(process.env.E2E_BASE_URL
+          ? []
+          : [
+              {
+                name: "chromium-email",
+                use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:3001" },
+                testMatch: ["**/magic-link.spec.ts", "**/email-suppression.spec.ts"],
+              },
+            ]),
+      ],
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : [
@@ -57,30 +82,35 @@ export default defineConfig({
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
-        {
-          // The email-capture server (path-to-100 #6): the SAME keyless build, second
-          // instance. Fake Resend creds flip isEmailConfigured() on — registering the
-          // magicLink() plugin and the login affordance — while EMAIL_TEST_CAPTURE_DIR
-          // diverts every send to a JSON file (packages/email/src/send.tsx) that
-          // magic-link.spec.ts reads: no network, no real key, CI-honest.
-          // BETTER_AUTH_URL must match the served origin (trusted-origin check + the
-          // links inside captured emails). These env entries win over the start
-          // script's `dotenv -e ../../.env` (dotenv-cli never overrides already-set
-          // vars), so a populated local root .env can't leak real creds in here.
-          command: "pnpm start --port 3001",
-          url: "http://localhost:3001",
-          reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
-          env: {
-            BETTER_AUTH_URL: "http://localhost:3001",
-            RESEND_API_KEY: "re_e2e_capture_only",
-            EMAIL_FROM: "E2E <e2e@example.com>",
-            EMAIL_TEST_CAPTURE_DIR: EMAIL_CAPTURE_DIR,
-            // Path-to-100 #8: arms /api/resend/webhook signature verification AND
-            // the send helper's suppression consult on this server only; the
-            // email-suppression spec self-signs event payloads against it.
-            RESEND_WEBHOOK_SECRET: RESEND_WEBHOOK_TEST_SECRET,
-          },
-        },
+        // The nonce-matrix run needs no second server (no email specs in it).
+        ...(cspNonceMode
+          ? []
+          : [
+              {
+                // The email-capture server (path-to-100 #6): the SAME keyless build, second
+                // instance. Fake Resend creds flip isEmailConfigured() on — registering the
+                // magicLink() plugin and the login affordance — while EMAIL_TEST_CAPTURE_DIR
+                // diverts every send to a JSON file (packages/email/src/send.tsx) that
+                // magic-link.spec.ts reads: no network, no real key, CI-honest.
+                // BETTER_AUTH_URL must match the served origin (trusted-origin check + the
+                // links inside captured emails). These env entries win over the start
+                // script's `dotenv -e ../../.env` (dotenv-cli never overrides already-set
+                // vars), so a populated local root .env can't leak real creds in here.
+                command: "pnpm start --port 3001",
+                url: "http://localhost:3001",
+                reuseExistingServer: !process.env.CI,
+                timeout: 120_000,
+                env: {
+                  BETTER_AUTH_URL: "http://localhost:3001",
+                  RESEND_API_KEY: "re_e2e_capture_only",
+                  EMAIL_FROM: "E2E <e2e@example.com>",
+                  EMAIL_TEST_CAPTURE_DIR: EMAIL_CAPTURE_DIR,
+                  // Path-to-100 #8: arms /api/resend/webhook signature verification AND
+                  // the send helper's suppression consult on this server only; the
+                  // email-suppression spec self-signs event payloads against it.
+                  RESEND_WEBHOOK_SECRET: RESEND_WEBHOOK_TEST_SECRET,
+                },
+              },
+            ]),
       ],
 });

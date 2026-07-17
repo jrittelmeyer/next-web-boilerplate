@@ -251,39 +251,43 @@
     env-gated, fire-and-forget heartbeat ping (`packages/jobs/src/heartbeat.ts`) — worker-only,
     no-op when `BETTER_STACK_HEARTBEAT_URL` is unset. Removal = 4 steps in its README.
 
-- **CSP: static `'unsafe-inline'` default; nonce upgrade shipped as a verified recipe, NOT a
-  flip (Phase 3 · M4).** The default ships a **static CSP** with `script-src 'self'
-  'unsafe-inline'` (in `next.config.ts`). The gold-standard nonce CSP (`'nonce-…'
-  'strict-dynamic'`) ships as an opt-in drop-in recipe — `apps/web/src/proxy.csp-nonce.ts.example`
-  (inert: Next only loads `proxy.ts`, so it's out of lint/type-check) — plus the documented
-  layout `nonce` snippet. **Decision: ship the recipe (Option A), but document its real cost
-  honestly** rather than pretend it's a one-file flip.
-  - **Why it's not a flip — the `cacheComponents` conflict.** A per-request nonce must live
-    in the **document shell's** inline scripts (next-themes' pre-paint script + Next's
+- **CSP: static `'unsafe-inline'` default; nonce as a first-class BUILD-TIME mode, not the
+  default (Phase 3 · M4 recipe → path-to-100 #10 mode, 2026-07-17).** The default ships a
+  **static CSP** with `script-src 'self' 'unsafe-inline'`; the gold-standard nonce CSP
+  (`'nonce-…' 'strict-dynamic'`) is now the env-gated **`CSP_MODE=nonce`** — one codebase,
+  both modes always compiled/linted, one shared directive list (`src/lib/csp.ts`) so the two
+  emitters can't drift. This superseded M4's inert `.example` recipe (deleted): a supported
+  mode with a CI lane can't rot the way a not-compiled recipe file can.
+  - **Why nonce isn't the default — the `cacheComponents` conflict.** A per-request nonce must
+    live in the **document shell's** inline scripts (next-themes' pre-paint script + Next's
     bootstrap), so the shell must render **per-request**. That is the opposite of Cache
-    Components' static-shell model (D4): reading the nonce via `headers()` in the root layout
+    Components' static-shell model (D4): reading the nonce via `headers()` in the layout
     **fails the production build** under `cacheComponents: true` (`/_not-found: Uncached data
-    accessed outside of <Suspense>` — the layout sits above every Suspense boundary). So
-    adopting nonce CSP **reverses D4**: `cacheComponents: false`, remove the `"use cache"`
-    showcase in `components/posts/post-stats.tsx`, and drop the `updateTag("posts")` calls in
-    `server/actions/post.ts`. The full step list is in the `.example` + [SECURITY.md](SECURITY.md).
-  - **Verified end-to-end (2026-06-27; re-verified against the i18n proxy 2026-07-12):**
-    with the recipe + D4 unwind applied, a prod build on `:3100` served a per-request
-    `'nonce-…' 'strict-dynamic'` CSP (no script `'unsafe-inline'`) on **both** the
-    unprefixed default locale and `/es`; every `<script>` tag (34: external chunks +
-    next-themes' inline pre-paint) carried the matching per-request nonce; the `/en`→`/`
-    and locale-aware auth redirects still fired; and `/[locale]` built dynamic (`ƒ`). The
-    reworked `.example` composes the nonce CSP *around* next-intl's hand-off — augment the
-    request headers with the nonce, hand the augmented `NextRequest` to `handleI18nRouting`
-    so it forwards them to the render, then set the CSP on the response. The default
-    (static-CSP) build is unchanged.
-  - **Alternatives considered.** **(B) Document-only — don't ship a recipe:** rejected; the
-    verified `.example` is still valuable for forks that don't use D4 (there it *is* nearly a
-    one-file flip) and makes the upgrade concrete instead of a rediscovery. **(C) Engineer
-    coexistence** (keep cacheComponents by isolating the nonce read behind a `<Suspense>`
-    boundary): **deferred as a future path** — it likely reintroduces a theme flash
-    (next-themes' anti-FOUC script would stream instead of being in the initial paint) and is
-    unverified; revisit only if a fork needs both nonce CSP *and* the static-shell posture.
+    accessed outside of <Suspense>`). Making nonce the default would force every page dynamic
+    for all consumers to serve the security-mature minority; the mode switch serves both.
+  - **Why build-time (not runtime):** the mode toggles `cacheComponents` — unavoidably a build
+    decision — so `next.config.ts` bakes the resolved mode into every bundle (`env: { CSP_MODE }`),
+    giving it `NEXT_PUBLIC_*` semantics: a runtime override is a verified no-op (a static build
+    started with `CSP_MODE=nonce` serves byte-identical headers), never a half-flipped server
+    (e.g. double CSP headers, which browsers enforce as the intersection).
+  - **Nonce mode does NOT unwind D4's `"use cache"` showcase** (the M4 recipe did):
+    `experimental.useCache: true` keeps the directive compiling and caching under
+    `cacheComponents: false` — source-verified in the installed Next 16.2.9 (`useCache`
+    *defaults from* `cacheComponents`; an explicit `true` survives it off) and live-verified
+    (post create → `updateTag("posts")` busts the cached count in nonce mode). What nonce mode
+    gives up is the static/PPR posture only.
+  - **Verified end-to-end** (recipe 2026-06-27 · i18n rework 2026-07-12 · as a mode
+    **2026-07-17**, incl. the `e2e/csp-nonce.spec.ts` matrix in the variable-gated `csp-nonce`
+    CI lane): per-request rotating nonce on both locales, no script `'unsafe-inline'`, every
+    `<script>` stamped, primary journeys with zero console CSP violations; the default build's
+    headers stay **byte-identical** to pre-#10. Details: [SECURITY.md](SECURITY.md) → CSP strategy.
+  - **Alternatives considered.** **(B) Keep the recipe-file posture:** rejected once re-litigated
+    — an inert `.example` drifts silently (it had already needed one full rework for i18n) and
+    its promise ("verified") decays without CI. **(C) Engineer coexistence** (keep
+    cacheComponents by isolating the nonce read behind a `<Suspense>` boundary): **still
+    deferred** — it likely reintroduces a theme flash (next-themes' anti-FOUC script would
+    stream instead of being in the initial paint) and is unverified; revisit only if a fork
+    needs both nonce CSP *and* the static-shell posture.
 
 - **Organizations / multi-tenancy = Better Auth's built-in `organization()` plugin
   (Tier 4 · Band 4).** Teams + per-org membership + per-org roles, chosen as the plugin

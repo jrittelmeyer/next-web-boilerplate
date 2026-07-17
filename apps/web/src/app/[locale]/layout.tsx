@@ -1,6 +1,7 @@
 import { Toaster } from "@repo/ui/components/sonner";
 import { ThemeProvider } from "@repo/ui/components/theme-provider";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -8,6 +9,7 @@ import type { ReactNode } from "react";
 import { PostHogProvider } from "@/components/observability/posthog-provider";
 import { StoreRehydration } from "@/components/store-rehydration";
 import { type Locale, routing } from "@/i18n/routing";
+import { cspMode } from "@/lib/csp";
 import { siteConfig, siteUrl } from "@/lib/site";
 import { TRPCReactProvider } from "@/lib/trpc/client";
 
@@ -85,6 +87,15 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
+  // CSP_MODE=nonce: pick up the per-request nonce the proxy minted so
+  // next-themes' pre-paint inline script carries it (ThemeProvider spreads the
+  // prop through; Next nonces its own injected scripts from the request's CSP
+  // header). The headers() read is what makes every page render dynamically —
+  // nonce mode's documented cost. In the default static mode this branch is
+  // dead (cspMode is a build-time constant), headers() is never called, and the
+  // static/PPR posture under cacheComponents is untouched.
+  const nonce = cspMode === "nonce" ? ((await headers()).get("x-nonce") ?? undefined) : undefined;
+
   // suppressHydrationWarning: next-themes sets the `class`/`style` on <html>
   // from a pre-paint inline script (no SSR flash), so the server HTML and the
   // first client render legitimately differ on this one element. The flag scopes
@@ -93,6 +104,7 @@ export default async function LocaleLayout({
     <html lang={locale} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <ThemeProvider
+          nonce={nonce}
           attribute="class"
           defaultTheme="system"
           enableSystem

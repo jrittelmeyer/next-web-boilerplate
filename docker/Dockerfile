@@ -41,6 +41,12 @@ COPY --from=deps /app ./
 ENV SKIP_ENV_VALIDATION=1
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV BUILD_STANDALONE=1
+# CSP_MODE is a BUILD-time knob (static default | nonce) — it's baked into the
+# bundles, so it must be chosen when the image is built, not when it runs:
+#   docker build -f docker/Dockerfile --build-arg CSP_MODE=nonce -t nwb-web .
+# See docs/context/SECURITY.md → CSP strategy.
+ARG CSP_MODE
+ENV CSP_MODE=$CSP_MODE
 RUN pnpm build
 
 # ---- jobs-build: bundle the worker into one self-contained JS file ----

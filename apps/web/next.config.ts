@@ -6,6 +6,9 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 // Validate environment variables at build/start time (fails fast on misconfig).
 import "./src/env";
+// Shared CSP directive builder + the build-time CSP_MODE resolution — one list
+// for both the static header below and proxy.ts's per-request nonce policy.
+import { buildCsp, cspMode } from "./src/lib/csp";
 
 // Repo root, two levels up from apps/web. Used as the output-file-tracing root so
 // the standalone build traces the workspace's raw-.tsx @repo/* packages (and the
@@ -33,46 +36,28 @@ const posthogAssetHost = posthogHost.replace(".i.posthog.com", "-assets.i.postho
 
 // ── Security headers + CSP ───────────────────────────────────────────────────
 // Applied to every response by headers() below. See docs/context/SECURITY.md for
-// the per-origin rationale and the nonce-based upgrade path. We ship a STATIC
-// (config-level) CSP rather than a nonce CSP: a nonce requires middleware, which
-// would force full dynamic rendering on every route and regress this repo's
-// prerendering posture (static routes + Partial Prerender shells under
-// cacheComponents). The cost is `script-src 'unsafe-inline'` — without
-// a nonce, Next.js's inline RSC/hydration scripts can't be hash-pinned.
+// the per-origin rationale (the directive list itself lives in src/lib/csp.ts,
+// shared with proxy.ts). Two supported modes, selected at BUILD time by CSP_MODE:
+//
+// - static (default, CSP_MODE unset): a config-level CSP with `script-src
+//   'unsafe-inline'` — Next's inline RSC/hydration scripts can't be hash-pinned,
+//   and this preserves the repo's prerendering posture (static routes + Partial
+//   Prerender shells under cacheComponents).
+// - nonce (CSP_MODE=nonce): the CSP header moves to proxy.ts, which mints a
+//   per-request nonce ('strict-dynamic', no script 'unsafe-inline'). Reading the
+//   nonce makes every page render dynamically, which is incompatible with Cache
+//   Components' static-shell model — so this mode builds with cacheComponents
+//   OFF (+ experimental.useCache to keep the D4 `"use cache"` showcase caching).
 //
 // process.env.NODE_ENV is set by the Next CLI (`next dev` → development,
 // `next build`/`next start` → production), and headers() is evaluated at server
-// start, so this branch picks the right variant per command.
+// start, so the CSP's dev/prod variant picks the right form per command.
 const isDev = process.env.NODE_ENV !== "production";
 
-// CSP directives. 'unsafe-eval' and ws: are dev-only — Turbopack + React Refresh
-// (HMR) need them; production stays strict. connect-src/script-src/frame-src
-// allowlist exactly the SaaS this boilerplate wires up. PostHog is reached via
-// the same-origin /ingest proxy ('self' covers it); its origins are still listed
-// for non-proxied features (toolbar, surveys).
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  // challenges.cloudflare.com: Turnstile CAPTCHA (A12) — its api.js (script) renders the
-  // widget in a same-origin-embedded iframe (frame). Opt-in: only loaded when
-  // NEXT_PUBLIC_TURNSTILE_SITE_KEY is set, but the directive is static (harmless allowlist).
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://js.stripe.com https://challenges.cloudflare.com`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data: https:",
-  "font-src 'self' data:",
-  `connect-src 'self' https://*.sentry.io https://*.posthog.com https://*.uploadthing.com https://*.ingest.uploadthing.com https://api.stripe.com${
-    isDev ? " ws:" : ""
-  }`,
-  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
-  "worker-src 'self' blob:",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-  ...(isDev ? [] : ["upgrade-insecure-requests"]),
-].join("; ");
-
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  // In nonce mode the CSP is per-request (proxy.ts); emitting the static one too
+  // would make browsers enforce BOTH policies (intersection) and break the app.
+  ...(cspMode === "nonce" ? [] : [{ key: "Content-Security-Policy", value: buildCsp() }]),
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -117,7 +102,22 @@ const nextConfig: NextConfig = {
   // route-segment configs it bans (`export const dynamic`/`runtime` — see the health,
   // stripe/webhook, and signup routes; they now rely on Next's Node-default runtime
   // and connection()/searchParams for dynamism). See docs/context/DECISIONS.md.
-  cacheComponents: true,
+  //
+  // CSP_MODE=nonce turns it OFF: the per-request nonce must reach the document
+  // shell's inline scripts, so the shell can't be a build-time static artifact
+  // (the layout's headers() read fails the build under cacheComponents). The
+  // explicit experimental.useCache keeps the `"use cache"` directive compiling
+  // and caching (post-stats.tsx + the updateTag busts) — verified in the
+  // installed Next: useCache only DEFAULTS from cacheComponents; an explicit
+  // true survives cacheComponents: false. What nonce mode gives up is the
+  // static/PPR posture, not the function cache. See SECURITY.md → CSP strategy.
+  cacheComponents: cspMode !== "nonce",
+  ...(cspMode === "nonce" ? { experimental: { useCache: true } } : {}),
+  // Bake the resolved mode into every bundle (server, client, AND the proxy's
+  // Edge bundle) so proxy.ts and the [locale] layout can't disagree with how
+  // this build was configured. This is what makes a runtime CSP_MODE override a
+  // documented no-op (NEXT_PUBLIC_-style semantics): rebuild to change modes.
+  env: { CSP_MODE: cspMode },
   transpilePackages: ["@repo/db", "@repo/auth", "@repo/ui", "@repo/email"],
   // Remote images for next/image. Uploadthing serves finished files at
   // https://<appId>.ufs.sh/f/<key>, so allow that app-specific subdomain host

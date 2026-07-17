@@ -1,7 +1,13 @@
 import { getSessionCookie } from "better-auth/cookies";
-import { type NextRequest, NextResponse } from "next/server";
+// NextRequest is imported as a VALUE (not `import type`) — the nonce hand-off
+// constructs `new NextRequest(...)` to carry the augmented request headers.
+import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
+// buildCsp/cspMode read the CSP_MODE literal next.config.ts baked into this Edge
+// bundle at build time — the proxy can't disagree with how the build was
+// configured (a runtime CSP_MODE is ignored; see SECURITY.md → CSP strategy).
+import { buildCsp, cspMode } from "./lib/csp";
 
 // next-intl locale routing (negotiation + as-needed prefixing). Now that the whole
 // page tree lives under app/[locale], we run it on (almost) every request — see the
@@ -73,7 +79,8 @@ export function proxy(request: NextRequest) {
   // Auth gate on the locale-stripped path. A redirect response doesn't need locale
   // rewriting, so we short-circuit before handing off to next-intl; the redirect
   // targets stay locale-correct via `prefix` (so an /es visitor lands on /es/login,
-  // and safeRedirectPath accepts the /es-prefixed redirectTo unchanged).
+  // and safeRedirectPath accepts the /es-prefixed redirectTo unchanged). Redirects
+  // also carry no script-bearing body, so they need none of the nonce work below.
   if (!hasSession && PROTECTED_PREFIXES.some((p) => path.startsWith(p))) {
     const url = new URL(`${prefix}/login`, request.url);
     url.searchParams.set("redirectTo", pathname);
@@ -85,7 +92,31 @@ export function proxy(request: NextRequest) {
   }
 
   // No gate fired — let next-intl negotiate the locale and rewrite as needed.
-  return handleI18nRouting(request);
+  if (cspMode !== "nonce") {
+    return handleI18nRouting(request);
+  }
+
+  // ── CSP_MODE=nonce: per-request nonce + strict CSP ─────────────────────────
+  // base64 of a random UUID — opaque and single-use. `crypto` and `Buffer` are
+  // both available in Next's Edge runtime (the shape from Next's official CSP
+  // guide). The nonce + CSP ride the REQUEST headers into the render: Next reads
+  // the nonce out of the request's Content-Security-Policy header and stamps it
+  // on every <script> it injects (bootstrap / RSC flight / hydration), and the
+  // [locale] layout reads `x-nonce` via headers() for next-themes' inline script.
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = buildCsp(nonce);
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("content-security-policy", csp);
+
+  // Hand the augmented request to next-intl so it forwards the headers onto its
+  // rewrite, then set the CSP on the RESPONSE too, so the browser enforces it.
+  // (In this mode next.config.ts omits its static CSP header — emitting both
+  // would make browsers enforce the intersection of the two policies.)
+  const response = handleI18nRouting(new NextRequest(request, { headers: requestHeaders }));
+  response.headers.set("content-security-policy", csp);
+  return response;
 }
 
 export const config = {
