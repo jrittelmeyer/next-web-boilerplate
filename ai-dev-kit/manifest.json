@@ -1,0 +1,126 @@
+{
+  "name": "ai-dev-kit",
+  "version": "0.1.0",
+  "description": "Portable agentic-development skill library: lifecycle skills, a per-project adapter contract, and a cross-platform installer.",
+  "adapterConfig": ".claude/ai-dev-kit.config.json",
+  "pipeline": [
+    "orient (cheap context load)",
+    "plan-gate (plan → sign-off → build)",
+    "dep-check (when adding/upgrading dependencies)",
+    "build",
+    "live-verify",
+    "code-review / simplify (built-in skills)",
+    "checkpoint (→ tidy / cache prune)",
+    "periodic: doc-audit · project-audit"
+  ],
+  "skills": [
+    {
+      "name": "checkpoint",
+      "version": "0.1.0",
+      "dualHome": false,
+      "summary": "Commit + push pending work, judge context health, then continue or hand off with a paste-ready resume prompt.",
+      "triggers": [
+        "checkpoint",
+        "commit and continue",
+        "wrap this step up",
+        "keep going vs. clear context"
+      ],
+      "composition": {
+        "runs": ["cache prune (adapter cache.prune)"],
+        "deepPass": "tidy",
+        "precededBy": ["live-verify"]
+      },
+      "automation": {
+        "planned": "Step 2 — surfaced at step boundaries; today: user-invoked or standing agreement"
+      }
+    },
+    {
+      "name": "doc-audit",
+      "version": "0.1.0",
+      "dualHome": true,
+      "summary": "Keep docs, agent context, persistent memory, and showcase docs accurate and token-lean; archive instead of delete.",
+      "triggers": [
+        "clean up docs",
+        "audit the docs",
+        "docs/memory review",
+        "periodic maintenance pass"
+      ],
+      "composition": {
+        "consumes": "project-audit reports and backlog",
+        "feeds": ["backlog gaps"]
+      },
+      "automation": {
+        "planned": "periodic (post-milestone) — user-invoked today"
+      }
+    },
+    {
+      "name": "project-audit",
+      "version": "0.1.0",
+      "dualHome": false,
+      "summary": "Score every feature group /100 against a best-available bar; verify docs ↔ code; emit a prioritized backlog.",
+      "triggers": [
+        "project audit",
+        "how good is this really",
+        "quality scores",
+        "what's missing to make this perfect"
+      ],
+      "composition": {
+        "feeds": ["backlog", "doc-audit (drift found)"],
+        "endsWith": "checkpoint"
+      },
+      "automation": {
+        "planned": "periodic / pre-release — user-invoked today"
+      }
+    },
+    {
+      "name": "tidy",
+      "version": "0.1.0",
+      "dualHome": false,
+      "summary": "Prune the unbounded local build cache; surface (never auto-run) orphaned dev servers, stale e2e users, dangling Docker images.",
+      "triggers": ["tidy", "clean up the machine", "disk is low", "build cache is huge"],
+      "composition": {
+        "invokedFrom": "checkpoint (deeper pass)"
+      },
+      "automation": {
+        "existing": "cache prune at checkpoint + pre-push backstop",
+        "planned": "Step 2 review"
+      }
+    },
+    {
+      "name": "dep-check",
+      "version": "0.1.0",
+      "dualHome": false,
+      "summary": "Registry-verify a dependency before adding/upgrading: real version, dist-tags, release-age window, pin policy, peers, standing holds.",
+      "triggers": [
+        "add a dependency",
+        "bump/upgrade a package",
+        "Renovate/Dependabot PR triage",
+        "which version should we use"
+      ],
+      "composition": {
+        "precedes": "build (any dependency change)"
+      },
+      "automation": {
+        "planned": "Step 2 — PostToolUse hook on package.json edits injects the dep-check reminder"
+      }
+    },
+    {
+      "name": "live-verify",
+      "version": "0.1.0",
+      "dualHome": false,
+      "summary": "Full gate, then a fresh prod build on a dedicated port, then drive the affected flow and observe real output.",
+      "triggers": [
+        "verify this works",
+        "before committing a nontrivial change",
+        "after wiring an integration"
+      ],
+      "composition": {
+        "defersTo": "project verify skill (built-in verify bootstraps one)",
+        "precedes": "checkpoint"
+      },
+      "automation": {
+        "planned": "Step 2 — PreToolUse hook on git commit touching product source injects the live-verify reminder"
+      }
+    }
+  ]
+}

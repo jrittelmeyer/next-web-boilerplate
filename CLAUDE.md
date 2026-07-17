@@ -6,10 +6,14 @@ The canonical agent onboarding (working agreements, stack, commands, monorepo ma
 context-doc index) is [AGENTS.md](AGENTS.md), imported above. Claude-Code-specific
 notes:
 
-- **Committed skills** (`.claude/skills/`): `checkpoint` (commit + push + cache-prune
-  at step boundaries), `project-audit` (score the repo, seed a backlog), `doc-audit`
-  (keep docs/context/memory/showcase docs accurate + token-lean; also installed
-  globally — keep the two copies identical), `tidy` (local machine hygiene). Run
-  `/checkpoint` at each step boundary.
+- **Skill library** ([ai-dev-kit/](ai-dev-kit/) — canonical source; installed to
+  `.claude/skills/` by `node ai-dev-kit/install.mjs`): `checkpoint` (commit + push +
+  cache-prune at step boundaries), `project-audit` (score the repo, seed a backlog),
+  `doc-audit` (docs/context/memory/showcase accuracy + token-lean; dual-home —
+  `--global` also installs it to `~/.claude/skills/`), `tidy` (machine hygiene),
+  `dep-check` (registry-verify deps), `live-verify` (fresh prod build + drive the
+  flow). Project params live in `.claude/ai-dev-kit.config.json`; edit skills in the
+  kit and re-install — never edit `.claude/skills/` directly (`install.mjs --check`
+  guards drift). Run `/checkpoint` at each step boundary.
 - `.claude/settings.json` (tracked) holds the shared permission allowlist;
   `settings.local.json` stays untracked/gitignored.

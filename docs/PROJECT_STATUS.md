@@ -58,6 +58,12 @@ _Last updated: 2026-07-17._
   **maintenance-only is the standing state again** (100 is a state to maintain — future
   passes re-run the currency checks). The TS7 cutover stays outside it (externally
   gated — stable-Next TS7 support; experimental in canary since 2026-07-10).
+- **ai-dev-kit program (started 2026-07-17):** the repo's agentic-dev techniques are
+  being codified into a portable, versioned skill library at [../ai-dev-kit/](../ai-dev-kit/)
+  (generic skills + per-project adapter config + cross-platform installer with drift
+  guard). **Step 1 (scaffold + 6 skills + installer) SHIPPED 2026-07-17**; Step 2
+  (automation hooks) and Step 3 (playbook + HTML catalog deck) follow, each
+  sign-off-gated. `.claude/skills/` is now installer output — edit the kit, re-install.
 
 ## Build progress
 

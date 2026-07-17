@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ai-dev-kit project adapter",
+  "description": "Per-project parameters read by ai-dev-kit skills at run time. Every field is optional — a skill missing a field derives it from the repo (and says so) rather than failing.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Project name (informational)."
+    },
+    "packageManager": {
+      "type": "string",
+      "enum": ["pnpm", "npm", "yarn", "bun"],
+      "description": "Shapes registry queries and script invocations."
+    },
+    "gate": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Commands, run in order, that make up the full verification gate (lint, type-check, build). An array — never a '&&' chain — so it runs on any shell."
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unit": { "type": "string" },
+        "e2e": { "type": "string" }
+      }
+    },
+    "prodVerify": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "How live-verify serves a production build without disturbing a standing dev server.",
+      "properties": {
+        "build": {
+          "type": "string",
+          "description": "Produces a fresh production build."
+        },
+        "start": {
+          "type": "string",
+          "description": "Serves the production build on the dedicated port."
+        },
+        "port": {
+          "type": "integer",
+          "description": "Dedicated prod-verify port (never the dev port)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Env/origin facts an agent needs before driving flows."
+        }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The local build cache that grows without bound, and how to measure/prune it.",
+      "properties": {
+        "size": { "type": "string" },
+        "prune": { "type": "string" }
+      }
+    },
+    "docs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string" },
+        "status": {
+          "type": "string",
+          "description": "The read-first-on-resume status/handoff doc."
+        },
+        "backlog": { "type": "string" },
+        "contextDir": {
+          "type": "string",
+          "description": "Agent context docs, loaded on demand."
+        },
+        "archiveDir": {
+          "type": "string",
+          "description": "Where audit reports and archived history land."
+        }
+      }
+    },
+    "commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "style": { "type": "string" },
+        "trailers": {
+          "type": "boolean",
+          "description": "false = never add Co-Authored-By or other trailers."
+        },
+        "useFileFlag": {
+          "type": "boolean",
+          "description": "true = write the message to a file and use git commit -F (survives PowerShell 5.1 quoting)."
+        }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["github-actions", "gitlab-ci", "other"]
+        },
+        "workflow": {
+          "type": "string",
+          "description": "The workflow to watch to green at a session-ending checkpoint."
+        }
+      }
+    },
+    "hygiene": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "devPorts": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "description": "Ports where orphaned dev/prod servers may linger."
+        },
+        "e2eUserPattern": {
+          "type": "string",
+          "description": "Email pattern identifying throwaway e2e users in the local DB."
+        },
+        "keepContainers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Docker containers tidy must never prune."
+        }
+      }
+    },
+    "depPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "releaseAgeDays": {
+          "type": "integer",
+          "description": "Prefer the newest version at least this many days old."
+        },
+        "exactPin": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Packages that publish frequently — always pin exact."
+        }
+      }
+    }
+  }
+}
