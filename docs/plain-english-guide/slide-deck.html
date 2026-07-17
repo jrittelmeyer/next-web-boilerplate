@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>next-web-boilerplate — The Business Case</title>
+<style>
+  :root{
+    --plane:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --hairline:#e1e0d9; --baseline:#c3c2b7;
+    --accent:#2a78d6; --accent-deep:#1c5cab; --good:#006300;
+    --ring:rgba(11,11,11,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:var(--plane); color:var(--ink);
+    line-height:1.55; font-size:clamp(15px,1.35vw,19px);
+  }
+  main{scroll-snap-type:y proximity}
+  section.slide{
+    min-height:100vh; scroll-snap-align:start;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:6vh clamp(24px,9vw,140px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--plane);
+  }
+  section.slide.alt{background:var(--surface)}
+  .kicker{
+    font-size:.72em; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent-deep); margin-bottom:.9em;
+  }
+  h1{font-size:clamp(34px,4.6vw,64px); line-height:1.08; letter-spacing:-.015em; font-weight:700}
+  h2{font-size:clamp(26px,3.2vw,44px); line-height:1.12; letter-spacing:-.012em; font-weight:700; margin-bottom:.5em; max-width:24ch}
+  h2 .thin{font-weight:400; color:var(--ink-2)}
+  .lead{font-size:1.12em; color:var(--ink-2); max-width:62ch; margin-bottom:1.4em}
+  .lead strong{color:var(--ink)}
+  ul.points{list-style:none; max-width:70ch; margin-bottom:1.6em}
+  ul.points li{
+    padding:.42em 0 .42em 1.5em; position:relative;
+  }
+  ul.points li::before{
+    content:""; position:absolute; left:0; top:1.02em; width:.62em; height:.62em;
+    border-radius:2px; background:var(--accent); opacity:.85;
+  }
+  ul.points li strong{font-weight:650}
+  ul.points li .why{color:var(--ink-2)}
+  .cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:1.2em 2.4em; max-width:1200px}
+  .card{
+    background:var(--surface); border:1px solid var(--hairline); border-radius:12px;
+    padding:1.1em 1.25em;
+  }
+  .slide.alt .card{background:var(--plane)}
+  .card h3{font-size:1em; font-weight:650; margin-bottom:.35em}
+  .card p{font-size:.92em; color:var(--ink-2)}
+  .card .mini-links{margin-top:.6em}
+  /* stat tiles (dataviz spec: label / semibold value / muted subline) */
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; max-width:1200px; margin:1.2em 0 1.6em}
+  .tile{background:var(--surface); border:1px solid var(--hairline); border-radius:12px; padding:16px 18px}
+  .slide.alt .tile{background:var(--plane)}
+  .tile .t-label{font-size:.78em; color:var(--ink-2); font-weight:500}
+  .tile .t-value{font-size:2.1em; font-weight:600; line-height:1.15; margin:.06em 0}
+  .tile .t-sub{font-size:.78em; color:var(--muted)}
+  /* link pills */
+  .links{display:flex; flex-wrap:wrap; gap:10px; margin-top:.4em}
+  .links .lbl{font-size:.78em; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); align-self:center; margin-right:2px}
+  a.pill{
+    display:inline-block; font-size:.82em; text-decoration:none; font-weight:550;
+    padding:.38em .85em; border-radius:999px; border:1px solid var(--hairline);
+    color:var(--accent-deep); background:var(--surface);
+  }
+  .slide.alt a.pill{background:var(--plane)}
+  a.pill:hover{border-color:var(--accent); background:#eef4fc}
+  a.pill.repo::after{content:" ↗"; color:var(--muted)}
+  a.inline{color:var(--accent-deep)}
+  /* pyramid */
+  .pyramid{display:flex; flex-direction:column; gap:10px; max-width:880px; margin:.4em 0 1.4em}
+  .pyr{border:1px solid var(--hairline); border-left:5px solid var(--accent); border-radius:10px; background:var(--surface); padding:.9em 1.2em}
+  .slide.alt .pyr{background:var(--plane)}
+  .pyr b{display:block; margin-bottom:.15em}
+  .pyr span{color:var(--ink-2); font-size:.92em}
+  /* big table (doc map) */
+  table.map{border-collapse:collapse; width:100%; max-width:1250px; font-size:.85em; background:var(--surface); border:1px solid var(--hairline); border-radius:12px; overflow:hidden}
+  table.map th,table.map td{padding:.6em .8em; text-align:left; vertical-align:top; border-top:1px solid var(--hairline)}
+  table.map thead th{background:var(--plane); border-top:none; font-size:.9em; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-2)}
+  table.map td.feat b{font-weight:650}
+  table.map td.feat span{color:var(--ink-2)}
+  table.map a{color:var(--accent-deep); text-decoration:none; white-space:nowrap}
+  table.map a:hover{text-decoration:underline}
+  table.map a.gh::after{content:"↗"; font-size:.85em; color:var(--muted); margin-left:2px}
+  /* chart */
+  .chart-wrap{max-width:760px; background:var(--surface); border:1px solid var(--hairline); border-radius:12px; padding:18px 20px 8px; margin:.6em 0 1em}
+  .slide.alt .chart-wrap{background:var(--plane)}
+  .chart-title{font-size:.9em; font-weight:650}
+  .chart-sub{font-size:.78em; color:var(--muted); margin-bottom:6px}
+  .chart-wrap svg{width:100%; height:auto; display:block}
+  .chart-wrap text{font-family:inherit; font-variant-numeric:tabular-nums}
+  details.data{max-width:760px; font-size:.82em; color:var(--ink-2); margin-bottom:1.2em}
+  details.data summary{cursor:pointer; color:var(--accent-deep)}
+  details.data table{border-collapse:collapse; margin-top:.5em}
+  details.data td,details.data th{border:1px solid var(--hairline); padding:.3em .7em; font-variant-numeric:tabular-nums}
+  /* hero figure */
+  .hero-num{font-size:clamp(56px,7vw,96px); font-weight:600; line-height:1; letter-spacing:-.02em}
+  .hero-cap{color:var(--ink-2); margin-top:.3em; max-width:46ch}
+  /* generations */
+  .gen{display:grid; grid-template-columns:auto 1fr; gap:2px 16px; max-width:820px; margin-bottom:1.2em}
+  .gen dt{font-weight:650; white-space:nowrap; padding:.5em 0}
+  .gen dd{color:var(--ink-2); padding:.5em 0; border-bottom:1px solid var(--hairline)}
+  .gen dt{border-bottom:1px solid var(--hairline)}
+  /* nav chrome */
+  #progress{position:fixed; top:0; left:0; height:3px; background:var(--accent); width:0%; z-index:50; transition:width .15s}
+  #counter{position:fixed; right:16px; bottom:14px; font-size:12px; color:var(--muted); z-index:50; font-variant-numeric:tabular-nums;
+    background:var(--surface); border:1px solid var(--hairline); border-radius:999px; padding:4px 10px}
+  #hint{position:fixed; left:16px; bottom:14px; font-size:12px; color:var(--muted); z-index:50}
+  .navbtns{position:fixed; right:14px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:8px; z-index:50}
+  .navbtns button{
+    width:36px; height:36px; border-radius:50%; border:1px solid var(--hairline);
+    background:var(--surface); color:var(--ink-2); font-size:16px; cursor:pointer;
+  }
+  .navbtns button:hover{border-color:var(--accent); color:var(--accent-deep)}
+  footer.deckfoot{font-size:.78em; color:var(--muted); margin-top:2.2em}
+  @media print{
+    #progress,#counter,#hint,.navbtns{display:none}
+    section.slide{min-height:auto; page-break-after:always; padding:40px}
+    body{background:#fff}
+  }
+  @media (max-width:700px){
+    .navbtns{display:none}
+    section.slide{padding:8vh 22px}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="counter">1 / 26</div>
+<div id="hint">Use ← → keys, or scroll</div>
+<div class="navbtns">
+  <button type="button" id="prev" title="Previous slide (←)">↑</button>
+  <button type="button" id="next" title="Next slide (→)">↓</button>
+</div>
+
+<main id="deck">
+
+<!-- 1 · TITLE -->
+<section class="slide" id="s1">
+  <div class="kicker">A verified foundation for serious web applications</div>
+  <h1>next-web-boilerplate<br><span style="font-weight:400;color:var(--ink-2)">The business case</span></h1>
+  <p class="lead" style="margin-top:1em">
+    Months of mandatory engineering — accounts, payments, email, search, security,
+    testing, monitoring, deployment — delivered as a <strong>working, proven,
+    documented starting point</strong>. Built and maintained through
+    <strong>AI-agent development under human direction</strong>, and published as a
+    free public template.
+  </p>
+  <div class="links">
+    <span class="lbl">Start here</span>
+    <a class="pill" href="README.md">Plain-English Guide (13 docs)</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate">The public repository</a>
+  </div>
+  <footer class="deckfoot">Every slide links to deeper reading: plain pills open the
+  zero-jargon guide beside this file; pills marked ↗ open the project’s own technical
+  docs on GitHub. · Current as of 2026-07-17 (repo commit 6b9f346)</footer>
+</section>
+
+<!-- 2 · THE PROBLEM -->
+<section class="slide alt" id="s2">
+  <div class="kicker">The problem</div>
+  <h2>The feature you want to build is the <em>smallest</em> part of the work</h2>
+  <p class="lead">Before any product can take its first customer, a team must build
+  the same invisible foundation every product needs — none of it optional, none of
+  it their specialty:</p>
+  <ul class="points">
+    <li><strong>Sign-in and account security</strong> <span class="why">— where mistakes make headlines</span></li>
+    <li><strong>Safe data storage</strong> <span class="why">— with backups that provably restore</span></li>
+    <li><strong>Payments, email, file handling, search</strong> <span class="why">— each with brutal edge cases</span></li>
+    <li><strong>Monitoring, testing, security hardening, deployment</strong> <span class="why">— the difference between a demo and a business</span></li>
+  </ul>
+  <p class="lead">Industry name: <strong>undifferentiated heavy lifting</strong> —
+  realistically <strong>4–6 months of senior engineering</strong> re-solved from
+  scratch by almost every project, usually less well. This project is that lifting,
+  done once, done properly.</p>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="01-the-big-picture.md">Guide ch. 1 — The Big Picture</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/FEATURES.md">FEATURES.md — full inventory &amp; reasoning</a>
+  </div>
+</section>
+
+<!-- 3 · WHAT YOU GET -->
+<section class="slide" id="s3">
+  <div class="kicker">What it is</div>
+  <h2>Day one looks like most projects’ month six</h2>
+  <p class="lead">A <strong>starter kit</strong> (a “boilerplate”): a pre-built,
+  professionally engineered foundation a team copies and builds their actual product
+  on. Included and already working:</p>
+  <div class="cols">
+    <div class="card"><h3>Complete modern sign-in</h3><p>Passwords, Google/GitHub login, two-factor codes, fingerprint/passkey login, teams &amp; roles, admin tools, audit trail.</p></div>
+    <div class="card"><h3>Revenue plumbing</h3><p>Subscription checkout, billing portal, failed-payment handling — proven with real test payments.</p></div>
+    <div class="card"><h3>Email that lands</h3><p>Professional templates plus the inbox-deliverability setup, proven against a real sending domain.</p></div>
+    <div class="card"><h3>Search, uploads, background work</h3><p>Typo-tolerant instant search, safe file uploads, and a retrying job queue — with no extra infrastructure to run.</p></div>
+    <div class="card"><h3>Eyes on production</h3><p>Crash reporting, uptime and log monitoring, product analytics with privacy-first consent.</p></div>
+    <div class="card"><h3>A machine-enforced quality bar</h3><p>Hundreds of automated tests, accessibility scans, visual checks, and supply-chain defenses on every change.</p></div>
+  </div>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="README.md">Guide index — all 12 chapters</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/GETTING_STARTED.md">GETTING_STARTED.md</a>
+  </div>
+</section>
+
+<!-- 4 · AT A GLANCE -->
+<section class="slide alt" id="s4">
+  <div class="kicker">At a glance</div>
+  <h2>The numbers that describe it</h2>
+  <div class="tiles">
+    <div class="tile"><div class="t-label">Settings needed to boot</div><div class="t-value">2</div><div class="t-sub">everything else is optional &amp; degrades gracefully</div></div>
+    <div class="tile"><div class="t-label">Optional integrations wired</div><div class="t-value">~12</div><div class="t-sub">payments, email, search, monitoring, more</div></div>
+    <div class="tile"><div class="t-label">Latest audit score</div><div class="t-value">100<span style="font-size:.5em;color:var(--muted)">/100</span></div><div class="t-sub">vs. a “best imaginable kit” bar, 8 passes</div></div>
+    <div class="tile"><div class="t-label">Agent &amp; human context docs</div><div class="t-value">14</div><div class="t-sub">one per domain, loaded per task</div></div>
+    <div class="tile"><div class="t-label">Accessibility-scanned surfaces</div><div class="t-value">7</div><div class="t-sub">machine-checked on every change</div></div>
+    <div class="tile"><div class="t-label">Cost per user for sign-in</div><div class="t-value">$0</div><div class="t-sub">identity is owned, not rented</div></div>
+  </div>
+  <p class="lead">Each of these is unpacked on the slides that follow — with a link
+  to the evidence.</p>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="01-the-big-picture.md">Guide ch. 1 — how to judge it</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/PROJECT_STATUS.md">PROJECT_STATUS.md — current state</a>
+  </div>
+</section>
+
+<!-- 5 · THREE DIFFERENTIATORS -->
+<section class="slide" id="s5">
+  <div class="kicker">The thesis</div>
+  <h2>Three things free starter kits almost never have</h2>
+  <ul class="points" style="font-size:1.08em">
+    <li><strong>1 · Verified, not assumed.</strong> <span class="why">Every integration was
+      exercised for real — live test payments, real emails, real deploys — with dated proof
+      kept in the repository. Not “wired and hopefully works.”</span></li>
+    <li><strong>2 · Every decision on file.</strong> <span class="why">A written decision log
+      records why each technology was chosen, what the alternatives were — and which options
+      were evaluated and <em>rejected</em>, with evidence. Nobody ever has to guess “why is it
+      like this?”</span></li>
+    <li><strong>3 · Built for the AI era.</strong> <span class="why">Structured so AI coding
+      agents work in it as effectively as humans — which is also how it was built, under
+      human sign-off, with machine-enforced quality. The same structure doubles as the best
+      new-hire onboarding you’ve seen.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="01-the-big-picture.md">Guide ch. 1</a>
+    <a class="pill" href="11-built-with-ai-agents.md">Guide ch. 11 — AI agents</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DECISIONS.md">DECISIONS.md — the decision log</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION.md — the dated proof</a>
+  </div>
+</section>
+
+<!-- 6 · HOW TO DRILL DOWN -->
+<section class="slide alt" id="s6">
+  <div class="kicker">How this presentation works</div>
+  <h2>Three layers — pick your depth</h2>
+  <div class="pyramid">
+    <div class="pyr"><b>This deck — the pitch (10 minutes)</b>
+      <span>Business value only. Every claim links downward.</span></div>
+    <div class="pyr"><b>The Plain-English Guide — full understanding, zero jargon (13 documents)</b>
+      <span>Assumes no software knowledge. Every term defined, every choice explained with
+      analogies, alternatives, and honest caveats. Sits in the same folder as this file —
+      start at <a class="inline" href="README.md">README.md</a>.</span></div>
+    <div class="pyr"><b>The repository’s own docs — the nitty-gritty (on GitHub)</b>
+      <span><a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/FEATURES.md">FEATURES.md</a> (inventory &amp; why) ·
+      <a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION.md</a> (dated proof) ·
+      <a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DECISIONS.md">DECISIONS.md</a> (choices &amp; rejections) ·
+      14 per-domain context docs — the complete map is on the
+      <a class="inline" href="#s22">feature-to-docs slide</a>.</span></div>
+  </div>
+  <p class="lead" style="font-size:.95em"><strong>Note:</strong> plain link pills open the
+  local guide files (keep this deck in its <code>plain-english-guide</code> folder);
+  pills marked ↗ open the public GitHub docs and work from anywhere.</p>
+</section>
+
+<!-- 7 · VERIFIED NOT ASSUMED -->
+<section class="slide" id="s7">
+  <div class="kicker">Differentiator 1 · Proof</div>
+  <h2>“Verify by running, not by assuming” <span class="thin">— the standing rule</span></h2>
+  <ul class="points">
+    <li><strong>Real payment lifecycle</strong> <span class="why">— test-mode checkout → webhook →
+      database → billing portal → even <em>simulated months of clock time</em> to prove
+      failed-renewal handling (Stripe test clocks). Completed 2026-07-13.</span></li>
+    <li><strong>Real email deliverability</strong> <span class="why">— sent through a real domain
+      with the anti-spam plumbing (SPF/DKIM/DMARC) configured and confirmed, 2026-07-14.</span></li>
+    <li><strong>Real logins</strong> <span class="why">— live Google &amp; GitHub sign-ins; passkey
+      sign-in exercised in the automated tests with a simulated authenticator.</span></li>
+    <li><strong>Real deployment</strong> <span class="why">— a copy deployed to a hosting provider
+      (Fly.io) with a managed database, confirmed healthy end-to-end, 2026-07-13.</span></li>
+    <li><strong>Rehearsed disaster recovery</strong> <span class="why">— the database restore
+      drill was actually performed, not just written down.</span></li>
+  </ul>
+  <p class="lead"><strong>Why it matters:</strong> “wired but never run” is where the expensive
+  surprises hide. Here, the inspection log ships with the house.</p>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="01-the-big-picture.md">Guide ch. 1 — the pedigree</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION.md — phase-by-phase, dated</a>
+  </div>
+</section>
+
+<!-- 8 · IDENTITY -->
+<section class="slide alt" id="s8">
+  <div class="kicker">Feature value · Identity</div>
+  <h2>Enterprise-grade sign-in, owned outright — <span class="thin">$0 per user, forever</span></h2>
+  <ul class="points">
+    <li><strong>No identity rent, no lock-in.</strong> <span class="why">Rented login services charge
+      per active user — success makes them expensive — and hold your user data hostage. Here,
+      accounts live in your own database.</span></li>
+    <li><strong>Security that survives due diligence:</strong> <span class="why">passwords checked
+      against real-world breach databases, two-factor codes, fingerprint/passkey login
+      (unphishable), bot protection, attempt throttling.</span></li>
+    <li><strong>B2B-ready from day one:</strong> <span class="why">teams/organizations with roles and
+      invitations — the structure business customers require.</span></li>
+    <li><strong>Permissions that bite instantly.</strong> <span class="why">Rights are re-checked fresh
+      on every sensitive action — a revoked admin loses power immediately, not minutes later
+      (a real flaw in most systems, documented honestly where one narrow exception remains).</span></li>
+    <li><strong>Compliance groundwork done:</strong> <span class="why">permanent audit trail of admin
+      actions, user data export, session management, safe email-change — the early questions on
+      every security questionnaire, already answered.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="05-accounts-and-identity.md">Guide ch. 5 — Accounts &amp; Identity</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/AUTH.md">AUTH.md — full technical detail</a>
+  </div>
+</section>
+
+<!-- 9 · PAYMENTS -->
+<section class="slide" id="s9">
+  <div class="kicker">Feature value · Payments</div>
+  <h2>Revenue-ready on day one</h2>
+  <ul class="points">
+    <li><strong>Subscription checkout → money in, recorded correctly.</strong> <span class="why">Stripe’s
+      hosted payment page (card data never touches your servers — the lightest compliance
+      posture) feeding a subscriptions record in your own database.</span></li>
+    <li><strong>The messy parts are the point:</strong> <span class="why">duplicate payment notifications
+      handled exactly once; failed renewal cards detected and status-flipped automatically
+      (“dunning” — a leading cause of silent revenue loss); premium content gating worked
+      end-to-end.</span></li>
+    <li><strong>Fewer support tickets:</strong> <span class="why">customers manage cards and cancel
+      through Stripe’s self-service billing portal.</span></li>
+    <li><strong>No billing zombies:</strong> <span class="why">deleting an account automatically cancels
+      its subscription — the classic infuriating loophole, closed.</span></li>
+    <li><strong>Teams can pay, not just individuals:</strong> <span class="why">one team subscription
+      entitles every member — B2B-ready — with ownership rules engineered so no member’s account
+      deletion can ever cancel the team’s billing.</span></li>
+    <li><strong>All of it proven with real test transactions,</strong> <span class="why">including
+      time-travel simulation of renewal failures months out.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="08-connected-services.md">Guide ch. 8 — Connected Services</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES.md</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION.md — Stripe phase</a>
+  </div>
+</section>
+
+<!-- 10 · EMAIL -->
+<section class="slide alt" id="s10">
+  <div class="kicker">Feature value · Email</div>
+  <h2>Email that reaches inboxes, <span class="thin">not spam folders</span></h2>
+  <ul class="points">
+    <li><strong>The deliverability plumbing is the hard part</strong> <span class="why">— the DNS-level
+      standards (SPF/DKIM/DMARC) that make providers trust your domain. Documented as a recipe
+      and executed against a real domain, verified 2026-07-14.</span></li>
+    <li><strong>Professional templates, safely built.</strong> <span class="why">Emails are written with
+      the same type-checked component system as the app — no fragile hand-coded email HTML —
+      with a plain-text version on every send (a spam-filter best practice most kits skip).</span></li>
+    <li><strong>Every account flow wired:</strong> <span class="why">verification, password reset,
+      welcome, safe email change.</span></li>
+    <li><strong>Runs fine with no email provider at all</strong> <span class="why">— sign-up still works;
+      team invites fall back to a copyable link. Nothing blocks evaluation.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="08-connected-services.md">Guide ch. 8</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES.md — Resend</a>
+  </div>
+</section>
+
+<!-- 11 · ZERO NEW INFRASTRUCTURE -->
+<section class="slide" id="s11">
+  <div class="kicker">Feature value · Search, uploads &amp; background work</div>
+  <h2>Big-product capabilities, <span class="thin">small-product operating costs</span></h2>
+  <ul class="points">
+    <li><strong>Instant, typo-tolerant search</strong> <span class="why">(Meilisearch) — the search
+      experience users expect from Amazon, self-hosted: no per-query rent, unlike the famous
+      alternative (Algolia). Index settings are versioned in the repository like code.</span></li>
+    <li><strong>Safe file uploads</strong> <span class="why">— browsers upload straight to cloud storage
+      (your servers never carry the load), every file tracked in the database, deletion engineered
+      so a half-failure can never orphan a file.</span></li>
+    <li><strong>A retrying background-job queue</strong> <span class="why">— slow work (emails, billing
+      calls) happens off the customer’s clock and retries on failure. The signature decision: the
+      queue lives <em>inside the existing database</em> — zero new services to run, and if the
+      worker is down, jobs safely accumulate and drain later.</span></li>
+    <li><strong>The pattern to notice:</strong> <span class="why">one boring, excellent database also
+      powers the job queue, live updates, and rate limiting — four systems’ capability, one
+      system’s operating burden.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="08-connected-services.md">Guide ch. 8</a>
+    <a class="pill" href="04-the-database.md">Guide ch. 4</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES.md</a>
+  </div>
+</section>
+
+<!-- 12 · REALTIME -->
+<section class="slide alt" id="s12">
+  <div class="kicker">Feature value · Live updates</div>
+  <h2>A live, modern feel — <span class="thin">without renting another service</span></h2>
+  <ul class="points">
+    <li><strong>Notifications appear the instant they happen</strong> <span class="why">— no refresh —
+      with an always-correct unread badge. Shipped as a complete worked example.</span></li>
+    <li><strong>The typical cost of this feature is a new vendor or a new server cluster.</strong>
+      <span class="why">Here it’s built on capabilities the database and every browser already have —
+      zero new infrastructure, zero new dependencies.</span></li>
+    <li><strong>Engineered for the real world:</strong> <span class="why">every notification is saved
+      first (nothing lost when a laptop closes), dropped connections self-heal, and the approach
+      stays correct when the app runs as many copies.</span></li>
+    <li><strong>Limits documented honestly</strong> <span class="why">— including where certain hosting
+      styles constrain it, with named fallbacks and the scale-up path written down.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="06-screens-and-servers.md">Guide ch. 6 — the internal nervous system</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/API.md">API.md — realtime section</a>
+  </div>
+</section>
+
+<!-- 13 · DATA SAFETY -->
+<section class="slide" id="s13">
+  <div class="kicker">Feature value · Data</div>
+  <h2>The unrecoverable part is the most conservative part</h2>
+  <ul class="points">
+    <li><strong>The gold-standard database</strong> <span class="why">(PostgreSQL — free, open, ~30 years
+      mature, runs anywhere), with every structural change versioned and replayable like code.</span></li>
+    <li><strong>Backups with a rehearsed restore.</strong> <span class="why">Ready-made backup/restore
+      commands, point-in-time recovery guidance, and a disaster drill that was actually performed.
+      An untested backup plan is a hope, not a plan.</span></li>
+    <li><strong>Typo-proof data access.</strong> <span class="why">The database’s structure is wired into
+      the code’s safety net — asking for a field that doesn’t exist is flagged as it’s typed, not
+      discovered by a customer.</span></li>
+    <li><strong>A professionally built example feature to copy</strong> <span class="why">— pagination
+      that stays fast at page 400, all-or-nothing multi-step changes, instant-feeling updates —
+      so the team’s first real feature inherits professional standards.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="04-the-database.md">Guide ch. 4 — The Database</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DATABASE.md">DATABASE.md — incl. backup/DR runbook</a>
+  </div>
+</section>
+
+<!-- 14 · FAST -->
+<section class="slide alt" id="s14">
+  <div class="kicker">Feature value · Speed</div>
+  <h2>Fast by default — <span class="thin">and guarded against getting slow</span></h2>
+  <ul class="points">
+    <li><strong>Pages answer instantly.</strong> <span class="why">The newest rendering machinery is on
+      by default: the static shell of every page is pre-built and served immediately, personalized
+      parts stream in — plus an automatic code optimizer engineers used to hand-tune. Speed is
+      the out-of-the-box posture, not a later project.</span></li>
+    <li><strong>Interactions feel immediate.</strong> <span class="why">Screens update optimistically
+      while the server confirms in the background, rolling back gracefully on failure.</span></li>
+    <li><strong>Slowness can’t creep in silently.</strong> <span class="why">Hard size budgets on what
+      browsers must download turn “the app got slower” into a specific failed check on the
+      specific change that caused it.</span></li>
+    <li><strong>Why speed is money:</strong> <span class="why">page speed measurably moves conversion,
+      retention, and search ranking. Amazon-class teams treat 100ms as revenue.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="03-the-foundation.md">Guide ch. 3 — the machinery</a>
+    <a class="pill" href="10-shipping-and-running.md">Guide ch. 10 — budgets</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/STACK.md">STACK.md</a>
+  </div>
+</section>
+
+<!-- 15 · GLOBAL & ACCESSIBLE -->
+<section class="slide" id="s15">
+  <div class="kicker">Feature value · Reach</div>
+  <h2>More markets, more users, <span class="thin">less legal risk</span></h2>
+  <ul class="points">
+    <li><strong>International expansion becomes a translation purchase, not a re-engineering
+      project.</strong> <span class="why">Multi-language support is built into the foundation (English +
+      Spanish working today), with per-language web addresses that search engines index separately —
+      retrofitting this later is one of software’s most notorious rebuilds.</span></li>
+    <li><strong>Dates, numbers and currency format themselves per region</strong> <span class="why">—
+      the small details that make software feel foreign when wrong.</span></li>
+    <li><strong>Accessibility is machine-enforced, not aspirational.</strong> <span class="why">The
+      industry-standard checker scans seven app surfaces on every change and fails the build on
+      violations; components are built on a foundation engineered for keyboard and screen-reader
+      correctness.</span></li>
+    <li><strong>Why that’s defensibility, not polish:</strong> <span class="why">accessibility is now
+      law across much of the market (ADA, European Accessibility Act), a hard requirement in
+      government/enterprise purchasing — and lawsuits are routine.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="07-look-feel-and-languages.md">Guide ch. 7</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/I18N.md">I18N.md</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/TESTING.md">TESTING.md — a11y scans</a>
+  </div>
+</section>
+
+<!-- 16 · DESIGN SYSTEM -->
+<section class="slide alt" id="s16">
+  <div class="kicker">Feature value · Look &amp; feel</div>
+  <h2>A product that looks professional <span class="thin">— and can’t silently stop</span></h2>
+  <ul class="points">
+    <li><strong>One design system, enforced by construction.</strong> <span class="why">Approved colors,
+      spacing, and components are the path of least resistance — no drift into seventeen shades
+      of blue as the team grows.</span></li>
+    <li><strong>The component catalog is owned, not rented.</strong> <span class="why">Every button and
+      dialog’s source lives in the repository — customization is just editing; no upstream vendor
+      can change or abandon the product’s look.</span></li>
+    <li><strong>Dark mode done right</strong> <span class="why">— including the classic “flash of the
+      wrong theme” bug, specifically engineered away. Table stakes for modern software; fiddly to
+      retrofit.</span></li>
+    <li><strong>Appearance is regression-tested.</strong> <span class="why">Every component is
+      photographed in both themes and pixel-compared on every change — “we fixed the menu and
+      broke the checkout button” gets caught by machines, plus a component showroom for
+      designer review.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="07-look-feel-and-languages.md">Guide ch. 7</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/UI.md">UI.md</a>
+  </div>
+</section>
+
+<!-- 17 · SECURITY -->
+<section class="slide" id="s17">
+  <div class="kicker">Feature value · Security</div>
+  <h2>Hardened at the front door <span class="thin">and at the loading dock</span></h2>
+  <ul class="points">
+    <li><strong>Front door:</strong> <span class="why">the full set of browser-enforced protections
+      (content security policy and friends) against the standard web attack catalog, bot
+      protection, attempt throttling, plus a standardized channel for security researchers to
+      report responsibly.</span></li>
+    <li><strong>Loading dock — the supply chain:</strong> <span class="why">modern apps are assembled
+      from hundreds of open-source packages, and criminals hijack popular ones. Defenses here:
+      a 7-day quarantine on all new package versions (enforced at two independent layers), an
+      update robot whose every suggestion must pass the full test gauntlet, vulnerability
+      scanning of code and shipping containers, and deep static analysis on every change.</span></li>
+    <li><strong>Procurement-grade evidence:</strong> <span class="why">every build publishes a signed
+      ingredients list (SBOM) and cryptographic proof of where it was built (SLSA provenance) —
+      increasingly demanded by enterprise and government buyers, almost never found in
+      starter kits.</span></li>
+    <li><strong>Honest trade-offs:</strong> <span class="why">even the one place the gold-standard
+      hardening conflicts with the speed machinery is documented, priced, and shipped as a
+      verified opt-in recipe — not silently ignored.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="09-quality-and-trust.md">Guide ch. 9</a>
+    <a class="pill" href="10-shipping-and-running.md">Guide ch. 10</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SECURITY.md">SECURITY.md</a>
+  </div>
+</section>
+
+<!-- 18 · QUALITY MACHINE -->
+<section class="slide alt" id="s18">
+  <div class="kicker">Feature value · Quality</div>
+  <h2>Quality is infrastructure here, <span class="thin">not heroics</span></h2>
+  <ul class="points">
+    <li><strong>Every change runs the gauntlet before it can land:</strong> <span class="why">hundreds
+      of unit tests, robot-driven real-browser journeys (sign-up through two-factor and passkey
+      flows), database integration tests, accessibility scans, screenshot comparisons — and the
+      deployable containers themselves are rebuilt, booted, health-checked, and security-scanned.</span></li>
+    <li><strong>Quality only ratchets up.</strong> <span class="why">Test-coverage thresholds fail the
+      build if protection drops; a dead-code detector blocks accumulation of abandoned code (it
+      caught two real defects on day one).</span></li>
+    <li><strong>Sustainable velocity is the payoff.</strong> <span class="why">Teams with this net ship
+      on Friday afternoons; code review becomes judgment (“is this the right approach?”) instead
+      of archaeology (“does this even work?”).</span></li>
+    <li><strong>And it’s what makes AI participation safe</strong> <span class="why">— the same machines
+      that catch careless humans catch careless AI, with zero sentiment. Verification, not trust.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="09-quality-and-trust.md">Guide ch. 9 — Quality &amp; Trust</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/TESTING.md">TESTING.md</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT.md — CI/CD</a>
+  </div>
+</section>
+
+<!-- 19 · DEPLOY ANYWHERE -->
+<section class="slide" id="s19">
+  <div class="kicker">Feature value · Freedom to run anywhere</div>
+  <h2>No vendor can hold this product hostage</h2>
+  <ul class="points">
+    <li><strong>Ships in the universal container format</strong> <span class="why">(Docker) — runs
+      identically on any cloud, any host, or your own hardware. Most kits in this ecosystem
+      quietly assume one premium host; this one deliberately doesn’t.</span></li>
+    <li><strong>The path is proven, not theoretical:</strong> <span class="why">a real copy was deployed
+      live (Fly.io, managed database, healthy end-to-end) and the step-by-step runbook from that
+      deployment ships in the docs — alternatives documented too.</span></li>
+    <li><strong>Evaluation costs minutes:</strong> <span class="why">boots with two settings; all ~12
+      integrations are optional and switch off gracefully when unconfigured — a property enforced
+      by the test suite, and the same design that makes every vendor swappable (each integration
+      even ships a “how to remove this” checklist).</span></li>
+    <li><strong>Misconfiguration fails loud and early</strong> <span class="why">— settings are validated
+      at startup with clear errors, and secrets are structurally kept out of the code, with
+      GitHub’s leak-blocking as a second net.</span></li>
+    <li><strong>Even monitoring isn’t locked in:</strong> <span class="why">one optional setting exports
+      performance traces in OpenTelemetry — the industry’s vendor-neutral monitoring language — to
+      any compatible product or a collector you host yourself.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="10-shipping-and-running.md">Guide ch. 10</a>
+    <a class="pill" href="08-connected-services.md">Guide ch. 8 — graceful degradation</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT.md — incl. Fly.io runbook</a>
+  </div>
+</section>
+
+<!-- 20 · OBSERVABILITY -->
+<section class="slide alt" id="s20">
+  <div class="kicker">Feature value · Operations</div>
+  <h2>Know about problems <span class="thin">before customers do</span></h2>
+  <ul class="points">
+    <li><strong>Every crash reported with full context</strong> <span class="why">— exact line, user’s
+      environment, steps leading in. Without this, you learn about bugs from the minority of
+      users who complain; the rest just leave.</span></li>
+    <li><strong>Uptime, logs, and a worker heartbeat</strong> <span class="why">— including the component
+      whose silent death nobody notices until emails stop. Monitoring configuration is versioned
+      <em>as code</em>, not hand-clicked and forgotten.</span></li>
+    <li><strong>Product analytics with feature flags</strong> <span class="why">— see what’s used, roll
+      features out gradually, kill a bad one instantly without redeploying.</span></li>
+    <li><strong>Privacy-first by default:</strong> <span class="why">analytics is consent-gated (off
+      until opt-in) and a user data export ships — GDPR alignment built in, and a deliberate
+      choice of analytics vendor over Google Analytics on exactly these grounds.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="08-connected-services.md">Guide ch. 8 — monitoring section</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES.md</a>
+  </div>
+</section>
+
+<!-- 21 · AI AGENTS -->
+<section class="slide" id="s21">
+  <div class="kicker">Differentiator 3 · How it was built</div>
+  <h2>This is what agentic development looks like <span class="thin">when it’s done with discipline</span></h2>
+  <dl class="gen">
+    <dt>2021 — Autocomplete</dt><dd>AI suggests the next few lines while a human writes. The human does all the thinking.</dd>
+    <dt>2023 — Chatbots</dt><dd>AI writes snippets on request, but can’t see the project, run anything, or check its work.</dd>
+    <dt>2025 — Agents</dt><dd><strong style="color:var(--ink)">AI performs the work:</strong> reads the whole project, plans multi-step
+      changes, writes the code, <strong style="color:var(--ink)">runs the builds and tests, observes real failures, and fixes
+      them</strong> — under human direction. This project is the exhibit: built almost entirely this way,
+      to the quality bar shown on every previous slide.</dd>
+  </dl>
+  <p class="lead">The human role shifts <strong>up, not out</strong>: setting direction, reviewing
+  plans, approving trade-offs, owning judgment — an engineering manager of a tireless,
+  extremely fast, occasionally overconfident staff engineer.</p>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="11-built-with-ai-agents.md">Guide ch. 11 — the full story</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/AGENTS.md">AGENTS.md — the actual rules of engagement</a>
+  </div>
+</section>
+
+<!-- 22 · THE DISCIPLINE -->
+<section class="slide alt" id="s22a">
+  <div class="kicker">Differentiator 3 · Why it’s safe</div>
+  <h2>The productivity isn’t free — <span class="thin">it’s purchased with discipline</span></h2>
+  <ul class="points">
+    <li><strong>Plan → sign-off → build.</strong> <span class="why">The agent must present a plan and
+      stop; a human approves before any code is written. Judgment stays human.</span></li>
+    <li><strong>Verify by running.</strong> <span class="why">Every “done” is machine-checked evidence —
+      full quality gate green plus the feature observed working live — never the AI’s say-so.</span></li>
+    <li><strong>Context engineering.</strong> <span class="why">A standardized onboarding file plus 14
+      focused per-domain docs brief the agent precisely, per task. Because an agent remembers
+      nothing between sessions, docs are load-bearing — updated with every change, audited for
+      drift. Happy side effect: the best new-hire onboarding money can buy.</span></li>
+    <li><strong>Guardrails, not trust.</strong> <span class="why">A committed permissions allowlist plus
+      every quality machine from the previous slides, applied to AI output with zero sentiment.</span></li>
+    <li><strong>The transferable claim:</strong> <span class="why">“agent-ready” is becoming a property
+      of codebases, like “well-tested” — and this repository is ahead of that curve.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="11-built-with-ai-agents.md">Guide ch. 11</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/AGENTS.md">AGENTS.md</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/MAINTENANCE.md">MAINTENANCE.md — the standing regimen</a>
+  </div>
+</section>
+
+<!-- 23 · RECEIPTS -->
+<section class="slide" id="s23">
+  <div class="kicker">The receipts</div>
+  <h2>Measured against a “best imaginable kit” bar — <span class="thin">gaps found, then closed</span></h2>
+  <div class="chart-wrap" role="img" aria-label="Line chart: project audit scores across eight passes rising from 93 on July 8, 2026 to 100 by July 17.">
+    <div class="chart-title">Project audit score, out of 100</div>
+    <div class="chart-sub">Eight passes, 2026-07-08 → 2026-07-17 · scale shown 90–100</div>
+    <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+      <title>Audit score by pass: 93, then 97.5, 98.2, 99.3 held across three passes, 99.35, closing at 100</title>
+      <!-- gridlines: 90 / 95 / 100 -->
+      <g stroke="#e1e0d9" stroke-width="1">
+        <line x1="56" y1="30"  x2="700" y2="30"/>
+        <line x1="56" y1="115" x2="700" y2="115"/>
+      </g>
+      <line x1="56" y1="200" x2="700" y2="200" stroke="#c3c2b7" stroke-width="1"/>
+      <!-- y tick labels -->
+      <g font-size="12" fill="#898781">
+        <text x="46" y="34"  text-anchor="end">100</text>
+        <text x="46" y="119" text-anchor="end">95</text>
+        <text x="46" y="204" text-anchor="end">90</text>
+      </g>
+      <!-- x labels -->
+      <g font-size="12" fill="#898781" text-anchor="middle">
+        <text x="100" y="228">Jul 8</text>
+        <text x="180" y="228">Jul 12</text>
+        <text x="260" y="228">Jul 12</text>
+        <text x="340" y="228">Jul 14</text>
+        <text x="420" y="228">Jul 14</text>
+        <text x="500" y="228">Jul 15</text>
+        <text x="580" y="228">Jul 15</text>
+        <text x="660" y="228">Jul 17</text>
+      </g>
+      <!-- data line: y = 200 - (score-90)*17 -->
+      <polyline points="100,149 180,72.5 260,60.6 340,41.9 420,41.9 500,41.9 580,41.05 660,30"
+        fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <!-- markers: 8px dots (r=4) with 2px surface ring (stroke) -->
+      <g fill="#2a78d6" stroke="#fcfcfb" stroke-width="2">
+        <circle cx="100" cy="149"  r="5"><title>Pass 1 · 2026-07-08 · 93.0</title></circle>
+        <circle cx="180" cy="72.5" r="5"><title>Pass 2 · 2026-07-12 · 97.5</title></circle>
+        <circle cx="260" cy="60.6" r="5"><title>Pass 3 · 2026-07-12 · 98.2</title></circle>
+        <circle cx="340" cy="41.9" r="5"><title>Pass 4 · 2026-07-14 · 99.3</title></circle>
+        <circle cx="420" cy="41.9" r="5"><title>Pass 5 · 2026-07-14 · 99.3</title></circle>
+        <circle cx="500" cy="41.9" r="5"><title>Pass 6 · 2026-07-15 · 99.3</title></circle>
+        <circle cx="580" cy="41.05" r="5"><title>Pass 7 · 2026-07-15 · 99.35</title></circle>
+        <circle cx="660" cy="30" r="5"><title>Pass 8 · 2026-07-17 · 100.0 — verified the closing “path to 100” program</title></circle>
+      </g>
+      <!-- selective direct labels: first + latest -->
+      <g font-size="13" fill="#0b0b0b" font-weight="600">
+        <text x="100" y="172" text-anchor="middle">93</text>
+        <text x="660" y="19"  text-anchor="middle">100</text>
+      </g>
+    </svg>
+  </div>
+  <details class="data">
+    <summary>View the data</summary>
+    <table>
+      <tr><th>Pass</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
+      <tr><th>Date (2026)</th><td>Jul 8</td><td>Jul 12</td><td>Jul 12</td><td>Jul 14</td><td>Jul 14</td><td>Jul 15</td><td>Jul 15</td><td>Jul 17</td></tr>
+      <tr><th>Score /100</th><td>93.0</td><td>97.5</td><td>98.2</td><td>99.3</td><td>99.3</td><td>99.3</td><td>99.35</td><td>100.0</td></tr>
+    </table>
+  </details>
+  <ul class="points">
+    <li><strong>Each gap found became a to-do item and was worked to completion</strong> <span class="why">— the reports are preserved in the repository’s archive. The last points sat behind the audits’ own “won’t fix” rulings; in July 2026 every ruling was re-argued, all fell, and an eleven-item closing program shipped — the eighth audit re-verified each item in the code and scored 100.</span></li>
+    <li><strong>Stated honestly:</strong> <span class="why">the audits are evidence-based (claims re-checked against code) but run by the same AI tooling that built the project — not an external certification. And 100 is treated as a state to maintain, not a trophy: every future audit re-checks it against the moving “best available today” bar and can take points back.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="01-the-big-picture.md">Guide ch. 1 — audits &amp; caveats</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/BACKLOG.md">BACKLOG.md — what’s deferred &amp; why</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/tree/main/docs/archive">docs/archive — the audit reports</a>
+  </div>
+</section>
+
+<!-- 24 · DOC MAP -->
+<section class="slide alt" id="s22" style="justify-content:flex-start; padding-top:8vh">
+  <div class="kicker">Completeness</div>
+  <h2>Every feature → its documentation</h2>
+  <p class="lead">The full drill-down map: each implemented feature group, its plain-English
+  chapter, and the repository doc holding the technical detail. (The complete feature
+  inventory with reasoning is
+  <a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/FEATURES.md">FEATURES.md ↗</a>;
+  dated proof per feature is
+  <a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION.md ↗</a>.)</p>
+  <table class="map">
+    <thead><tr><th style="width:52%">Feature group — what’s implemented</th><th>Plain English</th><th>Technical docs</th></tr></thead>
+    <tbody>
+      <tr><td class="feat"><b>Core platform</b> <span>— Next.js 16 + React 19, TypeScript 6 strict, Node 24, Turborepo + pnpm monorepo; instant-page rendering (Cache Components/PPR) and the React Compiler on by default</span></td>
+        <td><a href="03-the-foundation.md">Ch. 3</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/STACK.md">STACK</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/ARCHITECTURE.md">ARCHITECTURE</a></td></tr>
+      <tr><td class="feat"><b>Database &amp; data safety</b> <span>— PostgreSQL + Drizzle, 16 versioned migrations, indexes, transactions, seed data, backup/restore + rehearsed DR drill, pooling knob, copy-me example entity</span></td>
+        <td><a href="04-the-database.md">Ch. 4</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DATABASE.md">DATABASE</a></td></tr>
+      <tr><td class="feat"><b>Identity &amp; access</b> <span>— email/password + verification + reset, breach-checked passwords, Google/GitHub login, 2FA + backup codes, passkeys, organizations/teams + invitations, instant-effect roles (RBAC), admin ban + impersonation, audit log + viewer, sessions list/revoke, safe email change, account deletion, CAPTCHA, throttling</span></td>
+        <td><a href="05-accounts-and-identity.md">Ch. 5</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/AUTH.md">AUTH</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SECURITY.md">SECURITY</a></td></tr>
+      <tr><td class="feat"><b>Internal data flow</b> <span>— type-safe reads (tRPC), resilient writes (Server Actions), shared validation rulebook (Zod), forms (React Hook Form), request telemetry, rate-limited endpoints</span></td>
+        <td><a href="06-screens-and-servers.md">Ch. 6</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/API.md">API</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/CONVENTIONS.md">CONVENTIONS</a></td></tr>
+      <tr><td class="feat"><b>State discipline</b> <span>— server/client/URL state boundary, caching + optimistic updates (TanStack Query), UI state (Zustand), shareable URL state</span></td>
+        <td><a href="06-screens-and-servers.md">Ch. 6</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/STATE.md">STATE</a></td></tr>
+      <tr><td class="feat"><b>Realtime</b> <span>— live notifications + authoritative unread badge over the existing database (LISTEN/NOTIFY → SSE), persisted-first, self-healing reconnect</span></td>
+        <td><a href="06-screens-and-servers.md">Ch. 6</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/API.md">API</a></td></tr>
+      <tr><td class="feat"><b>Design system &amp; UI</b> <span>— Tailwind v4 tokens, owned component catalog (shadcn/ui on Radix), dark mode (no flash), Storybook showroom, visual screenshot regression, skeletons/dialogs/toasts</span></td>
+        <td><a href="07-look-feel-and-languages.md">Ch. 7</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/UI.md">UI</a></td></tr>
+      <tr><td class="feat"><b>Internationalization</b> <span>— English + Spanish, per-locale URLs &amp; SEO, locale-aware date/number/currency formatting, language switcher</span></td>
+        <td><a href="07-look-feel-and-languages.md">Ch. 7</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/I18N.md">I18N</a></td></tr>
+      <tr><td class="feat"><b>Payments</b> <span>— Stripe hosted checkout → webhook → subscriptions table, idempotency, billing portal, dunning, premium gating, cancel-on-account-deletion; live-verified incl. test-clock time travel</span></td>
+        <td><a href="08-connected-services.md">Ch. 8</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION</a></td></tr>
+      <tr><td class="feat"><b>Email</b> <span>— Resend + typed React Email templates, plain-text part on every send, all account flows, SPF/DKIM/DMARC deliverability proven on a real domain, graceful no-key mode</span></td>
+        <td><a href="08-connected-services.md">Ch. 8</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES</a></td></tr>
+      <tr><td class="feat"><b>Uploads · Search · Jobs</b> <span>— Uploadthing direct-to-storage with tracked files + fail-closed deletion; Meilisearch with settings-as-code + index-on-write; pg-boss queue in Postgres with retrying worker (169&nbsp;MB slim image) + heartbeat</span></td>
+        <td><a href="08-connected-services.md">Ch. 8</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT</a></td></tr>
+      <tr><td class="feat"><b>Observability &amp; privacy</b> <span>— Sentry crash reporting (readable stack traces in prod), BetterStack logs + uptime + dashboards-as-code, PostHog analytics + feature flags, consent banner (opt-in), GDPR data export, health endpoint</span></td>
+        <td><a href="08-connected-services.md">Ch. 8</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SERVICES.md">SERVICES</a></td></tr>
+      <tr><td class="feat"><b>Security posture</b> <span>— full security-header set + CSP (verified nonce upgrade as documented recipe), COOP, security.txt, violation reporting, rate limiting (+ Upstash option, hardened IP detection), 7-day dependency quarantine, SHA-pinned CI, pnpm audit, Trivy, SBOM, SLSA provenance, CodeQL, secret scanning</span></td>
+        <td><a href="09-quality-and-trust.md">Ch. 9</a> · <a href="10-shipping-and-running.md">10</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SECURITY.md">SECURITY</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT</a></td></tr>
+      <tr><td class="feat"><b>Testing &amp; CI</b> <span>— Vitest unit/component suites with coverage gates, Playwright browser journeys (auth lifecycles, headers, i18n, a11y via axe on 7 surfaces, passkeys), DB integration tests, visual lane, dead-code gate (knip), git hooks, container build-and-smoke lane</span></td>
+        <td><a href="09-quality-and-trust.md">Ch. 9</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/TESTING.md">TESTING</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT</a></td></tr>
+      <tr><td class="feat"><b>Deployment</b> <span>— multi-stage Docker (web + slim worker), dev/prod compose, proven Fly.io runbook + documented alternatives, env validation, Renovate updates, performance budgets + bundle analysis</span></td>
+        <td><a href="10-shipping-and-running.md">Ch. 10</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT</a></td></tr>
+      <tr><td class="feat"><b>Agent-readiness</b> <span>— AGENTS.md working agreements, 14 on-demand context docs, committed skills (checkpoint / project-audit / doc-audit / tidy), permissions allowlist, decision log incl. rejected options, doc-drift audits, maintenance regimen</span></td>
+        <td><a href="11-built-with-ai-agents.md">Ch. 11</a></td>
+        <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/AGENTS.md">AGENTS</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DECISIONS.md">DECISIONS</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/MAINTENANCE.md">MAINTENANCE</a></td></tr>
+    </tbody>
+  </table>
+  <footer class="deckfoot">Guide chapters not listed above: <a class="inline" href="02-how-web-apps-work.md">Ch. 2 (the ten-minute primer)</a> and
+  <a class="inline" href="12-glossary.md">Ch. 12 (the glossary — every term, alphabetized)</a>.</footer>
+</section>
+
+<!-- 25 · WHAT IT'S NOT -->
+<section class="slide" id="s24">
+  <div class="kicker">Honest boundaries</div>
+  <h2>What it is <em>not</em> — <span class="thin">the caveats that make the pitch credible</span></h2>
+  <ul class="points">
+    <li><strong>Not a finished product.</strong> <span class="why">It’s the foundation plus worked
+      examples; the actual business features still get built on top.</span></li>
+    <li><strong>Not a no-code tool.</strong> <span class="why">It makes engineers (human and AI)
+      dramatically faster; it doesn’t replace them.</span></li>
+    <li><strong>Opinionated, with receipts.</strong> <span class="why">One good tool per category,
+      deeply integrated — and every pick argued in writing, every rejection recorded, every
+      integration removable by checklist.</span></li>
+    <li><strong>Known imperfections are public.</strong> <span class="why">A short backlog of deferred
+      items exists, each with its reason — most gated on outside technology maturing.</span></li>
+    <li><strong>The audits are self-run</strong> <span class="why">— rigorous and evidence-based, but
+      not an external certification. The claims that matter most are the independently
+      checkable ones: the dated verification log and the public code.</span></li>
+  </ul>
+  <div class="links">
+    <span class="lbl">Drill down</span>
+    <a class="pill" href="01-the-big-picture.md">Guide ch. 1 — “What this project is not”</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/BACKLOG.md">BACKLOG.md</a>
+  </div>
+</section>
+
+<!-- 26 · CLOSE -->
+<section class="slide alt" id="s25">
+  <div class="kicker">The close</div>
+  <h2>One paragraph to take with you</h2>
+  <p class="lead" style="font-size:1.18em; max-width:56ch">
+    A production-grade starter kit on the industry’s most mainstream stack, compressing
+    <strong>months of mandatory foundation work</strong> into a verified, documented,
+    working base — <strong>every feature proven live</strong>, <strong>every decision on
+    file</strong>, quality <strong>machine-enforced on every change</strong>, no vendor
+    lock-in anywhere — and a working exhibit of <strong>disciplined AI-agent
+    development</strong>, the practice that is reshaping how software gets built.
+  </p>
+  <div class="tiles" style="max-width:900px">
+    <div class="tile"><div class="t-label">Read next (10 min)</div><div class="t-value" style="font-size:1.15em">Guide ch. 1, 2 &amp; 11</div><div class="t-sub">the big picture, the primer, the AI story</div></div>
+    <div class="tile"><div class="t-label">Verify any claim</div><div class="t-value" style="font-size:1.15em">VERIFICATION.md</div><div class="t-sub">dated, phase-by-phase proof</div></div>
+    <div class="tile"><div class="t-label">See the code</div><div class="t-value" style="font-size:1.15em">GitHub</div><div class="t-sub">public template, free to copy</div></div>
+  </div>
+  <div class="links">
+    <a class="pill" href="README.md">Plain-English Guide index</a>
+    <a class="pill" href="01-the-big-picture.md">Ch. 1 — The Big Picture</a>
+    <a class="pill" href="02-how-web-apps-work.md">Ch. 2 — The primer</a>
+    <a class="pill" href="11-built-with-ai-agents.md">Ch. 11 — Built With AI Agents</a>
+    <a class="pill" href="12-glossary.md">Ch. 12 — Glossary</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate">github.com/jrittelmeyer/next-web-boilerplate</a>
+    <a class="pill repo" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION.md</a>
+  </div>
+</section>
+
+</main>
+
+<script>
+(()=>{
+  const slides=[...document.querySelectorAll("section.slide")];
+  const counter=document.getElementById("counter");
+  const bar=document.getElementById("progress");
+  function current(){
+    const mid=window.scrollY+innerHeight/2;
+    let i=0;
+    slides.forEach((s,idx)=>{ if(s.offsetTop<=mid) i=idx; });
+    return i;
+  }
+  function update(){
+    const i=current();
+    counter.textContent=`${i+1} / ${slides.length}`;
+    const max=document.documentElement.scrollHeight-innerHeight;
+    bar.style.width=`${max>0?(window.scrollY/max)*100:0}%`;
+  }
+  function go(delta){
+    const i=Math.min(slides.length-1,Math.max(0,current()+delta));
+    slides[i].scrollIntoView({behavior:"smooth"});
+  }
+  addEventListener("scroll",update,{passive:true});
+  addEventListener("resize",update);
+  addEventListener("keydown",e=>{
+    if(e.target.closest("details,a,button,input")&&e.key!==" ") return;
+    if(["ArrowRight","ArrowDown","PageDown"," "].includes(e.key)){e.preventDefault();go(1);}
+    else if(["ArrowLeft","ArrowUp","PageUp"].includes(e.key)){e.preventDefault();go(-1);}
+    else if(e.key==="Home"){e.preventDefault();slides[0].scrollIntoView();}
+    else if(e.key==="End"){e.preventDefault();slides[slides.length-1].scrollIntoView();}
+  });
+  document.getElementById("next").onclick=()=>go(1);
+  document.getElementById("prev").onclick=()=>go(-1);
+  update();
+})();
+</script>
+</body>
+</html>

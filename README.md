@@ -107,6 +107,7 @@ docker/              — Dockerfile + docker-compose for local dev
 | --- | --- |
 | [`docs/FEATURES.md`](docs/FEATURES.md) | **What's included — and why.** The full inventory with per-choice rationale. |
 | [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | **Using this template.** Clone → run → rename → remove what you don't need → production. |
+| [`docs/plain-english-guide/`](docs/plain-english-guide/) | **The zero-jargon tour.** A 12-chapter plain-English explainer (no technical background needed) + a pitch deck — what this is, why each piece was chosen, and how it was built with AI agents. |
 | [`AGENTS.md`](AGENTS.md) | **Agent-assisted development.** Onboarding for coding agents (and a great human overview): working agreements + the per-task context-doc index. |
 | [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md) | **Keeping it current.** Dependency policy, Renovate, upgrade runbook, watch items. |
 | [`docs/context/`](docs/context/) | **Deep dives**, loaded on demand: `STACK`, `ARCHITECTURE`, `CONVENTIONS`, `DATABASE`, `AUTH`, `API`, `STATE`, `UI`, `I18N`, `TESTING`, `SERVICES`, `SECURITY`, `DEPLOYMENT`, `DECISIONS`. |

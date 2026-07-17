@@ -118,4 +118,6 @@ docker/             — prod Dockerfile + docker-compose (dev + prod)
 > [docs/archive/](docs/archive/) — load it only when you need the background behind a
 > past decision; it is not part of normal task context. Human-first guides:
 > [docs/FEATURES.md](docs/FEATURES.md) (what's included & why) ·
-> [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) (template usage).
+> [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) (template usage) ·
+> [docs/plain-english-guide/](docs/plain-english-guide/) (zero-jargon tour + pitch
+> deck for non-technical readers — not agent context).
