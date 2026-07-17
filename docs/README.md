@@ -12,6 +12,7 @@ level up.
 | [FEATURES.md](FEATURES.md) | **What's included — and why.** The inventory + per-choice rationale. Part pitch, part decision record. |
 | [GETTING_STARTED.md](GETTING_STARTED.md) | **Using this template.** Clone → run → rename → trim → production. |
 | [MAINTENANCE.md](MAINTENANCE.md) | **Keeping it current.** Dependency policy, automation setup, upgrade runbook. |
+| [plain-english-guide/](plain-english-guide/) | **The zero-jargon tour.** 12-chapter plain-English explainer + pitch deck for non-technical readers. |
 
 ## Living state
 

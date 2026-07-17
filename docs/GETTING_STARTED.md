@@ -95,6 +95,16 @@ If you cloned with git history (not degit / "Use this template"): `Remove-Item -
 
 ## Remove what you don't need
 
+- **The template's own history/marketing docs** — `pnpm init-app` offers to remove
+  them for you (interactive y/N; `--slim` / `--keep-template-docs` for scripted
+  runs; idempotent, run it anytime). They chronicle *this template's* build journey,
+  not your app: `docs/PROJECT_STATUS.md`, `docs/BACKLOG.md`, `docs/archive/`,
+  `docs/plain-english-guide/`, the funding link (+ README Support section);
+  `CHANGELOG.md` is reset to an empty skeleton. It also neutralizes the template
+  references in `README.md`/`AGENTS.md` and prints any leftover historical mentions
+  so you can tidy them whenever you next touch those files. Kept, because they
+  document *your* app's foundation: `FEATURES.md`, this file, `VERIFICATION.md`,
+  `MAINTENANCE.md`, all of `context/`.
 - Every integration in [`context/SERVICES.md`](context/SERVICES.md) ends with a
   self-contained **"Remove it"** checklist (Stripe, Sentry, PostHog, Uploadthing,
   Meilisearch, jobs, dashboards).
