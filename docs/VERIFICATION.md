@@ -279,6 +279,23 @@ All are optional and independent; the app keeps building/running if you skip any
 - [x] _(Optional)_ **CSP violation reporting** (P3-6 recipe): apply the SECURITY.md "CSP violation reporting" diff with your real DSN, rebuild/restart, load any page and run `fetch("https://example.com/")` in the console → the violation arrives in your Sentry project (their CSP/security-report handling). This confirms the Sentry-side half the 2026-07-05 local check couldn't: modern `report-to` upload needs a trusted-https endpoint, so only the legacy `report-uri` POST was captured locally (against a sink). _Verified 2026-07-06→07 (recipe applied ad hoc with the real DSN, reverted after): all three header pieces rendered exactly as designed; a real browser-generated violation report was **delivered to the real Sentry endpoint → 200** via the legacy leg (`report-uri` alone → Chromium page-context `application/csp-report` POST, i.e. pre-2026-browser behavior); and report→event processing was **confirmed in Issues** (search `event.type:csp`). The endpoint also answers the CORS preflight and 200s **both** wire formats POSTed directly. Two gotchas, both verified live: (1) **Sentry silently drops security reports for `localhost` pages** — 200-accepted but no event, even with the "localhost" inbound filter **off** (paired probes: the identical report with a non-localhost `document-uri` created the event; the localhost one never did). A local-page test can therefore never surface an event — prove processing with a non-localhost `document-uri` probe and treat the delivery 200 as the local success signal. (2) The modern `report-to` **background uploader never fires under browser automation** (Playwright Chromium headless/headed, real Chrome under automation, Firefox 151: the report registers and queues, no upload leaves) — and a registered `report-to` group suppresses `report-uri`, so an automated full-recipe check observes nothing. Net: the modern leg is only observable by hand on a **deployed (non-localhost)** page; SECURITY.md → "CSP violation reporting" has the mechanics._
 - [x] **Degraded check** (regression guard): DSN unset → the SDK is a no-op again. _Verified 2026-07-06 (shipped config, DSN commented out, fresh rebuild): **zero** sentry.io requests across page load + capture click + render-error click (buttons show their no-op status text; boundary still renders), and the header set is byte-identical to the shipped one (no reporting directives). DSN restored to `.env` afterwards._
 
+### OpenTelemetry (opt-in OTLP trace export)
+
+> ✅ **Section COMPLETE (2026-07-16, shipped with path-to-100 #9).** Verified against a
+> local `otel/opentelemetry-collector` (OTLP/HTTP on :4318, debug exporter) with fresh
+> prod builds on :3100, all three env states: **baseline** (endpoint unset → app healthy,
+> zero collector traffic — prior behavior exactly), **OTLP-only** (keyless build, no DSN
+> anywhere → 22-span batches at the collector, nothing sent to Sentry), and **dual**
+> (DSN + endpoint → `transaction` envelopes at a local Sentry ingest sink **and** 36-span
+> batches at the collector from the same requests). Span evidence included Next.js
+> internals (`middleware GET`, `resolve page components`), `pg.query`/`pg-pool.connect`,
+> and Better Auth `/get-session` handler spans; `OTEL_SERVICE_NAME=nwb-web` appeared as
+> the `service.name` resource attribute. Verified runtime-gated: the endpoint was set
+> only at `next start`, against builds that never saw it.
+
+- [x] Run a local collector + set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`, restart (no rebuild), drive a few pages → span batches appear in `docker logs` within ~5s. _The exact config + one-liner is in [SERVICES.md → OpenTelemetry](context/SERVICES.md#opentelemetry-export-opt-in-path-to-100-9)._
+- [x] **Degraded check** (regression guard): endpoint unset → zero OTel activity; the Sentry init is byte-identical to before (`openTelemetrySpanProcessors: []`). _Verified 2026-07-16 (run A above)._
+
 ### BetterStack (logs) + dashboards-as-code
 
 > ✅ **Section COMPLETE (2026-07-07).** All three rows verified against a real free-tier

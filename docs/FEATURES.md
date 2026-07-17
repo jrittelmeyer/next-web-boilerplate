@@ -200,6 +200,9 @@ builds and runs with the worker never started.
   (console fallback when unset) with **dashboards-as-code** (uptime monitors +
   worker heartbeats synced idempotently from typed config), and **PostHog** analytics
   + server-side feature flags.
+- **Opt-in OpenTelemetry**: set `OTEL_EXPORTER_OTLP_ENDPOINT` and server traces
+  export via OTLP/HTTP to any OTel backend — riding the Sentry SDK's own OTel
+  provider (no double-instrumentation), with or without a Sentry DSN.
 - **Privacy-first defaults**: analytics is consent-gated (opt-out by default, a real
   consent banner) and a GDPR **data export** ships with an allowlist-redacted
   `buildDataExport()`.

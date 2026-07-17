@@ -66,6 +66,7 @@ export default defineConfig({
         "src/lib/i18n-metadata.ts",
         "src/lib/keyset-cursor.ts",
         "src/lib/organization.ts",
+        "src/lib/otel.ts",
         "src/lib/posthog-identity.ts",
         "src/lib/rate-limit.ts",
         "src/lib/rbac.ts",

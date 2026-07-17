@@ -18,6 +18,8 @@
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "@logtail/next": "^0.3.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.220.0",
+    "@opentelemetry/sdk-trace-base": "^2.8.0",
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/email": "workspace:*",

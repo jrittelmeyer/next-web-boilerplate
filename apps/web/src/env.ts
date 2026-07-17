@@ -63,6 +63,14 @@ export const env = createEnv({
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
     SENTRY_AUTH_TOKEN: z.string().optional(),
+    // Observability — OpenTelemetry (opt-in, path-to-100 #9). Set the standard OTLP
+    // endpoint to export server traces (OTLP/HTTP) to any OTel backend, alongside or
+    // without Sentry; unset → no OTel export, today's exact behavior. Read directly
+    // from process.env in lib/otel.ts (instrumentation-time, like the Sentry DSN);
+    // listed here for validation + discoverability. OTEL_SERVICE_NAME names the
+    // service in the backend (Sentry's provider resource honors it; default "node").
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
+    OTEL_SERVICE_NAME: z.string().optional(),
     // App-level rate limiting (Step 20) — optional Upstash Redis driver. Unset
     // (the default) → the limiter uses an in-memory per-instance store; set BOTH to
     // switch to a distributed sliding-window limiter (required for multi-instance /
