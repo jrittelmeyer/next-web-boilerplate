@@ -15,6 +15,14 @@
   // TRPCContext, OAUTH_PROVIDERS, JOBS_SCHEMA). Only a symbol NO file uses is reported.
   "ignoreExportsUsedInFile": true,
   "workspaces": {
+    ".": {
+      "entry": [
+        // ai-dev-kit installer: a standalone script invoked as `node ai-dev-kit/install.mjs`
+        // (never imported), so knip can't see it on the import graph and would flag it
+        // as an unused file. See ai-dev-kit/README.md.
+        "ai-dev-kit/install.mjs"
+      ]
+    },
     "apps/web": {
       "entry": [
         // Documented example scaffold (SERVICES.md → Resend): the worked send-an-email
