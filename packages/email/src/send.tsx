@@ -105,8 +105,12 @@ async function send(
         return { error: `Recipient address is suppressed: ${options.to}`, suppressed: true };
       }
     } catch (err) {
+      // Literal format string with %s — `options.to` is user input, and console.warn
+      // treats a first argument followed by more args as printf-style, so an address
+      // containing %s/%j must be a format ARG, never part of the format string.
       console.warn(
-        `[email] suppression lookup failed for ${options.to} — sending anyway:`,
+        "[email] suppression lookup failed for %s — sending anyway:",
+        options.to,
         err instanceof Error ? err.message : err,
       );
     }

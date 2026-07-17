@@ -140,3 +140,28 @@ majors, typescript-v7 held), the **three override-removal conditions**
 `@esbuild-kit`), and the **TS7 stable-Next watch** — the lone open backlog row.
 Bands in `BACKLOG.md` remain the single source of truth; this report is the
 scoring record.
+
+## Addendum (2026-07-17, same day — a miss, owned)
+
+Hours after this report was committed, the owner spotted **3 open CodeQL
+code-scanning alerts** (created 2026-07-16 23:36Z → 07-17 06:36Z by the scans of
+the program's final commits — i.e. **open while this pass scored**). The pass
+missed them because it checked the CodeQL *workflow conclusion* (green) and the
+Dependabot alerts API (0 open) but never queried the code-scanning alerts API — a
+green analyze run only means the scan uploaded. **Method fixed:** the
+project-audit skill now requires querying the open-alerts APIs directly.
+
+Assessment and same-day fix (all three): (1) `js/tainted-format-string` in
+`packages/email/src/send.tsx` — the fail-open suppression-lookup warn passed a
+user-controlled email inside a printf-position template literal with a trailing
+arg; a `%s`-bearing address garbled the log line (proven live). Real
+product-code defect, impact limited to log confusion in an error path; fixed
+with a literal `%s` format string. (2) `js/bad-tag-filter` in
+`e2e/csp-nonce.spec.ts` — the script-tag regex was case-sensitive; a test
+assertion, not a sanitizer, tightened with `/i`. (3)
+`js/incomplete-url-substring-sanitization` in `e2e/billing-org.spec.ts` —
+`url().includes("stripe.com")` in the either-outcome assertion; tightened to a
+parsed-hostname check. **Scores unchanged** — a same-day-fixed log-formatting
+nit and two test-assertion tightenings don't re-open a deduction — but the
+alerts-API blind spot was a genuine audit-method gap, and this addendum is its
+record.

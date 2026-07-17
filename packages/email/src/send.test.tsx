@@ -204,8 +204,12 @@ describe("send helpers — suppression consult (path-to-100 #8)", () => {
     const result = await sendWelcomeEmail({ to: TO, name: "Ada" });
     expect(result).toHaveProperty("data");
     expect(await readdir(captureDir)).toHaveLength(1);
+    // The address must be a format ARG (%s), never interpolated into the format
+    // string itself — a %s-bearing address would otherwise consume the error arg
+    // (js/tainted-format-string, fixed 2026-07-17).
     expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("suppression lookup failed"),
+      expect.stringContaining("suppression lookup failed for %s"),
+      TO,
       "connection refused",
     );
   });

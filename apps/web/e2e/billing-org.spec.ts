@@ -67,7 +67,8 @@ test("an active org makes /billing the org's surface and the owner reaches the c
   // the owners/admins error BEFORE it — billing.test.ts pins that ordering).
   await ownerPage.getByRole("button", { name: "Subscribe" }).click();
   await expect(async () => {
-    const redirectedToStripe = ownerPage.url().includes("stripe.com");
+    const { hostname } = new URL(ownerPage.url());
+    const redirectedToStripe = hostname === "stripe.com" || hostname.endsWith(".stripe.com");
     const configErrorShown = await ownerPage
       .getByText("Stripe is not configured (set STRIPE_SECRET_KEY).")
       .isVisible();

@@ -79,7 +79,7 @@ test("every script tag in the served HTML carries that request's nonce", async (
     expect(nonce).toBeTruthy();
 
     const html = await response.text();
-    const scriptTags = html.match(/<script\b[^>]*>/g) ?? [];
+    const scriptTags = html.match(/<script\b[^>]*>/gi) ?? [];
     // A page with no scripts would vacuously pass — make sure Next's bootstrap
     // and the next-themes pre-paint inline script are actually there.
     expect(scriptTags.length).toBeGreaterThan(1);

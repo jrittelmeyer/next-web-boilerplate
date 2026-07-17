@@ -36,8 +36,14 @@ outputs are docs only (report + backlog + status pointers).
   (CONTRIBUTING, SECURITY, CoC, issue/PR templates, FUNDING) present and current,
   and claimed repo automation **actually alive**, not just configured (CI + code
   scanning green on recent commits, dependency-update PRs actually arriving — a
-  committed config with a dead app is dormant, not done). Untriaged issues/PRs
-  and visibly stale dependencies are adoption-killers: score them.
+  committed config with a dead app is dormant, not done). **Query the open-alert
+  APIs, not just workflow conclusions** — a green CodeQL run only means the scan
+  uploaded; open findings live behind
+  `gh api repos/<o>/<r>/code-scanning/alerts?state=open` (and the Dependabot
+  equivalent). Zero open alerts is the checkable claim; a workflow badge is not
+  (learned 2026-07-17: a 100-scoring pass missed 3 open CodeQL alerts this way).
+  Untriaged issues/PRs and visibly stale dependencies are adoption-killers:
+  score them.
 - **Goals & gates:** re-read the repo's stated goals (README/status) against
   what the repo now is — goal drift is a finding, not a given. Re-check every
   externally-gated watch/backlog row: has the upstream gate lifted since the
