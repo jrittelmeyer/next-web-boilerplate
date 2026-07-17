@@ -5,8 +5,8 @@
 > **not** kept here: the compact record is the build-progress table in
 > [PROJECT_STATUS.md](PROJECT_STATUS.md), and the full per-item prose is in
 > [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md). The audits that seeded past
-> backlogs live in [docs/archive/](archive/) (Phase B + the seven `/project-audit`
-> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35/100). Everything below
+> backlogs live in [docs/archive/](archive/) (Phase B + the eight `/project-audit`
+> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0/100). Everything below
 > goes plan → sign-off → build. Don't reintroduce shipped-item entries here.
 
 ## Watch (no action now)
@@ -34,11 +34,12 @@
   `minimumReleaseAgeExclude`.)
 - **Maintenance-only** (Tier 3 **G**) — the honest "we're done" option: let Renovate drive
   deps, keep docs current, add steps as real needs surface. Standing state 2026-07-12 →
-  2026-07-15; **SUPERSEDED 2026-07-15 by the path-to-100 program** (owner decision): the
-  seven audit passes plateaued at 99.35 because the last 13 points sat behind won't-fix
-  classifications, so each was re-litigated — all 13 proved recoverable
-  ([archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)). Maintenance-only
-  resumes when the program's rows ship and a scoring pass verifies them.
+  2026-07-15; superseded 2026-07-15 by the path-to-100 program (owner decision;
+  [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)); **RESUMED
+  2026-07-17** — the program shipped all 11 rows and the eighth scoring pass verified it
+  at **100.0/100** ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)).
+  Near-term owner calendar: Monday 2026-07-20 (Renovate batch + 8 pending-approval
+  majors — hold typescript-v7 per the TS7 gate).
 - **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is intermittently flaky
   (absorbed by `retries:2`, but it twice burned 2 of 3 CI attempts). **Not a code bug** — a
   fragile signup+redirect timing flow on modest runners. Harden **only if it ever turns a lane
@@ -59,11 +60,12 @@
 > **The path-to-100 program** (2026-07-15, owner-directed) — 11 rows recovering the 13
 > audit points locked behind won't-fix/deferred classifications (per-row re-analysis in
 > [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)) — **shipped all
-> 11 build rows 2026-07-16 → 17** (strikethrough table below), and the last remainder —
-> **#4b, the one-time live Uploadthing tunnel proof — closed 2026-07-17** (owner-approved
-> tunnel; strikethrough row below). **The program's build work is fully complete**; next:
-> the `/project-audit` scoring pass verifies it. The **TypeScript 7 cutover** stays
-> outside the program (externally gated, costs no points; see Watch).
+> 11 build rows 2026-07-16 → 17** (strikethrough table below), closed the last remainder
+> (**#4b**, the one-time live Uploadthing tunnel proof, 2026-07-17), and was **VERIFIED
+> at 100.0/100 by the 2026-07-17 scoring pass**
+> ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)). The
+> **TypeScript 7 cutover** stays outside the program (externally gated, costs no
+> points; see Watch) — it is now the only open row.
 
 ### Open rows
 

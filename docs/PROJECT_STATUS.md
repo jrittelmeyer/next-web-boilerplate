@@ -32,14 +32,13 @@ _Last updated: 2026-07-17._
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row is SHIPPED (2026-07-07 → 13)** — including the
-  A23–A31 polish rows, A32, and A13. Seven `/project-audit` passes graded the repo
-  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35/100** (2026-07-08 · 07-12 · 07-12B ·
-  07-14 · 07-14B post-launch · 07-15 · **07-15B, same-day delta** — proved the
-  Dependabot override trio end-to-end (alerts fixed on GitHub, clean audit, lockfile
-  resolutions) and the funding surface live; **zero drift found, a first** — Docs & DX
-  99 → 100; zero new backlog rows for the fourth consecutive time; reports in
-  [docs/archive/](archive/), latest:
-  [PROJECT_AUDIT_2026-07-15B.md](archive/PROJECT_AUDIT_2026-07-15B.md)).
+  A23–A31 polish rows, A32, and A13. Eight `/project-audit` passes graded the repo
+  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0/100** (2026-07-08 · 07-12 ·
+  07-12B · 07-14 · 07-14B post-launch · 07-15 · 07-15B · **07-17, the path-to-100
+  verification** — all 11 program rows re-verified in code, every live proof dated,
+  **zero drift across the 153-file program window**, zero new backlog rows for the
+  fifth consecutive time; reports in [docs/archive/](archive/), latest:
+  [PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) — rows
   at the bottom of the table below.
@@ -54,9 +53,11 @@ _Last updated: 2026-07-17._
   at 99.35 because the last 13 points sat behind won't-fix/deferred classifications;
   each was re-litigated and **all 13 proved recoverable**
   ([archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md) holds the
-  per-row analysis). Next: a `/project-audit` scoring pass verifies the program, then
-  maintenance-only resumes. The TS7 cutover stays outside it (externally gated —
-  stable-Next TS7 support; experimental in canary since 2026-07-10).
+  per-row analysis). **VERIFIED 2026-07-17 — the eighth `/project-audit` pass graded
+  100.0/100** ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md));
+  **maintenance-only is the standing state again** (100 is a state to maintain — future
+  passes re-run the currency checks). The TS7 cutover stays outside it (externally
+  gated — stable-Next TS7 support; experimental in canary since 2026-07-10).
 
 ## Build progress
 
@@ -134,7 +135,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Path-to-100 · #3 | Jobs dead-letter queue wired — worker creates every queue with `deadLetter: "failed-jobs"` **and** `updateQueue`-converges pre-existing databases (`createQueue` is `ON CONFLICT DO NOTHING`, verified in installed pg-boss 12.20.0 + live: all 4 queues stamped); watched DLQ consumer logs + captures to Sentry via `@sentry/node` 10.59.0 when `NEXT_PUBLIC_SENTRY_DSN` is set (reused — zero new env). Integration test proves exhausted job → DLQ with original payload on real Postgres. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#background-jobs--repojobs--pg-boss-d7). |
 | Path-to-100 · #4a | `e2e/uploads.spec.ts` — the last zero-e2e integration covered: keyless CI-honest spec (page renders logged-out, UploadButton mounts + settles past "Loading…", signed-in "Your uploads" empty state); 2/2 with `UPLOADTHING_TOKEN` explicitly blanked. The #4b callback runbook (`UPLOADTHING_CALLBACK_URL`, source-verified in installed 7.7.4) was authored 2026-07-16 and its one-time live tunnel proof **ran 2026-07-17** (owner-approved cloudflared tunnel: callback POSTed through the tunnel on a prod build → `uploads` row landed; Delete swept row + file — dated box in VERIFICATION.md). 2026-07-16 → 17. See [context/SERVICES.md](context/SERVICES.md#uploadthing-file-uploads) · [VERIFICATION.md](VERIFICATION.md). |
 | Path-to-100 · #6 | Magic-link sign-in wired (promotes the A18 recipe) — `magicLink()` env-gated on `isEmailConfigured()` so affordance + endpoints appear/disappear together; capture-seam e2e (second :3001 webServer) + live :3100 send proof. 2026-07-16. See [context/AUTH.md](context/AUTH.md#magic-link-sign-in-env-gated-path-to-100-6) · [context/TESTING.md](context/TESTING.md#email-capture--the-magic-link-e2e-path-to-100-6). |
-| Path-to-100 · #7 | i18n full-surface coverage — en/es catalogs extended to every `[locale]` surface (identical 485-key trees, en byte-identical); all six `toLocale*` sites → the A32 named formats (+ `dateOnly`); es e2e chrome + signed-in date spot-check. 2026-07-16. See [context/I18N.md](context/I18N.md). |
+| Path-to-100 · #7 | i18n full-surface coverage — en/es catalogs extended to every `[locale]` surface (identical key trees — 485 at ship, grown by later rows; en byte-identical); all six `toLocale*` sites → the A32 named formats (+ `dateOnly`); es e2e chrome + signed-in date spot-check. 2026-07-16. See [context/I18N.md](context/I18N.md). |
 | Path-to-100 · #8 | Email bounce/complaint handling — signature-verified `POST /api/resend/webhook` (zero new deps) → `email_suppressions` (migration 0016) → every `send*` helper consults `isEmailSuppressed()` (env-gated on `RESEND_WEBHOOK_SECRET`, fail-open); jobs complete instead of retrying suppressed sends; self-signed-svix e2e + live :3100 proof. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#bounce--complaint-handling-path-to-100-8) · [context/DATABASE.md](context/DATABASE.md#email-suppressions-email_suppressions--do-not-send-list-migration-0016). |
 | Path-to-100 · #9 | Opt-in OpenTelemetry — OTLP/HTTP trace export gated on `OTEL_EXPORTER_OTLP_ENDPOINT` (runtime knob, no rebuild; unset = prior behavior exactly): `lib/otel.ts` adds a `BatchSpanProcessor` to **Sentry's own OTel provider** via the SDK's `openTelemetrySpanProcessors` option (source-verified in 10.59.0) — one provider/sampler, no double-instrumentation; works DSN-less (sampler gates on `tracesSampleRate`, not DSN). Live matrix vs a local collector: baseline inert · OTLP-only spans (keyless build) · dual export (Sentry-sink `transaction` envelopes + collector spans from the same requests); `OTEL_SERVICE_NAME` honored. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#opentelemetry-export-opt-in-path-to-100-9). |
 | Path-to-100 · #10 | `CSP_MODE=nonce` as a first-class **build-time** mode (M4's recipe promoted; the inert `.example` deleted) — one shared directive list (`src/lib/csp.ts`) feeds both the static config header (default, byte-identical to pre-#10) and the proxy's per-request `'nonce-…' 'strict-dynamic'` CSP; nonce builds set `cacheComponents: false` + `experimental.useCache` so the D4 `"use cache"` showcase **keeps caching** (only the static/PPR posture is given up; `useCache`-survives-`cacheComponents:false` source-verified in Next 16.2.9). Baked via config `env` → runtime override is a verified no-op. New `e2e/csp-nonce.spec.ts` matrix (rotating nonce both locales · no script `'unsafe-inline'` · every `<script>` stamped · journeys with zero console violations) runs in the variable-gated `csp-nonce` CI lane (`ENABLE_CSP_NONCE`, ON here). 2026-07-17. See [context/SECURITY.md](context/SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch). |
