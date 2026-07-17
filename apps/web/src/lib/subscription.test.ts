@@ -7,14 +7,18 @@ const { subscriptionsFindFirst } = vi.hoisted(() => ({ subscriptionsFindFirst: v
 
 vi.mock("@repo/db", () => ({
   db: { query: { subscriptions: { findFirst: subscriptionsFindFirst } } },
-  subscriptions: { userId: "subscriptions.user_id", createdAt: "subscriptions.created_at" },
+  subscriptions: {
+    userId: "subscriptions.user_id",
+    organizationId: "subscriptions.organization_id",
+    createdAt: "subscriptions.created_at",
+  },
 }));
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col, val) => ({ eq: [col, val] })),
   desc: vi.fn((col) => ({ desc: col })),
 }));
 
-import { hasActiveSubscription, isSubscriptionActive } from "./subscription";
+import { hasActiveSubscription, hasOrgSubscription, isSubscriptionActive } from "./subscription";
 
 const NOW = new Date("2026-07-08T12:00:00Z");
 const FUTURE = new Date("2026-08-08T12:00:00Z");
@@ -86,5 +90,36 @@ describe("hasActiveSubscription", () => {
   it("is false when the newest row is not entitling", async () => {
     subscriptionsFindFirst.mockResolvedValue({ status: "canceled", currentPeriodEnd: FUTURE });
     expect(await hasActiveSubscription("u1")).toBe(false);
+  });
+});
+
+describe("hasOrgSubscription", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("queries the org's newest row by the entitlement columns (#11)", async () => {
+    subscriptionsFindFirst.mockResolvedValue({ status: "active", currentPeriodEnd: FUTURE });
+    await hasOrgSubscription("org1");
+    expect(subscriptionsFindFirst).toHaveBeenCalledWith({
+      columns: { status: true, currentPeriodEnd: true },
+      where: { eq: ["subscriptions.organization_id", "org1"] },
+      orderBy: [{ desc: "subscriptions.created_at" }],
+    });
+  });
+
+  it("is true when the org's newest row is entitling", async () => {
+    subscriptionsFindFirst.mockResolvedValue({ status: "trialing", currentPeriodEnd: FUTURE });
+    expect(await hasOrgSubscription("org1")).toBe(true);
+  });
+
+  it("is false when the org has no recorded subscription", async () => {
+    subscriptionsFindFirst.mockResolvedValue(undefined);
+    expect(await hasOrgSubscription("org1")).toBe(false);
+  });
+
+  it("is false when the org's newest row is not entitling", async () => {
+    subscriptionsFindFirst.mockResolvedValue({ status: "past_due", currentPeriodEnd: FUTURE });
+    expect(await hasOrgSubscription("org1")).toBe(false);
   });
 });

@@ -101,6 +101,7 @@ describe("checkout.session.completed", () => {
     expect(valuesMock).toHaveBeenCalledWith({
       id: "sub_1",
       userId: "u1",
+      organizationId: null,
       stripeCustomerId: "cus_1",
       status: "active",
       priceId: "price_1",
@@ -110,7 +111,36 @@ describe("checkout.session.completed", () => {
     expect(dbUpdate).not.toHaveBeenCalled();
   });
 
-  it("does not write when session metadata lacks a userId", async () => {
+  it("maps the row to the ORG when metadata carries organizationId (#11)", async () => {
+    constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          metadata: { userId: "u1", organizationId: "org1" },
+          subscription: "sub_1",
+          customer: "cus_org",
+        },
+      },
+    });
+
+    const res = await POST(webhookRequest());
+
+    expect(res.status).toBe(200);
+    expect(dbInsert).toHaveBeenCalledTimes(1);
+    // XOR ownership: the org owns the row; the purchaser's userId stays
+    // metadata-only provenance and must NOT land on the row.
+    expect(valuesMock).toHaveBeenCalledWith({
+      id: "sub_1",
+      userId: null,
+      organizationId: "org1",
+      stripeCustomerId: "cus_org",
+      status: "active",
+      priceId: "price_1",
+      currentPeriodEnd: new Date(PERIOD_END_SECONDS * 1000),
+    });
+  });
+
+  it("does not write when session metadata lacks an owner (no userId)", async () => {
     constructEvent.mockReturnValue({
       type: "checkout.session.completed",
       data: { object: { metadata: {}, subscription: "sub_1", customer: "cus_1" } },

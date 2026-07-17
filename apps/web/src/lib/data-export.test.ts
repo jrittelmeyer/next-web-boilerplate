@@ -106,6 +106,7 @@ function raw(): RawExportData {
   const subscription: Subscription = {
     id: "sub_123",
     userId: "u1",
+    organizationId: null,
     stripeCustomerId: "cus_123",
     status: "active",
     priceId: "price_123",

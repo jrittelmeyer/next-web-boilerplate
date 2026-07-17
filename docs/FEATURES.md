@@ -154,8 +154,13 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
 - **Stripe hosted Checkout** → webhook → a `subscriptions` table in your DB (insert on
   `checkout.session.completed`, updates by subscription id), customer reuse, the
   **billing portal**, `invoice.payment_failed` dunning sync, subscription-gated
-  content (`/premium`), and cancel-subscription-on-account-deletion via a background
-  job.
+  content (`/premium`), and cancel-subscription-on-deletion via a background
+  job (account **and** organization deletion).
+- **Per-org billing**: subscriptions belong to a user *or* an organization
+  (XOR-checked in the schema) — with an active org, checkout/portal are org-scoped
+  and owner/admin-gated, and one org subscription entitles every member on
+  `/premium`. Seat-quantity billing is a documented non-goal the schema doesn't
+  preclude.
 - Verified end-to-end in test mode: checkout, webhook idempotency, portal, and
   dunning-to-`past_due` driven by Stripe **test clocks**.
 
@@ -277,9 +282,9 @@ shipped. The full record is [`context/DECISIONS.md`](context/DECISIONS.md); high
   with unit + e2e proof. See STATE.md → Middleware decision.
 - **TS 7** — GA'd, but ships no JS Compiler API yet, so `next build` can't use it;
   the cutover is a tracked backlog item gated on Next.js support.
-- **Client-side Stripe SDK, org teams/dynamic roles, per-org billing, Turbo remote
-  cache** — all documented as deliberate one-step upgrades, kept out of the default
-  surface to stay lean.
+- **Client-side Stripe SDK, org teams/dynamic roles, seat-quantity billing, Turbo
+  remote cache** — all documented as deliberate one-step upgrades, kept out of the
+  default surface to stay lean.
 
 ## The verification pedigree
 

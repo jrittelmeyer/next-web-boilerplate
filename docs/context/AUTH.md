@@ -1033,8 +1033,14 @@ primitives (`dialog`, `select`) were added to `@repo/ui`.
   roles: `organization_role`) features are one-flag upgrades (`organization({ teams: {
   enabled: true } })` / `{ dynamicAccessControl: { enabled: true } }` + their tables); left
   off to keep the org-scoped-`posts` example and the members UI clean.
-- **Per-org billing** (scoping `subscriptions` to an org) is the Phase-5 org-aware Stripe
-  upgrade — documented, not built (subscriptions stay per-user for now).
+- **Per-org billing is built (path-to-100 #11).** `subscriptions` rows are owned by
+  exactly one of user/org; with an active org, `/billing` + `/premium` follow the org
+  context and only org owners/admins may check out / open the portal (fresh-read role
+  gate via `lib/organization.ts`). **Deleting an org cancels its Stripe subscriptions**
+  the A13 way — `organizationHooks.beforeDeleteOrganization` captures the ids,
+  `afterDeleteOrganization` enqueues the `cancel-stripe-subscriptions` job
+  (`packages/auth/src/auth.ts`). See [SERVICES.md → Stripe](SERVICES.md) ·
+  [DATABASE.md → Stripe subscriptions](DATABASE.md).
 
 ## Environment Variables
 

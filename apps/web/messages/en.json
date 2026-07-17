@@ -570,7 +570,11 @@
       "description": "Start a hosted Stripe Checkout session for an example $10/mo plan.",
       "subscriptionTitle": "Your subscription",
       "status": "Status: {status}",
-      "renews": "renews {date}"
+      "renews": "renews {date}",
+      "orgTitle": "Billing for {name}",
+      "orgDescription": "Subscriptions started here belong to {name} — every member gets access.",
+      "memberNotice": "Only organization owners and admins can manage billing.",
+      "orgSubscriptionTitle": "Organization subscription"
     },
     "subscribe": {
       "button": "Subscribe",
@@ -596,12 +600,14 @@
     "unlocked": {
       "title": "Pro content unlocked",
       "description": "You have an active subscription, so this premium section is available.",
-      "body": "Swap this for the real gated feature. The gate is a single call —<code>hasActiveSubscription(userId)</code>— so any Server Component, Server Action, or tRPC procedure can reuse it."
+      "body": "Swap this for the real gated feature. The gate is a single call —<code>hasActiveSubscription(userId)</code> or <code>hasOrgSubscription(orgId)</code>— so any Server Component, Server Action, or tRPC procedure can reuse it.",
+      "orgDescription": "Your active organization has a subscription, so this premium section is available."
     },
     "locked": {
       "title": "This content is for subscribers",
       "description": "Your account has no active subscription. Subscribe to unlock premium content.",
-      "cta": "View plans"
+      "cta": "View plans",
+      "orgDescription": "Your active organization has no subscription. An organization owner or admin can subscribe on the billing page."
     }
   },
   "StateDemo": {

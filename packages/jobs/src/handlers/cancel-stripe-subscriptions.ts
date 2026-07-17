@@ -7,15 +7,17 @@ import { cancelStripeSubscriptionsPayload } from "../queues";
 const STRIPE_API_VERSION = "2026-05-27.dahlia";
 
 /**
- * Process one `cancel-stripe-subscriptions` job (A13): cancel a removed account's
- * Stripe subscriptions. Enqueued by `@repo/auth`'s `user.deleteUser` hooks — the
- * local `subscriptions` rows cascade away with the user, but Stripe keeps billing
- * (the caveat in SERVICES.md → Stripe), so this finishes the cleanup out-of-band.
- * The ids are captured BEFORE the cascade and arrive in the payload, so this handler
- * needs no DB access — only a Stripe client.
+ * Process one `cancel-stripe-subscriptions` job (A13; org-aware since #11): cancel
+ * a removed owner's Stripe subscriptions. Enqueued by `@repo/auth`'s
+ * `user.deleteUser` hooks (account deletion → personal subscriptions) and, since
+ * #11, by the organization plugin's delete hooks (org deletion → the org's
+ * subscriptions) — either way the local `subscriptions` rows cascade away with the
+ * owner, but Stripe keeps billing (the caveat in SERVICES.md → Stripe), so this
+ * finishes the cleanup out-of-band. The ids are captured BEFORE the cascade and
+ * arrive in the payload, so this handler needs no DB access — only a Stripe client.
  *
- * Policy: cancel IMMEDIATELY. The account is gone, so "keep access until period end"
- * is meaningless and a userless-but-active subscription is a reconciliation hazard;
+ * Policy: cancel IMMEDIATELY. The owner is gone, so "keep access until period end"
+ * is meaningless and an ownerless-but-active subscription is a reconciliation hazard;
  * immediate cancellation keeps Stripe's state consistent with the account's. The
  * Stripe CUSTOMER is deliberately left intact so invoice/tax history survives —
  * delete it with `stripe.customers.del(customerId)` if you want no trace. To cancel
@@ -28,12 +30,14 @@ const STRIPE_API_VERSION = "2026-05-27.dahlia";
  * (idempotent — a retry after a partial cancel is safe).
  */
 export async function handleCancelStripeSubscriptions(data: unknown): Promise<void> {
-  const { userId, subscriptionIds } = cancelStripeSubscriptionsPayload.parse(data);
+  const { userId, organizationId, subscriptionIds } = cancelStripeSubscriptionsPayload.parse(data);
+  // Log label: an org deletion (#11) names the org; a user deletion names the user.
+  const owner = organizationId ? `org ${organizationId} (deleted by ${userId})` : userId;
 
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) {
     console.info(
-      `[jobs] cancel-stripe-subscriptions for ${userId} skipped — Stripe not configured (${subscriptionIds.length} subscription(s) left; cancel manually)`,
+      `[jobs] cancel-stripe-subscriptions for ${owner} skipped — Stripe not configured (${subscriptionIds.length} subscription(s) left; cancel manually)`,
     );
     return;
   }
@@ -51,7 +55,7 @@ export async function handleCancelStripeSubscriptions(data: unknown): Promise<vo
       // whole job (canceling the ids that already succeeded is a safe no-op).
       if (err instanceof Stripe.errors.StripeInvalidRequestError) {
         console.info(
-          `[jobs] cancel-stripe-subscriptions for ${userId}: ${id} already canceled or missing — skipping`,
+          `[jobs] cancel-stripe-subscriptions for ${owner}: ${id} already canceled or missing — skipping`,
         );
         continue;
       }
@@ -59,6 +63,6 @@ export async function handleCancelStripeSubscriptions(data: unknown): Promise<vo
     }
   }
   console.info(
-    `[jobs] cancel-stripe-subscriptions for ${userId}: canceled ${canceled}/${subscriptionIds.length} subscription(s)`,
+    `[jobs] cancel-stripe-subscriptions for ${owner}: canceled ${canceled}/${subscriptionIds.length} subscription(s)`,
   );
 }

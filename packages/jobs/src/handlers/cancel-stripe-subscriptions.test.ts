@@ -78,4 +78,18 @@ describe("handleCancelStripeSubscriptions", () => {
     ).rejects.toThrow();
     expect(cancel).not.toHaveBeenCalled();
   });
+
+  it("accepts an org-deletion payload (#11) and cancels the same way", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    cancel.mockResolvedValue({});
+
+    await expect(
+      handleCancelStripeSubscriptions({
+        userId: "u1",
+        organizationId: "org1",
+        subscriptionIds: ["sub_org"],
+      }),
+    ).resolves.toBeUndefined();
+    expect(cancel).toHaveBeenCalledWith("sub_org");
+  });
 });

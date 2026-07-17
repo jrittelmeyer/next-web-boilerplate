@@ -33,15 +33,32 @@ export function isSubscriptionActive(
 }
 
 /**
- * Does this user currently have an entitling subscription? Reads their newest
- * recorded row (the "latest created" reuse policy from server/actions/billing.ts)
- * and applies {@link isSubscriptionActive}. The gate for premium surfaces —
- * see the `/premium` demo route.
+ * Does this user currently have an entitling PERSONAL subscription? Reads their
+ * newest recorded row (the "latest created" reuse policy from
+ * server/actions/billing.ts) and applies {@link isSubscriptionActive}. Org-owned
+ * rows never match — they carry no `userId` (the #11 XOR ownership). The gate for
+ * premium surfaces — see the `/premium` demo route.
  */
 export async function hasActiveSubscription(userId: string): Promise<boolean> {
   const sub = await db.query.subscriptions.findFirst({
     columns: { status: true, currentPeriodEnd: true },
     where: eq(subscriptions.userId, userId),
+    orderBy: [desc(subscriptions.createdAt)],
+  });
+  return isSubscriptionActive(sub);
+}
+
+/**
+ * Does this organization currently have an entitling subscription? (path-to-100
+ * #11) The org-billing counterpart of {@link hasActiveSubscription}: same
+ * newest-row read, filtered by owner org. Membership is NOT checked here — pass
+ * an org id the caller has already resolved as the user's active org (the
+ * `/premium` pattern), so every member of a subscribed org is entitled.
+ */
+export async function hasOrgSubscription(organizationId: string): Promise<boolean> {
+  const sub = await db.query.subscriptions.findFirst({
+    columns: { status: true, currentPeriodEnd: true },
+    where: eq(subscriptions.organizationId, organizationId),
     orderBy: [desc(subscriptions.createdAt)],
   });
   return isSubscriptionActive(sub);

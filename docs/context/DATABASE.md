@@ -175,74 +175,91 @@ Real rollback is a Postgres guarantee a mock can't reproduce, so it's proven aga
 live database in `packages/db/__tests__/integration/posts.test.ts` (a revision write that
 violates its `post_id` FK aborts the paired post insert — neither row survives).
 
-## Stripe subscriptions (`subscriptions` — implemented, Phase 3 · C4)
+## Stripe subscriptions (`subscriptions` — implemented, Phase 3 · C4; org-aware #11)
 
 `subscriptions` (`packages/db/src/schema/subscriptions.ts`) persists Stripe
 subscription state written by the webhook handler
-(`apps/web/src/app/api/stripe/webhook/route.ts`). The Better Auth `user.id` is
-`text`, so the FK is `text` too; `onDelete: "cascade"` ties a subscription's
-lifetime to its user.
+(`apps/web/src/app/api/stripe/webhook/route.ts`). A row is owned by **exactly one**
+of a user (personal billing) or an organization (org billing, path-to-100 #11 —
+migration 0017): both `text` FKs are nullable with `onDelete: "cascade"`, and the
+XOR is a table check:
 
 ```typescript
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "./auth";
-
-export const subscriptions = pgTable("subscriptions", {
-  id: text("id").primaryKey(), // Stripe subscription id (sub_…)
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  stripeCustomerId: text("stripe_customer_id").notNull(),
-  status: text("status").notNull(), // active | trialing | canceled | past_due | …
-  priceId: text("price_id"),
-  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: text("id").primaryKey(), // Stripe subscription id (sub_…)
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").references(() => organization.id, {
+      onDelete: "cascade",
+    }),
+    stripeCustomerId: text("stripe_customer_id").notNull(),
+    status: text("status").notNull(), // active | trialing | canceled | past_due | …
+    priceId: text("price_id"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    // …createdAt/updatedAt…
+  },
+  (t) => [
+    index("subscriptions_user_id_idx").on(t.userId),
+    index("subscriptions_organization_id_idx").on(t.organizationId),
+    check("subscriptions_owner_check", sql`num_nonnulls(user_id, organization_id) = 1`),
+  ],
+);
 ```
+
+**Why XOR (org rows carry NO `userId`), not purchaser-plus-org:** a purchaser FK on
+an org row would cascade the *org's* subscription away when that member deletes
+their account — and the A13 cancel-on-delete capture would cancel the org's Stripe
+subscription because one member left the platform. With XOR ownership both delete
+cascades stay correct (user → personal rows, org → org rows), the A13 capture
+(`userId`-filtered) can't touch org rows, and every pre-#11 `userId`-keyed query
+needs no `IS NULL` guard. Purchaser provenance lives in the Checkout Session
+`metadata.userId` on Stripe's side. Seat-quantity billing is out of scope but not
+precluded — a later `quantity` column is purely additive.
 
 **`stripeCustomerId` lives only here — NOT on the `user` table.** The
 Better-Auth-owned `user` schema (see [DECISIONS.md](DECISIONS.md)) stays untouched:
-the user↔customer link is carried by this row (`userId` + `stripeCustomerId`) and
-written exclusively by the webhook, so there's no Better Auth `additionalFields`
-entry for it. `status` is plain `text` (not a typed enum) to keep `@repo/db` free
-of any `stripe` import — the handler narrows it to the SDK's
-`Stripe.Subscription.Status`.
+the owner↔customer link is carried by this row and written exclusively by the
+webhook, so there's no Better Auth `additionalFields` entry for it. Each org gets
+its **own Stripe customer** (never a member's personal one). `status` is plain
+`text` (not a typed enum) to keep `@repo/db` free of any `stripe` import — the
+handler narrows it to the SDK's `Stripe.Subscription.Status`.
 
 **How it's populated** (see [SERVICES.md](SERVICES.md) for the handler walk-through):
 - `checkout.session.completed` owns the **insert** — it's the only event that
-  carries our `userId` (via the Checkout Session metadata that
-  `createCheckoutSession` stamps on). The handler reads `userId` + the
-  subscription/customer ids off the session, retrieves the subscription for its
-  status/price/period, and **upserts** (`onConflictDoUpdate` on `id`, idempotent on
-  redelivery).
+  carries our owner mapping (via the Checkout Session metadata that
+  `createCheckoutSession` stamps on): `metadata.organizationId` present → an
+  org-owned row (`userId` null); absent → personal, owned by `metadata.userId`.
+  The handler retrieves the subscription for its status/price/period and
+  **upserts** (`onConflictDoUpdate` on `id`, idempotent on redelivery).
 - `customer.subscription.updated` / `deleted` **update by subscription id** only
-  (they don't carry `userId`) — a no-op if no checkout row exists (e.g. a
+  (they don't carry an owner) — a no-op if no checkout row exists (e.g. a
   subscription created outside this flow). `deleted` arrives as `status: "canceled"`.
 
 > **API-version note:** in the pinned `stripe` API version (`2026-05-27.dahlia`)
 > `price` and `current_period_end` live on the subscription **item**
 > (`sub.items.data[0]`), not the top-level subscription — read them from there.
 
-**How it's read — entitlement gating (A2).** The table is now *read* for access
-control, not just written. `apps/web/src/lib/subscription.ts` exposes
-`hasActiveSubscription(userId)`: it reads the user's **newest** row
-(`db.query.subscriptions.findFirst`, `orderBy desc(createdAt)` — the same
-latest-created reuse policy as `server/actions/billing.ts`), projected to
-`{ status, currentPeriodEnd }`, and applies the pure `isSubscriptionActive`
-predicate — **`status ∈ {active, trialing}` AND (`currentPeriodEnd` is null OR in
-the future)**. It's a **local read only** (no Stripe API call), so gating works
-with no Stripe creds. The `/premium` demo route is the worked consumer (three
-states: signed-out → sign-in · signed-in-unentitled → `/billing` · entitled →
-content). Any Server Component / Server Action / tRPC procedure can reuse the same
-call. See [SERVICES.md](SERVICES.md) (Stripe → entitlement gating).
+**How it's read — entitlement gating (A2, org-aware #11).** The table is *read*
+for access control, not just written. `apps/web/src/lib/subscription.ts` exposes
+`hasActiveSubscription(userId)` and `hasOrgSubscription(organizationId)`: each
+reads the owner's **newest** row (`db.query.subscriptions.findFirst`, `orderBy
+desc(createdAt)` — the same latest-created reuse policy as
+`server/actions/billing.ts`), projected to `{ status, currentPeriodEnd }`, and
+applies the pure `isSubscriptionActive` predicate — **`status ∈ {active,
+trialing}` AND (`currentPeriodEnd` is null OR in the future)**. Both are **local
+reads only** (no Stripe API call), so gating works with no Stripe creds. The
+`/premium` demo route is the worked consumer — it follows the caller's context
+(active org → `hasOrgSubscription`, so every member of a subscribed org is
+entitled; personal workspace → `hasActiveSubscription`). Any Server Component /
+Server Action / tRPC procedure can reuse the same call. See
+[SERVICES.md](SERVICES.md) (Stripe → entitlement gating).
 
 DB-backed coverage: `packages/db/__tests__/integration/subscriptions.test.ts`
-(upsert / idempotent redelivery / update-by-id / FK cascade against real Postgres).
-Entitlement-logic coverage: `apps/web/src/lib/subscription.test.ts`.
+(upsert / idempotent redelivery / update-by-id / FK cascade, plus the #11 org
+block: org-owned insert, both XOR-check rejections, org-delete cascade — all
+against real Postgres). Entitlement-logic coverage:
+`apps/web/src/lib/subscription.test.ts`.
 
 ## Uploaded files (`uploads` — implemented, Phase 3 · D9)
 
@@ -326,10 +343,11 @@ don't exist yet.
 
 **Org-scoped data — `posts` is the worked example (migration 0008).** `posts.organization_id`
 (nullable FK → `organization`, **SET NULL** on org delete) scopes a post to a tenant; **NULL =
-personal workspace**, so nothing to backfill on a zero-org clone. `uploads` and `subscriptions`
-stay **per-user** (avatars/personal files aren't tenant data; per-org billing is the deferred
-Phase-5 upgrade). Scoping/authz logic (authoritative active-org + fresh member-role reads) lives
-in `apps/web/src/lib/organization.ts`; see [API.md](API.md) → Org-scoped reads & writes.
+personal workspace**, so nothing to backfill on a zero-org clone. `uploads` stays **per-user**
+(avatars/personal files aren't tenant data); `subscriptions` is **owner-scoped** since #11 —
+personal *or* org, XOR-checked (see Stripe subscriptions above). Scoping/authz logic
+(authoritative active-org + fresh member-role reads) lives in
+`apps/web/src/lib/organization.ts`; see [API.md](API.md) → Org-scoped reads & writes.
 
 ## Two-factor auth (`two_factor` — Better Auth plugin, migration 0009)
 

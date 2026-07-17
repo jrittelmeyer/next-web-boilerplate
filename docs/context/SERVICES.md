@@ -32,32 +32,52 @@ import { getStripe, isStripeConfigured } from "@/lib/stripe";
 the SDK's TS types match. Read it from `stripe/cjs/apiVersion.js` and bump in
 lockstep with the SDK major.
 
-**Flow:**
+**Flow (context-aware since #11 — personal or org):**
 1. User clicks "Subscribe" → Server Action (`server/actions/billing.ts` →
    `createCheckoutSession`, auth-gated, returns `{ error } | { data: { url } }`)
-   creates a Checkout Session → client redirects to `session.url`. On a **repeat
-   checkout** the action reuses the user's recorded Stripe customer (P2-4a): it
-   reads the latest-created `subscriptions` row and passes
-   `customer: stripeCustomerId`; only a first checkout passes `customer_email`
-   (the two are mutually exclusive on the API — without reuse, every checkout
-   mints a duplicate Stripe customer). The Stripe call is try/caught → typed
-   error, since a recorded customer deleted in the Dashboard makes `create` throw.
+   creates a Checkout Session → client redirects to `session.url`. Both billing
+   actions first resolve the caller's **billing context**: the active org
+   (authoritative reads via `lib/organization.ts` — cookie cache bypassed, fresh
+   `member` role) or the personal workspace. **In an org context only owner/admin
+   may proceed** — a plain member gets a typed error, checked BEFORE the Stripe
+   config gate so the gate is exercisable keyless (same ordering posture as the
+   rate limit). On a **repeat checkout** the action reuses the context's recorded
+   Stripe customer (P2-4a): it reads the latest-created `subscriptions` row **for
+   that owner** (org-keyed or user-keyed — each org gets its own Stripe customer)
+   and passes `customer: stripeCustomerId`; only a first checkout passes
+   `customer_email` (the two are mutually exclusive on the API — without reuse,
+   every checkout mints a duplicate Stripe customer). The Stripe call is
+   try/caught → typed error, since a recorded customer deleted in the Dashboard
+   makes `create` throw.
 2. Stripe redirects back to `/billing/success?session_id=...` (UX cue only).
 3. Stripe sends `checkout.session.completed` webhook → handler verifies the
    signature, then **upserts** the `subscriptions` row (Phase 3 · C4). The
-   Server Action stamps `metadata.userId` on the session so the webhook can map
-   the subscription back to a user (see the handler notes below).
+   Server Action stamps `metadata.userId` (+ `metadata.organizationId` in an org
+   context) on the session so the webhook can map the subscription back to its
+   owner (see the handler notes below).
 
 **Billing portal (P2-4b):** `createBillingPortalSession` (same file, same shape —
-session gate → 5/min per-user rate limit → config gate) resolves the latest
-`subscriptions` row (**no row → typed "No billing history"**; the button only
-renders with a row, but Server Actions are public endpoints and must self-gate)
-and returns `billingPortal.sessions.create({ customer, return_url: /billing }).url`
-for a client redirect. `/billing` renders the "Your subscription" card (status +
+session gate → 5/min per-user rate limit → org owner/admin gate → config gate)
+resolves the context's latest `subscriptions` row (**no row → typed "No billing
+history"**, worded per context; the button only renders with a row, but Server
+Actions are public endpoints and must self-gate) and returns
+`billingPortal.sessions.create({ customer, return_url: /billing }).url`
+for a client redirect. `/billing` renders the subscription card (status +
 renewal date, a direct-table server read like /uploads) with the "Manage billing"
 button only when a row exists. NOTE: the portal requires a **saved customer-portal
 configuration** in the Stripe Dashboard — test mode ships a default; live mode
 errors until one is saved (Settings → Billing → Customer portal).
+
+**Per-org billing (path-to-100 #11).** With an active organization, `/billing` is
+that org's surface — "Billing for {org}", the org's subscription card, and the
+subscribe/manage controls rendered only for org owners/admins (members get
+explanatory copy; the render-gate is UX, the actions re-check authority). A row is
+owned by **exactly one** of user/org (XOR-checked; org rows carry NO `userId` —
+the rationale and schema live in [DATABASE.md](DATABASE.md) → Stripe
+subscriptions). Deleting an org triggers the same out-of-band Stripe cancellation
+as account deletion (see A13 below). Keyless e2e: `e2e/billing-org.spec.ts` (the
+context plumbing + gate ordering); the configured flow is live-verified per
+[VERIFICATION.md](../VERIFICATION.md) Phase 5.
 
 The example action uses inline `price_data` (a $10/mo "Example Pro Plan") so it's
 self-contained — no pre-created Stripe Dashboard Price is required to exercise it.
@@ -73,10 +93,12 @@ A minimal demo lives at `/billing` (+ `/billing/success`), public scaffold like
 - **DB persistence is implemented** (Phase 3 · C4) — it writes the `subscriptions`
   table via `@repo/db` (schema + rationale in [DATABASE.md](DATABASE.md)):
   - `checkout.session.completed` is the **row creator** — the only event carrying
-    our `userId` (via the Checkout Session `metadata.userId`). It resolves the
-    subscription/customer ids off the session, `subscriptions.retrieve(...)`s the
-    subscription for status/price/period, and **upserts** (`onConflictDoUpdate` on
-    the id PK, so a redelivered event is idempotent).
+    our owner mapping (the Checkout Session metadata): `metadata.organizationId`
+    present → an org-owned row (`userId` null — the #11 XOR ownership); absent →
+    personal, owned by `metadata.userId`. It resolves the subscription/customer
+    ids off the session, `subscriptions.retrieve(...)`s the subscription for
+    status/price/period, and **upserts** (`onConflictDoUpdate` on the id PK, so a
+    redelivered event is idempotent).
   - `customer.subscription.updated` / `deleted` **update by subscription id** only
     (no `userId` on these events) — a no-op when no checkout row exists.
   - `invoice.payment_failed` (P2-4c) syncs dunning state: the pinned API version
@@ -92,31 +114,39 @@ A minimal demo lives at `/billing` (+ `/billing/success`), public scaffold like
     API version moved them off the top-level subscription onto the item).
   - Stays behind the `503` gate, so an unconfigured build/run never reaches `@repo/db`.
 
-**Account-deletion cleanup (A13):** deleting a user (the `/account` danger zone)
-cascades the local `subscriptions` **row** away, but **Stripe keeps billing** unless
-the subscription is canceled on Stripe's side — so the boilerplate cancels it via the
+**Owner-deletion cleanup (A13; org-aware #11):** deleting a user (the `/account`
+danger zone) — or, since #11, deleting an **organization** — cascades the local
+`subscriptions` **rows** away, but **Stripe keeps billing** unless the subscription
+is canceled on Stripe's side — so the boilerplate cancels it via the
 D7 job pattern (never blocks the deletion; keeps `@repo/auth` free of any Stripe
 env/dep): `user.deleteUser.beforeDelete` (`packages/auth/src/auth.ts`) captures the
-user's non-terminal `subscriptions` ids **while the rows still exist**, `afterDelete`
+user's non-terminal **personal** `subscriptions` ids **while the rows still exist**
+(org rows carry no `userId`, so they're naturally out of reach), `afterDelete`
 enqueues the `cancel-stripe-subscriptions` job **only once the account is gone**, and
 the `@repo/jobs` worker (`handlers/cancel-stripe-subscriptions.ts`) cancels each via
 its own env-gated Stripe client (graceful no-op + log when Stripe is unconfigured).
+The org analogue rides the organization plugin's `organizationHooks`
+(`beforeDeleteOrganization` captures the org's rows / `afterDeleteOrganization`
+enqueues the same job with `organizationId` for the log line).
 **Policy:** cancel **immediately** (the account is gone, so period-end access is
 meaningless and a userless-but-active subscription is a reconciliation hazard) and
 **keep the Stripe customer** (invoice/tax history survives). Both are one-line swaps —
 `subscriptions.update(id, { cancel_at_period_end: true })` for period-end,
 `customers.del(customerId)` to also delete the customer. See AUTH.md → Danger zone.
 
-**Entitlement gating (A2) — reading the table back.** The webhook *writes* the
-`subscriptions` table; `apps/web/src/lib/subscription.ts` *reads* it for access
-control — the #1 thing a real SaaS fork does. `hasActiveSubscription(userId)`
-looks up the user's newest row and applies the pure `isSubscriptionActive`
+**Entitlement gating (A2; org-aware #11) — reading the table back.** The webhook
+*writes* the `subscriptions` table; `apps/web/src/lib/subscription.ts` *reads* it
+for access control — the #1 thing a real SaaS fork does.
+`hasActiveSubscription(userId)` / `hasOrgSubscription(organizationId)` look up the
+owner's newest row and apply the pure `isSubscriptionActive`
 predicate — **`status ∈ {active, trialing}` AND (`currentPeriodEnd` null OR in the
-future)**. It's a **local DB read, no Stripe call**, so gating works with Stripe
-unconfigured (an unentitled user simply never has an entitling row). The
+future)**. Both are **local DB reads, no Stripe call**, so gating works with Stripe
+unconfigured (an unentitled owner simply never has an entitling row). The
 **`/premium`** demo route is the worked consumer — a public, self-gating server
 page with three states (signed-out → sign-in · signed-in-unentitled → `/billing` ·
-entitled → the premium content). Copy the one-line gate into any Server Component,
+entitled → the premium content) that follows the caller's **context**: active org
+→ the org's subscription entitles **every member**; personal workspace → the
+user's own. Copy the one-line gate into any Server Component,
 Server Action, or tRPC procedure. To exercise it without Stripe creds, insert a
 fake `active` row for a test user (see [DATABASE.md](DATABASE.md) → Stripe
 subscriptions → How it's read). Not to be confused with A13 (cancel-on-delete,
@@ -155,12 +185,16 @@ Offline (no keys), the verification path can be exercised with
 5. Trim the CSP in `next.config.ts`: drop `https://js.stripe.com` (`script-src`),
    `https://js.stripe.com https://hooks.stripe.com` (`frame-src`), `https://api.stripe.com`
    (`connect-src`).
-6. Grep for links to `/billing` + `/premium` and remove them. Then unwire **A13** (cancel-on-delete):
-   drop the subscription-capture block in `packages/auth/src/auth.ts` `deleteUser.beforeDelete`, the
-   enqueue in `afterDelete`, and the `pendingStripeCancellations` Map; delete
+6. Grep for links to `/billing` + `/premium` and remove them. Then unwire **A13** (cancel-on-delete,
+   both owners): drop the subscription-capture block in `packages/auth/src/auth.ts`
+   `deleteUser.beforeDelete`, the enqueue in `afterDelete`, the `organizationHooks` block on the
+   `organization()` plugin (#11), and the `pendingStripeCancellations` +
+   `pendingOrgStripeCancellations` Maps; delete
    `packages/jobs/src/handlers/cancel-stripe-subscriptions.ts(.test.ts)`; remove its
    `JOBS.cancelStripeSubscriptions` entry + payload from `queues.ts` and its `boss.work`
-   registration in `worker.ts` (step 3's `@repo/jobs` remove covers the dep).
+   registration in `worker.ts` (step 3's `@repo/jobs` remove covers the dep). Also delete
+   `e2e/billing-org.spec.ts` and the org block in
+   `packages/db/__tests__/integration/subscriptions.test.ts` (#11).
 
 ---
 

@@ -11,6 +11,8 @@ const {
   isStripeConfigured,
   checkoutCreate,
   portalCreate,
+  getActiveOrganizationId,
+  getOrgRole,
 } = vi.hoisted(() => ({
   getSession: vi.fn(),
   subscriptionsFindFirst: vi.fn(),
@@ -18,12 +20,26 @@ const {
   isStripeConfigured: vi.fn(),
   checkoutCreate: vi.fn(),
   portalCreate: vi.fn(),
+  getActiveOrganizationId: vi.fn(),
+  getOrgRole: vi.fn(),
 }));
 
 vi.mock("@repo/auth", () => ({ auth: { api: { getSession } } }));
 vi.mock("@repo/db", () => ({
   db: { query: { subscriptions: { findFirst: subscriptionsFindFirst } } },
-  subscriptions: { userId: "subscriptions.user_id", createdAt: "subscriptions.created_at" },
+  subscriptions: {
+    userId: "subscriptions.user_id",
+    organizationId: "subscriptions.organization_id",
+    createdAt: "subscriptions.created_at",
+  },
+}));
+// The context helpers are mocked (their own behavior is pinned by
+// organization.test.ts); isOrgAdminRole keeps its real semantics inline so the
+// action's gate reads naturally in the org-context tests below.
+vi.mock("@/lib/organization", () => ({
+  getActiveOrganizationId,
+  getOrgRole,
+  isOrgAdminRole: (role: string | null) => role === "owner" || role === "admin",
 }));
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col, val) => ({ col, val })),
@@ -53,6 +69,9 @@ beforeEach(() => {
   rateLimitMock.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 });
   isStripeConfigured.mockReturnValue(true);
   subscriptionsFindFirst.mockResolvedValue(undefined);
+  // Default context: personal workspace (no active org).
+  getActiveOrganizationId.mockResolvedValue(null);
+  getOrgRole.mockResolvedValue(null);
 });
 
 describe("createCheckoutSession", () => {
@@ -166,6 +185,96 @@ describe("createBillingPortalSession", () => {
     portalCreate.mockRejectedValue(new Error("boom"));
     expect(await createBillingPortalSession()).toEqual({
       error: "Could not open the billing portal. Please try again.",
+    });
+  });
+});
+
+describe("org billing context (#11)", () => {
+  const asOrgContext = (role: string | null) => {
+    getActiveOrganizationId.mockResolvedValue("org1");
+    getOrgRole.mockResolvedValue(role);
+  };
+
+  it("blocks a plain member from checkout — before the Stripe config gate", async () => {
+    asOrgContext("member");
+    // Unconfigured on purpose: the role gate must fire first, so the member
+    // error is exercisable keyless (same ordering posture as the rate limit).
+    isStripeConfigured.mockReturnValue(false);
+    expect(await createCheckoutSession()).toEqual({
+      error: "Only organization owners and admins can manage billing.",
+    });
+    expect(getOrgRole).toHaveBeenCalledWith("org1", "u1");
+    expect(subscriptionsFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("blocks a non-member (no role) from checkout", async () => {
+    asOrgContext(null);
+    expect(await createCheckoutSession()).toEqual({
+      error: "Only organization owners and admins can manage billing.",
+    });
+  });
+
+  it("lets an org owner check out — org-keyed reuse lookup + org metadata", async () => {
+    asOrgContext("owner");
+    checkoutCreate.mockResolvedValue({ url: "https://checkout.stripe.test/cs_org" });
+    expect(await createCheckoutSession()).toEqual({
+      data: { url: "https://checkout.stripe.test/cs_org" },
+    });
+    // The reuse lookup is keyed by the ORG, not the purchaser.
+    expect(subscriptionsFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { col: "subscriptions.organization_id", val: "org1" } }),
+    );
+    const params = checkoutCreate.mock.calls[0]?.[0];
+    expect(params).toMatchObject({
+      customer_email: "u1@example.com",
+      metadata: { userId: "u1", organizationId: "org1" },
+    });
+  });
+
+  it("reuses the org's recorded Stripe customer on a repeat org checkout", async () => {
+    asOrgContext("admin");
+    subscriptionsFindFirst.mockResolvedValue({ id: "sub_org", stripeCustomerId: "cus_org" });
+    checkoutCreate.mockResolvedValue({ url: "https://checkout.stripe.test/cs_org2" });
+    await createCheckoutSession();
+    const params = checkoutCreate.mock.calls[0]?.[0];
+    expect(params).toMatchObject({ customer: "cus_org" });
+    expect(params).not.toHaveProperty("customer_email");
+  });
+
+  it("omits organizationId from metadata in the personal workspace", async () => {
+    checkoutCreate.mockResolvedValue({ url: "https://checkout.stripe.test/cs_p" });
+    await createCheckoutSession();
+    expect(checkoutCreate.mock.calls[0]?.[0]?.metadata).toEqual({ userId: "u1" });
+  });
+
+  it("blocks a plain member from the billing portal", async () => {
+    asOrgContext("member");
+    expect(await createBillingPortalSession()).toEqual({
+      error: "Only organization owners and admins can manage billing.",
+    });
+    expect(portalCreate).not.toHaveBeenCalled();
+  });
+
+  it("types the no-history portal error to the org context", async () => {
+    asOrgContext("owner");
+    expect(await createBillingPortalSession()).toEqual({
+      error: "No billing history for this organization.",
+    });
+  });
+
+  it("opens the portal for the ORG's recorded customer", async () => {
+    asOrgContext("owner");
+    subscriptionsFindFirst.mockResolvedValue({ id: "sub_org", stripeCustomerId: "cus_org" });
+    portalCreate.mockResolvedValue({ url: "https://portal.stripe.test/bps_org" });
+    expect(await createBillingPortalSession()).toEqual({
+      data: { url: "https://portal.stripe.test/bps_org" },
+    });
+    expect(subscriptionsFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { col: "subscriptions.organization_id", val: "org1" } }),
+    );
+    expect(portalCreate).toHaveBeenCalledWith({
+      customer: "cus_org",
+      return_url: "http://localhost:3000/billing",
     });
   });
 });

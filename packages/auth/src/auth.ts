@@ -69,6 +69,16 @@ const pendingUploadKeys = new Map<string, string[]>();
  */
 const pendingStripeCancellations = new Map<string, string[]>();
 
+/**
+ * (#11) Cancelable Stripe subscription ids for a deleted ORGANIZATION, captured by
+ * `organizationHooks.beforeDeleteOrganization`, consumed by `afterDeleteOrganization`
+ * — the org-billing analogue of `pendingStripeCancellations`, for the same reason:
+ * the org's `subscriptions` rows cascade away with the organization row, so their
+ * ids must be read while they still exist, but the cancellation must only be
+ * enqueued once the org is actually gone. Keyed by organization id.
+ */
+const pendingOrgStripeCancellations = new Map<string, string[]>();
+
 // Cloudflare Turnstile CAPTCHA options (A12), computed once at module load. undefined
 // when TURNSTILE_SECRET_KEY is unset — see the conditional spread in `plugins` below.
 const turnstileCaptcha = captchaOptions();
@@ -425,6 +435,48 @@ export const auth = betterAuth({
           role: data.role,
           url: invitationAcceptUrl(data.id),
         }).then(() => undefined),
+      // (#11) Org-delete Stripe cleanup — the A13 pattern applied to ORG-owned
+      // subscriptions: deleting an org cascades its local `subscriptions` rows away
+      // but Stripe keeps billing, so capture the non-terminal ids while the rows
+      // still exist and enqueue the cancel job only once the org is actually gone
+      // (a deletion that fails between the hooks must not cancel a live org's
+      // billing). Same graceful posture as the user-delete hooks: a failed read
+      // never blocks the deletion, and the worker no-ops when Stripe is unset.
+      organizationHooks: {
+        beforeDeleteOrganization: async ({ organization: org }) => {
+          try {
+            const subs = await db.query.subscriptions.findMany({
+              columns: { id: true },
+              where: (row, { and, eq, notInArray }) =>
+                and(
+                  eq(row.organizationId, org.id),
+                  notInArray(row.status, ["canceled", "incomplete_expired"]),
+                ),
+            });
+            if (subs.length > 0) {
+              pendingOrgStripeCancellations.set(
+                org.id,
+                subs.map((row) => row.id),
+              );
+            }
+          } catch {
+            // Graceful — worst case Stripe keeps billing (the pre-#11 status quo).
+          }
+        },
+        afterDeleteOrganization: async ({ organization: org, user: deleter }) => {
+          const subscriptionIds = pendingOrgStripeCancellations.get(org.id);
+          pendingOrgStripeCancellations.delete(org.id);
+          if (subscriptionIds && subscriptionIds.length > 0) {
+            await enqueue(JOBS.cancelStripeSubscriptions, {
+              // The org is the OWNER being cleaned up; the acting deleter rides
+              // along as `userId` for the log line (see queues.ts).
+              userId: deleter.id,
+              organizationId: org.id,
+              subscriptionIds,
+            });
+          }
+        },
+      },
     }),
     // Two-factor auth (Tier 4 · Band 2) — opt-in per user, always available (no env
     // needed, so it never gates the "runs with env unset" contract and doesn't change

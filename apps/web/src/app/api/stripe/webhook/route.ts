@@ -84,21 +84,30 @@ export async function POST(req: Request): Promise<Response> {
   // Session metadata that `createCheckoutSession` stamps on (server/actions/billing.ts).
   switch (event.type) {
     case "checkout.session.completed": {
-      // The row creator: this is the only event that carries our `userId` (via
-      // the Checkout Session metadata), so it owns the insert. The session holds
+      // The row creator: this is the only event that carries our owner mapping
+      // (via the Checkout Session metadata `createCheckoutSession` stamps), so it
+      // owns the insert. `metadata.organizationId` present → the row is ORG-owned
+      // (#11 XOR ownership: no userId — `metadata.userId` is purchaser provenance
+      // only); absent → personal, owned by `metadata.userId`. The session holds
       // the subscription/customer ids but not the subscription's status/period —
       // retrieve the subscription to fill those in, then upsert (idempotent on a
       // redelivered event).
       const checkoutSession = event.data.object;
       const userId = checkoutSession.metadata?.userId;
+      const organizationId = checkoutSession.metadata?.organizationId;
       const subscriptionId = idOf(checkoutSession.subscription);
       const stripeCustomerId = idOf(checkoutSession.customer);
-      if (userId && subscriptionId && stripeCustomerId) {
+      const owner = organizationId
+        ? { userId: null, organizationId }
+        : userId
+          ? { userId, organizationId: null }
+          : null;
+      if (owner && subscriptionId && stripeCustomerId) {
         const sub = await getStripe().subscriptions.retrieve(subscriptionId);
         const fields = subscriptionFields(sub);
         await db
           .insert(subscriptions)
-          .values({ id: sub.id, userId, stripeCustomerId, ...fields })
+          .values({ id: sub.id, ...owner, stripeCustomerId, ...fields })
           .onConflictDoUpdate({
             target: subscriptions.id,
             set: { stripeCustomerId, ...fields },

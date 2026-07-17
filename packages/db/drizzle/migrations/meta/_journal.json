@@ -120,6 +120,13 @@
       "when": 1784243223418,
       "tag": "0016_mighty_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1784267391971,
+      "tag": "0017_wakeful_shadow_king",
+      "breakpoints": true
     }
   ]
 }

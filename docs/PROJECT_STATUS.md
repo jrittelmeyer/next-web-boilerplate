@@ -47,14 +47,16 @@ _Last updated: 2026-07-17._
   lane is live since A28). **CodeQL is live** — `ENABLE_CODEQL` is set on the public
   repo (code scanning is free once public); the variable gate stays so private forks
   don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
-- **The path-to-100 program is active (owner decision, 2026-07-15).** Seven audit
-  passes plateaued at 99.35 because the last 13 points sat behind won't-fix/deferred
-  classifications; each was re-litigated and **all 13 proved recoverable** — 11 rows
-  (10 new + the email B3 row), banded in [BACKLOG.md](BACKLOG.md), per-row analysis +
-  risk flags in [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md).
-  Each row goes plan → sign-off → build; maintenance-only resumes when a scoring pass
-  verifies the program. The TS7 cutover stays outside it (externally gated — stable-Next
-  TS7 support; experimental in canary since 2026-07-10).
+- **The path-to-100 program (owner decision, 2026-07-15) has SHIPPED all 11 build
+  rows — #1–#11, 2026-07-16 → 17.** Seven audit passes plateaued at 99.35 because the
+  last 13 points sat behind won't-fix/deferred classifications; each was re-litigated
+  and **all 13 proved recoverable** ([archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)
+  holds the per-row analysis). The one open remainder is **#4b** — the one-time live
+  Uploadthing tunnel proof (runbook committed; blocked on the owner opening a tunnel —
+  see [BACKLOG.md](BACKLOG.md)); Uploads can only score 100 once it runs. Next: a
+  `/project-audit` scoring pass verifies the program, then maintenance-only resumes.
+  The TS7 cutover stays outside it (externally gated — stable-Next TS7 support;
+  experimental in canary since 2026-07-10).
 
 ## Build progress
 
@@ -136,6 +138,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Path-to-100 · #8 | Email bounce/complaint handling — signature-verified `POST /api/resend/webhook` (zero new deps) → `email_suppressions` (migration 0016) → every `send*` helper consults `isEmailSuppressed()` (env-gated on `RESEND_WEBHOOK_SECRET`, fail-open); jobs complete instead of retrying suppressed sends; self-signed-svix e2e + live :3100 proof. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#bounce--complaint-handling-path-to-100-8) · [context/DATABASE.md](context/DATABASE.md#email-suppressions-email_suppressions--do-not-send-list-migration-0016). |
 | Path-to-100 · #9 | Opt-in OpenTelemetry — OTLP/HTTP trace export gated on `OTEL_EXPORTER_OTLP_ENDPOINT` (runtime knob, no rebuild; unset = prior behavior exactly): `lib/otel.ts` adds a `BatchSpanProcessor` to **Sentry's own OTel provider** via the SDK's `openTelemetrySpanProcessors` option (source-verified in 10.59.0) — one provider/sampler, no double-instrumentation; works DSN-less (sampler gates on `tracesSampleRate`, not DSN). Live matrix vs a local collector: baseline inert · OTLP-only spans (keyless build) · dual export (Sentry-sink `transaction` envelopes + collector spans from the same requests); `OTEL_SERVICE_NAME` honored. 2026-07-16. See [context/SERVICES.md](context/SERVICES.md#opentelemetry-export-opt-in-path-to-100-9). |
 | Path-to-100 · #10 | `CSP_MODE=nonce` as a first-class **build-time** mode (M4's recipe promoted; the inert `.example` deleted) — one shared directive list (`src/lib/csp.ts`) feeds both the static config header (default, byte-identical to pre-#10) and the proxy's per-request `'nonce-…' 'strict-dynamic'` CSP; nonce builds set `cacheComponents: false` + `experimental.useCache` so the D4 `"use cache"` showcase **keeps caching** (only the static/PPR posture is given up; `useCache`-survives-`cacheComponents:false` source-verified in Next 16.2.9). Baked via config `env` → runtime override is a verified no-op. New `e2e/csp-nonce.spec.ts` matrix (rotating nonce both locales · no script `'unsafe-inline'` · every `<script>` stamped · journeys with zero console violations) runs in the variable-gated `csp-nonce` CI lane (`ENABLE_CSP_NONCE`, ON here). 2026-07-17. See [context/SECURITY.md](context/SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch). |
+| Path-to-100 · #11 | Per-org billing — the program's **last row**. `subscriptions` owned by exactly ONE of user/org (migration 0017: nullable `user_id`, new `organization_id` FK, `num_nonnulls`-check; **XOR by design** — a purchaser FK would let a member's account deletion cascade/cancel the ORG's subscription). Org-context checkout + portal (authoritative active-org + fresh-role reads; owner/admin gate BEFORE the config gate), webhook org mapping via `metadata.organizationId`, `hasOrgSubscription()` + context-aware `/premium` (one org sub entitles every member), org-aware `/billing`, org-delete → the A13 cancel job via `organizationHooks`. Live-verified end-to-end in test mode (checkout → org row → resend-idempotent → member entitled/blocked → portal on the org customer → org delete canceled 1/1 on Stripe); keyless `e2e/billing-org.spec.ts`. Seat-quantity billing stays out of scope (schema doesn't preclude it). 2026-07-17. See [context/SERVICES.md](context/SERVICES.md#stripe-payments) · [context/DATABASE.md](context/DATABASE.md#stripe-subscriptions-subscriptions--implemented-phase-3--c4-org-aware-11). |
 
 ## Fresh project on-ramp (clone → build a real app)
 

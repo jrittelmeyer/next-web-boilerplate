@@ -458,6 +458,19 @@ All are optional and independent; the app keeps building/running if you skip any
 > (2 `active` + 1 `past_due`), the DB rows cascading to 0. One gotcha surfaced: test mode needs a
 > customer-portal configuration — the first API `billing_portal.configurations.create` surfaced the
 > account default, after which the portal works.
+>
+> ✅ **Per-org billing (#11) verified end-to-end in test mode 2026-07-17** (fresh prod build on
+> `:3100`, same headless Stripe CLI + forwarder). Proven: an org-context hosted checkout (`4242…`)
+> → `checkout.session.completed` → a `subscriptions` row with **`organization_id` set and
+> `user_id` NULL** (the XOR ownership), **idempotent** on event resend (still one row);
+> `/billing` as the org's surface (owner sees the "Organization subscription" card + portal, which
+> opened on the **org's** Stripe customer); `/premium` **unlocked for the owner AND a plain
+> second member** via the org subscription, while that member saw the owners/admins notice and
+> **no subscribe/manage controls**; and **org-delete cleanup** — deleting the org enqueued the
+> cancel job and the worker **canceled 1/1** on Stripe (`status: canceled` confirmed via the API),
+> the DB row cascading away and the owner's `/billing` falling back to the personal surface.
+> (One topology artifact, not a bug: the post-payment redirect targets `BETTER_AUTH_URL` (`:3000`),
+> so on a `:3100` verify box the success redirect refuses — the webhook path is unaffected.)
 
 - [x] Get **test** keys from the Stripe Dashboard. Set in `.env`: `STRIPE_SECRET_KEY="sk_test_…"` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_…"`.
 - [x] Run the webhook forwarder (prints the signing secret):
@@ -469,6 +482,7 @@ All are optional and independent; the app keeps building/running if you skip any
 - [x] **Payment-failure sync (P2-4c)** — the handler resolves the subscription via `invoice.parent.subscription_details` and re-projects the row's `status` from the retrieved subscription (`db:studio`). A trigger-fabricated invoice references an unrecorded subscription (deliberate no-op), so this was proven the strong way: a **test clock** with the recorded subscription on a failing card (`4000 0000 0000 0341`) advanced past renewal → real `invoice.payment_failed` → row flips to `past_due`.
 - [x] **Webhook hardening** — bad signature → **400**; unconfigured (keys removed) → **503**; flood the endpoint → **429** (`Retry-After`).
 - [x] **Degraded checks** _(live-verified on this box 2026-07-03, :3100 prod build)_ — logged-out **Subscribe** → "Unauthorized"; logged-in with no keys → "Stripe is not configured"; no recorded subscription → no "Your subscription" card; seeded row + no keys → card renders and **Manage billing** returns the typed unconfigured error.
+- [x] **Per-org billing (#11)** _(live-verified 2026-07-17 — the banner above)_ — with an **active org**: Subscribe as org owner → checkout → webhook → row with `organization_id` (no `user_id`); `/premium` unlocked for **every member**; plain member sees the owners/admins notice (no controls; the action gate is unit-pinned to run **before** the config gate); portal opens on the org's customer; org delete → worker cancels the org's Stripe subscription. Keyless context plumbing: `e2e/billing-org.spec.ts`.
 
 ---
 

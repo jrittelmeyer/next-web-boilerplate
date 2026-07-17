@@ -72,13 +72,16 @@ export const cleanupExpiredVerificationsPayload = z.object({}).strict();
 export type CleanupExpiredVerificationsPayload = z.infer<typeof cleanupExpiredVerificationsPayload>;
 
 /**
- * Payload for the {@link JOBS.cancelStripeSubscriptions} job (A13). `subscriptionIds`
- * are Stripe subscription ids (`sub_…` — the `subscriptions` table's PK), captured
- * from the user's rows BEFORE the delete cascade removes them; `userId` is only for
- * log lines (the account is already gone when the job runs).
+ * Payload for the {@link JOBS.cancelStripeSubscriptions} job (A13; org-aware since
+ * #11). `subscriptionIds` are Stripe subscription ids (`sub_…` — the `subscriptions`
+ * table's PK), captured from the owner's rows BEFORE the delete cascade removes
+ * them. `userId` and `organizationId` are only for log lines (the owner is already
+ * gone when the job runs): a USER deletion sends the deleted user's id; an ORG
+ * deletion (#11) sends the org's id plus the acting deleter as `userId`.
  */
 export const cancelStripeSubscriptionsPayload = z.object({
   userId: z.string().min(1),
+  organizationId: z.string().min(1).optional(),
   subscriptionIds: z.array(z.string().min(1)).min(1),
 });
 /** @public — the inferred payload type, exported for producers/handlers in consuming code. */

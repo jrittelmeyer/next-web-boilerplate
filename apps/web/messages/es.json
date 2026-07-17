@@ -570,7 +570,11 @@
       "description": "Inicia una sesión de Stripe Checkout alojada para un plan de ejemplo de 10 $/mes.",
       "subscriptionTitle": "Tu suscripción",
       "status": "Estado: {status}",
-      "renews": "se renueva el {date}"
+      "renews": "se renueva el {date}",
+      "orgTitle": "Facturación de {name}",
+      "orgDescription": "Las suscripciones iniciadas aquí pertenecen a {name}: todos sus miembros obtienen acceso.",
+      "memberNotice": "Solo los propietarios y administradores de la organización pueden gestionar la facturación.",
+      "orgSubscriptionTitle": "Suscripción de la organización"
     },
     "subscribe": {
       "button": "Suscribirse",
@@ -596,12 +600,14 @@
     "unlocked": {
       "title": "Contenido Pro desbloqueado",
       "description": "Tienes una suscripción activa, así que esta sección premium está disponible.",
-      "body": "Sustituye esto por la funcionalidad real restringida. La puerta es una sola llamada —<code>hasActiveSubscription(userId)</code>— así que cualquier Server Component, Server Action o procedimiento de tRPC puede reutilizarla."
+      "body": "Sustituye esto por la funcionalidad real restringida. La puerta es una sola llamada —<code>hasActiveSubscription(userId)</code> o <code>hasOrgSubscription(orgId)</code>— así que cualquier Server Component, Server Action o procedimiento de tRPC puede reutilizarla.",
+      "orgDescription": "Tu organización activa tiene una suscripción, así que esta sección premium está disponible."
     },
     "locked": {
       "title": "Este contenido es para suscriptores",
       "description": "Tu cuenta no tiene una suscripción activa. Suscríbete para desbloquear el contenido premium.",
-      "cta": "Ver planes"
+      "cta": "Ver planes",
+      "orgDescription": "Tu organización activa no tiene una suscripción. Un propietario o administrador de la organización puede suscribirse en la página de facturación."
     }
   },
   "StateDemo": {
