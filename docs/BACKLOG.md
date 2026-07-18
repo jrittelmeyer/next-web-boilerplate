@@ -5,8 +5,8 @@
 > **not** kept here: the compact record is the build-progress table in
 > [PROJECT_STATUS.md](PROJECT_STATUS.md), and the full per-item prose is in
 > [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md). The audits that seeded past
-> backlogs live in [docs/archive/](archive/) (Phase B + the eight `/project-audit`
-> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0/100). Everything below
+> backlogs live in [docs/archive/](archive/) (Phase B + the nine `/project-audit`
+> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0/100). Everything below
 > goes plan → sign-off → build. Don't reintroduce shipped-item entries here.
 
 ## Watch (no action now)
@@ -73,6 +73,7 @@
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
 | B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
+| B1 | Docs-in-code | **M-1: two stale `postgres:16` comments → `postgres:18`** (`packages/db/vitest.config.ts` · `packages/jobs/vitest.integration.config.ts`) | [archive/PROJECT_AUDIT_2026-07-18.md](archive/PROJECT_AUDIT_2026-07-18.md) | Comment-only; the 07-18 postgres-18 merge updated CI + docs but missed these two in-code mentions. Ride it on any next code-touching change. |
 
 ### Shipped (strikethrough record — full rows in the PROJECT_STATUS table + archive/PHASE_HISTORY)
 

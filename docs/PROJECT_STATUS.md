@@ -32,13 +32,14 @@ _Last updated: 2026-07-18._
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row is SHIPPED (2026-07-07 → 13)** — including the
-  A23–A31 polish rows, A32, and A13. Eight `/project-audit` passes graded the repo
-  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0/100** (2026-07-08 · 07-12 ·
-  07-12B · 07-14 · 07-14B post-launch · 07-15 · 07-15B · **07-17, the path-to-100
-  verification** — all 11 program rows re-verified in code, every live proof dated,
-  **zero drift across the 153-file program window**, zero new backlog rows for the
-  fifth consecutive time; reports in [docs/archive/](archive/), latest:
-  [PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)).
+  A23–A31 polish rows, A32, and A13. Nine `/project-audit` passes graded the repo
+  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0/100** (2026-07-08 ·
+  07-12 · 07-12B · 07-14 · 07-14B post-launch · 07-15 · 07-15B · **07-17, the
+  path-to-100 verification** · **07-18, the first maintenance-mode pass** — the 100
+  held through the Renovate major wave + the ai-dev-kit/doc window; alerts APIs 0
+  open, TS7 gate + all three override conditions re-checked standing, one comment-nit
+  backlog row M-1; reports in [docs/archive/](archive/), latest:
+  [PROJECT_AUDIT_2026-07-18.md](archive/PROJECT_AUDIT_2026-07-18.md)).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) — rows
   at the bottom of the table below.
