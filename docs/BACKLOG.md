@@ -38,8 +38,9 @@
   [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)); **RESUMED
   2026-07-17** — the program shipped all 11 rows and the eighth scoring pass verified it
   at **100.0/100** ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)).
-  Near-term owner calendar: Monday 2026-07-20 (Renovate batch + 8 pending-approval
-  majors — hold typescript-v7 per the TS7 gate).
+  Near-term owner calendar: Monday 2026-07-20 (scheduled Renovate batch, ~36 minors —
+  triage per PR at open time). The 7 approved majors merged 2026-07-18;
+  typescript-v7 stays held per the TS7 gate.
 - **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is intermittently flaky
   (absorbed by `retries:2`, but it twice burned 2 of 3 CI attempts). **Not a code bug** — a
   fragile signup+redirect timing flow on modest runners. Harden **only if it ever turns a lane
