@@ -16,7 +16,10 @@
  *     .github/FUNDING.yml + the README "Support this project" section; resets
  *     CHANGELOG.md to an empty skeleton. Kept: FEATURES, GETTING_STARTED,
  *     VERIFICATION, MAINTENANCE, docs/context/ — those document YOUR app's
- *     foundation. Interactive runs ask; non-interactive runs skip unless --slim.
+ *     foundation; their known pointers at the removed docs are retargeted at the
+ *     public template repo or rewritten (see MENTION_PATCHES), and anything left
+ *     is listed file:line. Interactive runs ask; non-interactive runs skip
+ *     unless --slim.
  *   • prints the remaining setup checklist
  *
  * Run it after `npx degit jrittelmeyer/next-web-boilerplate my-app` (or after
@@ -224,6 +227,87 @@ function patchAgentsMd() {
   }
 }
 
+const TEMPLATE_REPO = "https://github.com/jrittelmeyer/next-web-boilerplate";
+
+/**
+ * Known passages in KEPT docs that point at REMOVED template docs. Pointers to
+ * permanently-removed history are retargeted at the public template repo (the
+ * content still lives there); pointers to docs that `/project-init` later
+ * regenerates are rewritten so they don't presume the file exists yet. Matched
+ * on content — a passage that has drifted simply no-ops, and the report below
+ * lists whatever remains.
+ */
+const MENTION_PATCHES = [
+  {
+    file: "docs/FEATURES.md",
+    from: "needs (tracked in\n[`BACKLOG.md`](BACKLOG.md)). →",
+    to: "needs. →",
+  },
+  {
+    file: "docs/FEATURES.md",
+    from: "before launch (reports in\n  [`archive/`](archive/)).",
+    to: `before launch (reports archived in the\n  [template repo](${TEMPLATE_REPO}/tree/main/docs/archive)).`,
+  },
+  {
+    file: "docs/MAINTENANCE.md",
+    from: "The live list is [`BACKLOG.md`](BACKLOG.md). At release:",
+    to: "The live list is your backlog doc (recreated by `/project-init`, or keep your own). At release:",
+  },
+  {
+    file: "docs/MAINTENANCE.md",
+    from: "Past audit\nreports live in [`archive/`](archive/) as worked examples.",
+    to: `Past audit\nreports from the template era live in its\n[docs/archive](${TEMPLATE_REPO}/tree/main/docs/archive) as worked examples.`,
+  },
+  {
+    file: "docs/MAINTENANCE.md",
+    from: "the affected `docs/context/*` doc, and\n   [`PROJECT_STATUS.md`](PROJECT_STATUS.md). If the upgrade changed a *decision*",
+    to: "the affected `docs/context/*` doc, and\n   your status doc. If the upgrade changed a *decision*",
+  },
+  {
+    file: "docs/context/DECISIONS.md",
+    from: "the\n> step-by-step history that produced it is in\n> [../archive/PHASE_HISTORY.md](../archive/PHASE_HISTORY.md). Topic-specific detail",
+    to: `the\n> step-by-step history that produced it is archived in the\n> [template repo](${TEMPLATE_REPO}/blob/main/docs/archive/PHASE_HISTORY.md). Topic-specific detail`,
+  },
+  {
+    file: "docs/context/STACK.md",
+    from: "See [BACKLOG.md](../BACKLOG.md)",
+    to: `See the [template's backlog](${TEMPLATE_REPO}/blob/main/docs/BACKLOG.md)`,
+  },
+  {
+    file: "docs/VERIFICATION.md",
+    from: " (documented in PROJECT_STATUS / [BACKLOG → Watch](BACKLOG.md));",
+    to: ";",
+  },
+];
+
+/** Retarget or drop the known dead pointers left in kept docs after the removals. */
+function patchLeftoverMentions() {
+  const byFile = new Map();
+  for (const patch of MENTION_PATCHES) {
+    const list = byFile.get(patch.file) ?? [];
+    list.push(patch);
+    byFile.set(patch.file, list);
+  }
+  for (const [file, patches] of byFile) {
+    const path = resolve(root, file);
+    if (!existsSync(path)) continue;
+    const original = readFileSync(path, "utf8");
+    let next = original;
+    let applied = 0;
+    for (const { from, to } of patches) {
+      if (!next.includes(from)) continue;
+      next = next.replace(from, to);
+      applied++;
+    }
+    if (next !== original) {
+      writeFileSync(path, next);
+      console.log(
+        `  • ${file}: tidied ${applied} template-history pointer${applied === 1 ? "" : "s"}.`,
+      );
+    }
+  }
+}
+
 function resetChangelog() {
   const path = resolve(root, "CHANGELOG.md");
   if (!existsSync(path)) return;
@@ -239,7 +323,11 @@ All notable changes to this project will be documented in this file.
   console.log("  • Reset CHANGELOG.md to an empty skeleton (the PR template references it).");
 }
 
-/** Report leftover mentions of removed docs — harmless historical pointers, listed for later tidying. */
+/**
+ * List remaining mentions of removed docs, file:line each. After the tidy above,
+ * what's left is either the init/slim flow describing itself (intentional) or new
+ * drift the content-matched patches couldn't reach.
+ */
 function reportDanglingReferences() {
   const needle = /docs\/archive|archive\/|PROJECT_STATUS|BACKLOG\.md|plain-english-guide/;
   const targets = [];
@@ -259,14 +347,18 @@ function reportDanglingReferences() {
 
   const hits = [];
   for (const file of targets) {
-    const count = readFileSync(file, "utf8")
-      .split("\n")
-      .filter((l) => needle.test(l)).length;
-    if (count > 0) hits.push(`${relative(root, file).replaceAll("\\", "/")} (${count})`);
+    const rel = relative(root, file).replaceAll("\\", "/");
+    const lines = readFileSync(file, "utf8").split("\n");
+    for (const [i, line] of lines.entries()) {
+      // Retargets at the public template repo are deliberate, not dead links.
+      if (!needle.test(line) || line.includes(TEMPLATE_REPO)) continue;
+      const text = line.trim();
+      hits.push(`${rel}:${i + 1}  ${text.length > 88 ? `${text.slice(0, 85)}…` : text}`);
+    }
   }
   if (hits.length > 0) {
     console.log(
-      `  Leftover historical mentions — dead links are harmless; tidy when you next touch:\n    ${hits.join("\n    ")}`,
+      `  Remaining mentions of removed template docs (lines describing the init/slim\n  flow itself are intentional — anything else is worth a tidy):\n    ${hits.join("\n    ")}`,
     );
   }
 }
@@ -283,6 +375,7 @@ function slim() {
   patchReadme();
   patchDocsReadme();
   patchAgentsMd();
+  patchLeftoverMentions();
   reportDanglingReferences();
 }
 
