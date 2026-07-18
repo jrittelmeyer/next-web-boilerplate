@@ -21,6 +21,10 @@ program, step 1 of 3).
   substitution, `productBrief`).
 - Reviewed and deliberately NOT hook-automated: a post-scaffold nudge belongs in
   the template's getting-started text, not machinery.
+- `docs/PLAYBOOK.md` gains technique 10 — **inception discipline** (restate first,
+  honest value-add split, date-stamped competitive claims, marked assumptions,
+  walking-skeleton row 1); the deck adds the seventh skill card + the inception
+  pipeline stage and re-stamps at 0.4.0.
 
 ## 0.3.0 — 2026-07-17
 

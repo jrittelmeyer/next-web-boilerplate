@@ -208,9 +208,9 @@
 <body>
 
 <section class="slide">
-  <p class="eyebrow">ai-dev-kit · v0.3.0</p>
+  <p class="eyebrow">ai-dev-kit · v0.4.0</p>
   <h1>A portable operating method for agentic development.</h1>
-  <p class="lede">Six skills, three hooks, and nine techniques that turn AI-assisted
+  <p class="lede">Seven skills, three hooks, and ten techniques that turn AI-assisted
   building into a repeatable pipeline — token-lean, verification-first, and installable
   into any project in one command. Distilled from shipping a production monorepo to a
   verified 100/100.</p>
@@ -221,6 +221,7 @@
   <p class="eyebrow">01 · The pipeline</p>
   <h2>Every unit of work runs the same loop.</h2>
   <div class="pipeline">
+    <span class="stage hot">project-init</span><span class="arrow">→</span>
     <span class="stage">orient</span><span class="arrow">→</span>
     <span class="stage">plan-gate</span><span class="arrow">→</span>
     <span class="stage hot">dep-check</span><span class="arrow">→</span>
@@ -231,15 +232,23 @@
     <span class="stage">periodic audits</span>
   </div>
   <p class="pipeline-note">Highlighted stages are kit skills; the rest are conventions
-  (the playbook) or Claude Code built-ins the kit composes with. Each stage catches the
-  failure class the previous one can't — wrong direction, supply-chain surprises,
+  (the playbook) or Claude Code built-ins the kit composes with. project-init runs
+  once, at inception, to seed the loop; every stage after catches the failure class
+  the previous one can't — wrong direction, supply-chain surprises,
   compiles-but-doesn't-work, context exhaustion.</p>
 </section>
 
 <section class="slide">
   <p class="eyebrow">02 · The skills</p>
-  <h2>Six skills carry the mechanics.</h2>
+  <h2>Seven skills carry the mechanics.</h2>
   <div class="grid">
+    <div class="card">
+      <div class="card-head"><h3>project-init</h3><span class="chip">once, at inception</span></div>
+      <p>Idea or plan docs in; discovery out — gap analysis, competitive scan, template
+      fit-map, one batched question round — then a product brief and a backlog whose
+      completion is the 100 score.</p>
+      <p class="meta">precedes → <b>the whole pipeline</b> · scored ever after by <b>project-audit</b></p>
+    </div>
     <div class="card">
       <div class="card-head"><h3>checkpoint</h3><span class="chip">step boundary</span></div>
       <p>Commit + push, judge context health, then continue — or hand off with a
@@ -313,7 +322,7 @@
 
 <section class="slide">
   <p class="eyebrow">04 · The playbook</p>
-  <h2>Nine techniques that don't fit in a skill.</h2>
+  <h2>Ten techniques that don't fit in a skill.</h2>
   <div class="techniques">
     <div><h3>The lifecycle pipeline</h3><p>One loop for every unit of work; skip a stage only out loud.</p></div>
     <div><h3>Plan → sign-off → build</h3><p>Wrong direction is the most expensive failure; a plan costs a paragraph.</p></div>
@@ -324,6 +333,7 @@
     <div><h3>The archive pattern</h3><p>Move detail off the hot path verbatim — preserve everything, pay for nothing.</p></div>
     <div><h3>Resume prompts</h3><p>Five parts, findings marked verified-where; a paragraph replaces an hour.</p></div>
     <div><h3>Automation review</h3><p>Advise-never-block; record the rejected hooks alongside the shipped ones.</p></div>
+    <div><h3>Inception discipline</h3><p>One structured pass from idea to a signed-off brief and a backlog whose completion is 100.</p></div>
   </div>
   <p style="margin-top:18px"><a href="PLAYBOOK.md">Read the full playbook →</a></p>
 </section>
@@ -362,7 +372,7 @@
 </section>
 
 <footer>
-  current as of 2026-07-17 · ai-dev-kit 0.3.0 · next-web-boilerplate ·
+  current as of 2026-07-18 · ai-dev-kit 0.4.0 · next-web-boilerplate ·
   <a href="../README.md">README</a> · <a href="../manifest.json">manifest</a> ·
   <a href="PLAYBOOK.md">playbook</a>
 </footer>

@@ -10,7 +10,7 @@
 >   Working agreements → [../AGENTS.md](../AGENTS.md) ·
 >   Backlog → [BACKLOG.md](BACKLOG.md)
 
-_Last updated: 2026-07-17._
+_Last updated: 2026-07-18._
 
 ## Where we are
 
@@ -67,7 +67,13 @@ _Last updated: 2026-07-17._
   ([../ai-dev-kit/docs/PLAYBOOK.md](../ai-dev-kit/docs/PLAYBOOK.md)) + self-contained
   catalog deck. Forward row: extraction to a standalone repo (BACKLOG).
   `.claude/skills/` and `.claude/hooks/ai-dev-kit/` are installer output — edit the
-  kit, re-install.
+  kit, re-install. **project-init program (started 2026-07-18):** the kit gains its
+  one-time inception entry point — `/project-init` turns an idea or plan docs into
+  discovery (gaps, value-adds, competitive scan, template fit-map) → a product brief
+  → regenerated status/backlog to a 100 bar, gated on sign-off before the pipeline
+  starts. **Steps 1–2 of 3 shipped 2026-07-18 (kit 0.4.0)** — skill + adapter `init`
+  block, on-ramp docs, playbook technique 10, deck re-stamp; step 3 (live trial in a
+  scratch degit) is a BACKLOG open row.
 
 ## Build progress
 

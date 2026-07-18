@@ -70,6 +70,13 @@ an existing one) and, with `--name`, renames the root `package.json` + README ti
 Everything it does you can do by hand; nothing needs to be ripped out. After it runs,
 follow the [Quickstart](#quickstart) from `docker compose … up` onward.
 
+Developing with **Claude Code**? After `pnpm install`, hand **`/project-init`** your
+idea or your plan documents — the bundled [ai-dev-kit](ai-dev-kit/README.md)
+inception skill runs discovery (clarifying questions, gap analysis, a competitive
+scan, a map of which shipped integrations your product actually needs), writes your
+product brief, regenerates the status/backlog docs around *your* app (running
+`init-app` for you along the way), and starts the build pipeline.
+
 ## Scripts
 
 ```bash

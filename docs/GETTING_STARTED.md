@@ -47,6 +47,18 @@ satisfies validation — change it before anything public. Sign-up works immedia
 with no email provider configured, accounts get a session right away instead of
 waiting on a verification email.
 
+## Starting from an idea? Run `/project-init`
+
+If you develop with Claude Code, the bundled [ai-dev-kit](../ai-dev-kit/README.md)
+ships an **inception skill** that replaces the manual scaffold-then-plan routine:
+hand `/project-init` your idea (or a stack of plan documents) and it runs discovery
+— clarifying questions, gap analysis, a competitive scan, and a map of which shipped
+integrations your product actually needs — then writes your product brief
+(`docs/PRODUCT.md`), runs `pnpm init-app` for you, regenerates
+`PROJECT_STATUS.md`/`BACKLOG.md` around *your* product with a prioritized plan to a
+100 audit score, and starts the build pipeline. Everything below works exactly the
+same without it.
+
 ## Environment: what's required vs what lights up
 
 Only **two variables are required** — everything else is optional and the app

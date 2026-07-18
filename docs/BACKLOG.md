@@ -65,14 +65,16 @@
 > at 100.0/100 by the 2026-07-17 scoring pass**
 > ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)). The
 > **TypeScript 7 cutover** stays outside the program (externally gated, costs no
-> points; see Watch). Open rows: the TS7 cutover + the ai-dev-kit extraction.
+> points; see Watch). Open rows: the TS7 cutover, the ai-dev-kit extraction, and the
+> project-init live trial (program step 3).
 
 ### Open rows
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
 | B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
-| B3 | Agent tooling | **ai-dev-kit extraction** — pull [../ai-dev-kit/](../ai-dev-kit/) (kit 0.3.0, all 3 program steps shipped 2026-07-17) into its own repo; consume here + in similar projects via the installer | ai-dev-kit/README.md (Roadmap) | Unblocked, opt-in. Scope: new repo, move kit verbatim, this repo installs from it (git dep or subtree); decide dual-home doc-audit source-of-truth handoff. Plan → sign-off → build. |
+| B1 | Agent tooling | **project-init live trial (program step 3)** — degit a scratch copy, run `/project-init` end-to-end on a sample idea, mend the skill from findings | [../ai-dev-kit/skills/project-init/SKILL.md](../ai-dev-kit/skills/project-init/SKILL.md) · ai-dev-kit CHANGELOG 0.4.0 | Steps 1–2 shipped 2026-07-18 (kit 0.4.0: skill + adapter `init` block; on-ramp/playbook/deck wiring). Program arc approved 2026-07-18; the step still goes plan → sign-off → build. |
+| B3 | Agent tooling | **ai-dev-kit extraction** — pull [../ai-dev-kit/](../ai-dev-kit/) (kit 0.4.0; the original 3 program steps shipped 2026-07-17, project-init added 2026-07-18) into its own repo; consume here + in similar projects via the installer | ai-dev-kit/README.md (Roadmap) | Unblocked, opt-in. Scope: new repo, move kit verbatim, this repo installs from it (git dep or subtree); decide dual-home doc-audit source-of-truth handoff. Plan → sign-off → build. |
 
 ### Shipped (strikethrough record — full rows in the PROJECT_STATUS table + archive/PHASE_HISTORY)
 
