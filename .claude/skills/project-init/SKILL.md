@@ -30,7 +30,9 @@ product code.**
 - **Scaffold guard:** if the adapter defines `init.scaffold`, run it once the app name
   is known — but a scaffold's doc-slim step *removes files*, so unless the repo is an
   obviously fresh scaffold (template journey docs intact, no product commits yet), get
-  explicit confirmation first. Name still unknown → fold it into the question round
+  explicit confirmation first. Substitute `{name}` with a **lowercase npm-safe slug**
+  of the chosen name — a reference scaffold may silently skip its rename step on an
+  invalid npm name. Name still unknown → fold it into the question round
   and scaffold after.
 
 ## 2. Discovery (extended thinking)
@@ -112,7 +114,9 @@ Sweep the context docs (adapter `docs.contextDir`) against the product's needs:
 
 Present the whole thing — brief summary, doc mends, the backlog's shape, the top B1
 rows — and **wait for explicit sign-off** (plan → sign-off → build; inception is the
-biggest plan there is). On sign-off, enter the lifecycle pipeline at the first B1
-row: orient → plan-gate per row → build → live-verify → checkpoint at every boundary.
+biggest plan there is). On sign-off, commit the inception output (scaffold + brief + doc mends + regenerated
+docs; adapter `commit` style) so the pipeline starts from a clean tree, then enter the
+lifecycle pipeline at the first B1 row: orient → plan-gate per row → build →
+live-verify → checkpoint at every boundary.
 On rejection, fold the feedback into the brief and re-present — that's one more
 round, not a failure.

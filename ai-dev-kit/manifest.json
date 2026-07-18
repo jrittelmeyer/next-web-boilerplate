@@ -1,6 +1,6 @@
 {
   "name": "ai-dev-kit",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Portable agentic-development skill library: lifecycle skills, a per-project adapter contract, and a cross-platform installer.",
   "adapterConfig": ".claude/ai-dev-kit.config.json",
   "docs": {
@@ -156,7 +156,7 @@
     },
     {
       "name": "project-init",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dualHome": false,
       "summary": "One-time inception: plan docs or a raw idea → discovery (gaps, value-adds, competitive scan, template fit-map) → one batched question round → product brief + regenerated status/backlog to a 100 bar → sign-off → the pipeline begins.",
       "triggers": [

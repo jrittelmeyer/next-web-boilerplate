@@ -150,7 +150,7 @@
       "properties": {
         "scaffold": {
           "type": "string",
-          "description": "Mechanical scaffold command run at intake (env seed, rename, template-doc slim). `{name}` is replaced with the chosen app name; omit the placeholder if the command takes none. project-init confirms before running any scaffold that removes files."
+          "description": "Mechanical scaffold command run at intake (env seed, rename, template-doc slim). `{name}` is replaced with a lowercase npm-safe slug of the chosen app name (scaffolds may silently skip renaming on an invalid npm name); omit the placeholder if the command takes none. project-init confirms before running any scaffold that removes files."
         },
         "productBrief": {
           "type": "string",

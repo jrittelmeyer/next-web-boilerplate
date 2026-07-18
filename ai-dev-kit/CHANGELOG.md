@@ -1,5 +1,26 @@
 # ai-dev-kit changelog
 
+## 0.4.1 — 2026-07-18
+
+Live-trial mends (project-init program, step 3 — the full flow driven on a fresh
+degit consumer copy; sample product "Potluck", a recipe-sharing SaaS).
+
+- `skills/project-init` (0.1.1): the scaffold guard now requires `{name}` to be
+  substituted as a **lowercase npm-safe slug** — the reference scaffold
+  (`init-app`) silently skips its rename step on an invalid npm name, so an
+  unslugged "Potluck" would have shipped un-renamed (trial finding).
+- `skills/project-init` (0.1.1): sign-off now includes **committing the inception
+  output** (adapter `commit` style) before the pipeline enters row 1 — the skill
+  never said so, and a fresh adopter agent would have left the scaffold + docs
+  uncommitted (trial finding).
+- Adapter schema: `init.scaffold` description documents the slug requirement.
+- Trial verdict, everything else green on the consumer copy: installer `--check`,
+  intake re-run safety, fresh-scaffold guard, slim's removal contract, discovery →
+  one batched round (a skipped answer correctly became a marked assumption) →
+  brief → context-doc mends → regenerated status/backlog with walking-skeleton
+  row 1 + Upstream candidates. Template-level findings (leftover-mention tidy,
+  PRODUCT.md index placeholder) went to the template backlog, not the kit.
+
 ## 0.4.0 — 2026-07-18
 
 The inception skill — the pipeline gains its one-time entry point (project-init

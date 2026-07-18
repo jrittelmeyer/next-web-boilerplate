@@ -71,9 +71,15 @@ _Last updated: 2026-07-18._
   one-time inception entry point — `/project-init` turns an idea or plan docs into
   discovery (gaps, value-adds, competitive scan, template fit-map) → a product brief
   → regenerated status/backlog to a 100 bar, gated on sign-off before the pipeline
-  starts. **Steps 1–2 of 3 shipped 2026-07-18 (kit 0.4.0)** — skill + adapter `init`
-  block, on-ramp docs, playbook technique 10, deck re-stamp; step 3 (live trial in a
-  scratch degit) is a BACKLOG open row.
+  starts. **Steps 1–2 shipped 2026-07-18 (kit 0.4.0)**; **step 3 (live trial) COMPLETE
+  2026-07-18 — kit 0.4.1, PROGRAM COMPLETE.** The full flow ran on a fresh degit
+  consumer copy (sample product "Potluck"): installer `--check`, scaffold guard →
+  `init-app --slim`, discovery, one batched question round (a delegated answer became
+  a marked assumption), product brief, context-doc mends, regenerated status/backlog
+  — all green through the sign-off gate. Two skill mends landed (`{name}` must be a
+  lowercase npm-safe slug; sign-off commits the inception output) and two template
+  findings became BACKLOG on-ramp rows (leftover-mention tidy · PRODUCT.md index
+  placeholder).
 
 ## Build progress
 
