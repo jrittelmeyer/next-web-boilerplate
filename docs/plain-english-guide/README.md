@@ -96,6 +96,8 @@ in any browser.
 
 ---
 
-*Current as of 2026-07-17 (repo commit `6b9f346` — the path-to-100 program complete
-and verified at 100/100 by the eighth audit: team billing, the stricter security
-mode, vendor-neutral monitoring export, and the final uploads proof all shipped).*
+*Current as of 2026-07-18 (repo commit `28ab3b4` — the verified 100/100 state is
+being maintained; since the last stamp, the agent skill set described in
+[Chapter 11](11-built-with-ai-agents.md) became the standalone open-source
+[ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) project, and routine
+upkeep moved the local database to PostgreSQL 18).*

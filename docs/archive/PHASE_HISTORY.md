@@ -1530,3 +1530,43 @@ The 2026-07-11 doc-audit re-compressed the build-progress table (the append-log'
 | Path-to-100 · #9 | Opt-in OpenTelemetry — OTLP/HTTP trace export gated on `OTEL_EXPORTER_OTLP_ENDPOINT` (runtime knob, no rebuild; unset = prior behavior exactly): `lib/otel.ts` adds a `BatchSpanProcessor` to **Sentry's own OTel provider** via the SDK's `openTelemetrySpanProcessors` option (source-verified in 10.59.0) — one provider/sampler, no double-instrumentation; works DSN-less (sampler gates on `tracesSampleRate`, not DSN). Live matrix vs a local collector: baseline inert · OTLP-only spans (keyless build) · dual export (Sentry-sink `transaction` envelopes + collector spans from the same requests); `OTEL_SERVICE_NAME` honored. 2026-07-16. See [context/SERVICES.md](../context/SERVICES.md#opentelemetry-export-opt-in-path-to-100-9). |
 | Path-to-100 · #10 | `CSP_MODE=nonce` as a first-class **build-time** mode (M4's recipe promoted; the inert `.example` deleted) — one shared directive list (`src/lib/csp.ts`) feeds both the static config header (default, byte-identical to pre-#10) and the proxy's per-request `'nonce-…' 'strict-dynamic'` CSP; nonce builds set `cacheComponents: false` + `experimental.useCache` so the D4 `"use cache"` showcase **keeps caching** (only the static/PPR posture is given up; `useCache`-survives-`cacheComponents:false` source-verified in Next 16.2.9). Baked via config `env` → runtime override is a verified no-op. New `e2e/csp-nonce.spec.ts` matrix (rotating nonce both locales · no script `'unsafe-inline'` · every `<script>` stamped · journeys with zero console violations) runs in the variable-gated `csp-nonce` CI lane (`ENABLE_CSP_NONCE`, ON here). 2026-07-17. See [context/SECURITY.md](../context/SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch). |
 | Path-to-100 · #11 | Per-org billing — the program's **last row**. `subscriptions` owned by exactly ONE of user/org (migration 0017: nullable `user_id`, new `organization_id` FK, `num_nonnulls`-check; **XOR by design** — a purchaser FK would let a member's account deletion cascade/cancel the ORG's subscription). Org-context checkout + portal (authoritative active-org + fresh-role reads; owner/admin gate BEFORE the config gate), webhook org mapping via `metadata.organizationId`, `hasOrgSubscription()` + context-aware `/premium` (one org sub entitles every member), org-aware `/billing`, org-delete → the A13 cancel job via `organizationHooks`. Live-verified end-to-end in test mode (checkout → org row → resend-idempotent → member entitled/blocked → portal on the org customer → org delete canceled 1/1 on Stripe); keyless `e2e/billing-org.spec.ts`. Seat-quantity billing stays out of scope (schema doesn't preclude it). 2026-07-17. See [context/SERVICES.md](../context/SERVICES.md#stripe-payments) · [context/DATABASE.md](../context/DATABASE.md#stripe-subscriptions-subscriptions--implemented-phase-3--c4-org-aware-11). |
+
+## ai-dev-kit program (2026-07-17 → 18) — archived record
+
+The verbatim "Where we are" prose from PROJECT_STATUS, compacted there 2026-07-18
+(doc-audit pass 12). The kit's own README/CHANGELOG (in the
+[ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit)) carry the per-version
+record.
+
+> **ai-dev-kit program (started 2026-07-17):** the repo's agentic-dev techniques are
+> codified into a portable, versioned skill library — now the standalone
+> [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit)
+> (generic skills + per-project adapter config + cross-platform installer with drift
+> guard). **ALL THREE STEPS SHIPPED 2026-07-17 — kit 0.3.0**: Step 1 scaffold + 6
+> skills + installer; Step 2 advise-never-block hooks (dep-check nudge, live-verify
+> reminder, skill-drift guard — proven firing live); Step 3 why-layer playbook
+> (the kit's docs/PLAYBOOK.md) + self-contained catalog deck.
+> `.claude/skills/` and `.claude/hooks/ai-dev-kit/` are installer output — edit a
+> clone of the kit repo, re-install. **project-init program (started 2026-07-18):** the kit gains its
+> one-time inception entry point — `/project-init` turns an idea or plan docs into
+> discovery (gaps, value-adds, competitive scan, template fit-map) → a product brief
+> → regenerated status/backlog to a 100 bar, gated on sign-off before the pipeline
+> starts. **Steps 1–2 shipped 2026-07-18 (kit 0.4.0)**; **step 3 (live trial) COMPLETE
+> 2026-07-18 — kit 0.4.1, PROGRAM COMPLETE.** The full flow ran on a fresh degit
+> consumer copy (sample product "Potluck"): installer `--check`, scaffold guard →
+> `init-app --slim`, discovery, one batched question round (a delegated answer became
+> a marked assumption), product brief, context-doc mends, regenerated status/backlog
+> — all green through the sign-off gate. Two skill mends landed (`{name}` must be a
+> lowercase npm-safe slug; sign-off commits the inception output) and two template
+> findings became BACKLOG on-ramp rows (leftover-mention tidy · PRODUCT.md index
+> placeholder). **Both on-ramp rows shipped 2026-07-18 — kit 0.4.2:** `--slim` now
+> retargets/rewrites the 8 known leftover pointers (per-line report for anything
+> else), and AGENTS.md pre-seeds a commented `PRODUCT.md` context-index row that
+> `/project-init` (0.1.2) uncomments. **Extraction (B3) SHIPPED 2026-07-18 — kit
+> 0.5.0 is a standalone public repo**
+> ([jrittelmeyer/ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit): fresh
+> single-commit history, two-OS smoke CI green, secret scanning + push protection +
+> vulnerability alerts + CodeQL default setup + protect-main ruleset). This repo
+> now consumes it — the in-repo `ai-dev-kit/` dir is gone, the `.claude/` install
+> output stays committed, re-installs run from a clone (`--dest <this repo>`), and
+> doc-audit's dual-home source of truth moved to the kit repo (doc-audit 0.1.1).

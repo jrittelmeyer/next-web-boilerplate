@@ -317,7 +317,9 @@ the restore-drill, and migration-rollback strategy — is in
 ## docker-compose (Local Dev)
 
 `docker/docker-compose.yml` starts:
-- PostgreSQL 16 on port 5432 (`nwb-postgres`)
+- PostgreSQL 18 on port 5432 (`nwb-postgres`; 18+ images require the volume mounted
+  at `/var/lib/postgresql`, not the old `/data` suffix — a volume created by ≤17
+  needs a dump/reload or recreate)
 - Meilisearch on port 7700 (`nwb-meilisearch`; `MEILI_MASTER_KEY` wired for local dev)
 
 No pgAdmin — use `drizzle-kit studio` instead (`pnpm --filter @repo/db db:studio`).

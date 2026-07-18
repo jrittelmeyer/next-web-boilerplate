@@ -131,14 +131,19 @@ Three more mechanisms, briefly, because they show how mature this practice has
 become:
 
 - **Skills** — reusable, checked-in procedures the agent can invoke by name
-  (they live in the repository like code). This repo ships several: a
+  (they live in the repository like code). This repo ships seven: a
   *checkpoint* skill (commit and push work safely at each step boundary), a
   *project-audit* skill (the deep scoring audits from
-  [Chapter 1](01-the-big-picture.md)), and a machine-hygiene (*tidy*) skill; a
-  further *doc-audit* routine — the drift-hunting described above — runs as
-  part of the standing maintenance practice. Think of them as standard
-  operating procedures — the difference between an organization that has
-  process and one that has habits.
+  [Chapter 1](01-the-big-picture.md)), a *doc-audit* skill (the drift-hunting
+  described above), a machine-hygiene (*tidy*) skill, a dependency
+  version-checker, a live-verification routine, and a *project-init* skill
+  that interviews you about a new product idea and turns it into a researched
+  build plan. Think of them as standard operating procedures — the difference
+  between an organization that has process and one that has habits. And in
+  July 2026 the whole set graduated into its own open-source project:
+  [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit), a portable library
+  of these procedures that any project can install. The process that built
+  this repository is now itself a published, reusable product.
 - **Persistent memory** — between sessions, the agent maintains its own notes:
   durable facts, hard-won gotchas (e.g., the precise quirks of driving a
   payment provider's tools headlessly), and lessons from mistakes. Session two

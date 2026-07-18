@@ -58,38 +58,16 @@ _Last updated: 2026-07-18._
   **maintenance-only is the standing state again** (100 is a state to maintain — future
   passes re-run the currency checks). The TS7 cutover stays outside it (externally
   gated — stable-Next TS7 support; experimental in canary since 2026-07-10).
-- **ai-dev-kit program (started 2026-07-17):** the repo's agentic-dev techniques are
-  codified into a portable, versioned skill library — now the standalone
-  [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit)
-  (generic skills + per-project adapter config + cross-platform installer with drift
-  guard). **ALL THREE STEPS SHIPPED 2026-07-17 — kit 0.3.0**: Step 1 scaffold + 6
-  skills + installer; Step 2 advise-never-block hooks (dep-check nudge, live-verify
-  reminder, skill-drift guard — proven firing live); Step 3 why-layer playbook
-  (the kit's docs/PLAYBOOK.md) + self-contained catalog deck.
-  `.claude/skills/` and `.claude/hooks/ai-dev-kit/` are installer output — edit a
-  clone of the kit repo, re-install. **project-init program (started 2026-07-18):** the kit gains its
-  one-time inception entry point — `/project-init` turns an idea or plan docs into
-  discovery (gaps, value-adds, competitive scan, template fit-map) → a product brief
-  → regenerated status/backlog to a 100 bar, gated on sign-off before the pipeline
-  starts. **Steps 1–2 shipped 2026-07-18 (kit 0.4.0)**; **step 3 (live trial) COMPLETE
-  2026-07-18 — kit 0.4.1, PROGRAM COMPLETE.** The full flow ran on a fresh degit
-  consumer copy (sample product "Potluck"): installer `--check`, scaffold guard →
-  `init-app --slim`, discovery, one batched question round (a delegated answer became
-  a marked assumption), product brief, context-doc mends, regenerated status/backlog
-  — all green through the sign-off gate. Two skill mends landed (`{name}` must be a
-  lowercase npm-safe slug; sign-off commits the inception output) and two template
-  findings became BACKLOG on-ramp rows (leftover-mention tidy · PRODUCT.md index
-  placeholder). **Both on-ramp rows shipped 2026-07-18 — kit 0.4.2:** `--slim` now
-  retargets/rewrites the 8 known leftover pointers (per-line report for anything
-  else), and AGENTS.md pre-seeds a commented `PRODUCT.md` context-index row that
-  `/project-init` (0.1.2) uncomments. **Extraction (B3) SHIPPED 2026-07-18 — kit
-  0.5.0 is a standalone public repo**
-  ([jrittelmeyer/ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit): fresh
-  single-commit history, two-OS smoke CI green, secret scanning + push protection +
-  vulnerability alerts + CodeQL default setup + protect-main ruleset). This repo
-  now consumes it — the in-repo `ai-dev-kit/` dir is gone, the `.claude/` install
-  output stays committed, re-installs run from a clone (`--dest <this repo>`), and
-  doc-audit's dual-home source of truth moved to the kit repo (doc-audit 0.1.1).
+- **ai-dev-kit (2026-07-17 → 18, ALL PROGRAMS COMPLETE):** the repo's agentic-dev
+  techniques are codified into a portable skill library — the standalone public
+  [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.5.0: 7
+  skills incl. the `/project-init` inception flow, advise-never-block hooks, the
+  why-layer playbook + catalog deck, and a cross-platform installer with drift
+  guard). This repo consumes the installed output — `.claude/skills/` and
+  `.claude/hooks/ai-dev-kit/` are committed installer output; edit a clone of the
+  kit repo and re-install (`--dest <this repo>`), never the copies. Full program
+  history (the 3-step build, project-init + the "Potluck" live trial, U1/U2, the
+  B3 extraction) → [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
 
 ## Build progress
 

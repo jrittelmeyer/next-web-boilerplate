@@ -5,6 +5,21 @@ Notable changes to this project. The format follows
 (not a versioned library), `main` is always the supported version and entries mark
 milestones rather than package releases.
 
+## 2026-07-18 — PostgreSQL 18
+
+### Changed
+
+- **Docker Postgres moved 16 → 18** (`postgres:18-alpine` in both compose files and
+  the CI service containers). **Action needed on existing local volumes:** 18+
+  images refuse the old `/var/lib/postgresql/data` mount point
+  ([docker-library/postgres#1259](https://github.com/docker-library/postgres/issues/1259)),
+  so the compose files now mount the volume at `/var/lib/postgresql` — a volume
+  created by an older image won't start under 18. Either `pg_dump` → recreate the
+  volume → restore, or (throwaway dev data) delete the volume and re-run
+  `pnpm --filter @repo/db db:migrate`.
+- CI workflow actions updated a major each: checkout v7, setup-node v6,
+  upload-artifact v7, codecov v7, codeql-action v4, pnpm/action-setup v6.
+
 ## [1.0.0] — 2026-07-14
 
 Initial public release. The full inventory with rationale is

@@ -68,7 +68,7 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 
 ## Watch items (known, tracked, deliberately not done)
 
-The live list is [`BACKLOG.md`](BACKLOG.md). At release:
+The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
 
 - **TypeScript 7 cutover** — TS 7 GA'd as the native Go compiler but ships no JS
   Compiler API yet, so stable `next build` cannot use it. Experimental TS7 support
@@ -76,8 +76,6 @@ The live list is [`BACKLOG.md`](BACKLOG.md). At release:
   when it reaches a **stable** Next release (TS 7.1, ~Q4 2026, restores the
   programmatic API for the wider toolchain). The `tsc` CLI alone is ~3.6× faster, so
   the win is worth tracking.
-- **Email bounce/complaint handling** — Resend already suppresses account-side; the
-  optional app-side piece is a webhook → suppressions table.
 - **Temporary security overrides** (added 2026-07-15) — three pnpm `overrides:` in
   `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts that have **no
   upstream fix**. Remove each when its upstream moves, then `pnpm install` + the full
@@ -109,11 +107,12 @@ upgrade, a batch of merged Renovate PRs) rather than on a calendar:
   surface** (on-ramp truth, community files, automation actually alive) and a
   re-check of externally-gated watch rows.
 
-The project audit ships as a committed agent skill (`.claude/skills/project-audit/`,
-alongside the checkpoint/tidy helpers); its SKILL.md is a plain-markdown procedure a
-human — or any agent tooling — can follow directly. The doc audit is run as a
-described procedure (the sweep above) rather than a committed skill. Past audit
-reports live in [`archive/`](archive/) as worked examples.
+Both audits ship as committed agent skills (`.claude/skills/project-audit/` and
+`.claude/skills/doc-audit/`, alongside the checkpoint/tidy helpers — all installed
+from the [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) skill library);
+each SKILL.md is a plain-markdown procedure a human — or any agent tooling — can
+follow directly. Past audit reports live in [`archive/`](archive/) as worked
+examples.
 
 ## Local disk hygiene
 
