@@ -7,7 +7,9 @@ config. Designed to be extracted into its own repo later and imported wherever i
 needed.
 
 **Version:** see [VERSION](VERSION) · **History:** [CHANGELOG.md](CHANGELOG.md) ·
-**Machine-readable index:** [manifest.json](manifest.json)
+**Machine-readable index:** [manifest.json](manifest.json) ·
+**Why-layer:** [docs/PLAYBOOK.md](docs/PLAYBOOK.md) ·
+**Catalog/pitch deck:** [docs/pitch-deck.html](docs/pitch-deck.html)
 
 ## What's inside
 
@@ -99,7 +101,6 @@ them up.
 ## Roadmap
 
 - ~~Step 2 — automation~~ **shipped in 0.2.0** (see Automation above).
-- **Step 3 — playbook + deck:** the non-skill techniques (context tiers, memory
-  discipline, fan-out research, archive pattern) + a self-contained HTML catalog/pitch
-  deck.
+- ~~Step 3 — playbook + deck~~ **shipped in 0.3.0**
+  ([PLAYBOOK.md](docs/PLAYBOOK.md) · [pitch-deck.html](docs/pitch-deck.html)).
 - **Later:** extract to a standalone repo; consume here (and elsewhere) via install.

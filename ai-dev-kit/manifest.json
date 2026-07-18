@@ -1,8 +1,12 @@
 {
   "name": "ai-dev-kit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Portable agentic-development skill library: lifecycle skills, a per-project adapter contract, and a cross-platform installer.",
   "adapterConfig": ".claude/ai-dev-kit.config.json",
+  "docs": {
+    "playbook": "docs/PLAYBOOK.md",
+    "deck": "docs/pitch-deck.html"
+  },
   "pipeline": [
     "orient (cheap context load)",
     "plan-gate (plan → sign-off → build)",

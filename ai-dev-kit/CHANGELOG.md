@@ -1,5 +1,20 @@
 # ai-dev-kit changelog
 
+## 0.3.0 — 2026-07-17
+
+Step 3: playbook + catalog deck. The program's three steps are complete.
+
+- `docs/PLAYBOOK.md` — the why-layer: nine non-skill techniques (pipeline,
+  plan-gate, context tiers, memory discipline, cheapest-sufficient-probe, fan-out
+  research, archive pattern, resume prompts, automation review), each with
+  what/why/practice/automation/composes-with, pointing into skills rather than
+  duplicating them.
+- `docs/pitch-deck.html` — self-contained catalog/pitch deck (no external assets,
+  light/dark token theming): the pipeline, six skill cards with auto-trigger chips,
+  the hooks + advise-never-block policy, playbook at a glance, the adapter/install
+  story, and the roadmap.
+- manifest gains a `docs` section.
+
 ## 0.2.0 — 2026-07-17
 
 Step 2: automation hooks. All hooks **advise, never block** — they inject context;

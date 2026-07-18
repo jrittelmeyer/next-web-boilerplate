@@ -16,6 +16,8 @@ notes:
   (advise-never-block: dep-check nudge, live-verify reminder, skill-drift guard) are
   merged into `.claude/settings.json` and run from `.claude/hooks/ai-dev-kit/`. Edit
   skills/hooks in the kit and re-install — never edit the installed copies
-  (`install.mjs --check` guards drift). Run `/checkpoint` at each step boundary.
+  (`install.mjs --check` guards drift). The why-layer techniques live in
+  [ai-dev-kit/docs/PLAYBOOK.md](ai-dev-kit/docs/PLAYBOOK.md). Run `/checkpoint` at
+  each step boundary.
 - `.claude/settings.json` (tracked) holds the shared permission allowlist;
   `settings.local.json` stays untracked/gitignored.
