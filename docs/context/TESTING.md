@@ -209,7 +209,7 @@ How it's wired so the default run stays DB-free:
   already-set var, so it's a no-op in CI).
 - `@repo/db` has **no `test` / `test:coverage` script** — only `test:integration` —
   so `turbo test` (the DB-free `verify` lane) never invokes it. The E2E CI lane,
-  which provisions `postgres:16` + runs `db:migrate`, runs it explicitly.
+  which provisions `postgres:18` + runs `db:migrate`, runs it explicitly.
 
 The worked example is **`__tests__/integration/posts.test.ts`** — it runs the exact
 SQL behind the tRPC `post.list` procedure (select + `leftJoin` author name +
@@ -370,7 +370,7 @@ on another port, a preview deploy) — Playwright then targets that URL and does
 manage a server. The default + CI path (env unset) is unchanged.
 
 The DB-backed **CI** lane (the `e2e` job — every PR and push to `main`) provides a
-`postgres:16` service, runs `pnpm --filter @repo/db db:migrate`, then the DB
+`postgres:18` service, runs `pnpm --filter @repo/db db:migrate`, then the DB
 integration tests, then `pnpm test:e2e`. See
 [DEPLOYMENT.md](DEPLOYMENT.md#cicd-github-actions).
 

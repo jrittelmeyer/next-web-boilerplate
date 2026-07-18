@@ -548,7 +548,7 @@ required — except **Sentry source-map upload**, which needs `SENTRY_AUTH_TOKEN
 **`e2e`** — the **DB-backed lane**, runs on **every PR and push to `main`** (so a
 PR can't go green while breaking the core auth/posts flow — that gap used to surface
 only after merge). Playwright needs a real build + server + DB, so it spins up a
-`postgres:16` **service**, sets `DATABASE_URL` + `BETTER_AUTH_SECRET` (throwaway CI
+`postgres:18` **service**, sets `DATABASE_URL` + `BETTER_AUTH_SECRET` (throwaway CI
 values, not secrets), runs `pnpm --filter @repo/db db:migrate`, then the **DB
 integration tests** (`pnpm --filter @repo/db test:integration`), installs the browser
 (`playwright install --with-deps chromium`), and finally `pnpm test:e2e`. The
@@ -575,7 +575,7 @@ image** on every PR and push (parallel to the other jobs; no `needs`). CI used t
 build `docker/Dockerfile`, so a Dockerfile regression only surfaced on a manual build.
 The job:
 
-1. Starts a throwaway `postgres:16-alpine` on a user-defined docker network (reachable
+1. Starts a throwaway `postgres:18-alpine` on a user-defined docker network (reachable
    as `pg`), so the image's `/api/health` probe can return a real **200** (DB up) — no
    migrations needed, the probe only runs `select 1`.
 2. `docker build -f docker/Dockerfile -t nwb-web:ci .` — the documented build, self-
