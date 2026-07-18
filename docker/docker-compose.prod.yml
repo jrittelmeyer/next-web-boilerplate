@@ -86,7 +86,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: appdb
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # postgres 18+ images keep data in major-version subdirectories and refuse a
+      # mount at the old /var/lib/postgresql/data path — mount the parent instead
+      # (docker-library/postgres#1259).
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d appdb"]
       interval: 5s
