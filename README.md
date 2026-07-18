@@ -71,8 +71,9 @@ Everything it does you can do by hand; nothing needs to be ripped out. After it 
 follow the [Quickstart](#quickstart) from `docker compose … up` onward.
 
 Developing with **Claude Code**? After `pnpm install`, hand **`/project-init`** your
-idea or your plan documents — the bundled [ai-dev-kit](ai-dev-kit/README.md)
-inception skill runs discovery (clarifying questions, gap analysis, a competitive
+idea or your plan documents — the preinstalled
+[ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) inception skill runs
+discovery (clarifying questions, gap analysis, a competitive
 scan, a map of which shipped integrations your product actually needs), writes your
 product brief, regenerates the status/backlog docs around *your* app (running
 `init-app` for you along the way), and starts the build pipeline.

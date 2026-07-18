@@ -19,8 +19,8 @@ if (!/(^|\/)\.claude\/(skills|hooks)\//.test(filePath)) process.exit(0);
 const additionalContext =
   "ai-dev-kit skill-drift guard: a file under .claude/skills/ or .claude/hooks/ was just " +
   "edited directly. Installed copies are installer output — if this file is kit-managed, the " +
-  "edit will be flagged by `node ai-dev-kit/install.mjs --check` and overwritten on the next " +
-  "install. Make the change in ai-dev-kit/ (skills/ or hooks/) and re-run the installer " +
+  "edit will be flagged by `install.mjs --check` and overwritten on the next install. Make " +
+  "the change in a clone of the ai-dev-kit repo (skills/ or hooks/) and re-run the installer " +
   "instead. If the file is not in the kit manifest (a project-local skill), ignore this.";
 
 console.log(

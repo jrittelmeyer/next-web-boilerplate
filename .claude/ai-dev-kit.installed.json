@@ -1,8 +1,8 @@
 {
-  "kit": "0.4.2",
+  "kit": "0.5.0",
   "skills": {
     "checkpoint": "0.1.0",
-    "doc-audit": "0.1.0",
+    "doc-audit": "0.1.1",
     "project-audit": "0.1.0",
     "tidy": "0.1.0",
     "dep-check": "0.1.0",

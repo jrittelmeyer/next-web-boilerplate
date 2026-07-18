@@ -49,8 +49,9 @@ waiting on a verification email.
 
 ## Starting from an idea? Run `/project-init`
 
-If you develop with Claude Code, the bundled [ai-dev-kit](../ai-dev-kit/README.md)
-ships an **inception skill** that replaces the manual scaffold-then-plan routine:
+If you develop with Claude Code, the preinstalled
+[ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) skill library ships an
+**inception skill** that replaces the manual scaffold-then-plan routine:
 hand `/project-init` your idea (or a stack of plan documents) and it runs discovery
 — clarifying questions, gap analysis, a competitive scan, and a map of which shipped
 integrations your product actually needs — then writes your product brief

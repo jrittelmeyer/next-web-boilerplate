@@ -65,19 +65,19 @@
 > at 100.0/100 by the 2026-07-17 scoring pass**
 > ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)). The
 > **TypeScript 7 cutover** stays outside the program (externally gated, costs no
-> points; see Watch). Open rows: the TS7 cutover and the ai-dev-kit extraction.
+> points; see Watch). Open row: the TS7 cutover.
 
 ### Open rows
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
 | B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
-| B3 | Agent tooling | **ai-dev-kit extraction** — pull [../ai-dev-kit/](../ai-dev-kit/) (kit 0.4.0; the original 3 program steps shipped 2026-07-17, project-init added 2026-07-18) into its own repo; consume here + in similar projects via the installer | ai-dev-kit/README.md (Roadmap) | Unblocked, opt-in. Scope: new repo, move kit verbatim, this repo installs from it (git dep or subtree); decide dual-home doc-audit source-of-truth handoff. Plan → sign-off → build. |
 
 ### Shipped (strikethrough record — full rows in the PROJECT_STATUS table + archive/PHASE_HISTORY)
 
 | Band | Upgrade | Shipped | See |
 | --- | --- | --- | --- |
+| B3 | ~~ai-dev-kit extraction~~ — the kit is a standalone public repo, [jrittelmeyer/ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) (0.5.0: fresh single-commit history, two-OS smoke CI, secret scanning + vuln alerts + CodeQL + protect-main ruleset); this repo consumes the installed `.claude/` output and re-installs from a clone (`--dest`); doc-audit's dual-home source of truth handed to the kit repo (0.1.1) | 2026-07-18 | CLAUDE.md · PROJECT_STATUS B3 row |
 | B1 | ~~`init-app --slim` leftover-mention tidy (U1)~~ — the 8 known dead pointers in kept docs are retargeted at the public template repo or rewritten; the report is per-line and skips deliberate retargets | 2026-07-18 | scripts/init-app.mjs · GETTING_STARTED.md → Remove what you don't need |
 | B1 | ~~AGENTS.md `PRODUCT.md` index placeholder (U2)~~ — commented row under the context-doc table; `/project-init` (0.1.2, kit 0.4.2) uncomments it instead of authoring a row | 2026-07-18 | AGENTS.md · ai-dev-kit CHANGELOG 0.4.2 |
 | B1 | ~~project-init live trial (program step 3)~~ — full `/project-init` flow on a fresh degit consumer copy (sample product "Potluck"); two skill mends → **kit 0.4.1**; trial findings U1/U2 became the on-ramp rows above | 2026-07-18 | ai-dev-kit CHANGELOG 0.4.1 · PROJECT_STATUS ai-dev-kit row |

@@ -59,15 +59,15 @@ _Last updated: 2026-07-18._
   passes re-run the currency checks). The TS7 cutover stays outside it (externally
   gated — stable-Next TS7 support; experimental in canary since 2026-07-10).
 - **ai-dev-kit program (started 2026-07-17):** the repo's agentic-dev techniques are
-  being codified into a portable, versioned skill library at [../ai-dev-kit/](../ai-dev-kit/)
+  codified into a portable, versioned skill library — now the standalone
+  [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit)
   (generic skills + per-project adapter config + cross-platform installer with drift
   guard). **ALL THREE STEPS SHIPPED 2026-07-17 — kit 0.3.0**: Step 1 scaffold + 6
   skills + installer; Step 2 advise-never-block hooks (dep-check nudge, live-verify
   reminder, skill-drift guard — proven firing live); Step 3 why-layer playbook
-  ([../ai-dev-kit/docs/PLAYBOOK.md](../ai-dev-kit/docs/PLAYBOOK.md)) + self-contained
-  catalog deck. Forward row: extraction to a standalone repo (BACKLOG).
-  `.claude/skills/` and `.claude/hooks/ai-dev-kit/` are installer output — edit the
-  kit, re-install. **project-init program (started 2026-07-18):** the kit gains its
+  (the kit's docs/PLAYBOOK.md) + self-contained catalog deck.
+  `.claude/skills/` and `.claude/hooks/ai-dev-kit/` are installer output — edit a
+  clone of the kit repo, re-install. **project-init program (started 2026-07-18):** the kit gains its
   one-time inception entry point — `/project-init` turns an idea or plan docs into
   discovery (gaps, value-adds, competitive scan, template fit-map) → a product brief
   → regenerated status/backlog to a 100 bar, gated on sign-off before the pipeline
@@ -82,7 +82,14 @@ _Last updated: 2026-07-18._
   placeholder). **Both on-ramp rows shipped 2026-07-18 — kit 0.4.2:** `--slim` now
   retargets/rewrites the 8 known leftover pointers (per-line report for anything
   else), and AGENTS.md pre-seeds a commented `PRODUCT.md` context-index row that
-  `/project-init` (0.1.2) uncomments.
+  `/project-init` (0.1.2) uncomments. **Extraction (B3) SHIPPED 2026-07-18 — kit
+  0.5.0 is a standalone public repo**
+  ([jrittelmeyer/ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit): fresh
+  single-commit history, two-OS smoke CI green, secret scanning + push protection +
+  vulnerability alerts + CodeQL default setup + protect-main ruleset). This repo
+  now consumes it — the in-repo `ai-dev-kit/` dir is gone, the `.claude/` install
+  output stays committed, re-installs run from a clone (`--dest <this repo>`), and
+  doc-audit's dual-home source of truth moved to the kit repo (doc-audit 0.1.1).
 
 ## Build progress
 
@@ -167,6 +174,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Maintenance · init-app slim | `pnpm init-app` now offers to remove the template's own history/marketing docs from a derived app (interactive y/N; `--slim`/`--keep-template-docs` for scripts; idempotent) — deletes PROJECT_STATUS/BACKLOG/archive/plain-english-guide/FUNDING.yml, resets CHANGELOG, neutralizes the README + AGENTS.md template references, reports leftover mentions. Scratch-verified: fresh run, patched content, idempotent re-run. 2026-07-17. See [GETTING_STARTED.md](GETTING_STARTED.md#remove-what-you-dont-need). |
 | Path-to-100 · #11 | Per-org billing (the program's last row) — `subscriptions` owned by exactly ONE of user/org (migration 0017, `num_nonnulls` XOR; org rows carry no `user_id`, so a member's deletion can't cancel org billing); org-context checkout/portal (owner/admin gate before the config gate), webhook `metadata.organizationId` mapping, `hasOrgSubscription()` + context-aware `/premium` + org-aware `/billing`, org-delete → the A13 cancel job. Live-verified in test mode; keyless `e2e/billing-org.spec.ts`. 2026-07-17. See [context/SERVICES.md](context/SERVICES.md#stripe-payments) · [context/DATABASE.md](context/DATABASE.md#stripe-subscriptions-subscriptions--implemented-phase-3--c4-org-aware-11). |
 | Maintenance · on-ramp U1+U2 | Trial follow-ups: `--slim` leftover-pointer tidy (retarget at the template repo / rewrite, per-line report, idempotent — scratch-verified twice) + pre-seeded `PRODUCT.md` context-index placeholder, uncommented by `/project-init` (kit 0.4.2). 2026-07-18. See [GETTING_STARTED.md](GETTING_STARTED.md#remove-what-you-dont-need) · AGENTS.md · ai-dev-kit CHANGELOG. |
+| Maintenance · B3 kit extraction | ai-dev-kit → standalone public repo [jrittelmeyer/ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.5.0; doc-audit 0.1.1 source-of-truth handoff; two-OS smoke CI; secret scanning/vuln alerts/CodeQL/protect-main hardening). This repo consumes the installed `.claude/` output and re-installs from a clone via `--dest`. 2026-07-18. See [CLAUDE.md](../CLAUDE.md) · BACKLOG shipped row. |
 
 ## Fresh project on-ramp (clone → build a real app)
 
@@ -209,5 +217,6 @@ status,conclusion` — `watch --exit-status` alone has reported success on faile
 - Toolchain gotchas (pnpm `allowBuilds`, TS 6, Biome 2.5 config, drizzle
   `import.meta.dirname`) are documented in STACK.md / CONVENTIONS.md / UI.md.
 - The committed `.claude/` directory holds the Claude Code permissions allowlist
-  (`settings.json`) and the ai-dev-kit install output (skills + hooks — edit the
-  kit, re-install); `settings.local.json` stays untracked (gitignored).
+  (`settings.json`) and the ai-dev-kit install output (skills + hooks — edit a
+  clone of [the kit repo](https://github.com/jrittelmeyer/ai-dev-kit),
+  re-install); `settings.local.json` stays untracked (gitignored).

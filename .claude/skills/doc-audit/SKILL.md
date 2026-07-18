@@ -159,10 +159,11 @@ recommended option and say so in the report.
   file — that has quietly regrown a verbose per-step log. The fix pattern: keep a
   compact build-progress table as the record, move the prose into the history
   archive, and (re)state the rule "don't reintroduce the append-log."
-- **Dual-home rule:** this skill's canonical source lives in the ai-dev-kit
-  (`ai-dev-kit/skills/doc-audit/`); the project copy (`.claude/skills/doc-audit/`)
-  and the global copy (`~/.claude/skills/doc-audit/`) are both installer output —
-  edit the kit source and re-run `node ai-dev-kit/install.mjs --global`, never edit
+- **Dual-home rule:** this skill's canonical source lives in the ai-dev-kit repo
+  (github.com/jrittelmeyer/ai-dev-kit → `skills/doc-audit/`); the project copy
+  (`.claude/skills/doc-audit/`) and the global copy (`~/.claude/skills/doc-audit/`)
+  are both installer output — edit the kit source in a clone and re-run
+  `node install.mjs --global --dest <project-root>`, never edit
   the installed copies (`install.mjs --check` guards against drift). Project-specific
   designations — *which* files form the showcase set, where they live — belong in
   that project's memory, not in this file.
