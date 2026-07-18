@@ -34,13 +34,17 @@ with rather than reimplements.
 ## Install into a project
 
 ```bash
-node ai-dev-kit/install.mjs --adapter ai-dev-kit/adapters/<your-project>.json --global
+node ai-dev-kit/install.mjs --adapter ai-dev-kit/adapters/<your-project>.json --global --hooks
 ```
 
-- Copies `skills/*` → `<project>/.claude/skills/` (byte-identical).
+- Copies `skills/*` → `<project>/.claude/skills/` (byte-identical) and hook handlers
+  (`hooks/*.mjs`) → `.claude/hooks/ai-dev-kit/`.
 - `--global` also installs dual-home skills (`doc-audit`) → `~/.claude/skills/`.
 - `--adapter <file>` validates the adapter JSON and writes it verbatim to
   `.claude/ai-dev-kit.config.json`.
+- `--hooks` merges `hooks/hooks.json` into `.claude/settings.json` — only entries
+  whose command carries the `.claude/hooks/ai-dev-kit/` marker are ever replaced;
+  every other setting is preserved. Omit it to wire hooks manually.
 - `--dest <path>` targets a different project root (default: cwd).
 - Writes `.claude/ai-dev-kit.installed.json` (kit + skill versions, no timestamp).
   Idempotent — a second run writes nothing.
@@ -64,6 +68,25 @@ Every field is optional — a skill missing a field derives it from the repo (an
 so) rather than failing. After install the config belongs to the project: edit it
 freely (`--check` doesn't police it).
 
+## Automation (hooks)
+
+Three Claude Code hooks make the lifecycle self-reinforcing. **All of them advise,
+never block** — they inject a reminder into the agent's context; the agent decides.
+
+| Handler | Event · matcher | Fires on |
+| --- | --- | --- |
+| `dep-check-nudge.mjs` | PostToolUse · `Edit\|Write\|Bash` | package.json edits; pm `add`/`update`/install-with-args |
+| `live-verify-reminder.mjs` | PreToolUse · `Bash` (`if: "Bash(git *)"`) | any command segment containing `git … commit` |
+| `skill-drift-guard.mjs` | PostToolUse · `Edit\|Write` | direct file-tool edits under `.claude/skills\|hooks/` |
+
+Handlers are pure-Node stdin→stdout scripts (no jq/bash dependency — Windows-safe),
+installed to `.claude/hooks/ai-dev-kit/` and drift-guarded by `--check` like skills.
+Reviewed and deliberately **not** automated: a Stop-hook checkpoint nag and a
+tidy/cache hook — existing cadence (standing agreement, husky pre-push) covers both,
+and a nag would be noise. Hooks changed in `settings.json` load at session start;
+an already-running session may need `/hooks` opened once (or a restart) to pick
+them up.
+
 ## Rules
 
 - **Edit skills in the kit, then reinstall.** Never edit `.claude/skills/` directly —
@@ -75,8 +98,7 @@ freely (`--check` doesn't police it).
 
 ## Roadmap
 
-- **Step 2 — automation:** hook snippets (dep-check nudge on `package.json` edits,
-  live-verify reminder before product commits) + composition wiring.
+- ~~Step 2 — automation~~ **shipped in 0.2.0** (see Automation above).
 - **Step 3 — playbook + deck:** the non-skill techniques (context tiers, memory
   discipline, fan-out research, archive pattern) + a self-contained HTML catalog/pitch
   deck.

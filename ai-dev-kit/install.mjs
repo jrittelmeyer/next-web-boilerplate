@@ -4,13 +4,15 @@
  * (and dual-home skills into `~/.claude/skills/` with --global).
  *
  * Usage:
- *   node ai-dev-kit/install.mjs [--dest <project-root>] [--adapter <file>] [--global]
- *   node ai-dev-kit/install.mjs --check [--dest <project-root>] [--global]
+ *   node ai-dev-kit/install.mjs [--dest <root>] [--adapter <file>] [--global] [--hooks]
+ *   node ai-dev-kit/install.mjs --check [--dest <root>] [--global]
  *
  * Pure Node fs — no shell, no symlinks (Windows-safe). Idempotent: a re-run with an
  * unchanged kit writes nothing. `--check` exits 1 listing any installed file that
- * drifted from kit source (the adapter config is user-owned and never checked).
- * Skills in `.claude/skills/` that the manifest doesn't list are left untouched.
+ * drifted from kit source (the adapter config and settings.json are user-owned and
+ * never checked). Skills in `.claude/skills/` that the manifest doesn't list are left
+ * untouched. `--hooks` merges hooks/hooks.json into `.claude/settings.json` — only
+ * entries whose command carries the kit's handler-path marker are ever replaced.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -29,6 +31,7 @@ const opt = (name) => {
 
 const checkMode = flag("--check");
 const withGlobal = flag("--global");
+const withHooks = flag("--hooks");
 const dest = resolve(opt("--dest") ?? process.cwd());
 const adapterArg = opt("--adapter");
 
@@ -84,18 +87,64 @@ if (withGlobal) {
   }
 }
 
-// 3. Adapter config — validated as JSON, then copied verbatim. User-owned after
+// 3. Hook handlers — installed alongside skills (and drift-guarded the same way);
+//    inert until the hook config is merged into settings via --hooks.
+const hooksSrc = join(kitRoot, "hooks");
+const hooksDest = join(dest, ".claude", "hooks", "ai-dev-kit");
+for (const file of walk(hooksSrc)) {
+  if (file.endsWith(".mjs")) {
+    syncFile(file, join(hooksDest, relative(hooksSrc, file)));
+  }
+}
+
+// 4. Adapter config — validated as JSON, then copied verbatim. User-owned after
 //    install: edit it freely in the project; --check never polices it.
 if (adapterArg && !checkMode) {
   const text = readFileSync(resolve(adapterArg), "utf8");
   JSON.parse(text); // throws on invalid JSON before anything is written
   const outPath = join(dest, ".claude", "ai-dev-kit.config.json");
-  mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, text);
-  console.log(`adapter → ${label(outPath)}`);
+  const have = existsSync(outPath) ? readFileSync(outPath, "utf8") : null;
+  if (have === text) {
+    unchanged++;
+  } else {
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, text);
+    written++;
+    console.log(`adapter → ${label(outPath)}`);
+  }
 }
 
-// 4. Version stamp — deterministic (no timestamp) so re-installs produce zero diff.
+// 5. Hook config — merged into .claude/settings.json (--hooks). Kit-owned entries
+//    are identified by the handler-path marker and replaced wholesale; everything
+//    else in settings.json is preserved. Run-twice ⇒ byte-identical output.
+if (withHooks && !checkMode) {
+  const kitHooks = JSON.parse(readFileSync(join(hooksSrc, "hooks.json"), "utf8")).hooks;
+  const settingsPath = join(dest, ".claude", "settings.json");
+  const before = existsSync(settingsPath) ? readFileSync(settingsPath, "utf8") : null;
+  const settings = before ? JSON.parse(before) : {};
+  const marker = ".claude/hooks/ai-dev-kit/";
+  settings.hooks = settings.hooks ?? {};
+  for (const [event, entries] of Object.entries(kitHooks)) {
+    const kept = (settings.hooks[event] ?? [])
+      .map((e) => ({
+        ...e,
+        hooks: (e.hooks ?? []).filter((h) => !String(h.command ?? "").includes(marker)),
+      }))
+      .filter((e) => e.hooks.length > 0);
+    settings.hooks[event] = [...kept, ...entries];
+  }
+  const text = `${JSON.stringify(settings, null, 2)}\n`;
+  if (text === before) {
+    unchanged++;
+  } else {
+    mkdirSync(dirname(settingsPath), { recursive: true });
+    writeFileSync(settingsPath, text);
+    written++;
+    console.log(`hooks → merged into ${label(settingsPath)}`);
+  }
+}
+
+// 6. Version stamp — deterministic (no timestamp) so re-installs produce zero diff.
 const stamp = {
   kit: manifest.version,
   skills: Object.fromEntries(manifest.skills.map((s) => [s.name, s.version])),
@@ -113,7 +162,7 @@ if (haveStamp === stampText) {
   written++;
 }
 
-// 5. Report.
+// 7. Report.
 if (checkMode) {
   if (drifted.length > 0) {
     console.error(`ai-dev-kit ${manifest.version}: DRIFT in ${drifted.length} file(s):`);
@@ -130,5 +179,7 @@ if (checkMode) {
   console.log(
     `ai-dev-kit ${manifest.version}: ${written} file(s) written, ${unchanged} unchanged.`,
   );
-  console.log("Automation hooks land in Step 2 — see manifest.json → skills[].automation.");
+  if (!withHooks) {
+    console.log("Run with --hooks to merge the hook config into .claude/settings.json.");
+  }
 }

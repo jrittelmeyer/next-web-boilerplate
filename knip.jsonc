@@ -20,7 +20,11 @@
         // ai-dev-kit installer: a standalone script invoked as `node ai-dev-kit/install.mjs`
         // (never imported), so knip can't see it on the import graph and would flag it
         // as an unused file. See ai-dev-kit/README.md.
-        "ai-dev-kit/install.mjs"
+        "ai-dev-kit/install.mjs",
+        // ai-dev-kit hook handlers: stdin→stdout scripts invoked by Claude Code hooks
+        // (kit source + installed copies) — same never-imported class as the installer.
+        "ai-dev-kit/hooks/*.mjs",
+        ".claude/hooks/ai-dev-kit/*.mjs"
       ]
     },
     "apps/web": {

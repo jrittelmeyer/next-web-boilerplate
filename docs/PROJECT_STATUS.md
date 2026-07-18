@@ -61,9 +61,11 @@ _Last updated: 2026-07-17._
 - **ai-dev-kit program (started 2026-07-17):** the repo's agentic-dev techniques are
   being codified into a portable, versioned skill library at [../ai-dev-kit/](../ai-dev-kit/)
   (generic skills + per-project adapter config + cross-platform installer with drift
-  guard). **Step 1 (scaffold + 6 skills + installer) SHIPPED 2026-07-17**; Step 2
-  (automation hooks) and Step 3 (playbook + HTML catalog deck) follow, each
-  sign-off-gated. `.claude/skills/` is now installer output — edit the kit, re-install.
+  guard). **Step 1 (scaffold + 6 skills + installer) and Step 2 (advise-never-block
+  automation hooks: dep-check nudge, live-verify reminder, skill-drift guard — all
+  proven firing live) SHIPPED 2026-07-17**; Step 3 (playbook + HTML catalog deck)
+  follows, sign-off-gated. `.claude/skills/` and `.claude/hooks/ai-dev-kit/` are
+  installer output — edit the kit, re-install.
 
 ## Build progress
 

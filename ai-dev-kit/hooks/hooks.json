@@ -1,16 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(winget install *)",
-      "Bash(pnpm --filter @repo/db db:migrate)",
-      "Bash(docker exec *)",
-      "Bash(pnpm type-check *)",
-      "Bash(pnpm build *)",
-      "Bash(pnpm --filter web add -D dotenv-cli@^11.0.0)",
-      "Bash(git -c core.safecrlf=false commit -q -m ' *)",
-      "Bash(git check-ignore *)"
-    ]
-  },
   "hooks": {
     "PreToolUse": [
       {

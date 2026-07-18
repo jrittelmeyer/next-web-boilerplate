@@ -1,6 +1,6 @@
 {
   "name": "ai-dev-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Portable agentic-development skill library: lifecycle skills, a per-project adapter contract, and a cross-platform installer.",
   "adapterConfig": ".claude/ai-dev-kit.config.json",
   "pipeline": [
@@ -13,6 +13,34 @@
     "checkpoint (→ tidy / cache prune)",
     "periodic: doc-audit · project-audit"
   ],
+  "hooks": {
+    "config": "hooks/hooks.json",
+    "installedTo": ".claude/hooks/ai-dev-kit/",
+    "policy": "advise, never block — hooks inject context; the agent decides",
+    "handlers": [
+      {
+        "file": "hooks/dep-check-nudge.mjs",
+        "event": "PostToolUse",
+        "matcher": "Edit|Write|Bash",
+        "skill": "dep-check",
+        "fires": "package.json edits; pm add/update/upgrade or install-with-args commands"
+      },
+      {
+        "file": "hooks/live-verify-reminder.mjs",
+        "event": "PreToolUse",
+        "matcher": "Bash (if: \"Bash(git *)\")",
+        "skill": "live-verify",
+        "fires": "any command segment containing `git … commit`"
+      },
+      {
+        "file": "hooks/skill-drift-guard.mjs",
+        "event": "PostToolUse",
+        "matcher": "Edit|Write",
+        "skill": "(kit invariant)",
+        "fires": "direct file-tool edits under .claude/skills/ or .claude/hooks/"
+      }
+    ]
+  },
   "skills": [
     {
       "name": "checkpoint",
@@ -31,7 +59,7 @@
         "precededBy": ["live-verify"]
       },
       "automation": {
-        "planned": "Step 2 — surfaced at step boundaries; today: user-invoked or standing agreement"
+        "reviewed": "Step 2: deliberately not hook-automated — standing agreement + skill triggers cover the cadence; a Stop-hook nag would be noise"
       }
     },
     {
@@ -83,7 +111,7 @@
       },
       "automation": {
         "existing": "cache prune at checkpoint + pre-push backstop",
-        "planned": "Step 2 review"
+        "reviewed": "Step 2: no Claude hook — the existing cadence already covers it"
       }
     },
     {
@@ -101,7 +129,7 @@
         "precedes": "build (any dependency change)"
       },
       "automation": {
-        "planned": "Step 2 — PostToolUse hook on package.json edits injects the dep-check reminder"
+        "active": "PostToolUse (Edit|Write|Bash) → hooks/dep-check-nudge.mjs — injects the dep-check reminder on package.json edits / pm installs"
       }
     },
     {
@@ -119,7 +147,7 @@
         "precedes": "checkpoint"
       },
       "automation": {
-        "planned": "Step 2 — PreToolUse hook on git commit touching product source injects the live-verify reminder"
+        "active": "PreToolUse (Bash, if git *) → hooks/live-verify-reminder.mjs — injects the live-verify reminder before commits"
       }
     }
   ]

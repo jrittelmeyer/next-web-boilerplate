@@ -12,8 +12,10 @@ notes:
   `doc-audit` (docs/context/memory/showcase accuracy + token-lean; dual-home —
   `--global` also installs it to `~/.claude/skills/`), `tidy` (machine hygiene),
   `dep-check` (registry-verify deps), `live-verify` (fresh prod build + drive the
-  flow). Project params live in `.claude/ai-dev-kit.config.json`; edit skills in the
-  kit and re-install — never edit `.claude/skills/` directly (`install.mjs --check`
-  guards drift). Run `/checkpoint` at each step boundary.
+  flow). Project params live in `.claude/ai-dev-kit.config.json`; kit hooks
+  (advise-never-block: dep-check nudge, live-verify reminder, skill-drift guard) are
+  merged into `.claude/settings.json` and run from `.claude/hooks/ai-dev-kit/`. Edit
+  skills/hooks in the kit and re-install — never edit the installed copies
+  (`install.mjs --check` guards drift). Run `/checkpoint` at each step boundary.
 - `.claude/settings.json` (tracked) holds the shared permission allowlist;
   `settings.local.json` stays untracked/gitignored.
