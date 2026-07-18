@@ -227,7 +227,8 @@ function patchAgentsMd() {
   }
 }
 
-const TEMPLATE_REPO = "https://github.com/jrittelmeyer/next-web-boilerplate";
+const TEMPLATE_REPO_SLUG = "jrittelmeyer/next-web-boilerplate";
+const TEMPLATE_REPO = `https://github.com/${TEMPLATE_REPO_SLUG}`;
 
 /**
  * Known passages in KEPT docs that point at REMOVED template docs. Pointers to
@@ -350,8 +351,9 @@ function reportDanglingReferences() {
     const rel = relative(root, file).replaceAll("\\", "/");
     const lines = readFileSync(file, "utf8").split("\n");
     for (const [i, line] of lines.entries()) {
-      // Retargets at the public template repo are deliberate, not dead links.
-      if (!needle.test(line) || line.includes(TEMPLATE_REPO)) continue;
+      // Retargets at the public template repo are deliberate, not dead links —
+      // keyed on the repo slug so any link form to the template repo qualifies.
+      if (!needle.test(line) || line.includes(TEMPLATE_REPO_SLUG)) continue;
       const text = line.trim();
       hits.push(`${rel}:${i + 1}  ${text.length > 88 ? `${text.slice(0, 85)}…` : text}`);
     }
