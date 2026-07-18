@@ -117,12 +117,12 @@ jobs:
     runs-on: ubuntu-latest
     # DB-backed lane — @repo/db integration tests + the Playwright browser/a11y suite.
     # Runs on every PR (catch a broken auth/posts flow BEFORE merge, not after) and on
-    # push to main. Needs a database: the postgres:16 service below. Meilisearch is
+    # push to main. Needs a database: the postgres:18 service below. Meilisearch is
     # intentionally absent — createPost indexes best-effort, so the suite degrades
     # gracefully without it (see e2e/posts.spec.ts).
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -201,7 +201,7 @@ jobs:
     if: ${{ vars.ENABLE_CSP_NONCE == 'true' }}
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -279,7 +279,7 @@ jobs:
           docker network create nwb-ci
           docker run -d --name pg --network nwb-ci \
             -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=appdb \
-            postgres:16-alpine
+            postgres:18-alpine
           for i in $(seq 1 30); do
             if docker exec pg pg_isready -U postgres -d appdb >/dev/null 2>&1; then
               echo "postgres ready"; break
