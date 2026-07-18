@@ -1,5 +1,27 @@
 # ai-dev-kit changelog
 
+## 0.4.0 — 2026-07-18
+
+The inception skill — the pipeline gains its one-time entry point (project-init
+program, step 1 of 3).
+
+- `skills/project-init/` — turns an idea into a signed-off build program: intake
+  (plan docs and/or a raw idea) → mechanical scaffold (adapter `init.scaffold`,
+  confirm-gated because doc-slim removes files) → extended-thinking discovery (gap
+  analysis; value-add candidates split *free-in-template* vs *new build*;
+  competitive landscape scan, `--deep` fans out subagents; template fit-map) → one
+  batched clarifying-question round (skipped answers become marked assumptions) →
+  product brief at adapter `init.productBrief` carrying the product-specific
+  feature groups + bar that future `project-audit` passes score against →
+  context-doc mends with template-level gaps logged as backlog "Upstream
+  candidates" → regenerated status doc + banded backlog whose completion is the
+  100 score → plan sign-off → the lifecycle pipeline starts at row 1. Writes no
+  product code.
+- Adapter contract gains an optional `init` block (`scaffold` with `{name}`
+  substitution, `productBrief`).
+- Reviewed and deliberately NOT hook-automated: a post-scaffold nudge belongs in
+  the template's getting-started text, not machinery.
+
 ## 0.3.0 — 2026-07-17
 
 Step 3: playbook + catalog deck. The program's three steps are complete.

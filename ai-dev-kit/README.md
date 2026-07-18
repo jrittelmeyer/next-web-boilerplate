@@ -21,6 +21,7 @@ needed.
 | `tidy` | Prune the unbounded build cache; surface judgment-required machine cleanups | checkpoint boundary / low disk |
 | `dep-check` | Registry-verify version, release age, and pin policy before any dependency change | adding/upgrading a dependency |
 | `live-verify` | Fresh prod build + drive the real flow — behavioral proof before commit | before committing product changes |
+| `project-init` | Inception: plan docs / raw idea → discovery + competitive scan → product brief → status/backlog regenerated to a 100 bar | once, on a fresh scaffold |
 
 The intended lifecycle (machine-readable in `manifest.json` → `pipeline`):
 
@@ -29,6 +30,10 @@ orient → plan-gate → [dep-check] → build → live-verify
       → code-review / simplify → checkpoint (→ tidy)
       → periodic: doc-audit · project-audit
 ```
+
+`project-init` sits *before* the loop — the one-time inception pass that turns an
+idea (or a stack of plan documents) into the signed-off product brief, mended
+context docs, and prioritized backlog the loop then executes.
 
 `code-review`, `simplify`, and `verify` are Claude Code built-ins the kit composes
 with rather than reimplements.

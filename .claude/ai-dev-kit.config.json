@@ -40,5 +40,9 @@
   "depPolicy": {
     "releaseAgeDays": 7,
     "exactPin": ["lint-staged", "lucide-react"]
+  },
+  "init": {
+    "scaffold": "node scripts/init-app.mjs --slim --name {name}",
+    "productBrief": "docs/PRODUCT.md"
   }
 }

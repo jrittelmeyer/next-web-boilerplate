@@ -142,6 +142,21 @@
           "description": "Packages that publish frequently — always pin exact."
         }
       }
+    },
+    "init": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Project-inception parameters read by the project-init skill.",
+      "properties": {
+        "scaffold": {
+          "type": "string",
+          "description": "Mechanical scaffold command run at intake (env seed, rename, template-doc slim). `{name}` is replaced with the chosen app name; omit the placeholder if the command takes none. project-init confirms before running any scaffold that removes files."
+        },
+        "productBrief": {
+          "type": "string",
+          "description": "Where the converged product brief lands (default docs/PRODUCT.md)."
+        }
+      }
     }
   }
 }

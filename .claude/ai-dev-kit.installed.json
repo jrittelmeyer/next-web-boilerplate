@@ -1,11 +1,12 @@
 {
-  "kit": "0.3.0",
+  "kit": "0.4.0",
   "skills": {
     "checkpoint": "0.1.0",
     "doc-audit": "0.1.0",
     "project-audit": "0.1.0",
     "tidy": "0.1.0",
     "dep-check": "0.1.0",
-    "live-verify": "0.1.0"
+    "live-verify": "0.1.0",
+    "project-init": "0.1.0"
   }
 }
