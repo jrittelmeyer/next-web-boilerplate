@@ -1,5 +1,16 @@
 # ai-dev-kit changelog
 
+## 0.4.2 — 2026-07-18
+
+Trial follow-up: the template side of finding U2 shipped (a commented `PRODUCT.md`
+placeholder row under the agent-onboarding context-doc table), and the skill now
+uses it.
+
+- `skills/project-init` (0.1.2): the register-the-brief step prefers the
+  pre-seeded commented placeholder row — uncomment it (delete the wrapper lines)
+  instead of authoring a row; appending a shape-matched row stays the fallback
+  for repos without one.
+
 ## 0.4.1 — 2026-07-18
 
 Live-trial mends (project-init program, step 3 — the full flow driven on a fresh

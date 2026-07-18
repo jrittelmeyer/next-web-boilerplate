@@ -83,7 +83,10 @@ session loads instead of re-deriving:
 - Decision log: each question, the chosen option, every marked assumption.
 
 Register the brief in the repo's context-doc index (the agent-onboarding doc's
-load-when table) so future sessions find it on demand.
+load-when table) so future sessions find it on demand. Template copies pre-seed a
+commented placeholder row for the brief directly below that table — uncomment it
+(delete the comment-wrapper lines, keep the row) rather than authoring a row; if
+no placeholder exists, append a row matching the table's shape.
 
 ## 5. Mend the docs & methodology
 

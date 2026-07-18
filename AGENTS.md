@@ -113,6 +113,9 @@ docker/             — prod Dockerfile + docker-compose (dev + prod)
 | [SECURITY.md](docs/context/SECURITY.md) | security headers, CSP, allowlisting a new SaaS origin |
 | [DEPLOYMENT.md](docs/context/DEPLOYMENT.md) | Docker, env vars, CI/CD, infrastructure |
 | [DECISIONS.md](docs/context/DECISIONS.md) | the *why* behind a cross-cutting choice (driver, env, auth-schema ownership, tRPC/Action split, Tailwind/shadcn wiring, dependency pins) |
+<!-- /project-init: uncomment the row below (delete this wrapper line and the closing one) once docs/PRODUCT.md exists.
+| [PRODUCT.md](docs/PRODUCT.md) | the product brief — vision, target users, MVP scope, feature groups + the audit bar |
+-->
 
 > Historical detail (per-step rationale + verification, completed plans) lives in
 > [docs/archive/](docs/archive/) — load it only when you need the background behind a

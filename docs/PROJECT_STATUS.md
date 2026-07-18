@@ -79,7 +79,10 @@ _Last updated: 2026-07-18._
   — all green through the sign-off gate. Two skill mends landed (`{name}` must be a
   lowercase npm-safe slug; sign-off commits the inception output) and two template
   findings became BACKLOG on-ramp rows (leftover-mention tidy · PRODUCT.md index
-  placeholder).
+  placeholder). **Both on-ramp rows shipped 2026-07-18 — kit 0.4.2:** `--slim` now
+  retargets/rewrites the 8 known leftover pointers (per-line report for anything
+  else), and AGENTS.md pre-seeds a commented `PRODUCT.md` context-index row that
+  `/project-init` (0.1.2) uncomments.
 
 ## Build progress
 
@@ -163,6 +166,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Path-to-100 · #10 | `CSP_MODE=nonce` as a first-class **build-time** mode — one shared directive list (`src/lib/csp.ts`) feeds the static default (byte-identical to pre-#10) and the proxy's per-request `'nonce-…' 'strict-dynamic'` CSP; nonce builds keep the D4 `"use cache"` showcase via `experimental.useCache`; `e2e/csp-nonce.spec.ts` matrix in the `ENABLE_CSP_NONCE` CI lane (ON here). 2026-07-17. See [context/SECURITY.md](context/SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch). |
 | Maintenance · init-app slim | `pnpm init-app` now offers to remove the template's own history/marketing docs from a derived app (interactive y/N; `--slim`/`--keep-template-docs` for scripts; idempotent) — deletes PROJECT_STATUS/BACKLOG/archive/plain-english-guide/FUNDING.yml, resets CHANGELOG, neutralizes the README + AGENTS.md template references, reports leftover mentions. Scratch-verified: fresh run, patched content, idempotent re-run. 2026-07-17. See [GETTING_STARTED.md](GETTING_STARTED.md#remove-what-you-dont-need). |
 | Path-to-100 · #11 | Per-org billing (the program's last row) — `subscriptions` owned by exactly ONE of user/org (migration 0017, `num_nonnulls` XOR; org rows carry no `user_id`, so a member's deletion can't cancel org billing); org-context checkout/portal (owner/admin gate before the config gate), webhook `metadata.organizationId` mapping, `hasOrgSubscription()` + context-aware `/premium` + org-aware `/billing`, org-delete → the A13 cancel job. Live-verified in test mode; keyless `e2e/billing-org.spec.ts`. 2026-07-17. See [context/SERVICES.md](context/SERVICES.md#stripe-payments) · [context/DATABASE.md](context/DATABASE.md#stripe-subscriptions-subscriptions--implemented-phase-3--c4-org-aware-11). |
+| Maintenance · on-ramp U1+U2 | Trial follow-ups: `--slim` leftover-pointer tidy (retarget at the template repo / rewrite, per-line report, idempotent — scratch-verified twice) + pre-seeded `PRODUCT.md` context-index placeholder, uncommented by `/project-init` (kit 0.4.2). 2026-07-18. See [GETTING_STARTED.md](GETTING_STARTED.md#remove-what-you-dont-need) · AGENTS.md · ai-dev-kit CHANGELOG. |
 
 ## Fresh project on-ramp (clone → build a real app)
 
@@ -205,5 +209,5 @@ status,conclusion` — `watch --exit-status` alone has reported success on faile
 - Toolchain gotchas (pnpm `allowBuilds`, TS 6, Biome 2.5 config, drizzle
   `import.meta.dirname`) are documented in STACK.md / CONVENTIONS.md / UI.md.
 - The committed `.claude/` directory holds the Claude Code permissions allowlist
-  (`settings.json`) and the checkpoint / project-audit / doc-audit / tidy skills;
-  `settings.local.json` stays untracked (gitignored).
+  (`settings.json`) and the ai-dev-kit install output (skills + hooks — edit the
+  kit, re-install); `settings.local.json` stays untracked (gitignored).
