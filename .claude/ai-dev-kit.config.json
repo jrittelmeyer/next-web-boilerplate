@@ -43,6 +43,8 @@
   },
   "init": {
     "scaffold": "node scripts/init-app.mjs --slim --name {name}",
-    "productBrief": "docs/PRODUCT.md"
+    "productBrief": "docs/PRODUCT.md",
+    "migrationMap": "docs/MIGRATION.md",
+    "sourceDir": "intake/source/"
   }
 }
