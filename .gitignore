@@ -60,3 +60,7 @@ Thumbs.db
 
 # Local database backups (db:backup) — never commit dumps
 /backups/
+
+# /project-adopt intake — an adopted app's original source is a read-only
+# reference, never committed (see intake/README.md)
+intake/source/

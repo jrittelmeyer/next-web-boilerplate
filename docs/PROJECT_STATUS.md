@@ -59,16 +59,18 @@ _Last updated: 2026-07-18._
   **maintenance-only is the standing state again** (100 is a state to maintain — future
   passes re-run the currency checks). The TS7 cutover stays outside it (externally
   gated — stable-Next TS7 support; experimental in canary since 2026-07-10).
-- **ai-dev-kit (2026-07-17 → 18, ALL PROGRAMS COMPLETE):** the repo's agentic-dev
+- **ai-dev-kit (2026-07-17 → 19):** the repo's agentic-dev
   techniques are codified into a portable skill library — the standalone public
-  [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.5.0: 7
-  skills incl. the `/project-init` inception flow, advise-never-block hooks, the
+  [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.6.0: 8
+  skills incl. the two inception doors — `/project-init` from an idea,
+  `/project-adopt` from an existing codebase — advise-never-block hooks, the
   why-layer playbook + catalog deck, and a cross-platform installer with drift
   guard). This repo consumes the installed output — `.claude/skills/` and
   `.claude/hooks/ai-dev-kit/` are committed installer output; edit a clone of the
-  kit repo and re-install (`--dest <this repo>`), never the copies. Full program
-  history (the 3-step build, project-init + the "Potluck" live trial, U1/U2, the
-  B3 extraction) → [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
+  kit repo and re-install (`--dest <this repo>`), never the copies. Open
+  remainder: the project-adopt live trial (BACKLOG). Full program history (the
+  3-step build, project-init + the "Potluck" live trial, U1/U2, the B3
+  extraction) → [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
 
 ## Build progress
 
@@ -155,6 +157,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Maintenance · on-ramp U1+U2 | Trial follow-ups: `--slim` leftover-pointer tidy (retarget at the template repo / rewrite, per-line report, idempotent — scratch-verified twice) + pre-seeded `PRODUCT.md` context-index placeholder, uncommented by `/project-init` (kit 0.4.2). 2026-07-18. See [GETTING_STARTED.md](GETTING_STARTED.md#remove-what-you-dont-need) · AGENTS.md · ai-dev-kit CHANGELOG. |
 | Maintenance · B3 kit extraction | ai-dev-kit → standalone public repo [jrittelmeyer/ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.5.0; doc-audit 0.1.1 source-of-truth handoff; two-OS smoke CI; secret scanning/vuln alerts/CodeQL/protect-main hardening). This repo consumes the installed `.claude/` output and re-installs from a clone via `--dest`. 2026-07-18. See [CLAUDE.md](../CLAUDE.md) · BACKLOG shipped row. |
 | Maintenance · Renovate majors | 7 pending-approval majors triaged, approved & merged 2026-07-18 — actions/checkout v7 · setup-node v6 · upload-artifact v7 · codecov v7 · codeql-action v4 · pnpm/action-setup v6 · postgres 18 (compose + the 3 CI services + doc mentions in one merge), plus the required 18+ fix: compose volumes mount `/var/lib/postgresql` (18+ images refuse the old `/data` path — docker-library/postgres#1259; caught by the local fresh-volume proof, 18.4 healthy + migrations green). typescript-v7 held (TS7 gate, see BACKLOG). CI green, 0 open code-scanning alerts. |
+| Maintenance · project-adopt 1+2 | Brownfield inception door: `/project-adopt` (kit 0.6.0 — existing codebase → parity contract → honest theirs-vs-template disposition map → `docs/PRODUCT.md` + `docs/MIGRATION.md` → port backlog; adapter gains `init.migrationMap`/`init.sourceDir`) + template wiring (gitignored `intake/source/` drop + `intake/README.md`, GETTING_STARTED on-ramp section). Steps 1+2 2026-07-19; the live trial is the open step 3 (BACKLOG). See [GETTING_STARTED.md](GETTING_STARTED.md#starting-from-an-existing-app-run-project-adopt) · ai-dev-kit CHANGELOG 0.6.0. |
 
 ## Fresh project on-ramp (clone → build a real app)
 

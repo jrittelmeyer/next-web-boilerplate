@@ -60,6 +60,21 @@ integrations your product actually needs — then writes your product brief
 100 audit score, and starts the build pipeline. Everything below works exactly the
 same without it.
 
+## Starting from an existing app? Run `/project-adopt`
+
+The kit's second inception door, for when the product already exists — on any
+stack — and you want it on this foundation. Hand `/project-adopt` a path or git
+URL, or drop the code into `intake/source/` (gitignored; the original is a
+read-only reference, never committed). The skill surveys the app into a **parity
+contract** — routes, flows, data model, auth shape, design tokens, copy, SEO —
+maps every subsystem honestly (keep theirs, replace with the template's rigor,
+light up template features the app lacks), asks one batched round of clarifying
+questions, then writes `docs/PRODUCT.md` + `docs/MIGRATION.md` and regenerates
+`PROJECT_STATUS.md`/`BACKLOG.md` into a port program whose finish line is an app
+indistinguishable from the original to its users — running on this template,
+with the relevant integrations baked in. Where the original runs, every port
+step is verified against it side-by-side.
+
 ## Environment: what's required vs what lights up
 
 Only **two variables are required** — everything else is optional and the app
