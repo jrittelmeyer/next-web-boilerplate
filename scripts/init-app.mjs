@@ -251,13 +251,13 @@ const MENTION_PATCHES = [
   },
   {
     file: "docs/MAINTENANCE.md",
-    from: "The live list is [`BACKLOG.md`](BACKLOG.md). At release:",
-    to: "The live list is your backlog doc (recreated by `/project-init`, or keep your own). At release:",
+    from: "The live list is [`BACKLOG.md`](BACKLOG.md). Currently:",
+    to: "The live list is your backlog doc (recreated by `/project-init`, or keep your own). At the template snapshot:",
   },
   {
     file: "docs/MAINTENANCE.md",
-    from: "Past audit\nreports live in [`archive/`](archive/) as worked examples.",
-    to: `Past audit\nreports from the template era live in its\n[docs/archive](${TEMPLATE_REPO}/tree/main/docs/archive) as worked examples.`,
+    from: "Past audit reports live in [`archive/`](archive/) as worked\nexamples.",
+    to: `Past audit reports from the\ntemplate era live in its [docs/archive](${TEMPLATE_REPO}/tree/main/docs/archive)\nas worked examples.`,
   },
   {
     file: "docs/MAINTENANCE.md",

@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 // DB-backed integration tests (Step 29). These hit a REAL Postgres — no mocks —
 // so they live in `__tests__/integration/` and run ONLY via the `test:integration`
 // script (locally with the Docker container up, or the push-to-main E2E CI lane
-// which provisions a `postgres:16` service). There is deliberately no `test`
+// which provisions a `postgres:18` service). There is deliberately no `test`
 // script here, so the default `pnpm test` / `verify` CI lane stays DB-free and
 // fast — see TESTING.md.
 //

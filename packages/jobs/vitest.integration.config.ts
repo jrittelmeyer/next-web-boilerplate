@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 
 // DB-backed integration tests — they hit a REAL Postgres (no mocks), so they run
 // ONLY via `test:integration` (locally with the Docker container up, or the e2e CI
-// lane which provisions a postgres:16 service). They prove pg-boss can create its
+// lane which provisions a postgres:18 service). They prove pg-boss can create its
 // schema, enqueue, process a job, and dead-letter an exhausted one against this
 // Postgres. There is deliberately no `test` overlap: `pnpm test` / the verify lane
 // stay DB-free. See TESTING.md.
