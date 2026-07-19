@@ -107,7 +107,7 @@ docker/             — prod Dockerfile + docker-compose (dev + prod)
 | [API.md](docs/context/API.md) | tRPC procedures or Server Actions |
 | [STATE.md](docs/context/STATE.md) | Zustand stores, client vs server state, TanStack Query boundary |
 | [TESTING.md](docs/context/TESTING.md) | writing or running tests |
-| [UI.md](docs/context/UI.md) | components, layouts, Tailwind, shadcn |
+| [UI.md](docs/context/UI.md) | components, layouts, Tailwind, shadcn, adopting a brand/token sheet |
 | [I18N.md](docs/context/I18N.md) | translating copy, formatting dates/numbers/currency, adding a locale, locale routing/`[locale]`, per-locale SEO, the LanguageSwitcher |
 | [SERVICES.md](docs/context/SERVICES.md) | Stripe, Resend, Sentry, PostHog, Uploadthing, Meilisearch |
 | [SECURITY.md](docs/context/SECURITY.md) | security headers, CSP, allowlisting a new SaaS origin |

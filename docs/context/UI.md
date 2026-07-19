@@ -75,6 +75,78 @@ nonce-based CSP (SECURITY.md), pass the nonce to `next-themes` via its `nonce` p
 
 **Biome + Tailwind v4:** Biome's CSS parser rejects Tailwind's `@theme`/`@import "tailwindcss"` unless `css.parser.tailwindDirectives: true` is set in `biome.json` (already configured). Keep that enabled or `pnpm lint` will fail on any file using Tailwind at-rules.
 
+## Adopting an existing brand / token sheet
+
+Every real project eventually replaces the shadcn "slate" defaults with its own design
+system, and every `/project-adopt` port starts from one — the survey emits an extracted
+**token sheet** (palette · type · space · radius · breakpoints). The entire mapping lands
+in **one file**, `tooling/tailwind/base.css`, because apps and `@repo/ui` components only
+ever consume tokens (`bg-primary`, `border-input`, …), never raw values. If a rebrand has
+you editing `packages/ui/src/components/*`, a value bypassed the tokens — fix the token.
+
+A sheet in the shape the `/project-adopt` survey produces (values illustrative, shaped
+like the linkding adoption's):
+
+| Sheet entry | Extracted value |
+| --- | --- |
+| Brand accent | indigo `#4f46e5`, white text on it |
+| Canvas / text | white / near-black |
+| Subdued fill | one cool light gray |
+| Danger | red `#dc2626` |
+| Lines | light gray borders |
+| Type | Inter (UI) · system mono (code) |
+| Radius | 6px controls |
+| Breakpoints | framework defaults |
+
+Map it in five moves:
+
+1. **Palette → semantic slots (`:root`).** Assign *roles*, don't transcribe the palette:
+   the brand accent becomes `--primary` (+ `--primary-foreground` for text on it, and
+   usually `--ring` so focus rings are on-brand); canvas/text → `--background` /
+   `--foreground`; raised surfaces → `--card` / `--popover`; the subdued fill →
+   `--secondary` / `--muted` / `--accent` (slate keeps those three nearly identical —
+   keep that unless the sheet genuinely distinguishes them); danger → `--destructive`;
+   lines → `--border` / `--input`. Convert values to **oklch** to match the file — hex
+   is valid CSS, but oklch keeps the file uniform and makes derived shades (hover, dark
+   variants) perceptually predictable:
+
+   ```css
+   /* :root — from the sheet above */
+   --primary: oklch(0.511 0.262 276.97); /* brand indigo ≈ #4f46e5 */
+   --primary-foreground: oklch(0.985 0 0);
+   --ring: oklch(0.511 0.262 276.97);
+   ```
+
+2. **Author `.dark`, don't invert.** Dark `--background` is the brand hue at low
+   lightness (not pure black); `--primary` usually needs a **lighter** variant of the
+   brand color to hold contrast on dark surfaces; keep slate's translucent-white
+   `--border`/`--input` (`oklch(1 0 0 / 10%)`) unless the sheet ships real dark-mode
+   line colors. Adopted apps are often light-only — then `.dark` is an *authored
+   extension*: derive it from the brand hue and record it as an assumption in the
+   migration map.
+
+3. **Type.** Point `--font-sans`/`--font-mono` at the sheet's stacks in `@theme`. A real
+   webfont goes through the [`next/font` recipe below](#fonts-nextfont--opt-in-brand-font)
+   (`--font-brand` variable + `@theme inline`) — self-hosted, no CSP change.
+
+4. **Radius · space · breakpoints.** Set `--radius` once (`0.375rem` for this sheet's
+   6px) — the sm/md/lg/xl scale derives from it. Tailwind v4 derives the whole spacing
+   scale from a single `--spacing` (default `0.25rem`) — override it only if the sheet's
+   grid genuinely differs, and snap any ad-hoc pixel values to the scale rather than
+   minting one-off utilities. Breakpoints only when the design specifies them
+   (`@theme { --breakpoint-2xl: 90rem; }`); the defaults usually survive an adoption.
+
+5. **The satellite sets.** `--chart-1…5` are categorical — replace them with the brand's
+   data palette if it has one, keeping all five distinguishable in *both* themes. The
+   `--sidebar-*` family mirrors the main tokens by default; leave it tracking unless the
+   brand has a genuinely distinct nav surface.
+
+**Verify:** `pnpm storybook`, flip the theme toolbar — every primitive re-skins with zero
+component edits (that's the proof the mapping went through tokens); spot-check `--ring`
+focus visibility and `--destructive` contrast in both themes. If the visual lane is on,
+an intended token change rebases **both** platform baseline sets
+([Visual regression](#visual-regression-repoui-opt-in)).
+
 ## Fonts (`next/font` — opt-in brand font)
 
 The default is the **system font stack** — zero network cost, no layout shift, native on
