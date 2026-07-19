@@ -64,7 +64,10 @@ conclusions.
 - **Design system as shipped** — extract the real tokens (palette, type scale,
   spacing, radii, shadows, breakpoints, layout patterns), not impressions; parity
   lives or dies on these.
-- **Copy & locales** — all user-facing text, verbatim; locale coverage.
+- **Copy & locales** — enumerate the copy surface and bind it **verbatim by
+  reference** to the named source files (the retained source is the contract's
+  copy appendix — don't transcribe whole template trees into the map; spot-anchor
+  the key strings); locale coverage.
 - **Assets & SEO** — logos, fonts, images; meta/OG, sitemap, robots, structured
   data, redirects.
 
@@ -102,12 +105,16 @@ one line.
 ## 5. One batched question round
 
 Same convention as project-init: every open decision becomes a clarifying question
-with 2–4 concrete options and a recommendation, batched into **one round**. Cover
+with 2–4 concrete options and a recommendation, batched into **one round** — one
+presentation moment; where the asking UI caps questions per prompt, consecutive
+sets within that moment still count as the one round. Cover
 at minimum: the app name (if unknown), every ambiguous disposition, which light-up
 features to enable, the data/user migration reality, the port cut-line (everything
 vs core-flows-first), and the parity-evidence expectation wherever the reference
 grade is weak. Skipped answers → adopt the recommendation and **mark it as an
-assumption**. One round; a wrong assumption gets caught at the sign-off gate.
+assumption**; smaller calls resolved by recommendation without being asked get the
+same marking in the brief's decision log. One round; a wrong assumption gets
+caught at the sign-off gate.
 
 ## 6. Converge: the brief + the migration map
 
