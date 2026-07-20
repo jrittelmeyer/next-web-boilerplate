@@ -318,6 +318,11 @@ pnpm storybook                          # dev server → http://localhost:6006
 pnpm --filter @repo/ui build-storybook  # static export → packages/ui/storybook-static (gitignored)
 ```
 
+The gallery is also **browsable without cloning** — the static export is published to
+**GitHub Pages** ([live gallery](https://jrittelmeyer.github.io/next-web-boilerplate/))
+on every push that touches `packages/ui/`, via `.github/workflows/pages.yml`. See
+[DEPLOYMENT.md → Storybook on GitHub Pages](DEPLOYMENT.md#storybook-on-github-pages-component-gallery).
+
 - **Framework: `@storybook/react-vite`** (not `@storybook/nextjs`). `@repo/ui` is a
   standalone React library with **zero `next/*` imports** (it uses `next-themes`, a
   plain React context, and nothing else from Next) — so the lighter Vite framework is

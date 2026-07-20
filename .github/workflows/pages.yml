@@ -1,0 +1,90 @@
+name: Deploy Storybook to Pages
+
+# Publishes the @repo/ui component gallery (the already-built static Storybook) to
+# GitHub Pages so the primitives are clickable without running a server locally.
+# The build is deterministic and DB-free; nothing here is secret.
+#
+# Third-party actions are pinned to full commit SHAs (immutable — a moved tag can't
+# change what runs here); the version comment names the release each SHA belongs to.
+# These share the ci.yml / codeql.yml pins and the same Renovate digest preset
+# (.github/renovate.json), so they update under the same 7-day minimumReleaseAge gate.
+
+on:
+  push:
+    branches: [main]
+    # Only redeploy when the gallery (or this workflow) actually changes — the
+    # Storybook build reads solely from packages/ui, so a docs- or app-only push
+    # doesn't need to rebuild/redeploy the site.
+    paths:
+      - "packages/ui/**"
+      - ".github/workflows/pages.yml"
+  # Manual trigger — redeploy on demand from the Actions tab or `gh workflow run
+  # pages.yml` (also how the first deploy is kicked without waiting for a ui/ push).
+  workflow_dispatch:
+
+# Least-privilege token for a Pages deployment (GitHub's documented Pages perms):
+# read the repo, write the Pages site, mint the OIDC token deploy-pages verifies.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time, and never cancel an in-flight one — unlike CI,
+# cancelling mid-deploy can leave the published site half-updated. (No ref in the
+# group: main is the only branch that deploys, so all runs serialize.)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install pnpm
+        # The pnpm version itself comes from package.json "packageManager".
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Static Storybook → packages/ui/storybook-static. Every asset path in the
+      # output is relative (./assets/…), so the site serves correctly under the
+      # project Pages subpath (https://<owner>.github.io/<repo>/) with no base config.
+      - name: Build Storybook
+        run: pnpm --filter @repo/ui build-storybook
+
+      # Sets up Pages and, on the first run, enables it via the API (enablement:
+      # true) using this job's GITHUB_TOKEN — so no manual Settings → Pages toggle is
+      # needed. If org/enterprise policy blocks API enablement, flip Settings → Pages
+      # → Source: "GitHub Actions" once by hand and this step becomes a no-op.
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: packages/ui/storybook-static
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    # The deployment shows up on the repo's github-pages environment (with the live
+    # URL); deploy-pages returns that URL as an output.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

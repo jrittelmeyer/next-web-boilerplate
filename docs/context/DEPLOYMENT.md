@@ -662,6 +662,34 @@ repository variable is `"true"` (the `ENABLE_CODEQL` / `ENABLE_GHCR_PUBLISH` pat
 same way (`ENABLE_VISUAL`) but is **live in this repo** — A28 (2026-07-12) committed the
 Linux baselines and set the variable (see [UI.md](UI.md)).
 
+## Storybook on GitHub Pages (component gallery)
+
+`.github/workflows/pages.yml` publishes the `@repo/ui` **Storybook** gallery (the
+static export — see [UI.md → Component gallery](UI.md#component-gallery-storybook)) to
+**GitHub Pages**, so the shared primitives are browsable at
+**<https://jrittelmeyer.github.io/next-web-boilerplate/>** without cloning or running a
+server. Two jobs: **build** (`pnpm --filter @repo/ui build-storybook` →
+`packages/ui/storybook-static`, then `configure-pages` + `upload-pages-artifact`) and
+**deploy** (`deploy-pages` onto the `github-pages` environment). It runs on a **push to
+`main` that touches `packages/ui/**`** (or the workflow itself) and on
+**`workflow_dispatch`** — a docs- or app-only push doesn't rebuild the site.
+
+- **Least-privilege token** — `contents: read` · `pages: write` · `id-token: write`
+  (the OIDC token `deploy-pages` verifies); `concurrency: pages` with
+  `cancel-in-progress: false` so a deploy is never cancelled half-published.
+- **Self-enabling** — `configure-pages` is passed `enablement: true`, so the first run
+  turns Pages on via the API (no manual Settings toggle). If org/enterprise policy
+  blocks API enablement, set **Settings → Pages → Source: "GitHub Actions"** once by
+  hand and the input becomes a no-op.
+- **Subpath-safe** — the static export uses only relative asset paths, so it serves
+  correctly under the project `/<repo>/` subpath with no `base` config.
+- **Actions SHA-pinned** under the same shared Renovate digest preset as `ci.yml` /
+  `codeql.yml` (P1-5) — a moved upstream tag can't change what runs.
+- **Derived apps** — the workflow is generic (only the published URL differs). Pages is
+  free on **public** repos; on a **private** repo it needs a paid plan, so a private
+  fork can delete `pages.yml` (or leave it dormant — it just won't deploy until Pages is
+  available).
+
 ## Remote caching (Turborepo, opt-in)
 
 Turborepo caches each task's output keyed by a hash of its declared `inputs` +

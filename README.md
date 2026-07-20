@@ -93,6 +93,10 @@ pnpm clean        # per-package build artifacts (dist/.next) — NOT the Turbo c
 pnpm cache:prune  # evict oldest Turbo-cache entries to the size cap (default 20 GB)
 ```
 
+> Browse the shared UI primitives online — the
+> **[hosted Storybook gallery](https://jrittelmeyer.github.io/next-web-boilerplate/)**,
+> republished from `@repo/ui` on every change (no clone or server needed).
+
 ## Layout
 
 ```text
