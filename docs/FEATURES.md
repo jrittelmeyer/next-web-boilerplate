@@ -27,6 +27,24 @@ works end-to-end.
   focused context docs give a coding agent (or a new human teammate) exactly the
   context it needs per task, without loading everything at once.
 
+## See it
+
+The public landing (light **and** dark) and the gated app shell, captured from a real
+keyless run — the same two-env-var setup you get on `git clone`, no third-party keys:
+
+<table>
+  <tr>
+    <td width="50%"><img src="assets/landing-light.png" alt="Landing page in light mode"><br><sub>Landing · light</sub></td>
+    <td width="50%"><img src="assets/landing-dark.png" alt="Landing page in dark mode"><br><sub>Landing · dark</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/dashboard.png" alt="Signed-in dashboard shell"><br><sub>Signed-in dashboard shell</sub></td>
+    <td width="50%"><img src="assets/account.png" alt="Account profile and security settings"><br><sub>Account · profile &amp; security</sub></td>
+  </tr>
+</table>
+
+The shared UI primitives also have a live [Storybook gallery](https://jrittelmeyer.github.io/next-web-boilerplate/).
+
 ## Core platform
 
 | What | Choice |

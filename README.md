@@ -14,6 +14,26 @@ first month of wiring up a serious app.
 > and why: [`docs/FEATURES.md`](docs/FEATURES.md). The dated proof:
 > [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
+## Screenshots
+
+What you get on `git clone` — a themed public landing (light **and** dark) and the
+gated app shell — captured from a real keyless run (just the two required env vars,
+**no third-party keys**). Dark mode is class-based (`next-themes`, no flash).
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/landing-light.png" alt="Landing page in light mode"><br><sub>Landing · light</sub></td>
+    <td width="50%"><img src="docs/assets/landing-dark.png" alt="Landing page in dark mode"><br><sub>Landing · dark</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/dashboard.png" alt="Signed-in dashboard shell"><br><sub>Signed-in dashboard shell</sub></td>
+    <td width="50%"><img src="docs/assets/account.png" alt="Account profile and security settings"><br><sub>Account · profile &amp; security</sub></td>
+  </tr>
+</table>
+
+> Browse the shared UI primitives live in the
+> [hosted Storybook gallery](https://jrittelmeyer.github.io/next-web-boilerplate/).
+
 ## Stack
 
 | Layer | Choice |
