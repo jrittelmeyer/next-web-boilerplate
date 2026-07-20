@@ -9,6 +9,22 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Weekly heartbeat on main so the full pipeline (e2e / docker-image / scan)
+  # keeps running between merges. In maintenance mode a push is otherwise the only
+  # thing exercising CI, and "green" can rot silently against world-drift
+  # (base-image pulls, registry behavior, provider-facing flows). CodeQL already
+  # crons Mondays 04:30 UTC (codeql.yml); this runs Thursdays 04:30 to spread
+  # coverage across the week so the two heavy workflows don't overlap. Renovate +
+  # commit activity keeps the repo active, so GitHub's 60-day inactivity
+  # auto-disable of scheduled workflows never trips. (Schedule/dispatch runs
+  # exercise every lane exactly as a push to main does — only the opt-in GHCR
+  # publish/attest steps, which are `push`-gated, stay skipped.)
+  schedule:
+    - cron: "30 4 * * 4"
+  # Manual trigger — run the full pipeline on demand from the Actions tab or
+  # `gh workflow run ci.yml` (also how this heartbeat is verified without waiting
+  # for the cron).
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

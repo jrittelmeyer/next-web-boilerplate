@@ -498,6 +498,19 @@ All workflow actions are **pinned to full commit SHAs** (P1-5) with the release
 version in a trailing comment — a moved/retagged upstream ref can't change what
 runs in CI; Renovate maintains the digests (see the Renovate section below).
 
+**Triggers.** Beyond pull requests and pushes to `main`, `ci.yml` also runs on a
+**weekly `schedule`** (`cron: "30 4 * * 4"` — Thursdays 04:30 UTC) and on
+**`workflow_dispatch`** (a manual run from the Actions tab or `gh workflow run
+ci.yml`). The schedule is a **heartbeat**: in maintenance mode a push is otherwise
+the only thing exercising CI, so a weekly full-pipeline run keeps "green" honest
+against world-drift (base-image pulls, registry behavior, provider-facing flows)
+between merges. It's offset from CodeQL's own weekly cron (Mondays 04:30 UTC) so the
+two heavy workflows don't overlap, and Renovate + commit activity keeps the repo
+active enough that GitHub's 60-day inactivity auto-disable of scheduled workflows
+never trips. Schedule/dispatch runs exercise every lane exactly as a push to `main`
+does — only the opt-in GHCR publish/attest steps, which are `push`-gated, stay
+skipped.
+
 **`verify`** — runs on every PR and push:
 
 1. Install pnpm (`pnpm/action-setup`, version from `packageManager`) + deps (`--frozen-lockfile`).
