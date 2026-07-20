@@ -143,6 +143,55 @@ If you cloned with git history (not degit / "Use this template"): `Remove-Item -
   marks which routes are throwaway demos, which are real app shell, and which is the
   copy-me template.
 
+## Staying current with the template
+
+`degit` and GitHub's "Use this template" give you a **history-less** copy — a clean
+slate, but also no shared git ancestry with this repo, so you can't just `git pull`
+later improvements. Milestones are tagged (`v1.0.0`, `v1.1.0`, …) with notes on the
+[Releases page](https://github.com/jrittelmeyer/next-web-boilerplate/releases) and in
+[`CHANGELOG.md`](../CHANGELOG.md), so you can see what changed and pull in what you
+want. Add the template as a second remote to diff and cherry-pick:
+
+```bash
+git remote add template https://github.com/jrittelmeyer/next-web-boilerplate.git
+git fetch template --tags
+git log --oneline v1.0.0..template/main      # what's landed since you started
+```
+
+**Don't `git merge template/main`.** Your copy shares no history with the template, so
+a plain merge is refused (*"refusing to merge unrelated histories"*), and
+`--allow-unrelated-histories` treats the whole delta as add/add conflicts — a fresh
+degit of `v1.0.0` merging the current tip produced **143 conflicting files**. That's
+the one-way-copy tradeoff, not a bug. Two paths that actually work:
+
+- **Cherry-pick the changes you want** (recommended) — it applies patches, so it
+  ignores the unrelated history and conflicts stay localized to files *you've* also
+  edited. In the same dry-run, cherry-picking the latest commit auto-merged the
+  workflow + context docs cleanly; the only conflicts were the template's own journey
+  docs — which `pnpm init-app --slim` removes from a derived app anyway.
+  ```bash
+  git cherry-pick -x <sha>            # -x records the source commit
+  ```
+- **Inspect a file and port by hand** — for a targeted update:
+  ```bash
+  git diff HEAD template/main -- apps/web/src/lib/csp.ts
+  ```
+
+**Conflict zones to expect**, whichever path you take:
+
+- `pnpm-lock.yaml` — never hand-resolve; take either side, then run `pnpm install` to
+  regenerate it from the merged `package.json`s.
+- `.env.example` — merge additively (keep your keys, add the template's new ones).
+- The template's own journey docs (`PROJECT_STATUS.md`, `BACKLOG.md`, `docs/archive/`,
+  `docs/plain-english-guide/`, `CHANGELOG.md`) — and `PRODUCT.md`/`MIGRATION.md` if
+  `/project-init` or `/project-adopt` regenerated them — are yours now; discard the
+  template's side of those conflicts.
+
+If tracking the template long-term matters more than a clean slate, **`git clone` it
+instead of `degit`** and develop on a branch — then your app descends from the
+template's history and ordinary merges work (at the cost of carrying this repo's build
+history).
+
 ## Build your first feature
 
 The `posts` entity is the **copy-me template**: schema + indexes

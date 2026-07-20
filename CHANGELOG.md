@@ -3,9 +3,36 @@
 Notable changes to this project. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); since this is a template
 (not a versioned library), `main` is always the supported version and entries mark
-milestones rather than package releases.
+milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
+`v1.1.0`, …) with a matching
+[GitHub Release](https://github.com/jrittelmeyer/next-web-boilerplate/releases).
 
-## 2026-07-18 — PostgreSQL 18
+## [1.1.0] — 2026-07-20
+
+Everything shipped on `main` since the initial release — all additive, verified
+end-to-end, and graded **100.0/100** by the project audit (see
+[`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)).
+
+### Added
+
+- **Path-to-100 depth** — typed field errors on writes, hydration-safe Zustand
+  `persist`, admin-gated search reindex, a jobs dead-letter queue, keyless uploads
+  e2e + a prod-callback tunnel proof, magic-link sign-in, full-surface en/es i18n
+  coverage, email bounce/complaint suppression, opt-in OpenTelemetry export,
+  `CSP_MODE=nonce` as a first-class build mode, and per-organization billing.
+- **ai-dev-kit** — the repo's agentic-dev workflow, extracted to the standalone
+  [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) skill library and
+  preinstalled here: two inception doors (`/project-init` from an idea,
+  `/project-adopt` from an existing codebase), registry-verifying `dep-check` +
+  `live-verify` skills, and advise-never-block hooks.
+- **`pnpm init-app --slim`** — offers to strip the template's own history/marketing
+  docs from a derived app (see
+  [Getting started → Remove what you don't need](docs/GETTING_STARTED.md#remove-what-you-dont-need)).
+- **Scheduled CI heartbeat** — `ci.yml` now runs weekly (`schedule`) and on
+  `workflow_dispatch`, so the full pipeline keeps exercising world-facing surfaces
+  between merges.
+- **Staying-current recipe** — [Getting started](docs/GETTING_STARTED.md#staying-current-with-the-template)
+  documents pulling later template improvements into a derived (degit) app.
 
 ### Changed
 
@@ -65,3 +92,6 @@ against real services before release ([`docs/VERIFICATION.md`](docs/VERIFICATION
   proven Fly.io runbook, Vercel/Railway/self-host paths.
 - **Docs** — `FEATURES` (what + why), `GETTING_STARTED`, `MAINTENANCE`, `AGENTS.md`
   agent onboarding, 14 per-area context docs, decision log, verification checklist.
+
+[1.1.0]: https://github.com/jrittelmeyer/next-web-boilerplate/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/jrittelmeyer/next-web-boilerplate/releases/tag/v1.0.0
