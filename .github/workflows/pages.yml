@@ -61,14 +61,15 @@ jobs:
       - name: Build Storybook
         run: pnpm --filter @repo/ui build-storybook
 
-      # Sets up Pages and, on the first run, enables it via the API (enablement:
-      # true) using this job's GITHUB_TOKEN — so no manual Settings → Pages toggle is
-      # needed. If org/enterprise policy blocks API enablement, flip Settings → Pages
-      # → Source: "GitHub Actions" once by hand and this step becomes a no-op.
+      # Reads the repo's Pages config (base path / URL) for the deploy below. Pages
+      # must be enabled ONCE out-of-band — the Actions GITHUB_TOKEN can't create the
+      # site ("Resource not accessible by integration"), so `enablement: true` can't
+      # bootstrap it. Enable it once via Settings → Pages → Source: "GitHub Actions",
+      # or with a user/PAT token:
+      #   gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow
+      # After that this step (and every deploy) just works. See DEPLOYMENT.md.
       - name: Configure Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        with:
-          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

@@ -677,10 +677,12 @@ server. Two jobs: **build** (`pnpm --filter @repo/ui build-storybook` →
 - **Least-privilege token** — `contents: read` · `pages: write` · `id-token: write`
   (the OIDC token `deploy-pages` verifies); `concurrency: pages` with
   `cancel-in-progress: false` so a deploy is never cancelled half-published.
-- **Self-enabling** — `configure-pages` is passed `enablement: true`, so the first run
-  turns Pages on via the API (no manual Settings toggle). If org/enterprise policy
-  blocks API enablement, set **Settings → Pages → Source: "GitHub Actions"** once by
-  hand and the input becomes a no-op.
+- **Enable Pages once (out-of-band)** — the Actions `GITHUB_TOKEN` can't *create* the
+  Pages site (it returns `Resource not accessible by integration`), so this is a
+  one-time setup, not something the workflow bootstraps. Either flip **Settings → Pages
+  → Source: "GitHub Actions"**, or run it with a user/PAT token:
+  `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`. After that every
+  push/dispatch deploys with no further clicks. (Done for this repo 2026-07-20.)
 - **Subpath-safe** — the static export uses only relative asset paths, so it serves
   correctly under the project `/<repo>/` subpath with no `base` config.
 - **Actions SHA-pinned** under the same shared Renovate digest preset as `ci.yml` /
