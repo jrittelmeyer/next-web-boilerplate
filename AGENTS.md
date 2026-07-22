@@ -7,6 +7,10 @@ file before working in that area.
 > **Status:** feature-complete — the **path-to-100 program** shipped all 11 rows and
 > was **verified at 100.0/100** by the eighth audit pass (2026-07-17;
 > [docs/archive/PROJECT_AUDIT_2026-07-17.md](docs/archive/PROJECT_AUDIT_2026-07-17.md)).
+> The tenth pass (2026-07-22) scored **99.65** — no code regressed, but four
+> maintenance gaps opened, led by Renovate's scheduled update lane never having
+> delivered a PR
+> ([docs/archive/PROJECT_AUDIT_2026-07-22.md](docs/archive/PROJECT_AUDIT_2026-07-22.md)).
 > **Maintenance mode ([docs/MAINTENANCE.md](docs/MAINTENANCE.md)) is the standing
 > state.** Every integration is built and verified end-to-end — see
 > [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for exactly what's in place and

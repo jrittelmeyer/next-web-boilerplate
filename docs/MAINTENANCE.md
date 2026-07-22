@@ -89,10 +89,15 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
 
   The `auditConfig.ignoreGhsas` allowlist emptied the same day — `pnpm audit` now
   guards these overrides live (red if one ever regresses).
-- **More security overrides** (added 2026-07-22) — three transitive-only Dependabot
-  alerts, newly disclosed the same week (`pnpm audit` queries live advisory data —
-  nothing in the lockfile changed to surface these; the prior day's CI was fully
-  green). Remove each when its upstream moves, then `pnpm install` + the full gate:
+- **More security overrides** (added 2026-07-22) — three transitive-only advisories,
+  newly disclosed the same week (`pnpm audit` queries live advisory data — nothing in
+  the lockfile changed to surface these; the prior day's CI was fully green). **Only
+  `brace-expansion` was a Dependabot alert**; `sharp`, `dompurify`, and `fast-uri`
+  were caught by the CI `pnpm audit` lane and never appeared in Dependabot — so
+  **`pnpm audit` is the authoritative gate here and Dependabot the supplementary
+  signal** (checking Dependabot alone would have missed a HIGH on `sharp`, which sits
+  in Next's image-optimization path). Remove each when its upstream moves, then
+  `pnpm install` + the full gate:
   - `brace-expansion: 5.0.7` → remove once a routine bump naturally carries the
     lockfile past 5.0.7 (already in-range for **minimatch**'s own `^5.0.5`).
   - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile

@@ -32,14 +32,17 @@ _Last updated: 2026-07-20._
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row is SHIPPED (2026-07-07 → 13)** — including the
-  A23–A31 polish rows, A32, and A13. Nine `/project-audit` passes graded the repo
-  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0/100** (2026-07-08 ·
-  07-12 · 07-12B · 07-14 · 07-14B post-launch · 07-15 · 07-15B · **07-17, the
-  path-to-100 verification** · **07-18, the first maintenance-mode pass** — the 100
-  held through the Renovate major wave + the ai-dev-kit/doc window; alerts APIs 0
-  open, TS7 gate + all three override conditions re-checked standing, one comment-nit
-  backlog row M-1; reports in [docs/archive/](archive/), latest:
-  [PROJECT_AUDIT_2026-07-18.md](archive/PROJECT_AUDIT_2026-07-18.md)).
+  A23–A31 polish rows, A32, and A13. Ten `/project-audit` passes graded the repo
+  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0 → 99.65/100**
+  (2026-07-08 · 07-12 · 07-12B · 07-14 · 07-14B post-launch · 07-15 · 07-15B ·
+  **07-17, the path-to-100 verification** · 07-18, the first maintenance-mode pass ·
+  **07-22, the tenth pass — 99.65, the first drop, and none of it code**: product
+  code is byte-identical bar the M-1 comment fix, but Renovate's scheduled lane has
+  **never delivered a PR** (37 updates stalled behind a 6-hour weekly window), the
+  CHANGELOG records **no** security remediation, and the `sharp` override rides an
+  untested `/_next/image` path. Four B1/B2 backlog rows; reports in
+  [docs/archive/](archive/), latest:
+  [PROJECT_AUDIT_2026-07-22.md](archive/PROJECT_AUDIT_2026-07-22.md)).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) — rows
   at the bottom of the table below.
@@ -167,6 +170,7 @@ here — that's the append-log this table has replaced, six times now — most r
 | Maintenance · Storybook on Pages | Published the `@repo/ui` **Storybook** component gallery to **GitHub Pages** — new `.github/workflows/pages.yml` (build → `configure-pages` / `upload-pages-artifact` / `deploy-pages`, all SHA-pinned; subpath-safe relative assets), on push to `main` touching `packages/ui/**` + `workflow_dispatch`. Pages enabled once via the API (the Actions `GITHUB_TOKEN` can't create the site — one-time out-of-band setup). Live at <https://jrittelmeyer.github.io/next-web-boilerplate/>; linked from README + UI.md. This is the visual-surface backlog row's **gallery half**; the README screenshot tour (row below) is the other half — together they close the row. 2026-07-20. See [.github/workflows/pages.yml](../.github/workflows/pages.yml) · [context/DEPLOYMENT.md](context/DEPLOYMENT.md#storybook-on-github-pages-component-gallery). |
 | Maintenance · tagged releases | Cut the repo's first git tags + GitHub Releases (none existed despite a CHANGELOG `[1.0.0]`): **v1.0.0** on the launch commit `f224e98` + **v1.1.0** on the current tip, notes from a new CHANGELOG `[1.1.0]` milestone rollup (path-to-100 → 100/100, ai-dev-kit + both inception doors, PG-18, CI heartbeat) with compare links. Plus a GETTING_STARTED "Staying current with the template" recipe — remote + fetch + **cherry-pick** (naive merge refused; `--allow-unrelated-histories` = 143 conflicts, both dry-run-proven), honest conflict zones. 2026-07-20. See [CHANGELOG.md](../CHANGELOG.md) · [GETTING_STARTED.md](GETTING_STARTED.md#staying-current-with-the-template). |
 | Maintenance · B3 screenshot tour | The README **screenshot tour** — 4 retina PNGs captured from a real **keyless** prod run (landing light+dark, signed-in dashboard, `/account`) via a throwaway Playwright script against a fresh `:3100` build, committed to `docs/assets/` and wired into a `## Screenshots` section high in the README (right after the status blurb) + a "See it" strip in FEATURES.md. Shots use the two-env-var-only surface — no third-party keys, no consent banner. **Closes the B3 visual-surface row** (gallery + tour both shipped). 2026-07-20. See [README.md](../README.md#screenshots) · [docs/FEATURES.md](FEATURES.md). |
+| Maintenance · advisories #2 | **4 transitive-only advisories remediated 2026-07-22** via pnpm `overrides:` (`brace-expansion: 5.0.7` HIGH via minimatch/glob build-tooling paths · `dompurify: 3.4.12` via posthog-js's sanitizer · `sharp: 0.35.3` HIGH, bypassing next's own exact `^0.34.5` pin which excluded the libvips CVE fix) — none had an upstream fix at triage time. **Only `brace-expansion` was a Dependabot alert** — the other three surfaced in the CI `pnpm audit` lane, which is the authoritative gate here (2026-07-22 audit, F3). `fast-uri`'s fix (3.1.4, published 2026-07-19) is deliberately deferred via a dated `auditConfig.ignoreGhsas` pair until it clears the 7-day age gate (~2026-07-26); build-tool-only path, zero request-handling exposure. Removal conditions → [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done). |
 
 ## Fresh project on-ramp (clone → build a real app)
 

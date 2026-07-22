@@ -5,8 +5,8 @@
 > **not** kept here: the compact record is the build-progress table in
 > [PROJECT_STATUS.md](PROJECT_STATUS.md), and the full per-item prose is in
 > [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md). The audits that seeded past
-> backlogs live in [docs/archive/](archive/) (Phase B + the nine `/project-audit`
-> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0/100). Everything below
+> backlogs live in [docs/archive/](archive/) (Phase B + the ten `/project-audit`
+> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0 → 99.65/100). Everything below
 > goes plan → sign-off → build. Don't reintroduce shipped-item entries here.
 
 ## Watch (no action now)
@@ -38,20 +38,24 @@
   [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md)); **RESUMED
   2026-07-17** — the program shipped all 11 rows and the eighth scoring pass verified it
   at **100.0/100** ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)).
-  The scheduled Renovate batch (~36 minors) has **not opened as of 2026-07-22** —
-  the Dependency Dashboard (issue #1) still shows every item "Awaiting Schedule";
-  triage per PR once they land (`gh issue view 1` to re-check). The 7 approved
-  majors merged 2026-07-18; typescript-v7 stays held per the TS7 gate.
+  The scheduled Renovate batch has **not opened as of 2026-07-22**, and the
+  2026-07-22 audit found it is **blocked, not waiting** — the scheduled lane has
+  never produced a PR (0 `renovate/*` branches ever; all 7 merged PRs came from
+  manual dashboard-approval clicks). Fix is the B1 row below. The 7 approved
+  majors merged 2026-07-18; typescript-v7 stays held per the TS7 gate, and
+  `actions/setup-node v7` is a new pending-approval major.
 - **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is intermittently flaky
   (absorbed by `retries:2`, but it twice burned 2 of 3 CI attempts). **Not a code bug** — a
   fragile signup+redirect timing flow on modest runners. Harden **only if it ever turns a lane
   red**: bump that test's timeout, or wait on a network/cookie signal rather than only the URL.
 - **Temporary security overrides** — pnpm `overrides:` in `pnpm-workspace.yaml`
-  remediating transitive-only Dependabot alerts: `effect` 3.21.4 · `postcss` 8.5.15 ·
-  `esbuild` 0.25.12 (2026-07-15, no upstream fix) and `brace-expansion` 5.0.7 ·
-  `dompurify` 3.4.12 · `sharp` 0.35.3 (2026-07-22, newly disclosed that week). Plus a
-  temporary `auditConfig.ignoreGhsas` pair for `fast-uri` (fix too fresh for the age
-  gate, ~2026-07-26). Remove each when its condition clears — per-package removal
+  remediating transitive-only advisories: `effect` 3.21.4 · `postcss` 8.5.15 ·
+  `esbuild` 0.25.12 (2026-07-15, Dependabot alerts #1–#3, no upstream fix) and
+  `brace-expansion` 5.0.7 · `dompurify` 3.4.12 · `sharp` 0.35.3 (2026-07-22, newly
+  disclosed that week — **only `brace-expansion` was a Dependabot alert; the other
+  two plus `fast-uri` came from the CI `pnpm audit` lane**). Plus a temporary
+  `auditConfig.ignoreGhsas` pair for `fast-uri` (fix too fresh for the age gate,
+  ~2026-07-26). Remove each when its condition clears — per-package removal
   conditions in [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **Ship a real derived product end-to-end** (intent-level driver, owner-driven) — a real
   app built to completion on the template is the strongest validation of the
@@ -76,12 +80,18 @@
 > at 100.0/100 by the 2026-07-17 scoring pass**
 > ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)). The
 > **TypeScript 7 cutover** stays outside the program (externally gated, costs no
-> points; see Watch). Open row: the TS7 cutover.
+> points; see Watch). The 2026-07-22 pass scored **99.65** — the first drop since,
+> and none of it code: see the four new rows below
+> ([archive/PROJECT_AUDIT_2026-07-22.md](archive/PROJECT_AUDIT_2026-07-22.md)).
 
 ### Open rows
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
+| B1 | Tooling / deps | **Widen the Renovate schedule so the batch can actually land** — replace `"schedule": ["before 6am on monday"]` with a full-day window (e.g. `["on monday"]`), add an explicit `"timezone"`, and consider raising `prHourlyLimit`; confirm on the next window that PRs actually open | [.github/renovate.json](../.github/renovate.json) · [MAINTENANCE.md](MAINTENANCE.md) | **Highest-value open row.** The scheduled lane has produced **0 PRs ever** — 0 `renovate/*` branches on the remote, all 7 merged PRs created by manual dashboard-approval clicks, and the one elapsed Monday window (2026-07-20 00:00–06:00 UTC) yielded nothing despite 37 ready updates. A 6-hour UTC window requires Mend's hosted run cadence to intersect it; runs outside it only refresh the dashboard. Three stalled updates (`postcss`→8.5.19, `esbuild`→0.28.1, `effect`→3.22.0) are exactly the bumps that retire the temporary overrides. Every downstream copy inherits this config. Detail → [archive/PROJECT_AUDIT_2026-07-22.md](archive/PROJECT_AUDIT_2026-07-22.md) F1 |
+| B1 | Docs / release | **Record the security remediations in CHANGELOG** — add the 2026-07-15 and 2026-07-22 override batches to `[Unreleased]`, flagging that `sharp` is forced past Next's own `^0.34.5` pin on a runtime path | [CHANGELOG.md](../CHANGELOG.md) | The CHANGELOG has **zero** mentions of any security remediation, while the same window's Storybook/screenshot changes are logged. Consumers whose documented update path is cherry-picking template commits have no record of the only security-relevant changes. Detail → audit F2 |
+| B1 | Docs accuracy | **Relabel the non-Dependabot advisories in `pnpm-workspace.yaml`** — the comment header still says "Dependabot remediation (2026-07-22)"; only `brace-expansion` was a Dependabot alert | pnpm-workspace.yaml | Doc-side labels (MAINTENANCE.md, BACKLOG) fixed in the 2026-07-22 audit pass; the config-file comment rides the next code touch (M-1 precedent). The mislabel misdirects the verification method — Dependabot alone would have missed a HIGH on `sharp`. Detail → audit F3 |
+| B2 | Uploads / testing | **Cover the image-optimization path** — assert `/_next/image` returns a transformed response (keyless, against a local asset) | apps/web/e2e · [SERVICES.md](context/SERVICES.md) | `sharp: 0.35.3` overrides Next's exact `^0.34.5` on a path the app really uses (`uploads-list.tsx` → `next/image` → `/_next/image`), and **no test touches images** — green CI proves install + build, not that the optimizer still transforms. Needs a keyless-safe fixture image. Detail → audit F4 |
 | B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
 | B1 | On-ramp / kit | **Intake-drop convention for `/project-init`** — template half: seed a committed `docs/intake/` (README: drop planning docs here → run `/project-init`) + a GETTING_STARTED sentence + init-app kept-list mention; kit half: `init.intakeDir` adapter field (default `docs/intake/`), intake enumeration in project-init §1, raw docs → `docs/archive/product-intake/` in the inception commit after brief sign-off (prevents a second source of truth beside `PRODUCT.md`) | [GETTING_STARTED.md](GETTING_STARTED.md#starting-from-an-idea-run-project-init) | Direction owner-approved 2026-07-18; **build after the first real derived-project inception run (in flight) supplies lessons.** Kit half edits an ai-dev-kit clone → re-install (`--dest`), never the installed copies. Verified: init-app `--slim`'s delete list doesn't touch `docs/intake/`. Sibling convention shipped 2026-07-19: `intake/source/` (gitignored **code** drop for `/project-adopt`) stays separate — committed planning docs vs never-committed source. Plan → sign-off before building. |
 | B3 | Docs / positioning | **README / tagline reframe around the agent-native workflow** (OWNER-DIRECTED) — lead with the real differentiator: the context-doc system + working agreements + verification culture + ai-dev-kit's two inception doors, not the wiring | README.md · AGENTS.md | Dozens of starters have the wiring; nothing else has the operating system around it, and today it's buried in AGENTS.md / the docs. This is framing/marketing judgment — needs an owner decision, not a mechanical build. Pairs with the visual surface + the derived-product proof. |
