@@ -7,6 +7,20 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 `v1.1.0`, …) with a matching
 [GitHub Release](https://github.com/jrittelmeyer/next-web-boilerplate/releases).
 
+## [Unreleased]
+
+Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
+
+### Added
+
+- **Hosted Storybook component gallery** — `@repo/ui`'s Storybook publishes to
+  GitHub Pages on every change touching `packages/ui/**` (new
+  `.github/workflows/pages.yml`), linked from the README and
+  [`context/DEPLOYMENT.md`](docs/context/DEPLOYMENT.md#storybook-on-github-pages-component-gallery).
+- **README screenshot tour** — four keyless, real-build screenshots (landing
+  light/dark, signed-in dashboard, `/account`) in a new README `## Screenshots`
+  section and a "See it" strip in [`FEATURES.md`](docs/FEATURES.md).
+
 ## [1.1.0] — 2026-07-20
 
 Everything shipped on `main` since the initial release — all additive, verified

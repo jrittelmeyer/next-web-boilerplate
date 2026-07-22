@@ -91,13 +91,14 @@ in any browser.
 > real services, every architectural decision is recorded with its rationale, and
 > the whole repository is structured so that AI coding assistants can work on it as
 > effectively as human engineers — which is also how it was built, under human
-> direction and review, to a quality score of 100 out of 100 across eight
+> direction and review, to a quality score of 100 out of 100 across nine
 > increasingly demanding audits.
 
 ---
 
-*Current as of 2026-07-18 (repo commit `28ab3b4` — the verified 100/100 state is
-being maintained; since the last stamp, the agent skill set described in
-[Chapter 11](11-built-with-ai-agents.md) became the standalone open-source
-[ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) project, and routine
-upkeep moved the local database to PostgreSQL 18).*
+*Current as of 2026-07-22 (repo commit `90c647a` — the verified 100/100 state is
+being maintained, reconfirmed by a ninth audit pass the same week; since the last
+stamp, a second "inception door," `/project-adopt` (migrating an existing codebase
+onto this foundation), shipped and completed its own live trial, the repository
+cut its first tagged releases (`v1.0.0`, `v1.1.0`), and the project gained a public
+face: a hosted Storybook component gallery and a screenshot tour in the README).*

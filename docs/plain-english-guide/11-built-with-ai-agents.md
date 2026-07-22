@@ -131,16 +131,22 @@ Three more mechanisms, briefly, because they show how mature this practice has
 become:
 
 - **Skills** — reusable, checked-in procedures the agent can invoke by name
-  (they live in the repository like code). This repo ships seven: a
+  (they live in the repository like code). This repo ships eight: a
   *checkpoint* skill (commit and push work safely at each step boundary), a
   *project-audit* skill (the deep scoring audits from
   [Chapter 1](01-the-big-picture.md)), a *doc-audit* skill (the drift-hunting
   described above), a machine-hygiene (*tidy*) skill, a dependency
-  version-checker, a live-verification routine, and a *project-init* skill
-  that interviews you about a new product idea and turns it into a researched
-  build plan. Think of them as standard operating procedures — the difference
-  between an organization that has process and one that has habits. And in
-  July 2026 the whole set graduated into its own open-source project:
+  version-checker, a live-verification routine, a *project-init* skill that
+  interviews you about a new product idea and turns it into a researched build
+  plan, and a *project-adopt* skill that runs the same discovery-and-plan
+  process in reverse — pointed at an *existing* codebase, it surveys what's
+  there, maps it honestly against this foundation (what to keep, what this
+  template already does better), and produces a migration plan instead of a
+  from-scratch one. Two doors into the same disciplined process, depending on
+  whether you're starting fresh or migrating something that already runs.
+  Think of them as standard operating procedures — the difference between an
+  organization that has process and one that has habits. And in July 2026 the
+  whole set graduated into its own open-source project:
   [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit), a portable library
   of these procedures that any project can install. The process that built
   this repository is now itself a published, reusable product.
@@ -159,7 +165,7 @@ become:
 
 ## The audit loop: AI checking AI, with receipts
 
-The quality scores from [Chapter 1](01-the-big-picture.md) (eight passes,
+The quality scores from [Chapter 1](01-the-big-picture.md) (nine passes,
 93 → 100, against a "best imaginable starter kit" bar) come from the audit
 skill above: a full sweep that re-verifies documentation claims against actual
 code, scores every feature area, and emits a prioritized backlog — which was
@@ -171,12 +177,15 @@ to *re-argue its own rulings*, one by one — and every single one fell. An
 eleven-item closing program shipped through the same sign-off loop, and the
 eighth audit — which trusts nothing, re-checking each claimed fix in the code
 itself — scored it 100, noting explicitly that 100 is a state future audits
-must re-earn, not a finish line. Yes, it's the same AI tooling grading
-its own homework — [Chapter 1](01-the-big-picture.md) flags that honestly — but
-each pass is *evidence-based* (claims checked against code, not vibes), the
-bar was designed to be harsh, and the found-gaps-then-fixed-them trail is
-public. It's the software equivalent of publishing your inspection reports along
-with the house.
+must re-earn, not a finish line. Days later, once the project had gone back to
+ordinary upkeep (a dependency wave, new tooling installed), a ninth pass
+re-checked everything from scratch and held the same 100 — proof the score
+survives real change, not just the moment it was earned. Yes, it's the same AI
+tooling grading its own homework — [Chapter 1](01-the-big-picture.md) flags
+that honestly — but each pass is *evidence-based* (claims checked against
+code, not vibes), the bar was designed to be harsh, and the
+found-gaps-then-fixed-them trail is public. It's the software equivalent of
+publishing your inspection reports along with the house.
 
 ## What to take away
 

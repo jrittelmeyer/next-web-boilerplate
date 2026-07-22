@@ -117,12 +117,12 @@ new-employee onboarding a project can have. The same pages serve both.
 
 ## How good is it, really? (The audit trail)
 
-Quality claims are cheap, so this project measures itself. Eight separate audit
+Quality claims are cheap, so this project measures itself. Nine separate audit
 passes were run against a deliberately harsh standard — "how does this compare to
 the best available starter kit imaginable?" — scoring every feature area out of
 100. The scores across the audits ran **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 →
-99.35 → 100**, with each gap found feeding a to-do list that was then worked to
-completion. The audit reports themselves are preserved in the repository.
+99.35 → 100 → 100**, with each gap found feeding a to-do list that was then worked
+to completion. The audit reports themselves are preserved in the repository.
 
 Two honest footnotes, because credibility matters more than a round number:
 
@@ -138,7 +138,11 @@ Two honest footnotes, because credibility matters more than a round number:
   2026, when the eighth audit independently re-verified each item in the code and
   scored 100. The project treats that score as **a state to maintain, not a
   trophy**: every future audit re-checks it against the moving "best available
-  today" bar and can take points back.
+  today" bar and can take points back. Proof that isn't just talk: a ninth pass,
+  run days later once the project had settled back into ordinary maintenance (a
+  dependency wave, new tooling installed), re-checked everything from scratch and
+  held the same 100 — the score surviving a moving target, not just the day it
+  was set.
 
 The project is **feature-complete**: the "path to 100" effort is finished and
 verified, nothing more is being added without a demonstrated need, and the
