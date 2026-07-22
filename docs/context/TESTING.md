@@ -283,10 +283,19 @@ test("home page renders the boilerplate landing", async ({ page }) => {
 });
 ```
 
-Every spec except the DB-free `home.spec.ts`, `security-headers.spec.ts`, and
-`i18n.spec.ts` touches the database (19 specs total as of A22), so the suite belongs in
-the DB-backed E2E lane (the `e2e` job — every PR and push to main), which runs against a
-Postgres service.
+Every spec except the DB-free `home.spec.ts`, `security-headers.spec.ts`,
+`i18n.spec.ts`, `state.spec.ts`, and `image-optimization.spec.ts` touches the
+database (26 specs total as of the 2026-07-22 image-optimization spec), so the suite
+belongs in the DB-backed E2E lane (the `e2e` job — every PR and push to main), which
+runs against a Postgres service.
+
+**Direct-endpoint image assertions (audit B2, 2026-07-22):**
+`e2e/image-optimization.spec.ts` never opens a page — it drives `/_next/image` with
+Playwright's `request` fixture against a committed `/public` fixture PNG and asserts
+the response is a real transform (PNG→webp under `Accept: image/webp`; an
+IHDR-width check proving the same-format resize; 400 for a non-allowlisted remote
+`url=`, rejected before any fetch). This is the only place CI actually *invokes*
+the sharp image engine — install + build alone never do.
 
 **One spec never runs in the default suite:** `csp-nonce.spec.ts` (path-to-100 #10)
 asserts the `CSP_MODE=nonce` build's per-request-nonce matrix, so

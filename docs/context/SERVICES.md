@@ -715,6 +715,13 @@ this needs **no CSP change** (see [SECURITY.md](SECURITY.md)). The thumbnail is 
 `fill` + a sized container instead). Avatars stay on the `@repo/ui` `Avatar` primitive's
 plain `<img>` — that framework-agnostic package must not depend on `next/image`, and
 Radix's `AvatarImage` gives the load-error→initials fallback `next/image` doesn't.
+The optimizer itself is pinned keylessly by `e2e/image-optimization.spec.ts` (2026-07-22
+audit B2): a committed `/public` fixture (a local asset needs no `remotePatterns` entry)
+must come back from `/_next/image` genuinely transformed — PNG→webp, an IHDR-verified
+resize, and a 400 for any non-allowlisted remote `url=` — so a green e2e lane proves the
+sharp engine (version currently forced by a pnpm override, see
+[MAINTENANCE.md → Watch items](../MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done))
+still transforms, not merely installs.
 
 **Key env var** (**optional** — the app builds/runs without it, mirroring the
 env-gated Stripe/email/OAuth providers):

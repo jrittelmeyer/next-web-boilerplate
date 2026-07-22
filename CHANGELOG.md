@@ -20,6 +20,12 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 - **README screenshot tour** — four keyless, real-build screenshots (landing
   light/dark, signed-in dashboard, `/account`) in a new README `## Screenshots`
   section and a "See it" strip in [`FEATURES.md`](docs/FEATURES.md).
+- **`/_next/image` optimization e2e coverage** —
+  `apps/web/e2e/image-optimization.spec.ts` + a committed keyless fixture assert
+  the optimizer really transforms (PNG→webp, an IHDR-verified resize, and 400
+  for a non-allowlisted remote `url=`), so the overridden `sharp` engine (see
+  Security below) is exercised on every e2e run instead of merely installed —
+  the 2026-07-22 audit's last open row.
 
 ### Fixed
 

@@ -104,6 +104,9 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
     past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).
   - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
     still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22).
+    Its `/_next/image` runtime path is e2e-covered since 2026-07-22
+    (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that installs but no
+    longer transforms turns the e2e lane red instead of passing silently.
   - **`fast-uri` NOT yet overridden** — the fix (3.1.4) was published 2026-07-19,
     inside the 7-day age gate at triage time. Two GHSAs are temporarily
     acknowledged in `auditConfig.ignoreGhsas` (build-tool-only path — webpack's
