@@ -61,6 +61,41 @@ overrides:
   # untouched; 0.25.12 was already in the lockfile. Remove when drizzle-kit drops
   # @esbuild-kit.
   "@esbuild-kit/core-utils>esbuild": 0.25.12
+  # brace-expansion <5.0.7 (GHSA-3jxr-9vmj-r5cp, HIGH — O(2^n) DoS in expand() on
+  # crafted brace patterns), via minimatch@10.2.5 (eslint, and glob@13.0.6 used by
+  # Storybook/Sentry's webpack plugin/react-email — all build-tooling paths, not
+  # request-handling code). 5.0.7 is already in-range for minimatch's own
+  # `^5.0.5` — this is a plain fix-forward, not a pin-bypass like the three above;
+  # remove once Renovate/a routine bump naturally carries the lockfile past 5.0.7
+  # (age-gate clears 2026-07-06; published 2026-06-29).
+  brace-expansion: 5.0.7
+  # ——— Dependabot remediation (2026-07-22): transitive-only alerts, all newly
+  # disclosed since the prior day's green CI run (pnpm audit queries live
+  # advisory data — nothing in the lockfile changed to surface these).
+  #
+  # fast-uri <3.1.4 (GHSA-v2hh-gcrm-f6hx + GHSA-4c8g-83qw-93j6, HIGH — host
+  # confusion via a literal backslash / failed IDN canonicalization), via
+  # ajv@8.20.0 (webpack's schema-utils, reached by @sentry/webpack-plugin and
+  # Storybook's builder-vite — build-tooling only, zero request-handling
+  # exposure). NOT yet overridden: 3.1.4 was published 2026-07-19, inside the
+  # 7-day age gate — deliberately deferred rather than forcing a
+  # minimumReleaseAgeExclude for a build-tool-only finding. Add
+  # `fast-uri: 3.1.4` here once it clears the gate (~2026-07-26); tracked in
+  # MAINTENANCE.md → Watch items.
+  #
+  # dompurify <=3.4.11 (GHSA-c2j3-45gr-mqc4, low — CUSTOM_ELEMENT_HANDLING
+  # bypasses afterSanitizeElements), via posthog-js's own sanitizer dependency
+  # (a real runtime path — posthog-js ships client-side). 3.4.12 is in-range for
+  # posthog-js's own `^3.3.2` — plain fix-forward; remove once a routine bump
+  # naturally carries the lockfile past 3.4.12.
+  dompurify: 3.4.12
+  # sharp <0.35.0 (GHSA-f88m-g3jw-g9cj — inherited libvips CVE-2026-33327/33328/
+  # 35590/35591, HIGH), via next@16.2.9's own EXACT `^0.34.5` optionalDependency
+  # pin, which excludes the fix (Next.js's built-in image-optimization engine —
+  # a real runtime path, not build tooling). 0.35.3 clears the age gate
+  # (published 2026-07-01) and ships prebuilt binaries for every platform this
+  # repo targets. Remove when next's own sharp pin reaches >=0.35.0.
+  sharp: 0.35.3
 # Supply-chain release-age gate (Step 26 · A11). Every Phase-1/2 dep note describes this
 # discipline ("let a release age before taking it; hours-old/days-old releases were
 # rejected, pins were chosen to clear the gate"). It is ENFORCED at two layers:
@@ -84,8 +119,13 @@ minimumReleaseAge: 10080 # 7 days
 # its path + why it's low-risk for this app, so the audit stays green on the accepted
 # status quo and goes red the moment a NEW advisory appears. Prune an entry once the
 # fix lands in the lockfile (an ignore for an absent advisory is a harmless no-op).
-# EMPTY since 2026-07-15: the three long-standing entries (effect · esbuild · postcss)
-# are remediated by the Dependabot overrides above, so the audit now guards those
-# overrides live. Re-audit with `pnpm audit` (see DEPLOYMENT.md → Supply chain).
+# Re-emptied 2026-07-15 (the three long-standing entries — effect · esbuild ·
+# postcss — got remediated by the Dependabot overrides above); two TEMPORARY
+# entries added back 2026-07-22 for fast-uri (see the override block's comment
+# above — the fix, 3.1.4, is real but 3 days too fresh for minimumReleaseAge;
+# build-tool-only path, zero request-handling exposure). Remove both and add
+# `fast-uri: 3.1.4` to overrides once it clears the gate (~2026-07-26).
 auditConfig:
-  ignoreGhsas: []
+  ignoreGhsas:
+    - GHSA-v2hh-gcrm-f6hx # fast-uri host confusion (backslash authority) — fix too fresh, see above
+    - GHSA-4c8g-83qw-93j6 # fast-uri host confusion (failed IDN canonicalization) — fix too fresh, see above

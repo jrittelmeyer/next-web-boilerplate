@@ -46,10 +46,12 @@
   (absorbed by `retries:2`, but it twice burned 2 of 3 CI attempts). **Not a code bug** — a
   fragile signup+redirect timing flow on modest runners. Harden **only if it ever turns a lane
   red**: bump that test's timeout, or wait on a network/cookie signal rather than only the URL.
-- **Temporary security overrides (2026-07-15)** — three pnpm `overrides:` in
-  `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts with no upstream fix
-  (`effect` 3.21.4 via uploadthing · `postcss` 8.5.15 via next's own pin · `esbuild` 0.25.12
-  child-scoped via drizzle-kit). Remove each when its upstream moves — per-package removal
+- **Temporary security overrides** — pnpm `overrides:` in `pnpm-workspace.yaml`
+  remediating transitive-only Dependabot alerts: `effect` 3.21.4 · `postcss` 8.5.15 ·
+  `esbuild` 0.25.12 (2026-07-15, no upstream fix) and `brace-expansion` 5.0.7 ·
+  `dompurify` 3.4.12 · `sharp` 0.35.3 (2026-07-22, newly disclosed that week). Plus a
+  temporary `auditConfig.ignoreGhsas` pair for `fast-uri` (fix too fresh for the age
+  gate, ~2026-07-26). Remove each when its condition clears — per-package removal
   conditions in [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **Ship a real derived product end-to-end** (intent-level driver, owner-driven) — a real
   app built to completion on the template is the strongest validation of the

@@ -89,6 +89,22 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
 
   The `auditConfig.ignoreGhsas` allowlist emptied the same day — `pnpm audit` now
   guards these overrides live (red if one ever regresses).
+- **More security overrides** (added 2026-07-22) — three transitive-only Dependabot
+  alerts, newly disclosed the same week (`pnpm audit` queries live advisory data —
+  nothing in the lockfile changed to surface these; the prior day's CI was fully
+  green). Remove each when its upstream moves, then `pnpm install` + the full gate:
+  - `brace-expansion: 5.0.7` → remove once a routine bump naturally carries the
+    lockfile past 5.0.7 (already in-range for **minimatch**'s own `^5.0.5`).
+  - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile
+    past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).
+  - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.9
+    exact-pins `^0.34.5`, excluding the libvips CVE fix).
+  - **`fast-uri` NOT yet overridden** — the fix (3.1.4) was published 2026-07-19,
+    inside the 7-day age gate at triage time. Two GHSAs are temporarily
+    acknowledged in `auditConfig.ignoreGhsas` (build-tool-only path — webpack's
+    schema-utils via `ajv`, zero request-handling exposure). Once 3.1.4 clears the
+    gate (~2026-07-26): add `fast-uri: 3.1.4` to `overrides`, remove both GHSAs
+    from `ignoreGhsas`, `pnpm install` + full gate.
 - The **e2e signup flake** — intermittent, absorbed by Playwright retries, not a code
   bug; harden only if it ever turns a lane red.
 
