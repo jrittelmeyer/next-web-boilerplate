@@ -6,10 +6,13 @@
   "rangeStrategy": "auto",
   "semanticCommits": "disabled",
   "labels": ["dependencies"],
-  "schedule": ["before 6am on monday"],
+  "timezone": "America/New_York",
+  "schedule": ["on monday"],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 10,
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "schedule": ["on monday"]
   },
   "vulnerabilityAlerts": {
     "labels": ["security"],

@@ -39,7 +39,7 @@ allowBuilds:
 overrides:
   vite: 8.0.16
   # ——— Dependabot remediation (2026-07-15): 3 transitive-only alerts with NO upstream
-  # fix available (uploadthing@7.7.4 exact-pins effect 3.17.7 · next@16.2.10 pins
+  # fix available (uploadthing@7.7.4 exact-pins effect 3.17.7 · next@16.2.11 pins
   # postcss 8.4.31 · drizzle-kit@0.31.10 still deps the deprecated @esbuild-kit).
   # TEMPORARY — each override's removal condition is tracked in
   # docs/MAINTENANCE.md → Watch items.
@@ -69,9 +69,12 @@ overrides:
   # remove once Renovate/a routine bump naturally carries the lockfile past 5.0.7
   # (age-gate clears 2026-07-06; published 2026-06-29).
   brace-expansion: 5.0.7
-  # ——— Dependabot remediation (2026-07-22): transitive-only alerts, all newly
+  # ——— Advisory remediation (2026-07-22): transitive-only advisories, all newly
   # disclosed since the prior day's green CI run (pnpm audit queries live
-  # advisory data — nothing in the lockfile changed to surface these).
+  # advisory data — nothing in the lockfile changed to surface these). Only
+  # brace-expansion (above) was a Dependabot alert; dompurify, sharp, and
+  # fast-uri were caught by CI's pnpm-audit lane — the authoritative advisory
+  # gate here (Dependabot is the supplementary signal).
   #
   # fast-uri <3.1.4 (GHSA-v2hh-gcrm-f6hx + GHSA-4c8g-83qw-93j6, HIGH — host
   # confusion via a literal backslash / failed IDN canonicalization), via
@@ -90,7 +93,7 @@ overrides:
   # naturally carries the lockfile past 3.4.12.
   dompurify: 3.4.12
   # sharp <0.35.0 (GHSA-f88m-g3jw-g9cj — inherited libvips CVE-2026-33327/33328/
-  # 35590/35591, HIGH), via next@16.2.9's own EXACT `^0.34.5` optionalDependency
+  # 35590/35591, HIGH), via next@16.2.11's own EXACT `^0.34.5` optionalDependency
   # pin, which excludes the fix (Next.js's built-in image-optimization engine —
   # a real runtime path, not build tooling). 0.35.3 clears the age gate
   # (published 2026-07-01) and ships prebuilt binaries for every platform this

@@ -21,6 +21,36 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
   light/dark, signed-in dashboard, `/account`) in a new README `## Screenshots`
   section and a "See it" strip in [`FEATURES.md`](docs/FEATURES.md).
 
+### Fixed
+
+- **Renovate schedule widened so scheduled updates can actually land** — the
+  config shipped `"schedule": ["before 6am on monday"]` with no `timezone` key:
+  a 6-hour UTC window per week that the hosted app's run cadence may never
+  intersect (this repo's scheduled lane had produced zero update PRs as a
+  result). Now a full-day `["on monday"]` window with an explicit `timezone`
+  and explicit PR limits (`prHourlyLimit: 0`, `prConcurrentLimit: 10`). **If
+  you copied `.github/renovate.json` before this fix, apply the same change.**
+
+### Security
+
+- **Transitive-advisory remediations via pnpm `overrides`** (no upstream fix
+  existed for any at triage time; every override is temporary, with its removal
+  condition tracked in
+  [`docs/MAINTENANCE.md` → Watch items](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)):
+  - **2026-07-15:** `effect` → 3.21.4 (HIGH, via uploadthing's exact pin) ·
+    `postcss@<8.5.10` → 8.5.15 (via Next's own pin) ·
+    `@esbuild-kit/core-utils>esbuild` → 0.25.12 (via drizzle-kit).
+  - **2026-07-22:** `brace-expansion` → 5.0.7 (HIGH, build-tooling paths) ·
+    `dompurify` → 3.4.12 (via posthog-js, which ships client-side) · **`sharp`
+    → 0.35.3 (HIGH — note: this forces sharp past Next 16.2.x's own `^0.34.5`
+    optionalDependency pin on a real runtime path, `/_next/image`)**.
+    `fast-uri`'s fix (3.1.4) is deliberately deferred behind the 7-day
+    release-age gate (~2026-07-26) via two dated `auditConfig.ignoreGhsas`
+    entries (build-tool-only exposure).
+  - Provenance: only the 2026-07-15 trio and `brace-expansion` were Dependabot
+    alerts — `sharp`, `dompurify`, and `fast-uri` were caught by CI's
+    `pnpm audit` lane, the authoritative advisory gate here.
+
 ## [1.1.0] — 2026-07-20
 
 Everything shipped on `main` since the initial release — all additive, verified
