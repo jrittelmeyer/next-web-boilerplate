@@ -5,8 +5,8 @@
 > **not** kept here: the compact record is the build-progress table in
 > [PROJECT_STATUS.md](PROJECT_STATUS.md), and the full per-item prose is in
 > [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md). The audits that seeded past
-> backlogs live in [docs/archive/](archive/) (Phase B + the ten `/project-audit`
-> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0 → 99.65/100). Everything below
+> backlogs live in [docs/archive/](archive/) (Phase B + the eleven `/project-audit`
+> scoring passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0 → 99.65 → 99.65/100). Everything below
 > goes plan → sign-off → build. Don't reintroduce shipped-item entries here.
 
 ## Watch (no action now)
@@ -42,8 +42,12 @@
   2026-07-22 audit found it is **blocked, not waiting** — the scheduled lane has
   never produced a PR (0 `renovate/*` branches ever; all 7 merged PRs came from
   manual dashboard-approval clicks). Fix is the B1 row below. The 7 approved
-  majors merged 2026-07-18; typescript-v7 stays held per the TS7 gate, and
-  `actions/setup-node v7` is a new pending-approval major.
+  majors merged 2026-07-18; typescript-v7 stays held per the TS7 gate,
+  `actions/setup-node v7` is a new pending-approval major, and
+  `@testing-library/jest-dom v7` sits age-gated in the dashboard's Pending Status
+  Checks (surfaces for approval once aged; 22B). The same-day 22B re-check
+  confirmed the picture unchanged: still 0 `renovate/*` branches, 37 Awaiting
+  Schedule.
 - **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is intermittently flaky
   (absorbed by `retries:2`, but it twice burned 2 of 3 CI attempts). **Not a code bug** — a
   fragile signup+redirect timing flow on modest runners. Harden **only if it ever turns a lane
@@ -90,7 +94,7 @@
 | --- | --- | --- | --- | --- |
 | B1 | Tooling / deps | **Widen the Renovate schedule so the batch can actually land** — replace `"schedule": ["before 6am on monday"]` with a full-day window (e.g. `["on monday"]`), add an explicit `"timezone"`, and consider raising `prHourlyLimit`; confirm on the next window that PRs actually open | [.github/renovate.json](../.github/renovate.json) · [MAINTENANCE.md](MAINTENANCE.md) | **Highest-value open row.** The scheduled lane has produced **0 PRs ever** — 0 `renovate/*` branches on the remote, all 7 merged PRs created by manual dashboard-approval clicks, and the one elapsed Monday window (2026-07-20 00:00–06:00 UTC) yielded nothing despite 37 ready updates. A 6-hour UTC window requires Mend's hosted run cadence to intersect it; runs outside it only refresh the dashboard. Three stalled updates (`postcss`→8.5.19, `esbuild`→0.28.1, `effect`→3.22.0) are exactly the bumps that retire the temporary overrides. Every downstream copy inherits this config. Detail → [archive/PROJECT_AUDIT_2026-07-22.md](archive/PROJECT_AUDIT_2026-07-22.md) F1 |
 | B1 | Docs / release | **Record the security remediations in CHANGELOG** — add the 2026-07-15 and 2026-07-22 override batches to `[Unreleased]`, flagging that `sharp` is forced past Next's own `^0.34.5` pin on a runtime path | [CHANGELOG.md](../CHANGELOG.md) | The CHANGELOG has **zero** mentions of any security remediation, while the same window's Storybook/screenshot changes are logged. Consumers whose documented update path is cherry-picking template commits have no record of the only security-relevant changes. Detail → audit F2 |
-| B1 | Docs accuracy | **Relabel the non-Dependabot advisories in `pnpm-workspace.yaml`** — the comment header still says "Dependabot remediation (2026-07-22)"; only `brace-expansion` was a Dependabot alert | pnpm-workspace.yaml | Doc-side labels (MAINTENANCE.md, BACKLOG) fixed in the 2026-07-22 audit pass; the config-file comment rides the next code touch (M-1 precedent). The mislabel misdirects the verification method — Dependabot alone would have missed a HIGH on `sharp`. Detail → audit F3 |
+| B1 | Docs accuracy | **Relabel the non-Dependabot advisories in `pnpm-workspace.yaml`** — the comment header still says "Dependabot remediation (2026-07-22)"; only `brace-expansion` was a Dependabot alert | pnpm-workspace.yaml | Doc-side labels (MAINTENANCE.md, BACKLOG) fixed in the 2026-07-22 audit pass; the config-file comment rides the next code touch (M-1 precedent). The mislabel misdirects the verification method — Dependabot alone would have missed a HIGH on `sharp`. Same touch: refresh the block's stale next-version notes ("16.2.10"/"16.2.9" vs latest 16.2.11 — 22B N2). Detail → audit F3 |
 | B2 | Uploads / testing | **Cover the image-optimization path** — assert `/_next/image` returns a transformed response (keyless, against a local asset) | apps/web/e2e · [SERVICES.md](context/SERVICES.md) | `sharp: 0.35.3` overrides Next's exact `^0.34.5` on a path the app really uses (`uploads-list.tsx` → `next/image` → `/_next/image`), and **no test touches images** — green CI proves install + build, not that the optimizer still transforms. Needs a keyless-safe fixture image. Detail → audit F4 |
 | B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
 | B1 | On-ramp / kit | **Intake-drop convention for `/project-init`** — template half: seed a committed `docs/intake/` (README: drop planning docs here → run `/project-init`) + a GETTING_STARTED sentence + init-app kept-list mention; kit half: `init.intakeDir` adapter field (default `docs/intake/`), intake enumeration in project-init §1, raw docs → `docs/archive/product-intake/` in the inception commit after brief sign-off (prevents a second source of truth beside `PRODUCT.md`) | [GETTING_STARTED.md](GETTING_STARTED.md#starting-from-an-idea-run-project-init) | Direction owner-approved 2026-07-18; **build after the first real derived-project inception run (in flight) supplies lessons.** Kit half edits an ai-dev-kit clone → re-install (`--dest`), never the installed copies. Verified: init-app `--slim`'s delete list doesn't touch `docs/intake/`. Sibling convention shipped 2026-07-19: `intake/source/` (gitignored **code** drop for `/project-adopt`) stays separate — committed planning docs vs never-committed source. Plan → sign-off before building. |

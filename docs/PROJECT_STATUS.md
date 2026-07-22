@@ -10,7 +10,7 @@
 >   Working agreements → [../AGENTS.md](../AGENTS.md) ·
 >   Backlog → [BACKLOG.md](BACKLOG.md)
 
-_Last updated: 2026-07-20._
+_Last updated: 2026-07-22._
 
 ## Where we are
 
@@ -32,17 +32,19 @@ _Last updated: 2026-07-20._
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row is SHIPPED (2026-07-07 → 13)** — including the
-  A23–A31 polish rows, A32, and A13. Ten `/project-audit` passes graded the repo
-  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0 → 99.65/100**
+  A23–A31 polish rows, A32, and A13. Eleven `/project-audit` passes graded the repo
+  **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 → 100.0 → 100.0 → 99.65 → 99.65/100**
   (2026-07-08 · 07-12 · 07-12B · 07-14 · 07-14B post-launch · 07-15 · 07-15B ·
   **07-17, the path-to-100 verification** · 07-18, the first maintenance-mode pass ·
   **07-22, the tenth pass — 99.65, the first drop, and none of it code**: product
   code is byte-identical bar the M-1 comment fix, but Renovate's scheduled lane has
   **never delivered a PR** (37 updates stalled behind a 6-hour weekly window), the
   CHANGELOG records **no** security remediation, and the `sharp` override rides an
-  untested `/_next/image` path. Four B1/B2 backlog rows; reports in
+  untested `/_next/image` path · **07-22B, a same-day live-surface re-check —
+  99.65 holds** on the byte-identical tree: every gate stands, `pnpm audit` clean,
+  alert #4 still pending auto-close. Four B1/B2 backlog rows; reports in
   [docs/archive/](archive/), latest:
-  [PROJECT_AUDIT_2026-07-22.md](archive/PROJECT_AUDIT_2026-07-22.md)).
+  [PROJECT_AUDIT_2026-07-22B.md](archive/PROJECT_AUDIT_2026-07-22B.md)).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) — rows
   at the bottom of the table below.

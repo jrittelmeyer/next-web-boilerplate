@@ -83,7 +83,7 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
   - `effect: 3.21.4` → remove when **uploadthing** ships on effect >=3.20 (7.7.4
     exact-pins 3.17.7).
   - `"postcss@<8.5.10": 8.5.15` → remove when **next**'s own postcss pin reaches
-    >=8.5.10 (16.2.10 pins 8.4.31).
+    >=8.5.10 (16.2.11 still pins 8.4.31 — re-checked 2026-07-22).
   - `"@esbuild-kit/core-utils>esbuild": 0.25.12` → remove when **drizzle-kit** drops
     the deprecated `@esbuild-kit` loader.
 
@@ -102,8 +102,8 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
     lockfile past 5.0.7 (already in-range for **minimatch**'s own `^5.0.5`).
   - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile
     past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).
-  - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.9
-    exact-pins `^0.34.5`, excluding the libvips CVE fix).
+  - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
+    still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22).
   - **`fast-uri` NOT yet overridden** — the fix (3.1.4) was published 2026-07-19,
     inside the 7-day age gate at triage time. Two GHSAs are temporarily
     acknowledged in `auditConfig.ignoreGhsas` (build-tool-only path — webpack's
