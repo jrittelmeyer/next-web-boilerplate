@@ -251,8 +251,8 @@ const MENTION_PATCHES = [
   },
   {
     file: "docs/MAINTENANCE.md",
-    from: "The live list is [`BACKLOG.md`](BACKLOG.md). Currently:",
-    to: "The live list is your backlog doc (recreated by `/project-init`, or keep your own). At the template snapshot:",
+    from: "**This section is the canonical live Watch list** — full per-item detail and removal\nconditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Currently:",
+    to: "**This section is the canonical live Watch list** — full per-item detail and removal\nconditions live here; your backlog doc (recreated by `/project-init`) carries\none-line pointers. At the template snapshot:",
   },
   {
     file: "docs/MAINTENANCE.md",

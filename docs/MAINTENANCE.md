@@ -68,17 +68,51 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 
 ## Watch items (known, tracked, deliberately not done)
 
-The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
+**This section is the canonical live Watch list** — full per-item detail and removal
+conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Currently:
 
-- **TypeScript 7 cutover** — TS 7 GA'd as the native Go compiler but ships no JS
-  Compiler API yet, so stable `next build` cannot use it. Experimental TS7 support
-  (`experimental.useTypeScriptCli`) landed in **Next canary 2026-07-10**; re-evaluate
-  when it reaches a **stable** Next release (TS 7.1, ~Q4 2026, restores the
-  programmatic API for the wider toolchain). The `tsc` CLI alone is ~3.6× faster, so
-  the win is worth tracking.
+- **TypeScript 7 cutover** — **GA'd as `typescript@7.0.2` (2026-07-08)** but not yet
+  adoptable here (proven by a 2026-07-13 cutover attempt — owner-approved age-gate
+  override; repo undeployed → no prod risk): TS 7's package IS the native **Go**
+  compiler and **ships no JS Compiler API** — its `typescript` module exposes only
+  `version` (`createProgram`/`readConfigFile`/`sys`/`transpileModule` gone, no
+  `lib/typescript.js`; the programmatic API moved to `./unstable/*`), so `next build`
+  fails at its TS-detection step (Next 16 stable embeds the classic API). Every
+  library-API consumer (Next, webpack loaders, Vue/Svelte/Astro/MDX/Angular) stays on
+  TS 6 until the stable programmatic API returns in **TS 7.1 (~Q4 2026)**. Upstream
+  moved 2026-07-10: Next merged **experimental TS7 support into canary**
+  ([#95639](https://github.com/vercel/next.js/pull/95639) — detects TS7 and offers
+  `experimental.useTypeScriptCli`, shelling out to the CLI instead of the JS API;
+  auto-detect planned before stable), closing tracking issue
+  [#95490](https://github.com/vercel/next.js/issues/95490)
+  ([#95633](https://github.com/vercel/next.js/discussions/95633) remains the
+  discussion) — not in any stable 16.2.x (as of 2026-07-15; still absent at 16.2.11).
+  The `tsc` CLI itself is clean and **~3.6× faster** (monorepo type-check 20.5s →
+  5.7s, cache-bypassed), so the win is real. **Re-gate: on TS7 support reaching a
+  *stable* Next release** (`useTypeScriptCli` or its auto-detect successor — check
+  `pnpm view next dist-tags`). Mechanics learned: pnpm's age gate re-validates the
+  whole lockfile on every `pnpm run`/frozen install, not just `pnpm install` — any
+  early adoption needs a `minimumReleaseAgeExclude`.
+- **Maintenance-only (Tier 3 G) — the standing state** — the honest "we're done"
+  option: let Renovate drive deps, keep docs current, add steps as real needs surface.
+  Standing 2026-07-12 → 2026-07-15; superseded 2026-07-15 by the path-to-100 program
+  (owner decision; [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md));
+  **RESUMED 2026-07-17** — the program shipped all 11 rows and the eighth scoring pass
+  verified it at **100.0/100**
+  ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)). The
+  scheduled Renovate batch had **not opened as of 2026-07-22**, and the 2026-07-22
+  audit found it **blocked, not waiting** — the scheduled lane has never produced a PR
+  (0 `renovate/*` branches ever; all 7 merged PRs came from manual dashboard-approval
+  clicks). The widening fix **SHIPPED 2026-07-22**; **confirm PRs actually open at the
+  next Monday window (2026-07-27)**. The 7 approved majors merged 2026-07-18;
+  typescript-v7 stays held per the TS7 gate above; `actions/setup-node v7` is a new
+  pending-approval major, and `@testing-library/jest-dom v7` sits age-gated in the
+  dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The
+  same-day 22B re-check confirmed the picture unchanged: still 0 `renovate/*`
+  branches, 37 Awaiting Schedule.
 - **Temporary security overrides** (added 2026-07-15) — three pnpm `overrides:` in
-  `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts that have **no
-  upstream fix**. Remove each when its upstream moves, then `pnpm install` + the full
+  `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts (#1–#3) that have
+  **no upstream fix**. Remove each when its upstream moves, then `pnpm install` + the full
   gate:
   - `effect: 3.21.4` → remove when **uploadthing** ships on effect >=3.20 (7.7.4
     exact-pins 3.17.7).
@@ -119,8 +153,18 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
   doesn't exempt security fixes (the exclude is the policy's documented path).
   **Remove both entries once 16.2.11 ages out (2026-07-28)**, then `pnpm install`
   + the full gate.
-- The **e2e signup flake** — intermittent, absorbed by Playwright retries, not a code
-  bug; harden only if it ever turns a lane red.
+- The **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is
+  intermittently flaky (absorbed by `retries: 2`, but it twice burned 2 of 3 CI
+  attempts). **Not a code bug** — a fragile signup+redirect timing flow on modest
+  runners. Harden **only if it ever turns a lane red**: bump that test's timeout, or
+  wait on a network/cookie signal rather than only the URL.
+- **Ship a real derived product end-to-end** (intent-level driver, owner-driven) — a
+  real app built to completion on the template is the strongest validation of the
+  "verified end-to-end" claim, **unlocks the gated B1 intake-drop row** (BACKLOG →
+  Open rows), and supplies the proof the positioning reframe needs — consumption
+  finds what audits can't (both inception trials did). Already tracked in memory
+  `derived-project-intake-trial`; starts via `/project-init`. No template action
+  until it begins; it then feeds the on-ramp rows with real lessons.
 
 ## Security response runbook
 
