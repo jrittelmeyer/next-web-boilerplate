@@ -48,6 +48,15 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-07-23: `next` 16.2.9 → 16.2.11** — remediates the 2026-07-22 Next.js
+  advisory batch (9 GHSAs against `>=16.0.0 <16.2.11`: 4 high, including a
+  middleware/proxy bypass and Server-Action DoS/SSRF, plus 5 moderate). The
+  patched release was two days old, so a dated `minimumReleaseAgeExclude`
+  (`next`, `@next/*`) takes it past pnpm's 7-day gate — the policy's documented
+  security-fix path; remove 2026-07-28 (tracked in
+  [`docs/MAINTENANCE.md` → Watch items](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
+  This was the first advisory wave routed through the security-triage pipeline
+  (see Added above).
 - **Transitive-advisory remediations via pnpm `overrides`** (no upstream fix
   existed for any at triage time; every override is temporary, with its removal
   condition tracked in

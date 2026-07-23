@@ -113,6 +113,12 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
     schema-utils via `ajv`, zero request-handling exposure). Once 3.1.4 clears the
     gate (~2026-07-26): add `fast-uri: 3.1.4` to `overrides`, remove both GHSAs
     from `ignoreGhsas`, `pnpm install` + full gate.
+- **`minimumReleaseAgeExclude` for `next` + `@next/*`** (added 2026-07-23) — the
+  2026-07-22 Next.js advisory batch (9 GHSAs vs `<16.2.11`) was remediated by
+  bumping to 16.2.11, published 2026-07-21 — inside the 7-day age gate, which
+  doesn't exempt security fixes (the exclude is the policy's documented path).
+  **Remove both entries once 16.2.11 ages out (2026-07-28)**, then `pnpm install`
+  + the full gate.
 - The **e2e signup flake** — intermittent, absorbed by Playwright retries, not a code
   bug; harden only if it ever turns a lane red.
 

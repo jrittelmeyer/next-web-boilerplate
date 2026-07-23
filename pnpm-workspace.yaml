@@ -117,6 +117,16 @@ overrides:
 # @manypkg/cli) pass. Value is in MINUTES. Security fixes are not exempted here — bypass
 # a specific advisory via auditConfig / an override if a fix is ever younger than 7 days.
 minimumReleaseAge: 10080 # 7 days
+# TEMPORARY security exception (2026-07-23): next 16.2.11 (published 2026-07-21)
+# patches the 2026-07-22 advisory batch (9 GHSAs vs <16.2.11 — 4 high incl. a
+# middleware/proxy bypass and Server-Action DoS/SSRF) but is inside the 7-day
+# window, and pnpm's gate doesn't exempt security fixes (see the note above).
+# The security-fix path the policy documents: a deliberate, dated exclude.
+# REMOVE once 16.2.11 ages past the gate (2026-07-28) — tracked in
+# docs/MAINTENANCE.md → Watch items.
+minimumReleaseAgeExclude:
+  - next
+  - "@next/*" # next's first-party lockstep siblings (swc binaries, env) ship the same version
 # Audit allowlist (Step 26). `pnpm audit` (and the CI audit job) block on KNOWN
 # advisories; a deep TRANSITIVE dep we can't bump directly gets acknowledged here with
 # its path + why it's low-risk for this app, so the audit stays green on the accepted

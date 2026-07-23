@@ -61,7 +61,9 @@
   disclosed that week — **only `brace-expansion` was a Dependabot alert; the other
   two plus `fast-uri` came from the CI `pnpm audit` lane**). Plus a temporary
   `auditConfig.ignoreGhsas` pair for `fast-uri` (fix too fresh for the age gate,
-  ~2026-07-26). Remove each when its condition clears — per-package removal
+  ~2026-07-26) and a dated `minimumReleaseAgeExclude` for `next`/`@next/*`
+  (2026-07-23 — the 16.2.11 security bump was 2 days old; remove 2026-07-28).
+  Remove each when its condition clears — per-package removal
   conditions in [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **Ship a real derived product end-to-end** (intent-level driver, owner-driven) — a real
   app built to completion on the template is the strongest validation of the
