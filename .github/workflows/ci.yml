@@ -75,6 +75,14 @@ jobs:
       # validation — no BetterStack credentials needed — so it belongs in this lane.
       - run: pnpm --filter @repo/observability check
 
+      # Docs↔repo consistency (scripts/docs-sanity.mjs): relative links in
+      # AGENTS.md/CLAUDE.md/docs/** resolve, AGENTS.md's Commands exist in
+      # package.json scripts, and a warn-only annotation past the ~150-line
+      # standing-instruction budget. Deterministic and network-free — the docs
+      # are this template's flagship surface, so they get the same drift gate
+      # code gets from manypkg/knip.
+      - run: pnpm docs:sanity
+
       # Tests + coverage in one pass. Each package's vitest.config.ts enforces its
       # own coverage thresholds under --coverage, so a coverage regression fails
       # here. Plain `pnpm test` (local) stays coverage-free and fast.

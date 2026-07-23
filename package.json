@@ -27,6 +27,7 @@
     "clean": "turbo clean",
     "cache:size": "node scripts/prune-turbo-cache.mjs --report",
     "cache:prune": "node scripts/prune-turbo-cache.mjs",
+    "docs:sanity": "node scripts/docs-sanity.mjs",
     "storybook": "pnpm --filter @repo/ui storybook",
     "init-app": "node scripts/init-app.mjs",
     "prepare": "husky"
