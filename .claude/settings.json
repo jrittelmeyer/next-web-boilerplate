@@ -46,6 +46,12 @@
             "command": "node .claude/hooks/ai-dev-kit/skill-drift-guard.mjs",
             "timeout": 10,
             "statusMessage": "ai-dev-kit: skill-drift guard"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/ai-dev-kit/context-guard.mjs",
+            "timeout": 10,
+            "statusMessage": "ai-dev-kit: context guard"
           }
         ]
       }

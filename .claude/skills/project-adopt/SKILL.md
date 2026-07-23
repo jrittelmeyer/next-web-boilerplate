@@ -1,6 +1,6 @@
 ---
 name: project-adopt
-description: Adopt an existing codebase onto this template — survey the app end-to-end into a parity contract (routes, flows, data, auth, design tokens, copy, SEO), build an honest theirs-vs-template disposition map, converge on a product brief + migration map, and regenerate the living docs into a port program whose completion is a surface-identical app on the template foundation with the relevant template features lit up. Use when the user has an existing app or site to migrate onto the template, says "adopt this codebase" / "port my app to this boilerplate", or drops source code into the intake dir.
+description: Adopt an existing codebase onto this template — survey it into a parity contract, build an honest theirs-vs-template disposition map, converge on a product brief + migration map, and regenerate the living docs into a port program. Use when the user has an existing app or site to migrate onto the template, says "adopt this codebase" / "port my app to this boilerplate", or drops source code into the intake dir.
 ---
 
 # project-adopt
@@ -118,9 +118,9 @@ caught at the sign-off gate.
 
 ## 6. Converge: the brief + the migration map
 
-Two durable docs, both registered in the repo's context-doc index (uncomment the
-pre-seeded placeholder row where the template provides one; append a shape-matched
-row otherwise):
+Two durable docs, both registered in the repo's context-doc index (append
+shape-matched rows; older template copies pre-seed a commented placeholder row —
+uncomment it where present):
 
 - **Product brief** (`init.productBrief`) — the same shape project-init produces:
   vision, problem, users (observed, not aspirational — restate what the product

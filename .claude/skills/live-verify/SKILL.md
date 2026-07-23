@@ -1,6 +1,6 @@
 ---
 name: live-verify
-description: Verify a change by running it, not by assuming — full gate (lint · type-check · build), then a fresh production build served on a dedicated port, then drive the actual affected flow end-to-end and observe real output. Use before committing nontrivial product changes, after wiring any integration, or whenever the question is "does it actually work?" — tests passing and types checking are not behavioral proof.
+description: Verify a change by running it, not by assuming — full gate, fresh production build on a dedicated port, then drive the affected flow end-to-end and observe real output. Use before committing nontrivial product changes, after wiring any integration, or whenever the question is "does it actually work?"
 ---
 
 # live-verify

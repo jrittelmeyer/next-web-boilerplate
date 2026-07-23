@@ -1,6 +1,6 @@
 ---
 name: project-init
-description: Initialize a new product on this template — ingest detailed plan docs or a raw idea prompt, run deep discovery (clarifying questions, gap analysis, value-add candidates, competitor/adjacent-product research), converge on a product brief, mend context-doc gaps, and regenerate the living docs (status + prioritized backlog targeting a 100 audit score) before starting the build pipeline. Use on a fresh scaffold from the template, when the user says "init this project" / "here's my idea for an app", or when they hand over plan documents to turn into a build plan.
+description: Initialize a new product on this template — ingest plan docs or a raw idea, run discovery and competitive research, converge on a product brief, and regenerate the living docs into a build program targeting a 100 audit score. Use on a fresh scaffold from the template, when the user says "init this project" / "here's my idea for an app", or when they hand over plan documents.
 ---
 
 # project-init
@@ -83,10 +83,10 @@ session loads instead of re-deriving:
 - Decision log: each question, the chosen option, every marked assumption.
 
 Register the brief in the repo's context-doc index (the agent-onboarding doc's
-load-when table) so future sessions find it on demand. Template copies pre-seed a
-commented placeholder row for the brief directly below that table — uncomment it
-(delete the comment-wrapper lines, keep the row) rather than authoring a row; if
-no placeholder exists, append a row matching the table's shape.
+load-when table) so future sessions find it on demand: append a row matching the
+table's shape. (Older template copies pre-seed a commented placeholder row
+directly below the table — where one exists, uncomment it instead: delete the
+wrapper lines, keep the row.)
 
 ## 5. Mend the docs & methodology
 

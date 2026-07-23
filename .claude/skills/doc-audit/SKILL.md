@@ -1,15 +1,11 @@
 ---
 name: doc-audit
 description: >-
-  Audit and optimize a project's documentation, agent-context files, persistent memory,
-  and showcase docs (pitch decks, plain-English guides, slide decks) for agent accuracy
-  and token efficiency. Finds code↔doc drift (claims that no longer match the code),
-  culls duplication/bloat on the agent hot path, archives stale detail without losing
-  it, slims persistent memory, keeps human-narrative showcase docs — including
-  local-only/gitignored ones — current with shipped work, and surfaces undocumented
-  backlog gaps. Use when asked to review/clean up docs, context, or memory — or as a
-  periodic maintenance pass to keep them lean and accurate. Plan → sign-off → build
-  (sign-off may be pre-authorized by the invoking request).
+  Audit and optimize a project's documentation, agent-context files, persistent
+  memory, and showcase docs for accuracy and token efficiency — code↔doc drift,
+  duplication, archiving, memory slimming, showcase currency, standing-instruction
+  budgets. Use when asked to review/clean up docs, context, or memory — or as a
+  periodic maintenance pass to keep them lean and accurate.
 ---
 
 # Documentation / Context / Memory Audit
@@ -50,9 +46,10 @@ thinking — this is an analysis task before it's an editing task.
 
 ### 1 — Discover & read
 
-- Map the landscape: `README`, `CLAUDE.md`/`AGENTS.md`, everything under `docs/**`,
-  any status / handoff / backlog / changelog / decision-log files, and the agent
-  **memory** directory + its index.
+- Map the landscape: `README`, `CLAUDE.md`/`AGENTS.md`, any **leaf** `AGENTS.md`/
+  `CLAUDE.md` files in subdirectories (glob for them — monorepo packages carry
+  their own), everything under `docs/**`, any status / handoff / backlog /
+  changelog / decision-log files, and the agent **memory** directory + its index.
 - **Hunt for local-only docs.** Check `.gitignore` and `.git/info/exclude` for
   doc-shaped exclusions (a private explainer directory, a pitch deck, an internal
   guide) and check the project's memory for designated doc sets. These never appear
@@ -69,7 +66,7 @@ thinking — this is an analysis task before it's an editing task.
 
 ### 2 — Analyze (change nothing yet)
 
-Hunt for six things:
+Hunt for seven things:
 
 1. **Code↔doc drift.** List the doc claims most likely to rot: file/function/flag
    names, config values, env vars, schema shapes, command names, route/endpoint
@@ -98,6 +95,31 @@ Hunt for six things:
    scores, "N of 100", version numbers, "the only starter that…") — those rot with
    every release. For an HTML deck, grep the headings/stat markup for claims rather
    than reading the whole file.
+7. **Standing-instruction budget & placement.** Measure the always-loaded set
+   (tokens ≈ chars/4): the agent-onboarding file (`AGENTS.md`), tool-specific
+   files (`CLAUDE.md` and kin), the memory index, and skill descriptions. Check
+   against the project's budgets (adapter `contextBudget` where present;
+   defaults: onboarding file ~150 lines; memory index ~700 tokens with
+   ~120-char one-line hooks; a context doc above ~3,000 tokens is a
+   split-candidate; a memory file above ~1,500 likewise). Budgets are
+   heuristics — flag-and-recommend, never churn a stable file to chase a
+   number. Then check *placement*, which matters as much as size:
+   - **Prime directive:** flag always-loaded lines the agent could infer from
+     the repo itself — file trees, script lists package.json already carries,
+     stack tables duplicated from a README.
+   - **Thin pointers:** tool-specific files should import the onboarding doc
+     and carry only genuinely tool-specific config — flag re-catalogs of
+     content the harness already indexes (e.g. skill descriptions).
+   - **Cache stability:** flag volatile facts — dates, audit scores, deadlines,
+     version litanies — in always-loaded files. They invalidate the
+     prompt-cache prefix on every edit and are stale by construction; they
+     belong in the status doc, pointed at rather than pasted.
+   - **Leaf files:** audit any leaf `AGENTS.md` for drift against its owning
+     context doc (a stale leaf is worse than none) and note high-traffic
+     packages with sharp package-local rules that lack one.
+   - **Load-when precision:** every context doc gets exactly one trigger-shaped
+     row in the onboarding doc's index; flag rows that fire on everything
+     ("writing any code") or span too many topics to load selectively.
 
 Litmus tests:
 - *"Would an agent that loaded only this file be misled?"* → drift, or it needs a
@@ -123,6 +145,12 @@ recommended option and say so in the report.
   record (one line per item); move the verbose detail **verbatim** into an
   archive/history file. Then refresh any index / map / "where docs live" files so
   they still describe reality.
+- **Enforce budget & placement fixes** — relocate volatile status facts to the
+  status doc; split an oversized context doc along its heading seams into a
+  per-topic directory, leaving the original as a thin index/redirect so inbound
+  links keep resolving; trim tool-specific files back to thin pointers; restate
+  the write-time rule (budgets + "one clause on an existing line, not a new
+  paragraph") in the memory index header so prevention outlives the pass.
 - **Add the agreed backlog items.**
 - **Refresh showcase docs in-register.** Fold newly shipped work into the right
   chapter/slide in the doc's own voice: a plain-English guide defines every term at
@@ -150,6 +178,10 @@ recommended option and say so in the report.
 
 ## Notes & gotchas
 
+- **Budgets come from the adapter** — `.claude/ai-dev-kit.config.json` →
+  `contextBudget` overrides hunt 7's defaults; where absent, use the defaults
+  and say so. Sign-off cadence: plan → sign-off → build; sign-off may be
+  pre-authorized by the invoking request (see operating principles).
 - **Agent memory lives outside the repo** (typically
   `~/.claude/projects/<project-slug>/memory/` with a `MEMORY.md` index). It is
   **not** in git — edit it directly; it won't appear in `git status`. The index is

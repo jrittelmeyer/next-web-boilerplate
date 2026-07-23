@@ -45,15 +45,31 @@ live loop → docs → commit → CI watch: typically a third to half of a *fres
   continue (respect plan → sign-off: only build if the plan is already approved).
 - **Not healthy / in doubt:** hand off. A resume prompt costs a paragraph; a
   mid-verification compaction costs quality. Borderline counts as not healthy.
+- **Three strikes:** a session that has failed the *same obstacle* three times is
+  unhealthy regardless of remaining window — the window is now full of failure
+  and poisons further attempts. Hand off with a diagnosis of the wrong
+  assumption (the fix is to the spec or the context, not another retry); never
+  coach it out in-window.
 
 State the verdict and the rough numbers behind it — don't decide silently.
 
 ## 3. Handoff (when stopping)
 
 Update the project-state memory (what shipped, plan-approval status of the next item),
-then produce **one paste-ready resume prompt** in a fenced code block. Assume the next
-session starts cold with only CLAUDE.md + memory — anything not in the prompt or in a
-doc/memory is lost. It must contain, in order:
+then write the **resume prompt to disk** and point at it — disk survives everything,
+a scrollback paste doesn't, and a fresh session reads a file in targeted chunks
+instead of ingesting a wall of text:
+
+1. Write the full resume prompt (structure below) to the adapter's `docs.handoff`
+   path if set, else into the agent memory directory as `resume-prompt.md` (one
+   file, overwritten each handoff, index line: "standing resume prompt from the
+   last checkpoint — read when resuming mid-program"). Keep a repo-path handoff
+   out of version control unless the project tracks it deliberately.
+2. Emit the seed — one line: "fresh session: Read <path>, then continue" — plus
+   the same prompt as a fenced paste-ready block for convenience.
+
+Assume the next session starts cold with only CLAUDE.md + memory — anything not in
+the handoff file, a doc, or memory is lost. The prompt must contain, in order:
 
 1. **Orientation** — read the project's status doc + forward backlog (adapter
    `docs.status` / `docs.backlog`); what's shipped, last commit sha(s), CI state.

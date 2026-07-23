@@ -39,7 +39,21 @@
   },
   "depPolicy": {
     "releaseAgeDays": 7,
-    "exactPin": ["lint-staged", "lucide-react"]
+    "exactPin": [
+      "lint-staged",
+      "lucide-react",
+      "stripe",
+      "@sentry/*",
+      "posthog-*",
+      "react-email",
+      "@axe-core/playwright"
+    ]
+  },
+  "contextBudget": {
+    "agentsMdMaxLines": 150,
+    "contextDocSplitTokens": 3000,
+    "memoryIndexMaxTokens": 700,
+    "memoryFileMaxTokens": 1500
   },
   "init": {
     "scaffold": "node scripts/init-app.mjs --slim --name {name}",
