@@ -65,29 +65,29 @@ Reading lives in tRPC; **writing lives in Server Actions** (see below). Don't ad
   (throws `TOO_MANY_REQUESTS` → HTTP 429 past the cap). Compose it for expensive or
   abusable **public** queries (`post.list`, `search.search`). For the authenticated
   case, reach for `userRateLimitedProcedure` (below) — it keys by user, not IP.
-- `userRateLimitedProcedure` — **protected + rate-limited by user** (Tier 4 · A16).
+- `userRateLimitedProcedure` — **protected + rate-limited by user**.
   Builds on `protectedProcedure` (so a signed-out caller gets `UNAUTHORIZED` first),
   then keys the same limiter by `ctx.session.user.id` + path instead of client IP —
   the fair unit for an authenticated abusable read (one IP NATs many users; one account
   can rotate IPs). Same 20/min cap + 429 + `RateLimit-*`/`Retry-After` headers as its IP
   sibling (via the shared `ctx.rateLimit.blocked` slot). Example: `post.listMine`.
-- `adminProcedure` — requires an admin (RBAC, Step 21). Builds on
+- `adminProcedure` — requires an admin (RBAC). Builds on
   `protectedProcedure`, then authoritatively reads the caller's role from the DB
   (not the possibly-stale session) and throws `FORBIDDEN` for non-admins; attaches
-  `role` to ctx. Example: `admin.listUsers`. See [AUTH.md](AUTH.md#rbac-step-21).
-- `orgProcedure` — requires an **active organization** the caller is a member of
-  (Organizations, Tier 4 · Band 4). Builds on `protectedProcedure`, then reads the
+  `role` to ctx. Example: `admin.listUsers`. See [auth/rbac-admin.md](auth/rbac-admin.md).
+- `orgProcedure` — requires an **active organization** the caller is a member of.
+  Builds on `protectedProcedure`, then reads the
   active org **authoritatively** (`disableCookieCache` — the session's cached
   `activeOrganizationId` lags up to 5 min after create/switch) and the membership
   **role fresh from Postgres** (`lib/organization.ts`), the same authoritative posture
   as `adminProcedure`. No active org → `BAD_REQUEST`; active org but not a member →
   `FORBIDDEN`. Attaches `activeOrganizationId` + `orgRole` (`owner`/`admin`/`member`)
   to ctx. The base for org-scoped tRPC queries; org-scoped **writes** stay in Server
-  Actions. See [AUTH.md](AUTH.md#organizations) + [DECISIONS.md](DECISIONS.md).
+  Actions. See [auth/organizations.md](auth/organizations.md) + [DECISIONS.md](DECISIONS.md).
 
 ### Org-scoped reads & writes (Tier 4 · Band 4)
 
-The example `post` entity is the worked multi-tenant example. `posts.organization_id`
+The example `post` entity is the worked multi-tenant case. `posts.organization_id`
 is nullable — **NULL = the personal workspace** — so a zero-org clone behaves as before.
 
 - **Read** — `post.list` (`rateLimitedProcedure`, stays public) is session-aware: it
@@ -104,20 +104,19 @@ is nullable — **NULL = the personal workspace** — so a zero-org clone behave
 
 ## Rate limiting
 
-App-level rate limiting (Step 20) lives in `apps/web/src/lib/rate-limit.ts` — an
+App-level rate limiting lives in `apps/web/src/lib/rate-limit.ts` — an
 in-memory limiter by default, distributed via Upstash when its env is set. It's
 applied at three surfaces:
 
 - **tRPC** via `rateLimitedProcedure` (above) — the abusable public reads `post.list`
-  and `search.search` (A2 moved it off the trivial `user.health`, now `publicProcedure`)
-  — **or** `userRateLimitedProcedure` for an authenticated abusable read, keyed by user
-  id instead of IP (`post.listMine`, Tier 4 · A16).
+  and `search.search` — **or** `userRateLimitedProcedure` for an authenticated
+  abusable read, keyed by user id instead of IP (`post.listMine`).
 - **Server Actions** by calling `rateLimit(\`checkout:${session.user.id}\`, …)` and
   returning a typed `{ error }` when blocked (an action can't set a 429 status, so
   the limit surfaces as the same `ActionResult` the UI already handles).
 - **Stripe webhook** (route handler) → HTTP 429.
 
-This is separate from Better Auth's own limiter on `/api/auth/*` (Step 19). Full
+This is separate from Better Auth's own limiter on `/api/auth/*`. Full
 details — limits, storage, the no-CSP-change rationale — are in
 [SECURITY.md](SECURITY.md#rate-limiting-app-level).
 
@@ -150,14 +149,14 @@ export async function updateUserName(formData: FormData): Promise<ActionResult> 
 }
 ```
 
-**Role-gated actions (RBAC, Step 21):** for an admin-only mutation, gate with
+**Role-gated actions (RBAC):** for an admin-only mutation, gate with
 `requireAdmin()` from `@/lib/rbac` instead of the plain session check — it does the
 authoritative DB role read and returns `null` for non-admins, which the action turns
 into a typed `{ error: "Forbidden" }` (an action can't set a 403 status). Example:
 `server/actions/admin.ts` `setUserRole`, which also refuses to change the caller's
-*own* role (D2 anti-lockout) and `revalidatePath("/admin")`s so its client
+*own* role (anti-lockout) and `revalidatePath("/admin")`s so its client
 `RoleControl` (optimistic via `useOptimistic`) reconciles. See
-[AUTH.md](AUTH.md#rbac-step-21).
+[auth/rbac-admin.md](auth/rbac-admin.md).
 
 ### Typed field errors — the `ActionResult` convention (A7)
 
@@ -188,8 +187,7 @@ via `<FormMessage/>` (never a toast — field validation stays inline; a field-l
 
 **Worked examples:** `server/actions/post.ts` `createPost` + `components/posts/
 create-post-form.tsx`, and `updatePost` + the inline edit form in
-`components/posts/post-item.tsx` (adopted 2026-07-16 — both post writes share the
-convention). `createPost` also demonstrates a **server-only** field rule the client
+`components/posts/post-item.tsx` (both post writes share the convention). `createPost` also demonstrates a **server-only** field rule the client
 schema can't check without a round-trip — a per-workspace unique title — returning
 `fieldErrors: { title }` mapped inline to the title input. Each mutation carries
 `fieldErrors` on the thrown error (`FieldActionError` from `@/lib/forms`) into
@@ -232,7 +230,7 @@ export default async function Page() {
 }
 ```
 
-The `/posts` page (Step 28) is the **live worked example** of this prefetch +
+The `/posts` page is the **live worked example** of this prefetch +
 hydration pattern: `app/[locale]/posts/page.tsx` prefetches the first page of `trpc.post.list`
 (via `prefetchInfiniteQuery` — see pagination below) and wraps the list in
 `<HydrateClient>`, so `PostList` renders from cache on first paint. It works without
@@ -244,10 +242,10 @@ the session — so the prefetch runs at request time, not at build.
 The `post` router + actions are the copy-me template for a real entity:
 
 - **Read — tRPC query:** `post.list` (`rateLimitedProcedure`) lists posts newest-first,
-  joining the author name from `user` (`server/trpc/routers/post.ts`). **Org-scoped**
-  (Tier 4 · Band 4): the caller's active org, else personal (`organization_id IS NULL`)
-  — see "Org-scoped reads & writes" above. `post.listMine` (`userRateLimitedProcedure`,
-  Tier 4 · A16) is the authenticated companion — the caller's own posts across every
+  joining the author name from `user` (`server/trpc/routers/post.ts`). **Org-scoped**:
+  the caller's active org, else personal (`organization_id IS NULL`)
+  — see "Org-scoped reads & writes" above. `post.listMine`
+  (`userRateLimitedProcedure`) is the authenticated companion — the caller's own posts across every
   workspace (`author_id = me`), same keyset cursor but rate-limited **per user** instead
   of per IP; the copy-me for any per-account expensive read.
 - **Write — Server Actions** (`server/actions/post.ts`): `createPost` (auth-gated,
@@ -258,8 +256,9 @@ The `post` router + actions are the copy-me template for a real entity:
   (bulk-rebuilds the index from the DB; this is what
   the `/search` demo's button now calls — rate-limited 3/min per user, tighter than
   create/update's 10/min because it's a full-table scan + bulk index write; a real app
-  would `requireAdmin()` it, see SERVICES.md). Indexing is best-effort: a search outage
-  logs but never fails the DB write. See [SERVICES.md](SERVICES.md) and [DATABASE.md](DATABASE.md).
+  would `requireAdmin()` it, see [services/meilisearch.md](services/meilisearch.md)). Indexing
+  is best-effort: a search outage logs but never fails the DB write. See
+  [services/meilisearch.md](services/meilisearch.md) and [DATABASE.md](DATABASE.md).
 
 ### Cursor pagination (D1)
 
@@ -303,16 +302,21 @@ differ and the prefetch won't hydrate.
 The create/edit/delete writes update the UI **before** the server responds. Each is a
 TanStack `useMutation` wrapping the Server Action, with the canonical rollback shape:
 
-- `onMutate` — `cancelQueries`, snapshot the cache, apply the change immediately
-  (prepend / patch / remove against the infinite cache), return the snapshot.
-- `onError` — restore the snapshot and surface the action's typed error.
-- `onSettled` — `invalidateQueries` so the cache reconciles with the server's truth.
+- `onMutate` — `cancelQueries` (so an in-flight refetch can't clobber the optimistic
+  state), snapshot the current cache with `getQueryData`, apply the change immediately
+  with `setQueryData` (prepend / patch / remove against the infinite cache), and
+  **return the snapshot** as context.
+- `onError` — restore the snapshot (`setQueryData(key, context.previous)`) and surface
+  the action's typed error.
+- `onSettled` — `invalidateQueries` so the server's truth replaces the provisional row
+  (canonical id/timestamps).
 
-The cache helpers (`components/posts/post-cache.ts`) map over `pages[].items` since
-the infinite cache is pages, not a flat array. Controls show on **every** row, so
-editing/deleting another author's post optimistically changes it then rolls back on
-the typed `Forbidden` — a live demo of the rollback path. See
-[STATE.md](STATE.md#optimistic-updates-d1).
+Cache edits return a **new** object graph (never mutate in place) so React/Query see a
+fresh reference. The cache helpers (`components/posts/post-cache.ts`) map over
+`pages[].items` since the infinite cache is pages, not a flat array. Controls show on
+**every** row, so editing/deleting another author's post optimistically changes it then
+rolls back on the typed `Forbidden` — a live demo of the rollback path. The
+where-state-lives framing is [STATE.md](STATE.md#optimistic-updates-d1).
 
 ## Realtime / Server-Sent Events (SSE) (Tier 4 · A22)
 
@@ -343,7 +347,7 @@ per-user notifications (`/notifications`). The split stays the app's usual one:
   same-origin `EventSource` is already covered by `connect-src 'self'` — so **no CSP
   change** (see [SECURITY.md](SECURITY.md)).
 - **Client** — the feed reads the initial page via the `notification.list` tRPC query and
-  **keyset-paginates** it (`useInfiniteQuery` + a "Load more" button — A25): input is
+  **keyset-paginates** it (`useInfiniteQuery` + a "Load more" button): input is
   `{ cursor?, limit }`, output `{ items, nextCursor }`, the same `(createdAt, id)` cursor +
   `limit + 1` probe as `post.list` (the cursor `id` is uuid-validated like `post.list`'s —
   see "Cursor pagination" above). Stream events push into that same query
@@ -354,14 +358,14 @@ per-user notifications (`/notifications`). The split stays the app's usual one:
   **authoritative** source. It's a SQL `count()` (not fetch-every-unread-row + count in
   JS), so it stays a single aggregate row regardless of how many are unread — and it
   reflects the *server* total, not just the loaded page, which a page-derived tally would
-  undercount past `NOTIFICATIONS_PAGE_SIZE` (A24). Being a separate query, it's kept in
+  undercount past `NOTIFICATIONS_PAGE_SIZE`. Being a separate query, it's kept in
   lockstep with the list: the feed invalidates it on each SSE push, on the reconnect
   backfill, and on the offline-send fallback, and sets it straight to `0` on mark-all-read.
 
 **Delivery is at-least-once while connected, self-healing across a reconnect** — a NOTIFY
 in the reconnect gap is missed *as a push* (the server doesn't replay), but the client
 **backfills on re-open**: `EventSource.onopen` after a drop invalidates `notification.list`,
-so the feed reconciles against the persisted table with no reload (A23). Every notification
+so the feed reconciles against the persisted table with no reload. Every notification
 is persisted, so the initial load reconciles too. **Serverless caveat:** SSE needs a long-lived
 connection and a persistent DB connection — native on the Docker / `next start` target
 this repo ships, but capped/broken on serverless. See

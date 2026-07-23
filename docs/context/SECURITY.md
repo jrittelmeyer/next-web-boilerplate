@@ -19,7 +19,7 @@ doesn't touch the headers.
 
 There **is** one edge middleware — `apps/web/src/proxy.ts` (Next 16 renamed the
 `middleware` file convention to `proxy`) — which composes the optimistic
-auth-cookie gate (a fast redirect for protected/auth pages, see [AUTH.md](AUTH.md))
+auth-cookie gate (a fast redirect for protected/auth pages, see [auth/core.md](auth/core.md))
 with next-intl's locale routing (see [I18N.md](I18N.md)); in nonce mode it also
 mints the per-request CSP. Since i18n its `matcher` is **broad** —
 `'/((?!api|_next|_vercel|.*\\..*).*)'`, nearly every HTML route — because locale
@@ -70,12 +70,12 @@ variant, default static mode):
 | Directive | Value | Notes |
 | --- | --- | --- |
 | `default-src` | `'self'` | Fallback for anything not listed. |
-| `script-src` | `'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com` | `'unsafe-eval'` added in dev. `'unsafe-inline'` is required — see the strategy note. Stripe.js for a future Elements surface; `challenges.cloudflare.com` for the Turnstile CAPTCHA `api.js` (A12, opt-in). |
+| `script-src` | `'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com` | `'unsafe-eval'` added in dev. `'unsafe-inline'` is required — see the strategy note. Stripe.js for a future Elements surface; `challenges.cloudflare.com` for the Turnstile CAPTCHA `api.js` (opt-in). |
 | `style-src` | `'self' 'unsafe-inline'` | Tailwind/React inject inline `<style>` and `style=` attributes; inline styles are low-risk and standard. |
-| `img-src` | `'self' blob: data: https:` | `blob:`/`data:` for previews & Next image placeholders. Optimized uploads (the `/uploads` thumbnail, A6) load from the same-origin `/_next/image` proxy (`'self'`) — Next fetches `ufs.sh` server-side. The `https:` allowance now only covers residual direct `<img>` (e.g. Radix avatars); tighten to specific hosts if you drop those. |
+| `img-src` | `'self' blob: data: https:` | `blob:`/`data:` for previews & Next image placeholders. Optimized uploads (the `/uploads` thumbnail) load from the same-origin `/_next/image` proxy (`'self'`) — Next fetches `ufs.sh` server-side. The `https:` allowance now only covers residual direct `<img>` (e.g. Radix avatars); tighten to specific hosts if you drop those. |
 | `font-src` | `'self' data:` | System font stack (no `next/font`, no external font CDN). |
 | `connect-src` | `'self' https://*.sentry.io https://*.posthog.com https://*.uploadthing.com https://*.ingest.uploadthing.com https://api.stripe.com` | `ws:` added in dev. `'self'` covers tRPC + the PostHog `/ingest` proxy. See per-origin table. |
-| `frame-src` | `'self' https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com` | Stripe Elements / 3-D Secure frames; `challenges.cloudflare.com` for the Turnstile CAPTCHA widget iframe (A12, opt-in). |
+| `frame-src` | `'self' https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com` | Stripe Elements / 3-D Secure frames; `challenges.cloudflare.com` for the Turnstile CAPTCHA widget iframe (opt-in). |
 | `worker-src` | `'self' blob:` | Some SDKs spin up workers from `blob:` URLs. |
 | `frame-ancestors` | `'none'` | Clickjacking control (the modern `X-Frame-Options`). |
 | `base-uri` | `'self'` | Blocks `<base>`-tag base-URL hijacking. |
@@ -93,10 +93,10 @@ add or remove a SaaS, update this table **and** the CSP together.
 | **PostHog** | reached via same-origin `/ingest` proxy → covered by `'self'`; `https://*.posthog.com` listed for non-proxied features (toolbar, surveys) | `connect-src` | The browser SDK uses `api_host: "/ingest"` (a `next.config.ts` rewrite), so analytics traffic is same-origin and ad-blocker-resistant. |
 | **Sentry** | `https://*.sentry.io` | `connect-src` | The browser SDK posts events to your DSN's ingest host (`https://oNNN.ingest.<region>.sentry.io`). |
 | **Stripe** | `https://js.stripe.com` (script + frame), `https://hooks.stripe.com` (frame), `https://api.stripe.com` (connect) | `script-src`/`frame-src`/`connect-src` | The **hosted-checkout redirect** is a top-level navigation and isn't restricted by CSP at all — these are pre-allowlisted for a **future** client SDK / Elements (the `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` env var is reserved for that). |
-| **Uploadthing** | `https://*.uploadthing.com`, `https://*.ingest.uploadthing.com` (connect); `https:` (img, for residual direct `<img>`) | `connect-src`/`img-src` | The client SDK negotiates uploads with the API host and PUTs to the ingest host; served files live on `*.ufs.sh`. Optimized thumbnails go through the same-origin `/_next/image` proxy (`img-src 'self'`; `*.ufs.sh` is allowlisted in `images.remotePatterns`, A6) — the raw `https:` allowance only covers plain `<img>` such as Radix avatars. |
-| **Cloudflare Turnstile** (A12, opt-in) | `https://challenges.cloudflare.com` | `script-src`/`frame-src` | The CAPTCHA `api.js` (script) renders the challenge widget in a cross-origin iframe (frame). The widget's own network calls happen *inside* that iframe (its origin), so no `connect-src` entry is needed. Only loaded when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set; the static directive is harmless otherwise. See [AUTH.md](AUTH.md#bot-protection--captcha-cloudflare-turnstile-tier-4--band-2). |
+| **Uploadthing** | `https://*.uploadthing.com`, `https://*.ingest.uploadthing.com` (connect); `https:` (img, for residual direct `<img>`) | `connect-src`/`img-src` | The client SDK negotiates uploads with the API host and PUTs to the ingest host; served files live on `*.ufs.sh`. Optimized thumbnails go through the same-origin `/_next/image` proxy (`img-src 'self'`; `*.ufs.sh` is allowlisted in `images.remotePatterns`) — the raw `https:` allowance only covers plain `<img>` such as Radix avatars. |
+| **Cloudflare Turnstile** (opt-in) | `https://challenges.cloudflare.com` | `script-src`/`frame-src` | The CAPTCHA `api.js` (script) renders the challenge widget in a cross-origin iframe (frame). The widget's own network calls happen *inside* that iframe (its origin), so no `connect-src` entry is needed. Only loaded when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set; the static directive is harmless otherwise. See [auth/core.md](auth/core.md). |
 
-**Realtime SSE (A22) needs no CSP change.** The `EventSource` to
+**Realtime SSE needs no CSP change.** The `EventSource` to
 `/api/notifications/stream` is **same-origin**, so `connect-src 'self'` already covers it
 — nothing to allowlist. Two security properties come from the code, not the CSP: the
 stream **authenticates the session** and streams **only that user's** notifications
@@ -107,7 +107,7 @@ so a channel name can't inject SQL. See [API.md](API.md#realtime--server-sent-ev
 ## CSP strategy: static vs nonce (the `CSP_MODE` switch)
 
 The CSP ships in **two supported modes**, selected by the **build-time** env var
-`CSP_MODE` (path-to-100 #10; validated in `env.ts` — a typo fails the build):
+`CSP_MODE` (validated in `env.ts` — a typo fails the build):
 
 | | `CSP_MODE` unset / `static` (default) | `CSP_MODE=nonce` |
 | --- | --- | --- |
@@ -273,71 +273,7 @@ header set is **byte-identical** to the shipped one (verified by diffing
 `.next/routes-manifest.json` between builds), the same graceful-degradation
 posture as every other integration.
 
-### Verified (2026-07-05 local · 2026-07-06 live) + what to expect
-
-The recipe was applied ad hoc to a local prod build with the endpoint pointed at
-a local sink (no Sentry creds on the dev box; the shipped commit is docs-only):
-
-- Both headers render exactly as designed, and a real violation (`fetch()` to an
-  off-allowlist origin) delivered this actual legacy POST —
-  `Content-Type: application/csp-report`:
-
-  ```json
-  {
-    "csp-report": {
-      "document-uri": "http://localhost:3100/",
-      "violated-directive": "connect-src",
-      "effective-directive": "connect-src",
-      "blocked-uri": "https://example.com/",
-      "disposition": "enforce",
-      "source-file": "http://localhost:3100/_next/static/chunks/39_….js",
-      "line-number": 10,
-      "status-code": 200,
-      "original-policy": "default-src 'self'; … report-uri http://localhost:9099/api/424242/security/?sentry_key=…"
-    }
-  }
-  ```
-
-- The modern path verifies to the browser's edge: CDP
-  (`Network.enableReportingApi`) shows the same violation queued as a
-  `csp-violation` report for the `csp-endpoint` group. **Chromium's report
-  uploader only delivers to trusted-https endpoints** — plain-http endpoints
-  (even localhost) and self-signed certs are refused, and the cert-bypass launch
-  flags don't apply to it — so modern-path delivery can't be faked locally.
-  (That untrusted endpoint is also *why* the legacy POST above was observable at
-  all: a rejected endpoint never registers the `csp-endpoint` group, and with no
-  recognized `report-to` group the browser falls back to `report-uri`.)
-  Sentry's real endpoint *is* trusted https, and the legacy path proved delivery
-  to the same URL. The Sentry-side half (report → event in the Sentry UI) is a
-  [VERIFICATION.md](../VERIFICATION.md) Phase-4 row.
-- **Live re-run against a real DSN (2026-07-06→07, Phase-4 row):** Sentry's
-  endpoint answers the CORS preflight and returns **200** to both wire formats
-  POSTed directly; a real browser-generated report **delivered end-to-end → 200**
-  via the legacy leg (`report-uri` alone, i.e. pre-2026-browser behavior); and
-  report→event processing is confirmed (`event.type:csp` in Issues — the default
-  Issues feed can hide these, so search explicitly). Two caveats for re-verifiers:
-  - **Sentry silently drops security reports for `localhost` pages** —
-    200-accepted, no event, even with the "Filter out events coming from
-    localhost" inbound filter **off** (paired-probe verified: the same report
-    with a non-localhost `document-uri` creates the event). Local-page tests
-    will never show in Issues; prove processing with a non-localhost
-    `document-uri` probe and treat the delivery 200 as the local success signal.
-  - The modern `report-to` **background uploader never fires under browser
-    automation** — Playwright Chromium (headless *and* headed), real Chrome
-    launched under automation, and Firefox 151 all register + queue the report
-    (CDP shows Queued→Pending cycles) but no upload ever leaves the browser, and
-    since a *registered* `report-to` group suppresses `report-uri`, an automated
-    check of the full recipe observes nothing at all. That leg is only
-    observable by hand on a **deployed (non-localhost) page** in a normal
-    browser; don't burn time trying to script it.
-- **Self-hosted / non-`sentry.io` Sentry:** the *reports* are CSP-exempt, but the
-  browser SDK's own event POSTs are not — a DSN pointing off `*.sentry.io` also
-  needs its host added to `connect-src` (the live check watched exactly this
-  violation fire when the DSN targeted the local sink).
-
-Expect **noise** once enabled: extension-injected resources and outdated browsers
-file reports that aren't your bugs. Tag events with `sentry_environment`, and
-treat report volume as a signal to *investigate*, not an error budget.
+> ✅ **Verified** 2026-07-05 (local prod build, both wire formats) · 2026-07-06→07 (live against a real Sentry DSN — delivery 200 + report→event confirmed). Full log incl. the re-verifier gotchas (Sentry silently drops localhost-page reports; the modern `report-to` uploader never fires under browser automation; a self-hosted/non-`sentry.io` DSN also needs a `connect-src` entry): [VERIFICATION_PROVENANCE.md](../archive/VERIFICATION_PROVENANCE.md#securitymd--csp-violation-reporting-verification-archived-2026-07-23).
 
 ## Cross-origin isolation (COOP · CORP · COEP)
 
@@ -414,24 +350,13 @@ response.
 
 Rate limiting is **two layers**, by design — don't conflate them:
 
-1. **Auth routes** (`/api/auth/*`) — Better Auth's own built-in limiter, configured
-   in `packages/auth/src/auth.ts` (Step 19). Tight `customRules` on sign-in /
-   sign-up / password-reset / verification, plus the **four 2FA endpoints** —
-   `/two-factor/enable` + `/two-factor/disable` (3/min, password-gated state changes)
-   and `/two-factor/verify-totp` + `/two-factor/verify-backup-code` (5/min, the
-   brute-force-sensitive sign-in challenge) — and the **six passkey / WebAuthn
-   endpoints** `/passkey/{generate-register-options, verify-registration,
-   generate-authenticate-options, verify-authentication, delete-passkey, update-passkey}`
-   (10/min each — a passkey is a strong credential, so the cap is looser than TOTP yet
-   still throttles abuse), plus the **five admin-plugin endpoints** `/admin/{set-role,
-   ban-user, unban-user}` (20/min), `/admin/impersonate-user` (10/min) and
-   `/admin/stop-impersonating` (30/min) — already admin-gated, so these caps limit a
-   compromised or misbehaving admin session, not an anonymous brute force. Its counters are
-   stored in the **app Postgres** (`rateLimit.storage: "database"`, the `rate_limit` table) so
-   they hold across instances / a restart, not per-instance memory. See
-   [AUTH.md](AUTH.md#multi-instance-storage) → Rate limiting.
+1. **Auth routes** (`/api/auth/*`) — Better Auth's own built-in limiter
+   (`packages/auth/src/auth.ts`): tight per-endpoint `customRules` (sign-in/up,
+   password-reset, verification, 2FA, passkeys, admin), with counters in the **app
+   Postgres** (`rateLimit.storage: "database"`, the `rate_limit` table) so they hold
+   across instances / a restart. Canonical rules + caps: [auth/core.md](auth/core.md).
 2. **Everything else** — the broader **app-level** limiter in
-   `apps/web/src/lib/rate-limit.ts` (Step 20), applied to the Stripe webhook, a
+   `apps/web/src/lib/rate-limit.ts`, applied to the Stripe webhook, a
    sample Server Action, and a tRPC middleware. This section covers (2).
 
 ### The utility
@@ -456,10 +381,10 @@ Prefix the identifier per surface (`webhook:${ip}`, `checkout:${userId}`,
 | Stripe webhook | `app/api/stripe/webhook/route.ts` | client IP (`webhook:noip` when unresolved) | 100 / min (**20 / min** for the `noip` bucket) | HTTP **429** + `RateLimit-*` / `Retry-After` (before signature work) |
 | Checkout + billing-portal actions | `server/actions/billing.ts` | `session.user.id` | 5 / min each | typed `{ error }` (Server Actions can't set a 429 status) |
 | Post create / update actions | `server/actions/post.ts` | `session.user.id` | 10 / min each | typed `{ error }` |
-| `reindexPosts` action | `server/actions/post.ts` | `session.user.id` | 3 / min (full-table scan + bulk index write — see SERVICES.md) | typed `{ error }` |
+| `reindexPosts` action | `server/actions/post.ts` | `session.user.id` | 3 / min (full-table scan + bulk index write — see [services/meilisearch.md](services/meilisearch.md)) | typed `{ error }` |
 | Upload middleware + `deleteUpload` action | `lib/uploadthing.ts` / `server/actions/uploads.ts` | `session.user.id` | 10 / min each | `UploadThingError` (surfaces in `onUploadError`) / typed `{ error }` |
 | tRPC (`rateLimitedProcedure`) | the public reads — `post.list` (`routers/post.ts`) + `search.search` (`routers/search.ts`) | `trpc:${path}:${ip}` | 20 / min | `TRPCError TOO_MANY_REQUESTS` → HTTP **429** + `RateLimit-*` / `Retry-After` |
-| tRPC (`userRateLimitedProcedure`, A16) | the authenticated abusable reads — `post.listMine` (`routers/post.ts`) | `trpc:${path}:user:${session.user.id}` | 20 / min | `TRPCError TOO_MANY_REQUESTS` → HTTP **429** + `RateLimit-*` / `Retry-After` |
+| tRPC (`userRateLimitedProcedure`) | the authenticated abusable reads — `post.listMine` (`routers/post.ts`) | `trpc:${path}:user:${session.user.id}` | 20 / min | `TRPCError TOO_MANY_REQUESTS` → HTTP **429** + `RateLimit-*` / `Retry-After` |
 
 The webhook limit is deliberately generous: genuine Stripe deliveries come from a
 small set of IPs and can burst, so 100/min passes normal traffic while capping a
@@ -488,8 +413,8 @@ The **Server-Action** surfaces (checkout / post / upload) return a typed `{ erro
 rather than a 429 — a Server Action can't set a response status — so they carry no
 headers by design; the client renders the typed error.
 
-The **auth routes** (`/api/auth/*`) are a separate layer (Better Auth's own limiter,
-Step 19), which already emits its own **`X-Retry-After`** header on a 429 — not the
+The **auth routes** (`/api/auth/*`) are a separate layer (Better Auth's own limiter),
+which already emits its own **`X-Retry-After`** header on a 429 — not the
 `RateLimit-*` set above, and not touched by this helper.
 
 ### Storage: in-memory default → optional Upstash
@@ -499,7 +424,7 @@ Step 19), which already emits its own **`X-Retry-After`** header on a 429 — no
   shared across instances** — correct for single-instance only. (This is the layer that
   still carries that caveat: the Better Auth auth-route limiter was moved to
   `rateLimit.storage: "database"` so *its* counters now hold across instances — see
-  [AUTH.md](AUTH.md#multi-instance-storage).)
+  [auth/core.md](auth/core.md).)
 - **Set `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`:** switches to a
   distributed Upstash sliding-window limiter (`@upstash/ratelimit` +
   `@upstash/redis`, imported lazily only when configured). **Required for any
@@ -508,7 +433,7 @@ Step 19), which already emits its own **`X-Retry-After`** header on a 429 — no
 
 **No CSP / allowlist change for Upstash:** the limiter's REST calls are
 **server-to-server** (the module is `server-only`), never browser fetches — CSP only
-governs browser content sources. This is why Step 20 touches no `next.config.ts` CSP
+governs browser content sources. This is why the app-level limiter touches no `next.config.ts` CSP
 directive. (If a future limiter ran in the *browser*, you'd add its origin to
 `connect-src` and to the per-SaaS table above.)
 
@@ -559,24 +484,21 @@ documented rather than enforced.
 ## Admin authorization & impersonation (Tier 4 · Band 4)
 
 The `/admin` operator console and the Better Auth `admin()` plugin (ban + impersonation) form a
-privileged surface. The security posture:
+privileged surface. Mechanics + walk-through: [auth/rbac-admin.md](auth/rbac-admin.md). The
+security posture:
 
 - **Authorization is always the fresh-DB `requireAdmin()`**, never the cookie-cached session
-  role. The proxy does only an optimistic cookie-presence redirect for `/admin`; the
-  authoritative check is `requireAdmin()` in the Server Component / Server Action, so a demotion
-  bites on the **next request**, not up to 5 min later. Every `admin()` plugin endpoint, by
-  contrast, authorizes off the **session** role — which is exactly why ban/unban are performed as
-  **fresh-gated direct DB writes** (not the plugin endpoint) and why impersonation carries a
-  ≤5-min residual (below). See
-  [AUTH.md](AUTH.md#admin-plugin--ban--impersonation-tier-4--band-4).
+  role — a demotion bites on the **next request**, not up to 5 min later. The `admin()` plugin's
+  own endpoints authorize off the **session** role, which is why ban/unban are **fresh-gated
+  direct DB writes** (not the plugin endpoint) and why impersonation carries the residual below.
 - **Ban revokes live sessions immediately** (`banUser` deletes the target's `session` rows) and
   blocks re-sign-in via the plugin's fresh `session.create.before` hook — not just a future
   sign-in block. An elapsed `ban_expires` auto-lifts at the next sign-in attempt.
 - **Impersonation residual (accepted, documented).** Impersonation is a session-cookie swap only
   the plugin can do, so it authorizes off the session role: a **just-promoted admin must
-  re-sign-in** before they can impersonate. The wrapper Server Action's fresh `requireAdmin()`
-  gate still blocks a just-*demoted* admin the plugin alone would trust for ≤5 min, and every
-  ban / impersonation mutation is written to the `audit_log`. **`allowImpersonatingAdmins` is
-  false** — an admin can't impersonate another admin (no lateral privilege capture).
+  re-sign-in** before they can impersonate, while the wrapper Server Action's fresh
+  `requireAdmin()` gate still blocks a just-*demoted* admin the plugin alone would trust for
+  ≤5 min. Every ban / impersonation mutation is written to the `audit_log`.
+  **`allowImpersonatingAdmins` is false** — no lateral privilege capture.
 - **Anti-lockout throughout** — an admin can't ban or impersonate themselves, and can't change
   their own role, so the last admin can never lock the app out of `/admin`.

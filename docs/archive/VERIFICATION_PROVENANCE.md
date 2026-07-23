@@ -207,3 +207,76 @@ _Tail of the standing ⚠️ dev-callback box — the 2026-07-17 prod-callback l
 > the DB row cascading away and the owner's `/billing` falling back to the personal surface.
 > (One topology artifact, not a bug: the post-payment redirect targets `BETTER_AUTH_URL` (`:3000`),
 > so on a `:3100` verify box the success redirect refuses — the webhook path is unaffected.)
+
+## SECURITY.md — CSP violation-reporting verification (archived 2026-07-23)
+
+> Archived verbatim from `docs/context/SECURITY.md` → "CSP violation reporting
+> (opt-in)". The operational recipe (endpoint derivation, the `next.config.ts`
+> diffs, the graceful-degradation posture) stays in SECURITY.md; this is the
+> dated verification narrative.
+
+### Verified (2026-07-05 local · 2026-07-06 live) + what to expect
+
+The recipe was applied ad hoc to a local prod build with the endpoint pointed at
+a local sink (no Sentry creds on the dev box; the shipped commit is docs-only):
+
+- Both headers render exactly as designed, and a real violation (`fetch()` to an
+  off-allowlist origin) delivered this actual legacy POST —
+  `Content-Type: application/csp-report`:
+
+  ```json
+  {
+    "csp-report": {
+      "document-uri": "http://localhost:3100/",
+      "violated-directive": "connect-src",
+      "effective-directive": "connect-src",
+      "blocked-uri": "https://example.com/",
+      "disposition": "enforce",
+      "source-file": "http://localhost:3100/_next/static/chunks/39_….js",
+      "line-number": 10,
+      "status-code": 200,
+      "original-policy": "default-src 'self'; … report-uri http://localhost:9099/api/424242/security/?sentry_key=…"
+    }
+  }
+  ```
+
+- The modern path verifies to the browser's edge: CDP
+  (`Network.enableReportingApi`) shows the same violation queued as a
+  `csp-violation` report for the `csp-endpoint` group. **Chromium's report
+  uploader only delivers to trusted-https endpoints** — plain-http endpoints
+  (even localhost) and self-signed certs are refused, and the cert-bypass launch
+  flags don't apply to it — so modern-path delivery can't be faked locally.
+  (That untrusted endpoint is also *why* the legacy POST above was observable at
+  all: a rejected endpoint never registers the `csp-endpoint` group, and with no
+  recognized `report-to` group the browser falls back to `report-uri`.)
+  Sentry's real endpoint *is* trusted https, and the legacy path proved delivery
+  to the same URL. The Sentry-side half (report → event in the Sentry UI) is a
+  [VERIFICATION.md](../VERIFICATION.md) Phase-4 row.
+- **Live re-run against a real DSN (2026-07-06→07, Phase-4 row):** Sentry's
+  endpoint answers the CORS preflight and returns **200** to both wire formats
+  POSTed directly; a real browser-generated report **delivered end-to-end → 200**
+  via the legacy leg (`report-uri` alone, i.e. pre-2026-browser behavior); and
+  report→event processing is confirmed (`event.type:csp` in Issues — the default
+  Issues feed can hide these, so search explicitly). Two caveats for re-verifiers:
+  - **Sentry silently drops security reports for `localhost` pages** —
+    200-accepted, no event, even with the "Filter out events coming from
+    localhost" inbound filter **off** (paired-probe verified: the same report
+    with a non-localhost `document-uri` creates the event). Local-page tests
+    will never show in Issues; prove processing with a non-localhost
+    `document-uri` probe and treat the delivery 200 as the local success signal.
+  - The modern `report-to` **background uploader never fires under browser
+    automation** — Playwright Chromium (headless *and* headed), real Chrome
+    launched under automation, and Firefox 151 all register + queue the report
+    (CDP shows Queued→Pending cycles) but no upload ever leaves the browser, and
+    since a *registered* `report-to` group suppresses `report-uri`, an automated
+    check of the full recipe observes nothing at all. That leg is only
+    observable by hand on a **deployed (non-localhost) page** in a normal
+    browser; don't burn time trying to script it.
+- **Self-hosted / non-`sentry.io` Sentry:** the *reports* are CSP-exempt, but the
+  browser SDK's own event POSTs are not — a DSN pointing off `*.sentry.io` also
+  needs its host added to `connect-src` (the live check watched exactly this
+  violation fire when the DSN targeted the local sink).
+
+Expect **noise** once enabled: extension-injected resources and outdated browsers
+file reports that aren't your bugs. Tag events with `sentry_environment`, and
+treat report volume as a signal to *investigate*, not an error budget.

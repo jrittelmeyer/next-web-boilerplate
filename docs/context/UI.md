@@ -6,8 +6,8 @@
 
 - **Components:** shadcn/ui (copy-paste, Radix UI primitives)
 - **Styling:** Tailwind CSS v4
-- **Icons:** Lucide React (shadcn default) — installed in `@repo/ui` (Step 24)
-- **Dark mode:** `next-themes` provider + a theme toggle in `@repo/ui` (Step 24)
+- **Icons:** Lucide React (shadcn default) — installed in `@repo/ui`
+- **Dark mode:** `next-themes` provider + a theme toggle in `@repo/ui`
 - **Package:** `@repo/ui` (`packages/ui/`) for shared components
 
 ## Tailwind v4 Key Differences
@@ -34,8 +34,8 @@ every app and `@repo/ui` component follows. The class is managed at runtime by
 
 ## Dark mode (`next-themes`)
 
-The `.dark` tokens ship in `tooling/tailwind/base.css`; Step 24 wires the runtime that
-toggles them. Two pieces live in `@repo/ui`:
+The `.dark` tokens ship in `tooling/tailwind/base.css`; the runtime that toggles
+them is two pieces in `@repo/ui`:
 
 - **`ThemeProvider`** (`components/theme-provider.tsx`) — a thin `"use client"` wrapper
   over `next-themes`. The **app** mounts it in the document-shell layout
@@ -69,9 +69,11 @@ note. `attribute="class"` matches the `.dark` selector; `defaultTheme="system"` 
 switch. **`suppressHydrationWarning` on `<html>` is required** — the server renders no
 theme class and the inline script adds it, a deliberate one-element mismatch.
 
-**CSP note:** the pre-paint script is **inline**, allowed by the Step-18 `script-src
-'self' 'unsafe-inline'` — so dark mode needs **no CSP change**. If you migrate to a
-nonce-based CSP (SECURITY.md), pass the nonce to `next-themes` via its `nonce` prop.
+**CSP note:** the pre-paint script is **inline**. In the default static CSP mode it's
+allowed by `script-src 'unsafe-inline'`; in a **`CSP_MODE=nonce`** build — a first-class
+mode, not a migration — the `[locale]` layout already passes the per-request nonce to
+`ThemeProvider` (next-themes' `nonce` prop). Both modes work with no change here; current
+truth in [SECURITY.md](SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch).
 
 **Biome + Tailwind v4:** Biome's CSS parser rejects Tailwind's `@theme`/`@import "tailwindcss"` unless `css.parser.tailwindDirectives: true` is set in `biome.json` (already configured). Keep that enabled or `pnpm lint` will fail on any file using Tailwind at-rules.
 
@@ -236,19 +238,17 @@ Both came in with **no new npm dependency** — they import the same `radix-ui` 
 per the monorepo quirk above, the CLI's `radix-ui` install into `apps/web` was reverted.
 `apps/web` did gain a direct `lucide-react` dep (exact-pinned to `@repo/ui`'s version) since
 the org switcher/manager import icons directly — icons in app code, not only in `@repo/ui`.
-Used by `components/organization/*` (see [AUTH.md](AUTH.md#organizations-ui-step-4)).
+Used by `components/organization/*` (see [auth/organizations.md](auth/organizations.md)).
 
 `DialogContent` is **viewport-safe for tall content**: it caps its height at
 `max-h-[calc(100dvh-2rem)]` and scrolls the overflow *inside* the dialog (`overflow-y-auto`), so a
 dialog taller than the screen keeps its title + close button on screen instead of centering at 50%
-with the top half off the viewport edge (Tailwind v4 centers via the standalone `translate`
-property — untouched by the enter animation's `transform` — so the height cap was the only missing
-piece; the earlier "animation overrides the transform" diagnosis was wrong, see
-[DECISIONS.md](DECISIONS.md)). Verified by the `TallContent` story in `dialog.stories.tsx`
-(`pnpm --filter @repo/ui storybook`).
+with the top half off the viewport edge. (An earlier "animation overrides the transform" diagnosis
+was disproven — record: [docs/archive/PHASE_HISTORY.md](../archive/PHASE_HISTORY.md).) Verified by
+the `TallContent` story in `dialog.stories.tsx` (`pnpm --filter @repo/ui storybook`).
 
 **Shipped primitive — `Toaster` (sonner)** (`components/sonner.tsx`): app-wide transient
-notifications (Band-1 A1). A thin themed wrapper over `sonner`'s `Toaster` — it reads the active
+notifications. A thin themed wrapper over `sonner`'s `Toaster` — it reads the active
 theme from `next-themes` so toasts follow light/dark, and maps sonner's color slots to our
 `--popover*` / `--border` tokens. Mounted **once** in `apps/web/src/app/[locale]/layout.tsx`
 inside `ThemeProvider` (a portal leaf — it renders no children, so it doesn't widen the RSC boundary).
@@ -275,8 +275,8 @@ Form's `FormMessage`). Toasts render in the layout portal, **outside** the form,
 anchored a form-scoped `role="alert"` must move to sonner's toast (`[data-sonner-toast]`,
 `data-type="error"`) — see `e2e/account.spec.ts`.
 
-**Shipped primitive — `Skeleton`** (`components/skeleton.tsx`): the loading-placeholder primitive
-(Band-2 A14). A plain pulsing box (`animate-pulse rounded-md bg-accent`) you size/shape with
+**Shipped primitive — `Skeleton`** (`components/skeleton.tsx`): the loading-placeholder
+primitive. A plain pulsing box (`animate-pulse rounded-md bg-accent`) you size/shape with
 utility classes — added with **no new dependency** (`cn` + React only). It's the canonical shadcn
 Skeleton, hand-written to match the repo's `card.tsx` style (the shadcn CLI's value is dep
 resolution + registry fidelity; a 6-line, zero-dep primitive needs neither, and skipping the CLI
@@ -296,7 +296,7 @@ avoids its monorepo dep-move/reformat follow-ups).
   single-line post-count and the composer-card placeholder. Group skeletons carry `role="status"`
   on the wrapper (like `loading.tsx`); the individual bones are decorative.
 
-**Shipped primitive — `Table`** (`components/table.tsx`, A26): the canonical shadcn data-table
+**Shipped primitive — `Table`** (`components/table.tsx`): the canonical shadcn data-table
 family (`Table`/`TableHeader`/`TableBody`/`TableFooter`/`TableRow`/`TableHead`/`TableCell`/
 `TableCaption`) — thin styled wrappers over the native `<table>` elements, added with **no new
 dependency** (`cn` + React only, hand-written to match `card.tsx`/`skeleton.tsx` like the other
@@ -310,7 +310,7 @@ rows carry per-row Role/Ban/Impersonate control clusters, not clean tabular cell
 
 ## Component gallery (Storybook)
 
-`@repo/ui` ships a **Storybook** gallery (Step D6) — a live, isolated catalog of the
+`@repo/ui` ships a **Storybook** gallery — a live, isolated catalog of the
 shared primitives. It's a **dev tool**, not part of the app:
 
 ```bash
@@ -344,7 +344,7 @@ on every push that touches `packages/ui/`, via `.github/workflows/pages.yml`. Se
 - **Zero app-bundle / CI cost.** Storybook is never imported by `apps/web`, isn't in
   `turbo.json`, and CI doesn't run it by default → no prod weight (the opt-in `visual`
   regression job below is the one exception — gated on `ENABLE_VISUAL`, which this repo
-  sets since A28). One
+  sets). One
   guard makes this airtight: `apps/web/globals.css`
   scans `packages/ui/src`, so it adds `@source not "…/packages/ui/src/**/*.stories.tsx"`
   to keep story-only utility classes **out of the production stylesheet**. When you add a
@@ -372,7 +372,7 @@ pnpm --filter @repo/ui test:visual:update  # rebase baselines (after an intended
   component a sliver of a 1280×720 frame, which would dilute a real change below the
   threshold) in **both themes** (`?globals=theme:light|dark`). The interactive **Dialog**
   is opened before capture (`Default` + `TallContent` at a short 640×620 viewport — the
-  B3 tall-content regression surface).
+  tall-content regression surface).
 - **Determinism** is the whole game: Chromium launch flags
   (`--font-render-hinting=none --disable-lcd-text --disable-gpu --force-color-profile=srgb
   --hide-scrollbars`) plus frozen animations bring cross-run antialiasing noise to ~0 px,
@@ -384,7 +384,7 @@ pnpm --filter @repo/ui test:visual:update  # rebase baselines (after an intended
 
 **Baselines are PLATFORM-SPECIFIC.** Playwright names them
 `tests/visual.spec.ts-snapshots/<story>-<theme>-chromium-<platform>.png` because font
-rendering differs per-OS. **Both sets are committed** (A28, 2026-07-12): the maintainer's
+rendering differs per-OS. **Both sets are committed** (2026-07-12): the maintainer's
 dev platform (`…-win32.png`) and CI's (`…-linux.png`, generated in the pinned Playwright
 Docker image — **the same image the CI `visual` job runs inside** (`container:` in
 `ci.yml`), so baselines and CI share a bit-identical rendering environment; keep the two
@@ -415,7 +415,7 @@ docker run --rm -v "${PWD}:/src" mcr.microsoft.com/playwright:v1.61.0-noble bash
 
 **CI is variable-gated and ON in this repo** — the `visual` job in
 `.github/workflows/ci.yml` runs only when the `ENABLE_VISUAL` repo variable is `true` (the
-`ENABLE_CODEQL` / `ENABLE_GHCR_PUBLISH` pattern). This repo set it on 2026-07-12 (A28), so
+`ENABLE_CODEQL` / `ENABLE_GHCR_PUBLISH` pattern). This repo set it on 2026-07-12, so
 the job runs on every PR/push and stays green because the Linux baselines above are
 committed. A fresh fork starts with the variable unset (lane off) so its pipeline is green
 before it commits baselines for its own runner; flip it with `gh variable set ENABLE_VISUAL
@@ -456,8 +456,8 @@ The client validates with the **shared** schema (`@repo/validators`); the mutati
 runs through a **Server Action** (writes live in actions, not tRPC — see API.md). The
 action takes `FormData` and returns `{ error } | { data }`, so `onSubmit` builds a
 `FormData` and branches on the typed result. Working example:
-`apps/web/src/components/account/update-name-form.tsx`, hosted at `/account` (the M3
-account page; see [AUTH.md](AUTH.md#account-page-m3)).
+`apps/web/src/components/account/update-name-form.tsx`, hosted at `/account` (see
+[auth/account-page.md](auth/account-page.md)).
 
 ```typescript
 "use client";

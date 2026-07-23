@@ -1766,3 +1766,87 @@ the next archive sweep.
 | B3 | ~~A32 — locale-aware date formatting (`formats`/`timeZone` in `request.ts` + notifications feed → `useFormatter().dateTime`; the A30 recipe's consumer half)~~ | 2026-07-12 | I18N.md → Formatting dates, numbers & currency |
 | B2 | ~~A13 — cancel Stripe subscription on account deletion (`deleteUser.beforeDelete` capture → `cancel-stripe-subscriptions` job → `@repo/jobs` worker; immediate cancel, Stripe customer kept)~~ | 2026-07-13 | SERVICES.md → Stripe · AUTH.md → Danger zone |
 | B4 | ~~A31 — `typedRoutes` evaluation~~ (**evaluated → NOT adopted**: the `[locale]` tree makes the checking vacuous-or-wrong; next-intl's flattened nav typing is out of its reach) | 2026-07-12 | DECISIONS.md |
+
+## Decision-log anecdotes — archived from DECISIONS.md (2026-07-23)
+
+One-time build anecdotes moved verbatim out of the living decision log during the
+2026-07-23 doc restructure; each left a short locked-decision verdict in
+[DECISIONS.md](../context/DECISIONS.md). Relative links inside the moved text are as
+originally written (relative to `docs/context/`).
+
+**The shadcn `form` overwrite-prompt workaround (Step 7):**
+
+- **shadcn `form` add hit an overwrite prompt:** `form`'s registry deps include `button`+`label`
+  (already present), and `--yes` does **not** auto-answer the resulting "overwrite?" prompt (it
+  hangs). Workaround used: delete the two existing files, re-run the add (CLI writes all three
+  cleanly), then `git checkout` to restore the committed `button`/`label`, keeping only the new
+  `form.tsx`; then `biome check --write packages/ui`.
+
+**The superseded `/profile` demo route (Step 7→C1, deleted at M3):**
+
+- **Form demo lived at a public `/profile` route** (Step 7→C1), intentionally **not** under the
+  `(dashboard)` proxy gate, so both Server Action branches were exercisable in a browser: success
+  when signed in, and the typed `Unauthorized` when not. The mutation stays guarded server-side in
+  `updateUserName`. **Superseded by M3:** now that the `(auth)` UI + `(dashboard)` shell exist, the
+  real, gated `/account` page hosts this form and `/profile` was deleted. The signed-out
+  `Unauthorized` branch is still covered by the `updateUserName` unit test, not a public route.
+
+**The `react-email` pin story (Step 9; the pin fact itself stays in DECISIONS.md/STACK.md):**
+
+- **`react-email` is exact-pinned `6.6.3`** (not `^`): the `latest` `6.6.4` was published hours
+  before Step 9 and tripped pnpm's `minimumReleaseAge` supply-chain gate (it auto-added a
+  `minimumReleaseAgeExclude`, which was reverted). It's a devDep CLI (never shipped), so the prior
+  stable is used; bump once `6.6.4`+ ages out. The three _runtime_ email deps all passed the gate.
+
+**The disproven Dialog diagnosis (from the 2FA entry — this is the CANONICAL archived copy):**
+
+- **INLINE, not modal — a deliberate UX call (the original blocker is now fixed).** Both the
+  `/account` enroll card and the sign-in challenge are inline reveals, consistent with the
+  page's other cards. This was *originally* forced by a `Dialog` bug — tall content dropped off
+  the top of the viewport, unreachable. The earlier note blamed the `tw-animate-css` enter
+  animation "overriding the translate transform," but **reproduction (2026-07-09) proved that
+  wrong**: Tailwind v4 centers `DialogContent` via the standalone `translate` CSS property,
+  which the zoom animation's separate `transform` never touches — the real fault was simply
+  that `DialogContent` had **no height cap**. Fixed by adding `max-h-[calc(100dvh-2rem)]
+  overflow-y-auto` (see [UI.md](UI.md) → Dialog + the `TallContent` story in
+  `dialog.stories.tsx`); tall modals now scroll inside and stay centered. The 2FA/org surfaces
+  stay inline by **choice**, not necessity.
+
+**The `typedRoutes` prototype record (Tier 4 · A31; the verdict stays in DECISIONS.md):**
+
+- **`typedRoutes` evaluated and NOT adopted (Tier 4 · A31, 2026-07-12).** The stable top-level
+  `typedRoutes: true` flag (Next 16.2.9; `experimental.typedRoutes` is deprecated) was prototyped
+  end-to-end — `next typegen` → `.next/types/link.d.ts` → `tsc` → a full green build with the
+  required casts — and rejected because the `[locale]` path architecture inverts its value:
+  - **The generated route union can't represent this app's runtime URL space.** Every page lives
+    under `app/[locale]/`, so the union is `` `/${slug}/login` ``-shaped dynamic patterns plus five
+    static route handlers. Under `localePrefix: "as-needed"`, the **default-locale URLs the app
+    actually navigates to have no locale segment** — so checking is simultaneously **vacuous** for
+    single-segment paths (`redirect("/login")` type-checks by matching `/[locale]` with
+    locale=`"login"`; the typo `/dashbord` passes the same way) and **wrong** for the rest
+    (runtime-valid `/` and unprefixed multi-segment paths like `/admin/audit` are type errors).
+    Verified by probe: the only genuinely caught class is a locale-*prefixed* multi-segment typo
+    (`/es/dashbord`) — a URL shape this app never hand-writes.
+  - **The app's real link surface is out of `typedRoutes`' reach.** ~All links/redirects flow
+    through `@/i18n/navigation` ([I18N.md](I18N.md)), and next-intl's `createNavigation` types are
+    **flattened into its published `.d.ts` at its own build time** — with no `pathnames` map,
+    `href` is literally `string | UrlObject`, immune to the `next/link`/`next/navigation` module
+    augmentation. Only the ten deliberate `next/navigation`/`next/link` exception call sites would
+    be typed, and adoption's net diff there is **six `as Route` casts on runtime-correct code**
+    (4× `router.push(redirectTo)`, 2× `href="/"`) — suppressing checks, not adding them. If typed
+    hrefs are ever wanted here, the right tool is **next-intl's `pathnames` routing map** (checks
+    the i18n layer itself), not `typedRoutes`.
+  - **The flag is also a silent no-op under this repo's tsconfig.** TS include globs skip
+    dot-directories, so the scaffold's explicit `.next/types/**/*.ts` include is what admits the
+    generated types — and `apps/web/tsconfig.json`'s `exclude: [".next"]` filters it back out
+    (exclude wins over include). Enabling for real would require dropping that exclude **and**
+    adding a `next typegen` step before CI's `type-check` (the verify lane type-checks a clean
+    checkout, before any build). Side finding, deliberately left as-is: the same exclude keeps
+    Next's generated `validator.ts` (route-export conformance) out of `tsc`'s program; it passed
+    cleanly when admitted during the prototype, but wiring it in would make `type-check` results
+    depend on `.next` staleness — not worth the churn for a check the build already performs.
+  - **No tooling fallout** (the one point in favor): with the flag on plus the casts, Turbopack,
+    React Compiler, `cacheComponents`/PPR, the next-intl plugin, and the Sentry wrapper all built
+    green, and next-intl internals + the vitest navigation stubs type-checked untouched. The
+    rejection is architectural fit, not breakage — revisit only if the app ever drops locale path
+    routing or adopts a `pathnames` map (which supersedes it anyway).

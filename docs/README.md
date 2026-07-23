@@ -24,10 +24,13 @@ level up.
 
 ## Reference — `context/` (load per task)
 
-Fourteen per-area deep dives (`STACK` · `ARCHITECTURE` · `CONVENTIONS` · `DATABASE` ·
-`AUTH` · `API` · `STATE` · `UI` · `I18N` · `TESTING` · `SERVICES` · `SECURITY` ·
-`DEPLOYMENT` · `DECISIONS`). The per-task index — *which file to read for which kind
-of change* — is the table in [`AGENTS.md`](../AGENTS.md).
+Per-area deep dives (`STACK` · `ARCHITECTURE` · `CONVENTIONS` · `DATABASE` · `API` ·
+`STATE` · `UI` · `I18N` · `TESTING` · `SECURITY` · `DEPLOYMENT` · `DECISIONS`), plus
+two topic dirs split for per-task loading (2026-07-23): [`context/auth/`](context/auth/)
+(core · account-page · factors · rbac-admin · organizations; index `AUTH.md`) and
+[`context/services/`](context/services/) (one file per service; index `SERVICES.md`).
+The per-task index — *which file to read for which kind of change* — is the table in
+[`AGENTS.md`](../AGENTS.md).
 
 ## History — `archive/`
 

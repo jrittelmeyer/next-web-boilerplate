@@ -89,13 +89,17 @@ Full rationale, naming table, and file-structure map:
 | [ARCHITECTURE.md](docs/context/ARCHITECTURE.md) | adding features, creating files, package boundaries |
 | [CONVENTIONS.md](docs/context/CONVENTIONS.md) | naming details, `apps/web/src` file map, git hooks, knip/compiler rationale |
 | [DATABASE.md](docs/context/DATABASE.md) | schema, queries, migrations |
-| [AUTH.md](docs/context/AUTH.md) | auth flows, sessions, protected routes, RBAC |
+| [auth/core.md](docs/context/auth/core.md) | auth setup, sessions, protected routes, rate limits, plugin order, auth env |
+| [auth/account-page.md](docs/context/auth/account-page.md) | the /account page and its forms |
+| [auth/factors.md](docs/context/auth/factors.md) | 2FA, passkeys, CAPTCHA, magic link, email OTP |
+| [auth/rbac-admin.md](docs/context/auth/rbac-admin.md) | RBAC, admin plugin, ban/impersonation, audit log |
+| [auth/organizations.md](docs/context/auth/organizations.md) | organizations, invitations, per-org billing |
 | [API.md](docs/context/API.md) | tRPC procedures or Server Actions |
 | [STATE.md](docs/context/STATE.md) | Zustand stores, client vs server state, TanStack Query boundary |
 | [TESTING.md](docs/context/TESTING.md) | writing or running tests |
 | [UI.md](docs/context/UI.md) | components, layouts, Tailwind, shadcn, adopting a brand/token sheet |
 | [I18N.md](docs/context/I18N.md) | translating copy, formatting dates/numbers/currency, adding a locale, locale routing/`[locale]`, per-locale SEO, the LanguageSwitcher |
-| [SERVICES.md](docs/context/SERVICES.md) | Stripe, Resend, Sentry, PostHog, Uploadthing, Meilisearch |
+| [services/](docs/context/services/) | one file per service — stripe · resend · sentry · betterstack · posthog · uploadthing · meilisearch · jobs · observability-dac (index + shared conventions: [SERVICES.md](docs/context/SERVICES.md)) |
 | [SECURITY.md](docs/context/SECURITY.md) | security headers, CSP, allowlisting a new SaaS origin |
 | [DEPLOYMENT.md](docs/context/DEPLOYMENT.md) | Docker, env vars, CI/CD, infrastructure |
 | [DECISIONS.md](docs/context/DECISIONS.md) | the *why* behind a cross-cutting choice (driver, env, auth-schema ownership, tRPC/Action split, Tailwind/shadcn wiring, dependency pins) |

@@ -44,11 +44,11 @@ apps/web/
       [locale]/       — the WHOLE page tree (next-intl path routing — see I18N.md);
                         [locale]/layout.tsx is the real document shell (<html lang>,
                         providers, Toaster)
-        (auth)/       — C1 auth UI: login/signup/forgot-password/reset-password
+        (auth)/       — auth UI: login/signup/forgot-password/reset-password
                         (shared centered-card layout, no app nav); renders at /login, …
         (dashboard)/  — protected app shell (nav + user menu + sign-out); the layout
                         runs the authoritative session check, redirects to /login if none.
-                        Holds /dashboard and /admin (D2; admin-only nav link + RoleControl)
+                        Holds /dashboard and /admin (admin-only nav link + RoleControl)
     i18n/             — next-intl plumbing (routing.ts / request.ts / navigation.ts)
     proxy.ts          — edge gate: optimistic auth-cookie redirect + i18n locale routing
     components/       — App-specific React components (not shared); feature subfolders
@@ -71,7 +71,7 @@ apps/web/
   tsconfig.json       — extends @repo/typescript-config/nextjs
 ```
 
-Observability *instrumentation* (Step 13) lives **app-local**, not in a `@repo/*`
+Observability *instrumentation* lives **app-local**, not in a `@repo/*`
 package: the Sentry instrumentation files are a Next.js convention (must be in the
 app), the PostHog server client is a thin config singleton (`lib/posthog.ts`, same
 posture as `lib/stripe.ts`/`lib/search.ts`), the PostHog client provider is an app
@@ -79,7 +79,7 @@ component, and BetterStack's `log` is imported directly from `@logtail/next` whe
 needed. (`@repo/observability` is a different thing — dev/CI-only dashboards-as-code,
 above — not runtime instrumentation.)
 
-**SEO / PWA metadata (Step 23)** is all App Router file conventions in `app/`, plus
+**SEO / PWA metadata** is all App Router file conventions in `app/`, plus
 one helper. `lib/site.ts` (server-only) is the single source of truth — `siteUrl`
 (`SITE_URL ?? BETTER_AUTH_URL`, so the canonical public/SEO origin can differ from the
 app/auth origin; localhost fallback for `SKIP_ENV_VALIDATION` builds) and `siteConfig`
@@ -101,22 +101,22 @@ as they land.
 Drizzle schema definitions, database client, and migration files. Imported by `apps/web` and any future apps. No business logic — pure data access.
 
 ### `packages/auth` → `@repo/auth`
-Better Auth configuration, session type definitions, and auth utilities. The Next.js middleware lives in `apps/web` but imports session helpers from here. Imports `@repo/email` to send verification / password-reset / welcome emails from the Better Auth lifecycle callbacks (see [AUTH.md](AUTH.md)).
+Better Auth configuration, session type definitions, and auth utilities. The Next.js middleware lives in `apps/web` but imports session helpers from here. Imports `@repo/email` to send verification / password-reset / welcome emails from the Better Auth lifecycle callbacks (see [auth/core.md](auth/core.md)).
 
 ### `packages/email` → `@repo/email`
-React Email templates plus the (lazy) Resend client and the send helpers. Imported server-side only. Templates are React components that render to HTML. Imports `@repo/db` for the suppression consult (#8): `send()` checks `isEmailSuppressed()` before every configured send (see [SERVICES.md](SERVICES.md)).
+React Email templates plus the (lazy) Resend client and the send helpers. Imported server-side only. Templates are React components that render to HTML. Imports `@repo/db` for the suppression consult: `send()` checks `isEmailSuppressed()` before every configured send (see [services/resend.md](services/resend.md)).
 
 ### `packages/jobs` → `@repo/jobs`
-pg-boss background jobs (D7). Two halves: the app imports only the thin `enqueue()`
+pg-boss background jobs. Two halves: the app imports only the thin `enqueue()`
 (server-only, gracefully no-ops when the DB is unreachable); the worker is a separate
 long-lived process (`pnpm --filter @repo/jobs start`) that runs the handlers. Imports
 `@repo/email` (the welcome-email handler); consumed by `@repo/auth`
-(`afterEmailVerification` enqueues). Full walk-through in [SERVICES.md](SERVICES.md).
+(`afterEmailVerification` enqueues). Full walk-through in [services/jobs.md](services/jobs.md).
 
 ### `packages/observability` → `@repo/observability`
-BetterStack dashboards-as-code (D11): typed monitor/heartbeat config + `check`/`sync`
+BetterStack dashboards-as-code: typed monitor/heartbeat config + `check`/`sync`
 scripts. **Dev/CI-only — never imported by the app** (zero build/bundle/CSP surface).
-See [SERVICES.md](SERVICES.md).
+See [services/observability-dac.md](services/observability-dac.md).
 
 ### `packages/ui` → `@repo/ui`
 Shared shadcn/ui components. shadcn runs in **monorepo mode** (a `components.json` in
@@ -142,32 +142,32 @@ They're intentionally public (not behind the `(dashboard)` proxy gate) so both t
 signed-in and signed-out branches of each action are reachable.
 
 > **Removing an integration entirely** (not just swapping a demo for a real feature): each
-> integration's [SERVICES.md](SERVICES.md) section ends with a **"Remove it"** checklist — the
+> integration's doc under [services/](services/) ends with a **"Remove it"** checklist — the
 > exact files, deps, env vars, CSP entries, and DB tables to delete for Stripe, Uploadthing,
 > Meilisearch, PostHog, Sentry, background jobs (`@repo/jobs`), and `@repo/observability`. Email
 > (`@repo/email`) and BetterStack logging (`@logtail/next`) are load-bearing façades — those
 > entries explain how to swap/degrade rather than delete.
 
-| Route | Step | Demonstrates |
-| --- | --- | --- |
-| `/state` | 8 | A shared Zustand store (`UiStoreDemo` mounted twice, in sync) |
-| `/billing` (+ `/billing/success`) | 10 | Stripe hosted Checkout via `createCheckoutSession` |
-| `/premium` | A2 | Subscription **gating** — `hasActiveSubscription(userId)` reads the local `subscriptions` table (no Stripe call); three states (signed-out → sign-in · unentitled → `/billing` · entitled → content) |
-| `/uploads` | 11 | Uploadthing `UploadButton` (auth-gated `imageUploader`) |
-| `/search` | 12 | Meilisearch read (tRPC `search.search`) + a "Reindex posts from database" write (`reindexPosts`) over the real `posts` index |
-| `/observability` | 13 | Sentry capture · BetterStack log · PostHog event + server flag |
-| `/admin` | 21 · D2 | RBAC guard pattern — **gated** (not public), in the `(dashboard)` shell: proxy cookie-redirect + `requireAdmin()` authoritative check (404 for non-admins) + a user list whose roles are changed via the `setUserRole` Server Action (`RoleControl`, optimistic `useOptimistic`), behind an admin-only nav link |
-| `/posts` | 28 · D1 · D4 | The example domain entity end-to-end **and** the Cache Components / PPR showcase: a synchronous page renders the static card shell while `<PostStats>` (a `"use cache"` count — `cacheLife("minutes")`/`cacheTag("posts")`), the session-aware composer, and the cursor-paginated `post.list` feed (RSC-prefetched + hydrated, `useInfiniteQuery` + "Load more") each stream in behind their own `<Suspense>`. `createPost`/`updatePost`/`deletePost` index/de-index on write, do **optimistic** create/edit/delete + rollback, and `updateTag("posts")` to bust the cached count (read-your-own-writes) |
-| `/notifications` | A22 | **Gated** (in the `(dashboard)` shell): the realtime SSE example — a per-user notifications feed pushed over `/api/notifications/stream` (Postgres LISTEN/NOTIFY → in-process bus → `EventSource` → the `notification.list` query cache + a toast). Delete the route + `server/realtime/*` + the stream route to remove it; the persisted `notifications` table + `notification.list` degrade to "refresh to see new". See [API.md](API.md#realtime--server-sent-events-sse-tier-4--a22) |
+| Route | Demonstrates |
+| --- | --- |
+| `/state` | A shared Zustand store (`UiStoreDemo` mounted twice, in sync) |
+| `/billing` (+ `/billing/success`) | Stripe hosted Checkout via `createCheckoutSession` |
+| `/premium` | Subscription **gating** — `hasActiveSubscription(userId)` reads the local `subscriptions` table (no Stripe call); three states (signed-out → sign-in · unentitled → `/billing` · entitled → content) |
+| `/uploads` | Uploadthing `UploadButton` (auth-gated `imageUploader`) |
+| `/search` | Meilisearch read (tRPC `search.search`) + a "Reindex posts from database" write (`reindexPosts`) over the real `posts` index |
+| `/observability` | Sentry capture · BetterStack log · PostHog event + server flag |
+| `/admin` | RBAC guard pattern — **gated** (not public), in the `(dashboard)` shell: proxy cookie-redirect + `requireAdmin()` authoritative check (404 for non-admins) + a user list whose roles are changed via the `setUserRole` Server Action (`RoleControl`, optimistic `useOptimistic`), behind an admin-only nav link |
+| `/posts` | The example domain entity end-to-end **and** the Cache Components / PPR showcase: a synchronous page renders the static card shell while `<PostStats>` (a `"use cache"` count — `cacheLife("minutes")`/`cacheTag("posts")`), the session-aware composer, and the cursor-paginated `post.list` feed (RSC-prefetched + hydrated, `useInfiniteQuery` + "Load more") each stream in behind their own `<Suspense>`. `createPost`/`updatePost`/`deletePost` index/de-index on write, do **optimistic** create/edit/delete + rollback, and `updateTag("posts")` to bust the cached count (read-your-own-writes) |
+| `/notifications` | **Gated** (in the `(dashboard)` shell): the realtime SSE example — a per-user notifications feed pushed over `/api/notifications/stream` (Postgres LISTEN/NOTIFY → in-process bus → `EventSource` → the `notification.list` query cache + a toast). Delete the route + `server/realtime/*` + the stream route to remove it; the persisted `notifications` table + `notification.list` degrade to "refresh to see new". See [API.md](API.md#realtime--server-sent-events-sse-tier-4--a22) |
 
-`/admin` is the one **gated** entry here (RBAC, Step 21; deepened in D2): the page
+`/admin` is the one **gated** entry here (RBAC): the page
 content is an example to adapt, but the *guard wiring* — `proxy.ts` optimistic cookie
-redirect + the page's `requireAdmin()` authoritative role check — is the keeper. D2 moved
-it under the `(dashboard)` shell, added the `setUserRole` write surface (`RoleControl` —
+redirect + the page's `requireAdmin()` authoritative role check — is the keeper. It sits
+under the `(dashboard)` shell, with the `setUserRole` write surface (`RoleControl` —
 optimistic `useOptimistic`, with a self-demotion guard) and an admin-only nav link. See
-[AUTH.md](AUTH.md#rbac-step-21).
+[auth/rbac-admin.md](auth/rbac-admin.md).
 
-`/posts` (Step 28, deepened in D1, reworked into a Partial-Prerender showcase in D4) is the
+`/posts` (the Partial-Prerender showcase) is the
 **copy-me template**, not throwaway like the others: it's the example domain entity (`posts`)
 wired end-to-end — schema + migration (`@repo/db`) → cursor-paginated `post.list` tRPC query →
 `createPost`/`updatePost`/`deletePost` Server Actions (indexing / de-indexing into Meilisearch
@@ -180,30 +180,30 @@ own entity (`"use cache"` + `cacheTag` busted by `updateTag` on write). Copy the
 own entity, then delete the demo. The pagination + optimistic-mutation patterns are documented in
 [API.md](API.md#cursor-pagination-d1) and [STATE.md](STATE.md#optimistic-updates-d1). The `posts` files live in
 `packages/db/src/schema/posts.ts` (+ its `post-revisions.ts` history companion — the
-worked `db.transaction` example, A15), `apps/web/src/server/trpc/routers/post.ts`,
+worked `db.transaction` example), `apps/web/src/server/trpc/routers/post.ts`,
 `apps/web/src/server/actions/post.ts`, and `apps/web/src/components/posts/`.
 
 The root landing page (`/`, `app/[locale]/page.tsx`) is **not** scaffold — it's the real home
 page and the target of the Playwright smoke test.
 
-**The `(dashboard)` shell (C1) is real, not scaffold.** `app/[locale]/(dashboard)/dashboard/page.tsx`
+**The `(dashboard)` shell is real, not scaffold.** `app/[locale]/(dashboard)/dashboard/page.tsx`
 (renders at `/dashboard`, proxy-gated) is the clone-and-ship protected surface — a thin shell
 (nav + user menu + sign-out) to build your app inside, not a demo to delete. Add sibling
 routes under `app/[locale]/(dashboard)/` to inherit its nav + authoritative session gate. **`/account`
-(M3) is the worked example of exactly that** — a real, gated settings page (`app/[locale]/(dashboard)/account/page.tsx`)
+is the worked example of exactly that** — a real, gated settings page (`app/[locale]/(dashboard)/account/page.tsx`)
 that edits the display name (reusing the `updateUserName` Server Action + `UpdateNameForm`,
-now under `components/account/`), changes the sign-in email (two-hop verified flow, M5→M7)
+now under `components/account/`), changes the sign-in email (two-hop verified flow)
 and the password via the Better Auth client for credential users (a social-only user has no
-password card), lists active sessions with revoke (P2-1), **uploads/removes a profile photo**
-(Band-1 Tier-4 — the Profile card's `AvatarCard` posts to the auth-gated `avatarUploader`
+password card), lists active sessions with revoke, **uploads/removes a profile photo**
+(the Profile card's `AvatarCard` posts to the auth-gated `avatarUploader`
 route → persists `user.image` → renders via the shared `Avatar` primitive on `/account` **and**
-in the dashboard-header user menu; see [SERVICES.md](SERVICES.md#uploadthing-file-uploads)),
-and carries the danger-zone account deletion (P2-2) — full walk-through in
-[AUTH.md](AUTH.md#account-page-m3). It **replaced** the old throwaway `/profile` demo. The
-`(auth)` forms render **OAuth social buttons** for any env-configured provider (M1 — see
-[AUTH.md](AUTH.md#auth-ui-c1)). **Deferred depth (build when you need it):** richer dashboard widgets.
+in the dashboard-header user menu; see [services/uploadthing.md](services/uploadthing.md)),
+and carries the danger-zone account deletion — full walk-through in
+[auth/account-page.md](auth/account-page.md). It **replaced** the old throwaway `/profile` demo. The
+`(auth)` forms render **OAuth social buttons** for any env-configured provider (see
+[auth/core.md](auth/core.md)). **Deferred depth (build when you need it):** richer dashboard widgets.
 
-**Organizations UI (Tier 4 · Band 4) is real, not scaffold.** `/organization`
+**Organizations UI is real, not scaffold.** `/organization`
 (`app/[locale]/(dashboard)/organization/page.tsx`, proxy-gated) manages the active org — members,
 roles, invites, pending invitations, rename/delete/leave — and the header **workspace
 switcher** (`components/organization/org-switcher.tsx`) creates/switches orgs from any
@@ -211,7 +211,7 @@ switcher** (`components/organization/org-switcher.tsx`) creates/switches orgs fr
 rendered at that path — the `(auth)` group is a layout boundary only) is a **public**
 surface: it must work signed-out, so it is deliberately **not** under the `(dashboard)` gate
 or the proxy matcher. Both are driven by Better Auth's reactive org hooks; full walk-through
-in [AUTH.md](AUTH.md#organizations-ui-step-4).
+in [auth/organizations.md](auth/organizations.md).
 
 ## Where Tests Live
 
@@ -230,8 +230,8 @@ Convention: Vitest owns `*.test.*`, Playwright owns `*.spec.*`. See
 - `apps/web` → can import from any `@repo/*` package
 - `packages/*` → can import from `@repo/validators` and `@repo/ui`; never from `apps/web`
 - `packages/db` → no other `@repo/*` imports (pure Drizzle + Postgres)
-- `packages/auth` → may import from `@repo/db` (needs DB adapter), `@repo/email` (sends verification / reset emails from Better Auth callbacks), and `@repo/jobs` (enqueues the welcome email, D7). One-directional: `@repo/email`/`@repo/jobs` never import `@repo/auth`, so there's no cycle.
-- `packages/email` → may import from `@repo/validators` (email data schemas) and `@repo/db` (the `email_suppressions` consult, #8; acyclic — `@repo/db` imports no `@repo/*` package)
+- `packages/auth` → may import from `@repo/db` (needs DB adapter), `@repo/email` (sends verification / reset emails from Better Auth callbacks), and `@repo/jobs` (enqueues the welcome email). One-directional: `@repo/email`/`@repo/jobs` never import `@repo/auth`, so there's no cycle.
+- `packages/email` → may import from `@repo/validators` (email data schemas) and `@repo/db` (the `email_suppressions` consult; acyclic — `@repo/db` imports no `@repo/*` package)
 - `packages/jobs` → may import `@repo/email` (job handlers send email); exposes only `enqueue()` to the app
 - `packages/observability` → no `@repo/*` imports; never imported by anything (standalone scripts)
 - `tooling/*` → no runtime imports; config files only
@@ -248,7 +248,7 @@ Browser
     → /api/trpc/[trpc]  — tRPC handler
     → /api/auth/[...all] — Better Auth handler
     → /api/stripe/webhook — Stripe webhook handler
-    → /api/resend/webhook — Resend webhook handler (bounces/complaints → suppressions, #8)
+    → /api/resend/webhook — Resend webhook handler (bounces/complaints → suppressions)
     → /api/uploadthing  — Uploadthing handler
 ```
 

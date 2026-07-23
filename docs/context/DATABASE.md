@@ -43,61 +43,28 @@ packages/db/
 
 ## Example Schema — `posts` (the copy-me entity, Step 28)
 
-`posts` (`packages/db/src/schema/posts.ts`) is the worked example domain entity —
-the end-to-end template to copy for your own tables. It follows the repo convention
-(snake_case-plural table name, `id` UUID, `created_at`/`updated_at`) and foreign-keys
-into the Better Auth `user` table (note: its `id` is `text`, not `uuid`):
+`posts` ([`packages/db/src/schema/posts.ts`](../../packages/db/src/schema/posts.ts)) is
+the worked example domain entity — the end-to-end template to copy for your own tables.
+It follows the repo convention (snake_case-plural table name, `id` UUID,
+`created_at`/`updated_at`) and foreign-keys into the Better Auth `user` table (note:
+its `id` is `text`, not `uuid`). Read the schema in the file; the annotated choices:
 
-```typescript
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { user } from "./auth";
-import { organization } from "./organization";
-
-export const posts = pgTable(
-  "posts",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    authorId: text("author_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    // Multi-tenancy (Tier 4 · Band 4). NULLABLE — NULL = personal workspace, so a
-    // zero-org clone behaves as before (no backfill). SET NULL on org delete orphans
-    // (never nukes) the author's posts back to personal. See "Org scoping" below.
-    organizationId: text("organization_id").references(() => organization.id, {
-      onDelete: "set null",
-    }),
-    title: text("title").notNull(),
-    content: text("content").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (t) => [
-    // org_id LEADS the keyset composite — post.list is always scoped (= $1 or IS NULL),
-    // both valid leading btree predicates, so one index serves filter + ORDER BY. See below.
-    index("posts_org_id_created_at_id_idx").on(
-      t.organizationId,
-      t.createdAt.desc().nullsFirst(),
-      t.id.desc().nullsFirst(),
-    ),
-    index("posts_author_id_idx").on(t.authorId), // FK columns aren't auto-indexed
-  ],
-);
-
-export type Post = typeof posts.$inferSelect;
-export type NewPost = typeof posts.$inferInsert;
-```
+- **`organizationId` is nullable** (NULL = personal workspace, so a zero-org clone
+  behaves as before — no backfill) with **`onDelete: "set null"`** — an org delete
+  orphans (never nukes) the author's posts back to personal. See "Org scoping" below.
+- The two indexes (`posts_org_id_created_at_id_idx`, `posts_author_id_idx`) are the
+  teaching core — see Indexes below.
+- `updatedAt` is bumped automatically (`$onUpdate(() => new Date())`); `Post`/`NewPost`
+  come from `$inferSelect`/`$inferInsert`.
 
 The full vertical slice it threads through: schema + migration (here) →
 cursor-paginated `post.list` tRPC query → `createPost`/`updatePost`/`deletePost`
 Server Actions (which index / de-index into Meilisearch on write) → the `/posts` page
-→ the `/search` demo → `db:seed`. See [API.md](API.md), [SERVICES.md](SERVICES.md), and
+→ the `/search` demo → `db:seed`. See [API.md](API.md),
+[services/meilisearch.md](services/meilisearch.md), and
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
-`post.list` pages by a `(createdAt, id)` **keyset cursor** (D1), not OFFSET — the
-`updatedAt` column is bumped automatically by `$onUpdate` on every `updatePost`. See
+`post.list` pages by a `(createdAt, id)` **keyset cursor**, not OFFSET. See
 [API.md](API.md#cursor-pagination-d1).
 
 ### Indexes (P1-1) — what the template teaches
@@ -106,13 +73,13 @@ Server Actions (which index / de-index into Meilisearch on write) → the `/post
   orders by `(created_at DESC, id DESC)`; the composite mirrors that exactly. Without
   it, every page seq-scans and top-N-sorts the whole table
   (measured on 10k rows: 185 buffers / 6.4 ms → 6 buffers / 0.1 ms, Sort node gone).
-  Since org scoping (Tier 4 · Band 4, migration 0008) made `post.list` **always**
+  Since org scoping (migration 0008) made `post.list` **always**
   filter by `organization_id` (`= $1` or `IS NULL`), the composite now **leads with
   `organization_id`** (`posts_org_id_created_at_id_idx`, superseding the old
   `posts_created_at_id_idx`): a leading equality/IS-NULL predicate lets one btree serve
   both the tenant filter and the `(created_at, id)` keyset sort, and also covers the
   org-delete SET NULL scan (so no separate `organization_id` index is needed).
-  The second worked example (P3-5) is `user_created_at_id_idx` (migration 0006):
+  The second worked example is `user_created_at_id_idx` (migration 0006):
   `/admin` and `admin.listUsers` page the Better Auth `user` table with the same
   `(created_at DESC, id DESC)` keyset — the planner picks the index for the cursor
   predicate (Index Scan, Sort gone) even at a few hundred rows.
@@ -165,7 +132,7 @@ const created = await db.transaction(async (tx) => {
   rolled back, so they run **after** the transaction commits (see
   `apps/web/src/server/actions/post.ts`) — a search outage must never undo a committed
   DB write. The action wraps the transaction in `try/catch` and returns the typed
-  `ActionResult` error (A7) on abort.
+  `ActionResult` error on abort.
 - **Read/authorize first, write in the tx.** The create's duplicate-title check and the
   update's ownership lookup run *before* `BEGIN`; keep the transaction as short as
   possible (holding it open over slow work ties up a pooled connection and invites lock
@@ -177,43 +144,29 @@ violates its `post_id` FK aborts the paired post insert — neither row survives
 
 ## Stripe subscriptions (`subscriptions` — implemented, Phase 3 · C4; org-aware #11)
 
-`subscriptions` (`packages/db/src/schema/subscriptions.ts`) persists Stripe
-subscription state written by the webhook handler
+`subscriptions`
+([`packages/db/src/schema/subscriptions.ts`](../../packages/db/src/schema/subscriptions.ts))
+persists Stripe subscription state written by the webhook handler
 (`apps/web/src/app/api/stripe/webhook/route.ts`). A row is owned by **exactly one**
-of a user (personal billing) or an organization (org billing, path-to-100 #11 —
-migration 0017): both `text` FKs are nullable with `onDelete: "cascade"`, and the
-XOR is a table check:
+of a user (personal billing) or an organization (org billing — migration 0017).
+Read the schema in the file; the annotated choices:
 
-```typescript
-export const subscriptions = pgTable(
-  "subscriptions",
-  {
-    id: text("id").primaryKey(), // Stripe subscription id (sub_…)
-    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-    organizationId: text("organization_id").references(() => organization.id, {
-      onDelete: "cascade",
-    }),
-    stripeCustomerId: text("stripe_customer_id").notNull(),
-    status: text("status").notNull(), // active | trialing | canceled | past_due | …
-    priceId: text("price_id"),
-    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-    // …createdAt/updatedAt…
-  },
-  (t) => [
-    index("subscriptions_user_id_idx").on(t.userId),
-    index("subscriptions_organization_id_idx").on(t.organizationId),
-    check("subscriptions_owner_check", sql`num_nonnulls(user_id, organization_id) = 1`),
-  ],
-);
-```
+- **`id` is the Stripe subscription id (`sub_…`) — a natural PK**, the upsert target
+  that makes webhook redelivery idempotent.
+- `userId` / `organizationId` are both nullable `text` FKs with `onDelete: "cascade"`,
+  each indexed (FK columns aren't auto-indexed), and the ownership XOR is the
+  `subscriptions_owner_check` table check —
+  `num_nonnulls(user_id, organization_id) = 1`.
+- `status` is plain `text` (not a typed enum) to keep `@repo/db` free of any `stripe`
+  import — the handler narrows it to the SDK's `Stripe.Subscription.Status`.
 
 **Why XOR (org rows carry NO `userId`), not purchaser-plus-org:** a purchaser FK on
 an org row would cascade the *org's* subscription away when that member deletes
-their account — and the A13 cancel-on-delete capture would cancel the org's Stripe
-subscription because one member left the platform. With XOR ownership both delete
-cascades stay correct (user → personal rows, org → org rows), the A13 capture
-(`userId`-filtered) can't touch org rows, and every pre-#11 `userId`-keyed query
-needs no `IS NULL` guard. Purchaser provenance lives in the Checkout Session
+their account — and the cancel-on-delete capture (below) would cancel the org's
+Stripe subscription because one member left the platform. With XOR ownership both
+delete cascades stay correct (user → personal rows, org → org rows), the
+`userId`-filtered capture can't touch org rows, and existing `userId`-keyed queries
+need no `IS NULL` guard. Purchaser provenance lives in the Checkout Session
 `metadata.userId` on Stripe's side. Seat-quantity billing is out of scope but not
 precluded — a later `quantity` column is purely additive.
 
@@ -221,11 +174,13 @@ precluded — a later `quantity` column is purely additive.
 Better-Auth-owned `user` schema (see [DECISIONS.md](DECISIONS.md)) stays untouched:
 the owner↔customer link is carried by this row and written exclusively by the
 webhook, so there's no Better Auth `additionalFields` entry for it. Each org gets
-its **own Stripe customer** (never a member's personal one). `status` is plain
-`text` (not a typed enum) to keep `@repo/db` free of any `stripe` import — the
-handler narrows it to the SDK's `Stripe.Subscription.Status`.
+its **own Stripe customer** (never a member's personal one). The billing actions
+also *read* it back: a repeat checkout reuses the owner's **latest-created** row's
+`stripeCustomerId` (passing `customer:` instead of `customer_email:`), so repeat
+checkouts don't mint duplicate Stripe customers.
 
-**How it's populated** (see [SERVICES.md](SERVICES.md) for the handler walk-through):
+**How it's populated** (see [services/stripe.md](services/stripe.md) for the handler
+walk-through):
 - `checkout.session.completed` owns the **insert** — it's the only event that
   carries our owner mapping (via the Checkout Session metadata that
   `createCheckoutSession` stamps on): `metadata.organizationId` present → an
@@ -235,77 +190,75 @@ handler narrows it to the SDK's `Stripe.Subscription.Status`.
 - `customer.subscription.updated` / `deleted` **update by subscription id** only
   (they don't carry an owner) — a no-op if no checkout row exists (e.g. a
   subscription created outside this flow). `deleted` arrives as `status: "canceled"`.
+- `invoice.payment_failed` syncs dunning state: the handler retrieves the
+  subscription for the **authoritative** post-failure status (`past_due` /
+  `canceled` / `unpaid` — depends on the account's dunning settings, never hardcode)
+  and updates by id. Shape gotcha: the pinned API version has **no top-level
+  `invoice.subscription`** — the ref lives at
+  `invoice.parent.subscription_details.subscription` (absent on one-off/quote
+  invoices → skipped).
 
 > **API-version note:** in the pinned `stripe` API version (`2026-05-27.dahlia`)
 > `price` and `current_period_end` live on the subscription **item**
 > (`sub.items.data[0]`), not the top-level subscription — read them from there.
 
-**How it's read — entitlement gating (A2, org-aware #11).** The table is *read*
-for access control, not just written. `apps/web/src/lib/subscription.ts` exposes
+**Cascades delete only the local rows — Stripe keeps billing** unless the
+subscription is also canceled on Stripe's side. The auth-side hooks capture the
+owner's non-terminal rows **before** the user/org delete (while they still exist)
+and enqueue a background job that cancels each subscription out-of-band — never
+blocking the deletion. Flow details: [services/stripe.md](services/stripe.md).
+
+**How it's read — entitlement gating.** The table is *read* for access control, not
+just written. `apps/web/src/lib/subscription.ts` exposes
 `hasActiveSubscription(userId)` and `hasOrgSubscription(organizationId)`: each
 reads the owner's **newest** row (`db.query.subscriptions.findFirst`, `orderBy
-desc(createdAt)` — the same latest-created reuse policy as
-`server/actions/billing.ts`), projected to `{ status, currentPeriodEnd }`, and
+desc(createdAt)` — the same latest-created policy as the billing actions'
+customer reuse), projected to `{ status, currentPeriodEnd }`, and
 applies the pure `isSubscriptionActive` predicate — **`status ∈ {active,
 trialing}` AND (`currentPeriodEnd` is null OR in the future)**. Both are **local
-reads only** (no Stripe API call), so gating works with no Stripe creds. The
+reads only** (no Stripe API call), so gating works with no Stripe creds — to
+exercise it keyless, insert a fake `active` row for a test user. The
 `/premium` demo route is the worked consumer — it follows the caller's context
 (active org → `hasOrgSubscription`, so every member of a subscribed org is
 entitled; personal workspace → `hasActiveSubscription`). Any Server Component /
 Server Action / tRPC procedure can reuse the same call. See
-[SERVICES.md](SERVICES.md) (Stripe → entitlement gating).
+[services/stripe.md](services/stripe.md) (entitlement gating).
 
 DB-backed coverage: `packages/db/__tests__/integration/subscriptions.test.ts`
-(upsert / idempotent redelivery / update-by-id / FK cascade, plus the #11 org
+(upsert / idempotent redelivery / update-by-id / FK cascade, plus the org
 block: org-owned insert, both XOR-check rejections, org-delete cascade — all
 against real Postgres). Entitlement-logic coverage:
 `apps/web/src/lib/subscription.test.ts`.
 
 ## Uploaded files (`uploads` — implemented, Phase 3 · D9)
 
-`uploads` (`packages/db/src/schema/uploads.ts`) persists Uploadthing uploads — the
-upload analog of `subscriptions`. It's written by the file router's
-`onUploadComplete` callback (`apps/web/src/lib/uploadthing.ts`) once a file
-finishes uploading.
-
-```typescript
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { user } from "./auth";
-
-export const uploads = pgTable("uploads", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  key: text("key").notNull().unique(), // Uploadthing storage key (idempotency)
-  name: text("name").notNull(),
-  url: text("url").notNull(), // file.ufsUrl
-  size: integer("size").notNull(), // bytes
-  type: text("type"), // MIME type (nullable — sometimes empty)
-  // …createdAt / updatedAt as on every table
-});
-```
+`uploads` ([`packages/db/src/schema/uploads.ts`](../../packages/db/src/schema/uploads.ts))
+persists Uploadthing uploads — the upload analog of `subscriptions`. It's written by
+the file router's `onUploadComplete` callback (`apps/web/src/lib/uploadthing.ts`)
+once a file finishes uploading. Read the schema in the file; the annotated choices
+are these.
 
 Unlike `subscriptions` (which uses the Stripe id as its natural PK), files have no
 such identifier, so this follows the dominant repo convention — a surrogate `uuid`
 `id` (like `posts`). Idempotency rides on `key` (Uploadthing's stable storage key)
-instead: `UNIQUE`, so the callback **upserts** (`onConflictDoUpdate` on
+instead: **`NOT NULL UNIQUE`**, so the callback **upserts** (`onConflictDoUpdate` on
 `uploads.key`) and a redelivered callback is a no-op rather than a duplicate row.
 The callback lets DB errors propagate so a non-2xx makes Uploadthing retry —
-at-least-once delivery, no-op on retry. See [SERVICES.md](SERVICES.md) (Uploadthing)
-for the callback walk-through.
+at-least-once delivery, no-op on retry. `type` (MIME) is nullable — it sometimes
+arrives empty. See [services/uploadthing.md](services/uploadthing.md) for the
+callback walk-through.
 
 DB-backed coverage: `packages/db/__tests__/integration/uploads.test.ts`
 (persist-and-read / idempotent redelivery / null MIME type / FK cascade against
 real Postgres).
 
-**`user.image` is also a persisted upload target** (Band-1 Tier-4, **no migration** — the
-column already existed on the Better Auth `user` table). The second file-router route,
+**`user.image` is also a persisted upload target** (**no migration** — the column
+already existed on the Better Auth `user` table). The second file-router route,
 `avatarUploader`, writes the caller's avatar URL into `user.image` in its `onUploadComplete`
 (and best-effort deletes the replaced file); `removeUserAvatar` (`server/actions/avatar.ts`)
 nulls it. Deliberately kept off the `uploads` table — an avatar is single-valued profile
-state you replace, not a listed/managed file. See [SERVICES.md](SERVICES.md) (Uploadthing →
-`avatarUploader`).
+state you replace, not a listed/managed file. See
+[services/uploadthing.md](services/uploadthing.md) (`avatarUploader`).
 
 ## Organizations / multi-tenancy (`organization` / `member` / `invitation` — Better Auth plugin)
 
@@ -318,17 +271,14 @@ table names + camelCase Drizzle keys; snake_case columns. Shapes match the plugi
 (verified against the installed `better-auth` version); `updated_at` is added per the
 repo's "every table" convention (a DEFAULT covers it, so Better Auth's inserts never set it).
 
-- **`organization`** — `id` (text PK, Better-Auth-generated), `name`, `slug` (**unique**),
-  `logo?`, `metadata?` (JSON string), `created_at`/`updated_at`.
-- **`member`** — join of `user` ↔ `organization`: `organization_id` + `user_id` (both FK,
-  **cascade**), `role` (text, default `member` — the per-org role, see below), timestamps.
-  A **`UNIQUE (organization_id, user_id)`** index enforces one membership per user per org
-  **and** serves the authz hot path (membership lookup) + `listMembers` (org_id prefix); a
-  second `member_user_id_idx` serves `listOrganizations` (a user's orgs) + the user-delete
-  cascade. FK columns aren't auto-indexed by Postgres (P1-1).
-- **`invitation`** — `organization_id` (FK cascade), `email`, `role?`, `status`
-  (default `pending`), `inviter_id` (FK → user, cascade), `expires_at`, timestamps.
-  Indexed on `organization_id`, `email`, and `inviter_id`.
+- Tables: **`organization`** / **`member`** / **`invitation`** — read the columns in
+  [`schema/organization.ts`](../../packages/db/src/schema/organization.ts). The
+  load-bearing choices: `organization.slug` is **unique**; `member`'s
+  **`UNIQUE (organization_id, user_id)`** index enforces one membership per user per
+  org **and** serves the authz hot path (membership lookup) + `listMembers` (org_id
+  prefix), with a second `member_user_id_idx` for `listOrganizations` + the
+  user-delete cascade (FK columns aren't auto-indexed); `invitation` is indexed on
+  `organization_id`, `email`, and `inviter_id`; all FKs **cascade**.
 - **`session.active_organization_id`** (added to `schema/auth.ts`) — the caller's current
   org; **NULL = personal workspace**, so the app runs unchanged with zero orgs. Written
   only by the plugin (`input: false`); never a client-settable field.
@@ -344,7 +294,7 @@ don't exist yet.
 **Org-scoped data — `posts` is the worked example (migration 0008).** `posts.organization_id`
 (nullable FK → `organization`, **SET NULL** on org delete) scopes a post to a tenant; **NULL =
 personal workspace**, so nothing to backfill on a zero-org clone. `uploads` stays **per-user**
-(avatars/personal files aren't tenant data); `subscriptions` is **owner-scoped** since #11 —
+(avatars/personal files aren't tenant data); `subscriptions` is **owner-scoped** —
 personal *or* org, XOR-checked (see Stripe subscriptions above). Scoping/authz logic
 (authoritative active-org + fresh member-role reads) lives in
 `apps/web/src/lib/organization.ts`; see [API.md](API.md) → Org-scoped reads & writes.
@@ -357,14 +307,13 @@ snake_case columns; shape verified against the installed `better-auth`; `updated
 the "every table" rule with a DEFAULT so plugin inserts skip it). See [AUTH.md](AUTH.md) →
 Two-factor authentication and [DECISIONS.md](DECISIONS.md) → Two-factor.
 
-- **`two_factor`** — `id` (text PK), `secret` (base32 TOTP secret), `backup_codes` (encrypted,
-  newline-joined single-use recovery codes), `user_id` (FK → `user`, **cascade**), `verified`
-  (boolean, default `true` — set `false` between `enable()` and the first `verifyTotp()`, which
-  is what makes an abandoned enrollment a no-op), `created_at`/`updated_at`. `secret` and
-  `backup_codes` are plugin-side `returned: false` (never serialized to the client; the secret
-  only crosses inside the one-time enroll `totpURI`). One load-bearing index —
-  `two_factor_user_id_idx` — because every verify/disable/regenerate and the user-delete cascade
-  resolve the row by `user_id`, and Postgres doesn't auto-index FK columns (P1-1).
+- **`two_factor`** — columns: read the file. Load-bearing: `verified` defaults `true`
+  but is set `false` between `enable()` and the first `verifyTotp()` — what makes an
+  abandoned enrollment a no-op; `secret`/`backup_codes` are plugin-side
+  `returned: false` (never serialized to the client; the secret only crosses inside
+  the one-time enroll `totpURI`); one index — `two_factor_user_id_idx` — because every
+  verify/disable/regenerate and the user-delete cascade resolve the row by `user_id`,
+  and Postgres doesn't auto-index FK columns.
 - **`user.two_factor_enabled`** (added to `schema/auth.ts`, next to the RBAC `role`) — a
   plugin-managed boolean (`input: false`, default `false`); the login form's session gate reads
   it. Flipped `true` by the first successful `verifyTotp()`, back to `false` by `disable()`.
@@ -374,15 +323,12 @@ Two-factor authentication and [DECISIONS.md](DECISIONS.md) → Two-factor.
 `schema/passkey.ts` holds the `@better-auth/passkey` plugin's one table, on the same
 hand-maintained-in-`@repo/db` footing as the auth/org/2FA tables (registered in the
 `drizzleAdapter` schema map **aliased `passkeyTable`** — the alias avoids clashing with
-the plugin's `passkey` model name). It stores each WebAuthn credential: `id` (text PK),
-`name?` (user label), `public_key` (COSE verification key), `user_id` (FK → `user`,
-**cascade**), `credential_id` (the authenticator's opaque id — the sign-in lookup key),
-`counter` (WebAuthn signature counter), `device_type`, `backed_up`, `transports?`,
-`aaguid?`, timestamps. Two load-bearing indexes: `passkey_user_id_idx` (FK columns
-aren't auto-indexed, P1-1 — the cascade + per-user list) and `passkey_credential_id_idx`
+the plugin's `passkey` model name). It stores each WebAuthn credential (columns: read
+the file). Two load-bearing indexes: `passkey_user_id_idx` (FK columns aren't
+auto-indexed — the cascade + per-user list) and `passkey_credential_id_idx`
 (every passkey sign-in resolves the row by it). `publicKey`/`credentialID` never reach
 the client (redacted in the data export too). See
-[AUTH.md](AUTH.md#passkeys--webauthn-tier-4--band-3).
+[auth/factors.md](auth/factors.md).
 
 ## Audit log (`audit_log` — security-event trail, migration 0011)
 
@@ -390,7 +336,7 @@ the client (redacted in the data export too). See
 previously only emitted a fire-and-forget log line. Written by the shared, best-effort
 `recordAuditEvent()` helper (`@repo/db`) from four sites — an admin role change, and
 account deletion / email-change completion / sign-in (see
-[AUTH.md](AUTH.md#persisted-audit-trail--audit_log-b2) for the event table).
+[auth/rbac-admin.md](auth/rbac-admin.md) for the event table).
 
 - **`audit_log`** — `id` (uuid PK), `action` (text, typed to an `AuditAction` union in the
   helper but **not** a `pgEnum`, same one-line-to-extend posture as `user.role`), `actor_id`
@@ -407,7 +353,7 @@ account deletion / email-change completion / sign-in (see
   `actor_id` is left unindexed until a by-actor read exists.
 - **Read UI** — the admin-only `/admin/audit` page reads this table newest-first (keyset via
   the `created_at DESC` index; resolves `actor_id`/`target_id` → email with `LEFT JOIN`s). See
-  [AUTH.md](AUTH.md#persisted-audit-trail--audit_log-b2).
+  [auth/rbac-admin.md](auth/rbac-admin.md).
 - **PII posture** — unlike the external `@logtail` sink (IDs only), this table is the app's
   **own** Postgres (already holds `user.email`), so recording old→new email here is safe and
   is the point of the record.
@@ -415,11 +361,11 @@ account deletion / email-change completion / sign-in (see
 ## Email suppressions (`email_suppressions` — do-not-send list, migration 0016)
 
 `schema/email-suppressions.ts` is the do-not-send list behind bounce/complaint
-handling (path-to-100 #8): written by the signature-verified `/api/resend/webhook`
+handling: written by the signature-verified `/api/resend/webhook`
 route via `recordEmailSuppression()`, consulted by `@repo/email`'s `send()` via
 `isEmailSuppressed()` — both helpers live in `@repo/db` (`src/email-suppressions.ts`)
 because writer and reader sit in different packages, the `recordAuditEvent` precedent.
-See [SERVICES.md](SERVICES.md#bounce--complaint-handling-path-to-100-8).
+See [services/resend.md](services/resend.md) (bounce & complaint handling).
 
 - **`email_suppressions`** — `id` (uuid PK), `email` (text, **NOT NULL UNIQUE**,
   stored lowercase — the helpers normalize, so the unique constraint doubles as the
@@ -438,14 +384,14 @@ See [SERVICES.md](SERVICES.md#bounce--complaint-handling-path-to-100-8).
 - **Write posture** — unlike best-effort `recordAuditEvent`, `recordEmailSuppression`
   **throws** on failure: the webhook route 500s and the provider redelivers
   (at-least-once), which is what you want for a dropped suppression.
-- **Un-suppress** — delete the row (recipe in SERVICES.md → Resend).
+- **Un-suppress** — delete the row (recipe in [services/resend.md](services/resend.md)).
 - DB-backed coverage: `packages/db/__tests__/integration/email-suppressions.test.ts`
   (case-insensitive round-trip, idempotent upsert, latest-event refresh).
 
 ## Notifications (`notifications` — realtime SSE example, migration 0015)
 
 `schema/notifications.ts` is the **persisted backbone** of the realtime notifications
-example (Tier 4 · A22). It's the durable record; the live SSE push is an enhancement on
+example. It's the durable record; the live SSE push is an enhancement on
 top (see [API.md](API.md#realtime--server-sent-events-sse-tier-4--a22)), so the feature
 degrades cleanly to "refresh to see new" if the stream is stripped.
 
@@ -458,9 +404,8 @@ degrades cleanly to "refresh to see new" if the stream is stripped.
 - **One index** — `notifications_user_id_created_at_id_idx` on `(user_id, created_at DESC
   NULLS FIRST, id DESC NULLS FIRST)`: `user_id` leads (every read is `WHERE user_id = $1`),
   then the keyset sort columns, so it serves the `notification.list` read **and** the
-  user-delete cascade scan in one index. The `.nullsFirst()` matches the `posts` index —
-  Drizzle's bare `.desc()` emits `NULLS LAST`, which the planner treats as a different sort
-  and would skip the index (see the `posts` note above).
+  user-delete cascade scan in one index. The `.nullsFirst()` is the same planner trap as
+  the `posts` index (see Indexes above).
 - **Publish** — writes broadcast via `notify()` (`SELECT pg_notify(...)`, parameterized);
   the app-side LISTEN bus fans out to open SSE streams. Transport + serverless caveats:
   [API.md](API.md#realtime--server-sent-events-sse-tier-4--a22) /
@@ -472,7 +417,7 @@ degrades cleanly to "refresh to see new" if the stream is stripped.
 `rateLimit.storage: "database"` in `packages/auth/src/auth.ts`) so its counters are **shared
 across instances and survive a restart** — in-memory storage is per-instance and silently
 stops enforcing once you scale horizontally. See
-[AUTH.md](AUTH.md#multi-instance-storage) for the why.
+[auth/core.md](auth/core.md) for the why.
 
 - **`rate_limit`** — `id` (text PK), `key` (text **unique** — the `ip:path` bucket), `count`
   (integer — requests in the current window), `last_request` (**bigint** — epoch **ms**, which
@@ -488,15 +433,15 @@ stops enforcing once you scale horizontally. See
   is the only time column the limiter needs.
 - **Higher throughput** → wire Better Auth `secondaryStorage` (Redis/Upstash) and it becomes
   the limiter store automatically (drop the explicit `storage: "database"`); this table is then
-  unused. See [AUTH.md](AUTH.md#multi-instance-storage).
+  unused. See [auth/core.md](auth/core.md).
 
 ## Admin plugin columns (ban + impersonation)
 
-The Better Auth `admin()` plugin (Tier 4 · Band 4, migration 0014) adds **no new table** — it
+The Better Auth `admin()` plugin (migration 0014) adds **no new table** — it
 manages the existing `user.role` and adds four columns to `user`/`session` (added to
 `schema/auth.ts`, hand-maintained like the rest of the auth schema). Adopted to **augment** the
 hand-rolled RBAC (ban + impersonation only); see
-[AUTH.md](AUTH.md#admin-plugin--ban--impersonation-tier-4--band-4) and
+[auth/rbac-admin.md](auth/rbac-admin.md) and
 [DECISIONS.md](DECISIONS.md).
 
 - **`user.banned`** (boolean, `NOT NULL DEFAULT false`) / **`user.ban_reason`** (text, nullable) /
@@ -569,10 +514,9 @@ pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" backup.dump
 
 Lean on your provider's **automated backups + point-in-time recovery (PITR)** as the first
 line of defense, and keep periodic `pg_dump` logical dumps as an independent, portable second
-copy:
-- **Neon** — history-based PITR (restore to any point in the retention window) + branch-from-timestamp; retention is plan-dependent.
-- **Supabase** — daily backups on paid tiers; PITR is a WAL-archiving add-on.
-- **RDS / Cloud SQL** — automated snapshots + PITR via WAL; set the retention window (and, on RDS, enable deletion protection).
+copy (Neon: history-based PITR + branch-from-timestamp, retention plan-dependent; Supabase:
+daily backups on paid tiers, PITR as a WAL-archiving add-on; RDS / Cloud SQL: automated
+snapshots + WAL PITR — set the retention window, and on RDS enable deletion protection).
 
 Whatever the provider, set a **retention window** and ideally ship dumps **off-provider** — a
 backup living only in an account you might lose access to is not disaster recovery.
@@ -607,8 +551,14 @@ locked, idempotent). This is **outside Drizzle's control on purpose**:
   you like, but don't hand-edit).
 - First `boss.start()` (worker OR the web app's first enqueue) creates the schema, so
   it needs a role with CREATE privilege on first run; after that it's read/write only.
+- **What lives in it (inspect, don't edit):** jobs sit in `pgboss.job` (failed ones
+  stay there, rolling into `pgboss.archive` after the ~14-day retention — a durable,
+  queryable failure record), and cron schedules persist in `pgboss.schedule` (re-
+  registering on boot is an idempotent upsert keyed by queue name).
+- The local `db:backup` script **excludes** this schema — transient queue state, not
+  app data (see Backup, restore & disaster recovery above).
 
-See [SERVICES.md](SERVICES.md) → Background jobs and [DECISIONS.md](DECISIONS.md).
+See [services/jobs.md](services/jobs.md) and [DECISIONS.md](DECISIONS.md).
 
 ## Seeding (`db:seed`)
 
@@ -633,7 +583,7 @@ explicit, ascending `createdAt` values so a **fresh** seed paginates determinist
 - **Search:** the seed is **DB-only** — `@repo/db` stays pure Drizzle/Postgres
   (no Meilisearch import). Seeded rows aren't searchable until indexed: run the
   **"Reindex posts from database"** action on `/search`, or create posts via the
-  `/posts` UI (which indexes on write). See [SERVICES.md](SERVICES.md).
+  `/posts` UI (which indexes on write). See [services/meilisearch.md](services/meilisearch.md).
 
 ## Database Client
 
@@ -693,8 +643,8 @@ advisory locks held across statements. Concretely here:
 - **Point the pg-boss worker at a direct (or session-mode) connection.** pg-boss relies on
   `LISTEN/NOTIFY`, advisory locks, and a maintenance loop, which a transaction pooler breaks.
   Give the **worker** the direct `DATABASE_URL` (or a session-mode pooler port) even when the
-  web app goes through the transaction pooler. See [SERVICES.md](SERVICES.md) → Background jobs.
-- **The realtime SSE listener breaks the same way (Tier 4 · A22).** The web app's notification
+  web app goes through the transaction pooler. See [services/jobs.md](services/jobs.md).
+- **The realtime SSE listener breaks the same way.** The web app's notification
   bus holds one dedicated `LISTEN` connection per instance (`createPgListener`, which opens a
   raw `pg` Client on the same `DATABASE_URL`) — behind a transaction pooler it silently stops
   receiving. Keep the app on a direct/session-mode string if you keep this design, or swap the

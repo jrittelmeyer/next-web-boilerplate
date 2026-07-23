@@ -45,30 +45,20 @@ A write can still update the server cache *optimistically* — wrap the Server A
 a TanStack `useMutation` and edit the query cache in `onMutate`, before the round-trip.
 This is the one sanctioned way client code mutates server-state cache, and it stays a
 single source of truth: the optimistic edit is provisional and `onSettled` reconciles
-it against the server. The shape (worked example: the `/posts` create/edit/delete in
-[`components/posts/`](../../apps/web/src/components/posts/)):
-
-- `onMutate` — `cancelQueries` (so an in-flight refetch can't clobber the optimistic
-  state), snapshot the current cache with `getQueryData`, apply the change with
-  `setQueryData`, and **return the snapshot** as context.
-- `onError` — restore the snapshot (`setQueryData(key, context.previous)`) and surface
-  the action's typed error.
-- `onSettled` — `invalidateQueries` so the server's truth replaces the provisional row
-  (canonical id/timestamps).
-
-Cache edits return a **new** object graph (never mutate in place) so React/Query see a
-fresh reference. For a paginated (`useInfiniteQuery`) cache, map over `pages[].items`
-rather than treating `data` as a flat array — see `post-cache.ts` and
-[API.md](API.md#optimistic-mutations-d1).
+it against the server. The mechanics — the `onMutate`/`onError`/`onSettled` rollback
+shape, the new-object-graph rule, the paginated `pages[].items` mapping
+(`post-cache.ts`) — live in [API.md](API.md#optimistic-mutations-d1); the worked
+example is the `/posts` create/edit/delete in
+[`components/posts/`](../../apps/web/src/components/posts/).
 
 ## Document-shell client providers (the client boundary)
 
 The document shell — [`app/[locale]/layout.tsx`](../../apps/web/src/app/[locale]/layout.tsx)
 (the root `app/layout.tsx` is a bare passthrough since i18n, see [I18N.md](I18N.md)) —
-wraps `children` in **four** client providers — `ThemeProvider` (`next-themes`, Step 24)
-outside `PostHogProvider` (analytics, Step 13) outside `TRPCReactProvider` (server-state
+wraps `children` in **four** client providers — `ThemeProvider` (`next-themes`)
+outside `PostHogProvider` (analytics) outside `TRPCReactProvider` (server-state
 cache) outside `NextIntlClientProvider` (active locale + messages) — plus the `Toaster`
-portal leaf (A1). All take `children` and render them straight through, so **Server
+portal leaf. All take `children` and render them straight through, so **Server
 Components passed into the layout stay server-rendered** — a client component rendering a
 `children` prop does not pull that subtree into the client bundle. Adding a provider here
 therefore does **not** widen the RSC boundary; it just makes a context available (the
@@ -185,7 +175,7 @@ Notes:
 The active theme (light/dark/system) is genuinely **ephemeral client/UI state** by the
 table above — each tab can legitimately differ, it's never persisted to the DB. By the
 default rule that would make it a Zustand store. It deliberately **isn't**: it's owned by
-**`next-themes`** (Step 24, mounted as `ThemeProvider` in the root layout — see UI.md).
+**`next-themes`** (mounted as `ThemeProvider` in the root layout — see UI.md).
 
 This is the one client preference where a purpose-built library beats a store, because a
 persisted theme hits exactly the **SSR hydration-mismatch** problem the `persist` note
@@ -216,14 +206,14 @@ Server Component that awaits the `searchParams` prop — no client JS, no `useSe
   `<Link href="/admin?after=…">` — **zero client JavaScript**.
 - `app/[locale]/(auth)/login/page.tsx` reads `?redirectTo` the same way, then **sanitizes it**
   through `safeRedirectPath` ([`lib/auth-redirect.ts`](../../apps/web/src/lib/auth-redirect.ts),
-  the P0-2 open-redirect guard) before handing it to the client form.
+  the open-redirect guard) before handing it to the client form.
 
 Reading `searchParams` makes a route **dynamic** (rendered per request) — correct and
 expected for surfaces like these.
 
 **Opaque cursors for pagination.** `?after=` carries an encoded `(createdAt, id)` pair
 via [`lib/keyset-cursor.ts`](../../apps/web/src/lib/keyset-cursor.ts) — the flat-string
-form of `post.list`'s D1 cursor. Decode is **strict**: a missing or garbled cursor
+form of `post.list`'s keyset cursor. Decode is **strict**: a missing or garbled cursor
 returns `null` and the caller falls back to page 1, so a hand-edited URL degrades
 gracefully instead of throwing.
 
@@ -274,12 +264,12 @@ cache the rest of the app already reads.** Then a live value and a fetched value
 same value, read through one surface.
 
 The worked example is the realtime notifications feed
-([`components/notifications/notifications-feed.tsx`](../../apps/web/src/components/notifications/notifications-feed.tsx),
-A22). Its initial page is the ordinary `notification.list` tRPC query (prefetched +
+([`components/notifications/notifications-feed.tsx`](../../apps/web/src/components/notifications/notifications-feed.tsx)).
+Its initial page is the ordinary `notification.list` tRPC query (prefetched +
 hydrated). Then it opens a native **`EventSource`** to `/api/notifications/stream` (SSE)
 and, on each pushed event, **`queryClient.setQueryData(queryKey, …)`** prepends the row
 into that query's cache — the same `setQueryData` shape the optimistic posts mutations
-use ([API.md](API.md#optimistic-mutations-d1)). A toast (`sonner`, A1) fires alongside.
+use ([API.md](API.md#optimistic-mutations-d1)). A toast (`sonner`) fires alongside.
 Practical notes carried by that component:
 
 - **Stable key for the effect.** `queryOptions()` returns a fresh object each render, so
@@ -288,7 +278,7 @@ Practical notes carried by that component:
   refs so the stream is opened **once on mount**, not torn down on each render.
 - **Dedupe on insert.** The sender's own tab also receives its push, and a reconnect can
   redeliver — guard with an `id` check before prepending.
-- **Paginating a realtime-fed cache (A25).** The feed is keyset-paginated ("Load more",
+- **Paginating a realtime-fed cache.** The feed is keyset-paginated ("Load more",
   `useInfiniteQuery`), so its cache is no longer `{ items }` but `InfiniteData` —
   `{ pages, pageParams }`. Every push/mutation `setQueryData` therefore maps over
   `pages[].items`, not a flat array: **prepend a new push into `pages[0]`**, map
@@ -299,13 +289,13 @@ Practical notes carried by that component:
   from the pages.
 - **Backfill on reconnect.** A NOTIFY that lands while the `EventSource` is dropped is never
   pushed (the server doesn't replay). On a re-open — every `onopen` after the first —
-  `invalidateQueries(queryKey)` refetches so the gap reconciles automatically, no reload (A23).
+  `invalidateQueries(queryKey)` refetches so the gap reconciles automatically, no reload.
 - **Aggregate counts are their own query, kept in lockstep.** The unread badge reads
   `notification.unreadCount` (an authoritative SQL `count()` over the whole table), *not* a
   tally of the loaded page — the page holds only the first `NOTIFICATIONS_PAGE_SIZE` rows,
   so a local count would undercount past that. Because it's a separate query it must be
   reconciled at the same moments the list is: invalidate it on each push, on the reconnect
-  backfill, and on the offline-send fallback; set it to `0` on mark-all-read (A24). The
+  backfill, and on the offline-send fallback; set it to `0` on mark-all-read. The
   lesson generalizes — a derived count that must be exact belongs in its own server query,
   invalidated alongside the cache it summarizes, not computed from a partial client page.
 - **Degrade to the cache.** The rows are persisted (the `notifications` table), so if SSE

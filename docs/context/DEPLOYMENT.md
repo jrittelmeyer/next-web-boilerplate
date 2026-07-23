@@ -9,84 +9,27 @@ Validated at startup by `@t3-oss/env-nextjs`. The schema lives in `apps/web/src/
 If a required var is missing — or a set var is malformed (URL-shaped vars, `EMAIL_FROM`,
 trusted-origin entries) — the app throws at startup with a clear error naming the var.
 
-> The committed root `.env.example` carries every feature block below (all steps have
-> landed) — copy it and uncomment what you configure. The only vars deliberately **not**
-> in it are the script/worker-only `BETTER_STACK_API_TOKEN` / `BETTER_STACK_HEARTBEAT_URL`
-> (never read by the app — see [SERVICES.md](SERVICES.md)). The full set:
-```bash
-# Database
-DATABASE_URL="postgresql://postgres:password@localhost:5432/appdb"
-DB_POOL_MAX=""               # optional app-pool max cap (A29); unset = pg default 10, invalid fails loud
+> **The committed root [`.env.example`](../../.env.example) is the var reference** — it
+> carries every feature block with per-var comments; copy it and uncomment what you
+> configure. Non-inferable notes beyond the file's own comments:
+>
+> - `BETTER_STACK_API_TOKEN` / `BETTER_STACK_HEARTBEAT_URL` are deliberately **absent**
+>   from it — script/worker-only (dashboards-as-code `sync` / the jobs-worker heartbeat),
+>   never read by the app, not in `env.ts`. See
+>   [services/observability-dac.md](services/observability-dac.md).
+> - `CSP_MODE` is **build-time**, like `NEXT_PUBLIC_*` — bake it in (`CSP_MODE=nonce pnpm
+>   build` / docker `--build-arg`); a runtime value is ignored.
+>   [SECURITY.md](SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch).
+> - `DB_POOL_MAX` caps the app pool (unset → pg's default 10; set-but-invalid fails loud
+>   at startup) — sizing rule below and in
+>   [DATABASE.md](DATABASE.md#connection-pooling-managed-postgres--serverless).
+> - `SENTRY_AUTH_TOKEN` (+ `SENTRY_ORG`/`SENTRY_PROJECT`) is CI-only, for build-time
+>   source-map upload — see [services/sentry.md](services/sentry.md).
 
-# Auth
-BETTER_AUTH_SECRET="replace-with-32-char-random-secret"
-BETTER_AUTH_URL="http://localhost:3000"
-AUTH_TRUSTED_ORIGINS=""      # optional, comma-separated; entries must be URLs or *-wildcards
-SITE_URL=""                  # optional canonical public/SEO origin; defaults to BETTER_AUTH_URL
-
-# OAuth (optional — add providers you enable)
-GITHUB_CLIENT_ID=""
-GITHUB_CLIENT_SECRET=""
-GOOGLE_CLIENT_ID=""
-GOOGLE_CLIENT_SECRET=""
-
-# Stripe
-STRIPE_SECRET_KEY=""
-STRIPE_WEBHOOK_SECRET=""
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=""
-
-# Email
-RESEND_API_KEY=""
-EMAIL_FROM="noreply@yourdomain.com"   # bare address or "Name <address>"
-
-# Observability — Sentry
-NEXT_PUBLIC_SENTRY_DSN=""
-SENTRY_ORG=""
-SENTRY_PROJECT=""
-SENTRY_AUTH_TOKEN=""         # CI only — see the @sentry/cli note below
-
-# Logging — BetterStack (@logtail/next). Needs BOTH; legacy LOGTAIL_* names also work.
-BETTER_STACK_SOURCE_TOKEN=""
-BETTER_STACK_INGESTING_URL=""
-
-# Observability dashboards-as-code (@repo/observability → BetterStack Uptime). Both
-# optional + script/worker-only (NEVER read by the app — not in env.ts). See SERVICES.md.
-BETTER_STACK_API_TOKEN=""        # `pnpm --filter @repo/observability sync` only
-BETTER_STACK_HEARTBEAT_URL=""    # jobs worker pings this (URL from the synced heartbeat)
-
-# Analytics — PostHog
-NEXT_PUBLIC_POSTHOG_KEY=""
-NEXT_PUBLIC_POSTHOG_HOST="https://us.i.posthog.com"   # or https://eu.i.posthog.com
-
-# File uploads
-UPLOADTHING_TOKEN=""
-
-# Search
-MEILISEARCH_HOST="http://localhost:7700"
-MEILISEARCH_API_KEY=""
-
-# Rate limiting — distributed driver (optional Upstash Redis; in-memory if unset)
-UPSTASH_REDIS_REST_URL=""
-UPSTASH_REDIS_REST_TOKEN=""
-
-# Bot protection — Cloudflare Turnstile CAPTCHA (optional; A12 — set BOTH to enable)
-TURNSTILE_SECRET_KEY=""              # server: siteverify secret
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=""    # client widget key (build-time inlined)
-
-# Security — CSP mode (optional; path-to-100 #10). BUILD-time, like NEXT_PUBLIC_*:
-# bake it into the build (`CSP_MODE=nonce pnpm build` / docker --build-arg); a runtime
-# value is ignored. unset/static = config CSP + static/PPR posture; nonce = per-request
-# 'nonce-…' 'strict-dynamic' CSP from the proxy, pages render dynamic. SECURITY.md.
-CSP_MODE=""
-```
-
-**Managed Postgres & pooling.** The `DATABASE_URL` above is a direct local connection. On a
-managed provider (Neon / Supabase / RDS) or **any serverless** target, point it at a **pooled**
-connection string and size the pool deliberately — an unbounded per-invocation `pg.Pool` will
-exhaust Postgres otherwise. Cap the app pool with the optional **`DB_POOL_MAX`** env var (unset →
-pg's default of 10). One caveat specific to this stack: give the **pg-boss worker** a
-*direct* (non-transaction-pooled) connection, since it needs `LISTEN/NOTIFY` + advisory locks.
-Full guidance (pooler ports, the sizing rule, the transaction-mode caveat) is in
+**Managed Postgres & pooling.** On a managed provider (Neon / Supabase / RDS) or **any
+serverless** target, point `DATABASE_URL` at a **pooled** connection string, cap the app pool
+(`DB_POOL_MAX`), and give the **pg-boss worker** + the SSE listener a *direct/session-mode*
+connection. Canonical guidance (sizing rule, pooler ports, the transaction-mode caveat):
 [DATABASE.md](DATABASE.md#connection-pooling-managed-postgres--serverless).
 
 **IP-based rate limiting needs a trusted proxy.** The app derives the client IP from
@@ -97,30 +40,22 @@ and IP limiting becomes meaningless; put a proxy in front that overwrites them w
 real peer IP. Full platform table + the per-surface IP-less behavior (incl. the webhook
 `noip` bucket) are in [SECURITY.md](SECURITY.md#client-ip-resolution--trusted-proxies-d10).
 
-**Observability is all-optional (Step 13).** The app builds and runs with every
+**Observability is all-optional.** The app builds and runs with every
 Sentry/BetterStack/PostHog var unset (verified: `pnpm lint`+`type-check`+`build` with
 them unset). Two deployment-specific notes:
 
 - **PostHog `/ingest` proxy:** `next.config.ts` rewrites `/ingest/*` to the regional
   ingestion host derived from `NEXT_PUBLIC_POSTHOG_HOST` (default US). It's same-origin,
   so no CORS/ad-blocker config is needed; just set the env var for your region.
-- **Sentry source-map upload** happens at **build time** and needs `SENTRY_AUTH_TOKEN`
-  together with `SENTRY_ORG` and `SENTRY_PROJECT`. It also needs the `@sentry/cli` binary, which is
-  **not built by default** — flip `@sentry/cli` to `true` in `pnpm-workspace.yaml`
-  `allowBuilds` (it's `false` so installs stay network-light, and the no-creds build
-  never invokes it). `core-js` (transitive via posthog-js) is also `false` — its
-  postinstall is only a funding banner. Next 16's `next build` uses **Turbopack**, and
-  source-map upload is **supported there and on by default** (since `@sentry/nextjs@10.13`
-  and `next@15.4.1` — this repo is past both) via Next's `runAfterProductionCompile` hook,
-  so no webpack build is needed; runtime error capture works regardless of bundler.
-- **Dashboards-as-code** (`@repo/observability`): the BetterStack monitor + heartbeat
-  config is checked in as TS. CI validates it credential-free
-  (`pnpm --filter @repo/observability check`); to apply it, set `BETTER_STACK_API_TOKEN`
-  and run `pnpm --filter @repo/observability sync` (idempotent upsert — re-running
-  converges). It's a separate dev/CI-only package, never imported by the app, so it
-  adds zero build/bundle/CSP surface and is trivially deletable. After the first sync,
-  copy the `jobs-worker` heartbeat's ping URL into the worker's `BETTER_STACK_HEARTBEAT_URL`
-  so a dead worker pages you. See [SERVICES.md](SERVICES.md#dashboards-as-code-repoobservability--betterstack).
+- **Sentry source-map upload** is build-time (`SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT`,
+  plus flipping `@sentry/cli` to `true` in `pnpm-workspace.yaml` `allowBuilds`) and is
+  supported under the **Turbopack** build — details: [services/sentry.md](services/sentry.md).
+- **Dashboards-as-code** (`@repo/observability`): BetterStack monitors/heartbeats checked
+  in as TS — CI validates it credential-free; `pnpm --filter @repo/observability sync`
+  (with `BETTER_STACK_API_TOKEN`) applies it idempotently. After the first sync, copy the
+  `jobs-worker` heartbeat's ping URL into the worker's `BETTER_STACK_HEARTBEAT_URL` so a
+  dead worker pages you. Canonical:
+  [services/observability-dac.md](services/observability-dac.md).
 
 ## Local Development
 
@@ -191,11 +126,9 @@ defaults to Turbopack in Next 16). It compiles internally, so no prior `next bui
 needed, and it adds **no dependency** (it ships in the `next` CLI).
 
 We deliberately do **not** use `@next/bundle-analyzer`: it hooks **webpack**, so under
-this repo's Turbopack build it only emits output if you force `next build --webpack` —
-i.e. you'd be analyzing a webpack bundle the app never ships. The built-in tool analyzes
-the real output instead. Both `analyze` scripts wrap `dotenv -e ../../.env` like the
-other Next scripts so the internal compile passes env validation; `--output` writes under
-`.next/` (gitignored). The CLI is flagged **experimental**, so the `experimental-analyze`
+this repo's Turbopack build you'd be analyzing a webpack bundle the app never ships.
+Both `analyze` scripts wrap `dotenv -e ../../.env` so the internal compile passes env
+validation; the CLI is flagged **experimental**, so the `experimental-analyze`
 name/output path could shift across Next majors.
 
 ## Performance budgets (opt-in)
@@ -229,13 +162,11 @@ bytes.
 bundler-based presets (`@size-limit/webpack` / `-esbuild`) would re-bundle the source
 with a *different* bundler and report a number the app never serves.
 
-**Why a byte budget, not Lighthouse-CI** — bundle bytes are **deterministic** (a commit
-produces the same chunks → the same gzip size on any OS), so the gate can't flake. A
-Lighthouse category/CWV gate depends on lab timings that swing run-to-run on shared CI
-runners (the classic flaky perf gate), and its one deterministic part (resource-size
-budgets) is what this byte budget already covers — without a booted app or headless
-Chrome. That determinism is also why the budgets need **no per-OS baseline** (contrast
-the `visual` job's platform-specific screenshots).
+**Why a byte budget, not Lighthouse-CI** — bundle bytes are **deterministic** (same
+commit → same gzip size on any OS), so the gate can't flake and needs no per-OS
+baseline. A Lighthouse category/CWV gate rests on lab timings that swing run-to-run on
+shared CI runners, and its one deterministic part (resource-size budgets) is what this
+byte budget already covers — without a booted app or headless Chrome.
 
 **In CI** this is the opt-in **`perf`** job (see [CI/CD](#cicd-github-actions)) — OFF by
 default, enabled with `gh variable set ENABLE_PERF --body true`.
@@ -251,21 +182,17 @@ docker build -f docker/Dockerfile -t nwb-web .
 docker run -p 3000:3000 --env-file .env nwb-web
 ```
 
-Multi-stage build on `node:24-alpine` (corepack-pinned pnpm from `packageManager`):
-
-1. **base** — `corepack enable` + `libc6-compat` (musl glibc shim).
-2. **deps** — `pnpm fetch` (lockfile-only, cached) then `pnpm install --frozen-lockfile --offline`.
-3. **builder** — `pnpm build` with `SKIP_ENV_VALIDATION=1`, `NEXT_TELEMETRY_DISABLED=1`,
-   and **`BUILD_STANDALONE=1`** (see below). No real secrets are needed or baked in.
-   The CSP mode is chosen here too — `docker build --build-arg CSP_MODE=nonce …` bakes
-   the nonce-CSP build into the image (`CSP_MODE` is build-time; see
-   [SECURITY.md](SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch)).
-4. **runner** — minimal image; runs as the **non-root `nextjs`** user (uid 1001),
-   `CMD ["node", "apps/web/server.js"]`, listens on `:3000` (`PORT`/`HOSTNAME=0.0.0.0`).
-   The base image's bundled **`npm` CLI is removed** (`rm -rf …/node_modules/npm` +
-   the `npm`/`npx` bins) — the runtime never invokes it, so this shrinks the image and
-   drops npm's own vendored deps from the image-scan surface (see the `docker-image` CI
-   job below). corepack/pnpm live only in the build stages, never the runner.
+Multi-stage build on `node:24-alpine` (corepack-pinned pnpm from `packageManager`);
+stages: see the Dockerfile. The non-inferable choices: the **builder** stage builds
+with `SKIP_ENV_VALIDATION=1` + **`BUILD_STANDALONE=1`** (see below) — no real secrets
+are needed or baked in — and the CSP mode is chosen here too (`docker build
+--build-arg CSP_MODE=nonce …` bakes the nonce-CSP build into the image; see
+[SECURITY.md](SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch)). The
+**runner** is minimal, runs as the **non-root `nextjs`** user (uid 1001,
+`node apps/web/server.js` on `:3000`), and the base image's bundled **`npm` CLI is
+removed** — the runtime never invokes it, so this shrinks the image and drops npm's
+own vendored deps from the image-scan surface (see the `docker-image` CI job below);
+corepack/pnpm live only in the build stages, never the runner.
 
 **Standalone output is opt-in via `BUILD_STANDALONE`.** `next.config.ts` only sets
 `output: "standalone"` (+ `outputFileTracingRoot` = repo root) when `BUILD_STANDALONE`
@@ -342,7 +269,7 @@ docker compose -f docker/docker-compose.prod.yml up --build
   the dev compose. Migrations are **not** auto-run (see above) — apply them once the DB is up.
 - The `web` service carries a `healthcheck` (see below); the `-prod` Postgres/Meilisearch
   keep the same `pg_isready` / `/health` checks as the dev compose.
-- The **`worker` service** (D7 background jobs) runs the pg-boss worker as a **second
+- The **`worker` service** runs the pg-boss background-jobs worker as a **second
   process sharing the same Postgres** — see below.
 
 ### Background-jobs worker (D7)
@@ -352,15 +279,12 @@ The `@repo/jobs` worker is a **separate long-lived process**, not part of the we
 **`worker` target**, sharing the DB by service-name `DATABASE_URL`. It comes up with `up --build`.
 
 - **Slim image (esbuild-bundled, not `tsx`):** the image ships **no** TS transpiler and **no**
-  `node_modules` tree. A `jobs-build` stage runs `pnpm --filter @repo/jobs build`, which
-  esbuild-bundles `worker.ts` + everything it imports — the `@repo/db` / `@repo/email` workspace
-  TS (JSX templates included) and their JS deps — into a single `dist/worker.js`; the final
-  `worker` stage is just `node:24-alpine` + that one file (npm stripped like the runner, runs as
-  the unprivileged `node` user via `node worker.js`). This cut the worker image from **~1.57 GB**
-  (the old `FROM deps` stage — the full dev install + all source, needed only because `tsx` ran
-  the TS at runtime) to **~169 MB** (base + a 4.4 MB bundle), with a Trivy-clean surface. See
-  `packages/jobs/build.mjs`. Local dev still runs the TS directly (`pnpm --filter @repo/jobs
-  start` → `tsx`), so there's no build step in the edit loop.
+  `node_modules` tree — a `jobs-build` stage esbuild-bundles `worker.ts` + everything it
+  imports (the `@repo/db` / `@repo/email` workspace TS, JSX templates included) into one
+  `dist/worker.js`; the final stage is `node:24-alpine` + that file (npm stripped like the
+  runner, unprivileged `node` user). ~169 MB vs ~1.57 GB for the old tsx-at-runtime approach;
+  see `packages/jobs/build.mjs`. Local dev still runs the TS directly (`pnpm --filter
+  @repo/jobs start` → `tsx`), so there's no build step in the edit loop.
 - **Run it anywhere** (not just compose): `pnpm --filter @repo/jobs start`. All it needs is
   `DATABASE_URL` (+ any env a job uses, e.g. `RESEND_API_KEY`/`EMAIL_FROM` for the welcome
   email). On a PaaS, add it as a second "worker"/background process type alongside `web`.
@@ -369,14 +293,14 @@ The `@repo/jobs` worker is a **separate long-lived process**, not part of the we
   Nothing about deploying `web` requires the worker.
 - **Schema:** pg-boss creates + owns the `pgboss` schema itself — no Drizzle migration, no
   `db:migrate` step for it (see [DATABASE.md](DATABASE.md)).
-- **Recurring jobs (A3):** the worker also registers a cron schedule on boot (the
-  `cleanup-expired-verifications` housekeeping job — see [SERVICES.md](SERVICES.md)). Run **one**
+- **Recurring jobs:** the worker also registers a cron schedule on boot (the
+  `cleanup-expired-verifications` housekeeping job — see [services/jobs.md](services/jobs.md)). Run **one**
   worker for scheduling: pg-boss's cron scheduler fires each tick once across all `supervise:true`
   workers (it's not per-instance), so multiple workers won't double-fire, but the schedule only
   advances while at least one worker is up.
 - **Runtime cost (honest):** one extra Node process (~50–80 MB idle) polling Postgres on an
   interval + pg-boss's periodic maintenance, plus a small pg-boss pool on the web side
-  (lazy, enqueue-only — no polling). This is the one D7 surface that adds real runtime cost.
+  (lazy, enqueue-only — no polling). This is the one jobs surface that adds real runtime cost.
 
 ## Realtime (SSE) & serverless caveat (Tier 4 · A22)
 
@@ -396,19 +320,18 @@ background-jobs worker:
 - A function's max duration **caps the stream** (Vercel: streaming is allowed, but the
   invocation ends at `maxDuration`, so `EventSource` reconnect-churns). Edge runtimes
   can't run the `pg` LISTEN client at all (not Edge-safe).
-- A **connection pooler in transaction mode** (PgBouncer, and many managed "pooled"
-  Postgres URLs) **breaks `LISTEN`** — use a session-mode / direct connection for the
-  listener if you keep this design.
+- A **transaction-mode pooler breaks `LISTEN`** — the listener needs a direct/session
+  connection: [DATABASE.md](DATABASE.md#connection-pooling-managed-postgres--serverless).
 
 **If you deploy serverless,** pick one: (a) accept short streams + **backfill on
-(re)connect** — the client already does this (the feed invalidates `notification.list` on
-every `EventSource` re-open, A23), safe because notifications are persisted, so churny
-reconnects self-heal instead of going stale; (b) move the transport to a **hosted realtime
-provider** (Ably / Pusher /
-Supabase Realtime) behind the same `notify()` seam; or (c) **poll** the `notification.list`
-query on an interval. The persisted `notifications` table means the realtime layer is an
-enhancement you can swap or drop without losing data (the [ARCHITECTURE.md](ARCHITECTURE.md#demo--scaffold-routes-delete-these)
-removal note covers stripping it).
+(re)connect** — the client already does this (it invalidates `notification.list` on every
+`EventSource` re-open), so churny reconnects self-heal; (b) move the transport to a
+**hosted realtime provider** (Ably / Pusher / Supabase Realtime) behind the same
+`notify()` seam; or (c) **poll** `notification.list` on an interval. The persisted
+`notifications` table means the realtime layer is an enhancement you can swap or drop
+without losing data (the
+[ARCHITECTURE.md](ARCHITECTURE.md#demo--scaffold-routes-delete-these) removal note
+covers stripping it).
 
 ## Health checks & probes (Step 22)
 
@@ -430,7 +353,7 @@ It reports **both liveness and readiness** in one response:
 curl -i http://localhost:3000/api/health     # 200 with the DB up, 503 with it down
 ```
 
-Cache Components (D4) **bans the route-segment config API**, so the route no longer pins
+Cache Components **bans the route-segment config API**, so the route no longer pins
 `runtime`/`dynamic`. It relies on Next 16's **Node-by-default** route runtime (node-postgres
 is not Edge-safe — ⚠️ never set a global edge default, or this and the Stripe webhook lose
 Node) and calls `await connection()` so it never prerenders — the ping runs at request time,
@@ -443,9 +366,8 @@ while a readiness probe should (pull the instance from rotation until its depend
 returns). This single endpoint serves the **readiness** contract — which is what the
 Docker `HEALTHCHECK`, compose `depends_on: condition: service_healthy`, and PaaS health
 gates actually consume — and still exposes the liveness fields in the body. To split them
-for Kubernetes, add a query branch (e.g. `?check=live` → 200 whenever the process is up,
-skipping the DB ping) and point the `livenessProbe` at it while `readinessProbe` uses the
-default; it's a few lines and the body already separates the two signals.
+for Kubernetes, add a `?check=live` branch (200 whenever the process is up, skipping the
+DB ping) for the `livenessProbe` — the body already separates the two signals.
 
 **Docker `HEALTHCHECK`.** `docker/Dockerfile` runs the probe with `node -e "fetch(...)"`
 (checks `r.ok`), not `curl`/`wget`: the `node:24-alpine` runtime ships no `curl`, and
@@ -454,19 +376,17 @@ covers Next's cold boot; a 503 (down dependency) flips the container to `unhealt
 `docker run` then reports `healthy`/`unhealthy`, and `docker/docker-compose.prod.yml`
 declares the same check explicitly on the `web` service (visible/tunable there).
 
-> **Why the dev `docker-compose.yml` has no web healthcheck:** it runs only the backing
-> services (Postgres + Meilisearch) — local dev runs the app via `pnpm dev` on the host,
-> not in a container, so there's no app container to probe. Adding a `web` service to the
-> dev compose would change the dev workflow, so it's intentionally left out; its
-> Postgres/Meilisearch healthchecks are unchanged. The Dockerfile + prod-compose checks
-> cover every place the app actually runs in a container.
+> **The dev `docker-compose.yml` has no web healthcheck** because it runs only the
+> backing services — local dev runs the app via `pnpm dev` on the host, so there's no
+> app container to probe; the Dockerfile + prod-compose checks cover every place the
+> app actually runs in a container.
 
 ## Request telemetry (Step 22)
 
 A tRPC timing/error middleware (`apps/web/src/server/trpc/trpc.ts`) is applied to the
 **base procedure**, so every procedure — public, protected, rate-limited, admin —
 emits one structured log line per call (`path`, `type`, `durationMs`, `ok`, and `code`
-on failure). This is what makes the Step-13 observability stack carry real traffic signal.
+on failure). This is what makes the observability stack carry real traffic signal.
 
 - **BetterStack** (`@logtail/next` `log`): `info` on success, `warn` on expected client
   errors (UNAUTHORIZED / FORBIDDEN / TOO_MANY_REQUESTS / …), `error` on a server fault.
@@ -476,7 +396,7 @@ on failure). This is what makes the Step-13 observability stack carry real traff
   (genuine faults, not expected auth/rate-limit rejections). This is the only path tRPC
   errors reach Sentry — tRPC catches them internally, so `instrumentation.ts`'s
   `onRequestError` never sees them. No-op without a DSN.
-- **Flush (D4):** `log.flush()` is scheduled via **`next/after`** (`after(() => log.flush())`),
+- **Flush:** `log.flush()` is scheduled via **`next/after`** (`after(() => log.flush())`),
   not awaited inline — it runs *after* the response is sent, for **every** request (success +
   error), so a short-lived (serverless) runtime can't freeze before BetterStack's batched logs
   ship, and the flush adds no latency to the response. (`after` is Next's portable equivalent
@@ -486,79 +406,48 @@ on failure). This is what makes the Step-13 observability stack carry real traff
 
 `.github/workflows/ci.yml` has four always-on jobs (`verify`, `audit`, `e2e`,
 `docker-image`) plus three variable-gated jobs — `visual` (`ENABLE_VISUAL`, **on in
-this repo** since A28 committed the Linux baselines, 2026-07-12), `csp-nonce`
-(`ENABLE_CSP_NONCE`, **on in this repo** since path-to-100 #10, 2026-07-17 — builds
-the app with `CSP_MODE=nonce` and runs the `e2e/csp-nonce.spec.ts` matrix against a
-throwaway Postgres, proving the nonce mode on every PR/push while the always-on
-`e2e` lane keeps proving the static default; a fork that never uses nonce mode
-leaves the variable unset) and the still-dormant `perf` (`ENABLE_PERF`); a separate
-`.github/workflows/codeql.yml` runs static analysis (see
+this repo**), `csp-nonce` (`ENABLE_CSP_NONCE`, **on in this repo**; a fork that never
+uses nonce mode leaves it unset) and the still-dormant `perf` (`ENABLE_PERF`). A
+separate `.github/workflows/codeql.yml` runs static analysis (see
 [Dependency & security automation](#dependency--security-automation-step-26)) and
 `.github/workflows/security-audit.yml` is the daily advisory watch lane (below).
-All workflow actions are **pinned to full commit SHAs** (P1-5) with the release
-version in a trailing comment — a moved/retagged upstream ref can't change what
-runs in CI; Renovate maintains the digests (see the Renovate section below).
+**Job steps: see `.github/workflows/ci.yml`** — this section keeps only the rationale
+the YAML can't tell you. All workflow actions are **pinned to full commit SHAs** with
+the release version in a trailing comment — a moved/retagged upstream ref can't
+change what runs in CI; Renovate maintains the digests (see the Renovate section
+below).
 
-**Triggers.** Beyond pull requests and pushes to `main`, `ci.yml` also runs on a
-**weekly `schedule`** (`cron: "30 4 * * 4"` — Thursdays 04:30 UTC) and on
-**`workflow_dispatch`** (a manual run from the Actions tab or `gh workflow run
-ci.yml`). The schedule is a **heartbeat**: in maintenance mode a push is otherwise
-the only thing exercising CI, so a weekly full-pipeline run keeps "green" honest
-against world-drift (base-image pulls, registry behavior, provider-facing flows)
-between merges. It's offset from CodeQL's own weekly cron (Mondays 04:30 UTC) so the
-two heavy workflows don't overlap, and Renovate + commit activity keeps the repo
-active enough that GitHub's 60-day inactivity auto-disable of scheduled workflows
-never trips. Schedule/dispatch runs exercise every lane exactly as a push to `main`
-does — only the opt-in GHCR publish/attest steps, which are `push`-gated, stay
-skipped.
+**Triggers.** PRs, pushes to `main`, a **weekly `schedule`** (Thursdays 04:30 UTC)
+and **`workflow_dispatch`**. The schedule is a **heartbeat**: in maintenance mode a
+push is otherwise the only thing exercising CI, so a weekly full run keeps "green"
+honest against world-drift between merges; it's offset from CodeQL's Monday cron,
+and repo activity keeps GitHub's 60-day auto-disable of scheduled workflows from
+tripping. Schedule/dispatch runs behave exactly like a push to `main` — only the
+`push`-gated GHCR publish/attest steps stay skipped.
 
-**`verify`** — runs on every PR and push:
+**`verify`** — the static lane (no DB): type-check, lint, dep-consistency
+(`manypkg`), dead code / unused deps (`knip` — delete the orphan or tag intentional
+surface `@public`; see [CONVENTIONS.md → Exports](CONVENTIONS.md#exports)),
+dashboards-as-code validate, **docs-sanity** (`node scripts/docs-sanity.mjs` — every
+relative doc link resolves and AGENTS.md's Commands section matches root
+`package.json` scripts), test + coverage (per-package thresholds, see
+[TESTING.md](TESTING.md#coverage); Codecov only when a `CODECOV_TOKEN` secret is
+set), then a `SKIP_ENV_VALIDATION=1` build.
 
-1. Install pnpm (`pnpm/action-setup`, version from `packageManager`) + deps (`--frozen-lockfile`).
-2. Type-check (`pnpm type-check`)
-3. Lint (`pnpm lint`)
-4. Dep-consistency (`pnpm lint:deps` → `manypkg check`, A10) — fails if the same
-   external dependency is pinned to **different versions across workspace packages**
-   (`drizzle-orm` / `react-hook-form` / `lucide-react` are duplicated by hand), or if a
-   package's peer dep is missing from its devDependencies. A static `package.json`
-   check — no build/DB — so it sits in this lane; run it locally with the same
-   `pnpm lint:deps` (auto-fix with `pnpm fix:deps`).
-5. Dead code / unused deps (`pnpm knip`, A27) — resolves the real import graph
-   across all workspaces (root `knip.jsonc`) and fails on **unused files, unused
-   exports, and unused/phantom dependencies** — the orphan classes the manypkg
-   consistency check can't see. Static analysis, no build/DB. When it flags a
-   change: delete the orphan, or tag intentional-but-unconsumed API surface
-   `@public` at the export site; `knip.jsonc` ignores are the last resort and
-   every one carries its reason (see [CONVENTIONS.md → Exports](CONVENTIONS.md#exports)).
-6. Dashboards-as-code validate (`pnpm --filter @repo/observability check`) — pure
-   Zod parse of the checked-in monitor/heartbeat config, credential-free.
-7. Test + coverage (`pnpm test:coverage` — Vitest, no DB needed; **enforces the
-   per-package coverage thresholds**, see [TESTING.md](TESTING.md#coverage)).
-8. Upload coverage — every `packages/*/coverage/` as a build artifact (always;
-   `if-no-files-found: ignore`), and to **Codecov** when a `CODECOV_TOKEN` secret
-   is set (skipped otherwise, so the pipeline is self-contained).
-9. Build (`pnpm build`) with **`SKIP_ENV_VALIDATION: "1"`**.
+**`audit`** — parallel lane: `pnpm audit --audit-level high
+--ignore-registry-errors` (a flaky advisory API can't fail the build). Known
+unfixable transitives are allowlisted in `pnpm-workspace.yaml` (see
+[Supply chain](#dependency--security-automation-step-26)), so a **new** high/critical
+advisory turns it red while the accepted status quo stays green. On non-PR runs on
+`main` a follow-up step re-audits at **moderate+** and syncs the rolling
+`security-triage` issue via `.github/scripts/security-triage-issue.sh`.
 
-**`audit`** — runs on every PR and push (parallel to `verify`): installs deps and
-runs `pnpm audit --audit-level high --ignore-registry-errors`. It fails on
-high/critical advisories; the known unfixable transitive advisories are
-allowlisted in `pnpm-workspace.yaml` (see
-[Supply chain](#dependency--security-automation-step-26)), so a **new**
-high/critical advisory turns it red while the accepted status quo stays green.
-`--ignore-registry-errors` keeps a flaky advisory API from failing the build.
-On non-PR runs on `main` (push / heartbeat / manual dispatch) a follow-up step
-re-audits at **moderate+** with its own captured output and syncs the rolling
-`security-triage` issue (files it red, closes it green) via
-`.github/scripts/security-triage-issue.sh` — see the daily watch lane below.
-
-**`security-audit.yml`** (separate workflow) — the daily advisory **watch lane**
-(cron 05:00 UTC + `workflow_dispatch`): `pnpm audit` at the stricter moderate+
-threshold, a best-effort Dependabot-alerts cross-check, and the same
-`security-triage` issue sync. Advisories publish against the world, not this
-repo's commits — a green tree can wake up red (the 2026-07-22 Next.js batch), and
-the weekly Thursday heartbeat alone leaves up to a 6-day blind window. The issue
-(labeled `security-triage`, assigned to the repo owner) is the machine guarantee
-that a finding lands in the prioritized backlog; triage procedure:
+**`security-audit.yml`** (separate workflow) — the **daily** advisory watch lane
+(cron 05:00 UTC): moderate+ audit, a best-effort Dependabot-alerts cross-check, the
+same issue sync. Advisories publish against the world, not this repo's commits — a
+green tree can wake up red, and the weekly heartbeat alone leaves up to a 6-day
+blind window. The `security-triage` issue (assigned to the repo owner) is the
+machine guarantee a finding lands in the backlog; triage:
 [MAINTENANCE.md → Security response runbook](../MAINTENANCE.md#security-response-runbook).
 
 There's no root `.env` in CI; the app's build script loads `../../.env` via
@@ -575,150 +464,90 @@ The alternative is to supply real values: `DATABASE_URL` **and `BETTER_AUTH_SECR
 required — except **Sentry source-map upload**, which needs `SENTRY_AUTH_TOKEN`/
 `SENTRY_ORG`/`SENTRY_PROJECT` and `@sentry/cli` flipped to `true` in `allowBuilds`.
 
-**`e2e`** — the **DB-backed lane**, runs on **every PR and push to `main`** (so a
-PR can't go green while breaking the core auth/posts flow — that gap used to surface
-only after merge). Playwright needs a real build + server + DB, so it spins up a
-`postgres:18` **service**, sets `DATABASE_URL` + `BETTER_AUTH_SECRET` (throwaway CI
-values, not secrets), runs `pnpm --filter @repo/db db:migrate`, then the **DB
-integration tests** (`pnpm --filter @repo/db test:integration`), installs the browser
-(`playwright install --with-deps chromium`), and finally `pnpm test:e2e`. The
-Playwright report is uploaded as an artifact. **Meilisearch is intentionally absent** —
-`createPost` indexes best-effort, so the suite degrades gracefully without it (see
-`e2e/posts.spec.ts`). Concurrency keeps PR runs (`refs/pull/N/merge`) and main runs
-(`refs/heads/main`) in distinct groups, and `cancel-in-progress` collapses superseded
-pushes on a PR, so broadening to PRs doesn't pile up.
+**`e2e`** — the **DB-backed lane**, on **every PR and push to `main`** (so a PR
+can't go green while breaking the core auth/posts flow — that gap used to surface
+only after merge): a `postgres:18` service (throwaway env values, not secrets),
+migrations, the DB integration tests, then Playwright. **Meilisearch is
+intentionally absent** — `createPost` indexes best-effort, so the suite degrades
+gracefully without it (see `e2e/posts.spec.ts`). Concurrency groups +
+`cancel-in-progress` keep PR runs from piling up.
 
-**`csp-nonce`** — the **nonce-mode twin of `e2e`**, variable-gated on
-`ENABLE_CSP_NONCE` (**on in this repo**; path-to-100 #10). Same shape (postgres
-service, migrations, chromium, `pnpm test:e2e`) with `CSP_MODE: nonce` in the job
-env: Turbo's `test:e2e` → `build` dependency builds the app **in nonce mode** (a
-distinct Turbo cache key), and `playwright.config.ts` scopes the run to
-`e2e/csp-nonce.spec.ts` (the nonce matrix: rotating per-request nonce on both
-locales, no script `'unsafe-inline'`, every `<script>` stamped, primary journeys
-with zero console CSP violations) plus the mode-agnostic
-`security-headers.spec.ts`. `CSP_MODE` is **build-time**, which is why this is a
-separate lane with its own build rather than extra specs in the `e2e` lane. See
+**`csp-nonce`** — the nonce-mode twin of `e2e` (`ENABLE_CSP_NONCE`, **on in this
+repo**): `CSP_MODE: nonce` in the job env builds the app **in nonce mode** (a
+distinct Turbo cache key) and `playwright.config.ts` scopes the run to the nonce
+matrix (`e2e/csp-nonce.spec.ts`) plus the mode-agnostic `security-headers.spec.ts`.
+`CSP_MODE` is **build-time**, which is why this is a separate lane with its own
+build rather than extra specs in the `e2e` lane — which keeps proving the static
+default. See
 [SECURITY.md → CSP strategy](SECURITY.md#csp-strategy-static-vs-nonce-the-csp_mode-switch).
 
 **`docker-image`** — builds, smoke-tests, and vulnerability-scans the **production
-image** on every PR and push (parallel to the other jobs; no `needs`). CI used to never
-build `docker/Dockerfile`, so a Dockerfile regression only surfaced on a manual build.
-The job:
+image** on every PR and push (CI used to never build `docker/Dockerfile`, so a
+Dockerfile regression only surfaced on a manual build). Non-inferable parts: the
+**smoke test** polls the running image's `/api/health` against a throwaway Postgres
+until it returns 200 with `"database":"up"` — proving the standalone image boots and
+node-postgres works under alpine/musl, not merely that the process starts. The
+**`worker` target is built too, build-only** (no HTTP surface to smoke-test; its
+bundled JS adds nothing to scan beyond the shared `node:alpine` base). A **CycloneDX
+SBOM** (Trivy in SBOM mode — never gates) is produced on **every** run and uploaded
+as the `sbom-cyclonedx` artifact, placed *before* the vuln gate so the inventory
+exists even for an image that fails the scan. The **Trivy vuln gate** fails on
+`HIGH,CRITICAL` with a **fix available** (`ignore-unfixed: true`), matching the
+`pnpm audit --audit-level high` posture so unpatchable base-image CVEs don't flake
+CI red; accept a specific advisory (with a reason) in the repo-root `.trivyignore`.
+Results print as a log table — **no SARIF upload**, which would need
+GHAS/code-scanning (unavailable on a private repo, the same constraint as CodeQL).
 
-1. Starts a throwaway `postgres:18-alpine` on a user-defined docker network (reachable
-   as `pg`), so the image's `/api/health` probe can return a real **200** (DB up) — no
-   migrations needed, the probe only runs `select 1`.
-2. `docker build -f docker/Dockerfile -t nwb-web:ci .` — the documented build, self-
-   contained (the Dockerfile hard-sets `SKIP_ENV_VALIDATION=1`). It **also** builds the
-   `worker` target (`--target worker`) — the separate background-jobs image (its esbuild
-   bundle + slim runtime stage) — so a broken worker Dockerfile/bundle is caught here too;
-   build-only, as the worker exposes no HTTP surface to smoke-test and its bundled JS carries
-   no OS/npm packages of its own to scan beyond the shared `node:alpine` base.
-3. Runs the image on that network with the runtime env `env.ts` validates
-   (`DATABASE_URL` + `BETTER_AUTH_SECRET`, throwaway CI values), publishing `:3000`.
-4. **Smoke test** — polls `/api/health` from the runner host until it returns 200 with
-   `"status":"ok"` + `"database":"up"` (dumps `docker logs` on failure). Proves the
-   standalone image boots and node-postgres works under alpine/musl, not merely that the
-   process starts.
-5. **CycloneDX SBOM** — a second Trivy invocation (same SHA-pinned action, in SBOM mode:
-   `format: cyclonedx`, no severity/`exit-code`, so it never gates) writes
-   `trivy-sbom.cdx.json` — the supply-chain inventory of every OS + app package the image
-   ships. Produced on **every** run and uploaded as the **`sbom-cyclonedx`** build
-   artifact (alongside coverage / Playwright reports); in the opt-in publish path it also
-   feeds the SBOM attestation below. Placed *before* the vuln gate so the inventory exists
-   even for an image that later fails the scan.
-6. **Trivy image scan** (`aquasecurity/trivy-action`, SHA-pinned) — fails on
-   `HIGH,CRITICAL` that have a **fix available** (`ignore-unfixed: true`), matching the
-   `pnpm audit --audit-level high` posture so unpatchable upstream base-image CVEs don't
-   flake CI red. Accept a specific advisory by adding its ID (with a reason) to the
-   repo-root **`.trivyignore`** (mirrors the `pnpm audit` `ignoreGhsas` allowlist).
-   Results print as a table in the log — **no SARIF upload**, which would need
-   GHAS/code-scanning (unavailable on a private repo, the same constraint as CodeQL).
-
-**Opt-in GHCR publish.** A final step pushes the *same scanned image* to GitHub
-Container Registry (`ghcr.io/<owner>/<repo>-web`, tagged with the commit SHA + `latest`).
-It is **off by default** and runs only on push to `main` **and** when the
-`ENABLE_GHCR_PUBLISH` repository variable is `"true"` — the same opt-in pattern as
-`ENABLE_CODEQL`. Auth uses the workflow's `GITHUB_TOKEN` (the job grants
-`packages: write`); no extra secret. To enable:
-
-```bash
-gh variable set ENABLE_GHCR_PUBLISH --body true
-```
-
-**SBOM + build-provenance attestation (opt-in, rides the publish).** When — and only
-when — the GHCR publish runs, two further steps sign **[SLSA build-provenance](https://slsa.dev/)**
-and **SBOM** attestations over the pushed image's immutable **digest** and attach them to
-the GHCR package (keyless [Sigstore](https://www.sigstore.dev/) signing via the workflow's
-OIDC token — the job also grants `id-token: write` + `attestations: write`). They use the
-first-party `actions/attest-build-provenance` + `actions/attest-sbom` (SHA-pinned). Nothing
-new to enable — they share the `ENABLE_GHCR_PUBLISH` + push-to-`main` gate, so a published
-image always ships attested. A consumer can then verify *how it was built* and *what it
-contains* before running it:
-
-```bash
-# both the provenance and SBOM attestations are stored with the package
-gh attestation verify oci://ghcr.io/<owner>/<repo>-web:latest --owner <owner>
-```
-
-> The **SBOM artifact** (step 5) is produced and local-verifiable on every run; the
-> **attestation** steps only exercise inside a real GHCR publish (they need an OIDC token
-> and a registry push, so they can't run on a PR) — they are wired and gated, exercised
-> the first time `ENABLE_GHCR_PUBLISH` is turned on.
+**Opt-in GHCR publish + attestations.** A final step pushes the *same scanned image*
+to `ghcr.io/<owner>/<repo>-web` — only on push to `main` **and** when the
+`ENABLE_GHCR_PUBLISH` variable is `"true"` (`gh variable set ENABLE_GHCR_PUBLISH
+--body true`); auth is the workflow's `GITHUB_TOKEN`, no extra secret. When — and
+only when — the publish runs, **[SLSA build-provenance](https://slsa.dev/)** and
+**SBOM** attestations are signed over the pushed image's immutable **digest** and
+attached to the GHCR package (keyless [Sigstore](https://www.sigstore.dev/) signing
+via the workflow's OIDC token). They share the publish gate, so a published image
+always ships attested — and they can't exercise on a PR (they need an OIDC token +
+a registry push), so they are wired and gated, exercised the first time the variable
+is turned on. Verify:
+`gh attestation verify oci://ghcr.io/<owner>/<repo>-web:latest --owner <owner>`.
 
 **`perf`** *(opt-in, dormant)* — gates the production bundle against
-`apps/web/.size-limit.json` (see [Performance budgets](#performance-budgets-opt-in)). It
-installs deps, builds the app **keyless** (no PostHog key in CI → no `ConsentBanner` in
-the measured bundle, matching what deploys ship), then runs `pnpm --filter web size`. No
-DB, no booted app, no headless Chrome — just deterministic byte counts, so it can't
-flake and needs no per-OS baseline. **Off by default**: runs only when the `ENABLE_PERF`
-repository variable is `"true"` (the `ENABLE_CODEQL` / `ENABLE_GHCR_PUBLISH` pattern) —
-`gh variable set ENABLE_PERF --body true`. The `@repo/ui` **`visual`** job is gated the
-same way (`ENABLE_VISUAL`) but is **live in this repo** — A28 (2026-07-12) committed the
-Linux baselines and set the variable (see [UI.md](UI.md)).
+`apps/web/.size-limit.json` (see [Performance budgets](#performance-budgets-opt-in)).
+It builds the app **keyless** (no PostHog key → no `ConsentBanner` in the measured
+bundle, matching what deploys ship) — no DB, no booted app, no headless Chrome, so
+deterministic byte counts that can't flake and need no per-OS baseline. Enable with
+`gh variable set ENABLE_PERF --body true`. The `@repo/ui` **`visual`** job is gated
+the same way (`ENABLE_VISUAL`) but is **live in this repo** — the Linux baselines
+are committed (see [UI.md](UI.md)).
 
 ## Storybook on GitHub Pages (component gallery)
 
 `.github/workflows/pages.yml` publishes the `@repo/ui` **Storybook** gallery (the
 static export — see [UI.md → Component gallery](UI.md#component-gallery-storybook)) to
-**GitHub Pages**, so the shared primitives are browsable at
-**<https://jrittelmeyer.github.io/next-web-boilerplate/>** without cloning or running a
-server. Two jobs: **build** (`pnpm --filter @repo/ui build-storybook` →
-`packages/ui/storybook-static`, then `configure-pages` + `upload-pages-artifact`) and
-**deploy** (`deploy-pages` onto the `github-pages` environment). It runs on a **push to
-`main` that touches `packages/ui/**`** (or the workflow itself) and on
-**`workflow_dispatch`** — a docs- or app-only push doesn't rebuild the site.
+**GitHub Pages** — browsable at
+**<https://jrittelmeyer.github.io/next-web-boilerplate/>** without cloning (steps: see
+the workflow; actions SHA-pinned under the same Renovate digest preset as `ci.yml`).
+It runs on a push to `main` that touches `packages/ui/**` (or the workflow itself) and
+on `workflow_dispatch` — a docs- or app-only push doesn't rebuild the site.
 
-- **Least-privilege token** — `contents: read` · `pages: write` · `id-token: write`
-  (the OIDC token `deploy-pages` verifies); `concurrency: pages` with
-  `cancel-in-progress: false` so a deploy is never cancelled half-published.
 - **Enable Pages once (out-of-band)** — the Actions `GITHUB_TOKEN` can't *create* the
-  Pages site (it returns `Resource not accessible by integration`), so this is a
-  one-time setup, not something the workflow bootstraps. Either flip **Settings → Pages
-  → Source: "GitHub Actions"**, or run it with a user/PAT token:
-  `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`. After that every
-  push/dispatch deploys with no further clicks. (Done for this repo 2026-07-20.)
+  Pages site (`Resource not accessible by integration`), so this is one-time setup the
+  workflow can't bootstrap: flip **Settings → Pages → Source: "GitHub Actions"**, or
+  with a user/PAT token:
+  `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`. (Done for this repo.)
 - **Subpath-safe** — the static export uses only relative asset paths, so it serves
   correctly under the project `/<repo>/` subpath with no `base` config.
-- **Actions SHA-pinned** under the same shared Renovate digest preset as `ci.yml` /
-  `codeql.yml` (P1-5) — a moved upstream tag can't change what runs.
 - **Derived apps** — the workflow is generic (only the published URL differs). Pages is
   free on **public** repos; on a **private** repo it needs a paid plan, so a private
-  fork can delete `pages.yml` (or leave it dormant — it just won't deploy until Pages is
-  available).
+  fork can delete `pages.yml` or leave it dormant.
 
 ## Remote caching (Turborepo, opt-in)
 
-Turborepo caches each task's output keyed by a hash of its declared `inputs` +
-`env`. By default that cache is **local only** (`.turbo/`, gitignored). A *remote*
-cache shares those artifacts across machines and CI runs, so a build/test someone
-else (or a previous CI run) already did is downloaded instead of re-run.
-
-**It is off by default and unwired** — the repo builds and CI passes with zero
-config. Turn it on only when the time saved is worth the setup. The prerequisite
-is already in place: every cacheable task in `turbo.json` declares its `inputs`/
-`outputs` (and `build` its `env`), which is what makes a cross-machine hit
-*correct* rather than stale. Adopting remote cache needs **no change to
+A remote cache shares Turbo task artifacts across machines and CI runs. **It is off
+by default and unwired** — the repo builds and CI passes with zero config. The
+prerequisite is already in place: every cacheable task in `turbo.json` declares its
+`inputs`/`outputs` (and `build` its `env`), which is what makes a cross-machine hit
+*correct* rather than stale — adopting remote cache needs **no change to
 `turbo.json`**.
 
 ### Vercel-hosted (zero infra)
@@ -747,14 +576,10 @@ export TURBO_TEAM=…                                # team/namespace slug
 ### CI (still opt-in)
 
 Add `TURBO_TOKEN` + `TURBO_TEAM` (and `TURBO_API` if self-hosted) as repo secrets/
-variables and expose them as `env:` on the `verify`/`e2e` jobs. Turbo auto-detects
-them — **no workflow logic changes**, the existing `pnpm build`/`pnpm test` calls
-just start hitting the remote cache. Two flags worth knowing:
-
-- `--remote-cache-read-only` — read but don't write the remote cache. Good for PR
-  runs so untrusted branches can't populate the shared cache.
-- `--remote-only` — ignore the local FS cache entirely (`remote:rw`); useful on
-  ephemeral CI runners where the local cache is always cold anyway.
+variables and expose them as `env:` on the `verify`/`e2e` jobs — Turbo auto-detects
+them, **no workflow logic changes**. Use `--remote-cache-read-only` on PR runs so
+untrusted branches can't populate the shared cache; `--remote-only` suits ephemeral
+runners whose local cache is always cold.
 
 ### Signing (recommended for a shared cache)
 
@@ -788,14 +613,12 @@ Automated dependency updates tuned to the repo's posture:
   exact-pinned ones (`stripe`, `@sentry/nextjs`, `posthog-*`, `lucide-react`,
   `lint-staged`, …) as new exact pins, widens the caret ranges in place — so the
   mixed pin/caret posture survives upgrades without re-encoding every pin.
-- **`helpers:pinGitHubActionDigests`** (P1-5) — keeps the workflows' SHA-pinned
+- **`helpers:pinGitHubActionDigests`** — keeps the workflows' SHA-pinned
   `uses:` refs updated (digest + `# vX.Y.Z` comment) as new action releases age past
-  the same 7-day gate; pins were seeded from the GitHub API at the newest ≥7-day-old
-  release per major line (which put CodeQL one behind: v3.36.3 was published the day
-  of pinning).
+  the same 7-day gate.
 - `lockFileMaintenance` weekly (refresh transitive deps), `semanticCommits:
   "disabled"` (the repo's history is intentionally mixed-style — same reason the
-  Step-25 `commit-msg` hook isn't a Conventional-Commits enforcer), a weekly
+  `commit-msg` hook isn't a Conventional-Commits enforcer), a weekly
   schedule to batch PRs, `@types/*` grouped, and **major bumps gated behind
   Dependency-Dashboard approval**.
 - **Setup:** Renovate runs via the **Renovate GitHub App** (install it on the repo
@@ -805,19 +628,15 @@ Automated dependency updates tuned to the repo's posture:
   config). Validate config changes locally with
   `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
 
-> **Two-layer release-age enforcement (A11).** The 7-day gate holds at both layers.
+> **Two-layer release-age enforcement.** The 7-day gate holds at both layers.
 > Renovate (**update-time**) never *proposes* a release younger than a week. pnpm's
 > install-time **`minimumReleaseAge: 10080`** (in `pnpm-workspace.yaml`, minutes) gates
-> the **existing lockfile**: pnpm validates every entry against the age on each install
-> (including `--frozen-lockfile`), so a too-fresh transitive can't enter the tree through
-> a lockfile edit either. It was left commented while the repo was days old — a frozen
-> install checks the whole lockfile, and the early deliberate pins + their fresh
-> transitives would have failed — and **enabled 2026-07-08** once the tree aged past the
-> window (a frozen install verified all lockfile entries clear the gate). The setting
-> reads each version's *publish* time, not its lockfile-add date, so a recently-added but
-> long-published package (e.g. `sonner`, `@manypkg/cli`) passes. Note it does **not**
-> exempt security fixes (unlike Renovate's `vulnerabilityAlerts.minimumReleaseAge: null`);
-> a fix younger than 7 days needs a manual `auditConfig`/override bypass.
+> the **existing lockfile**: pnpm validates every entry on each install (including
+> `--frozen-lockfile`), so a too-fresh transitive can't enter the tree through a
+> lockfile edit either. It reads each version's *publish* time, not its lockfile-add
+> date, so a recently-added but long-published package passes. Note it does **not**
+> exempt security fixes (unlike Renovate's `vulnerabilityAlerts.minimumReleaseAge:
+> null`); a fix younger than 7 days needs a manual `auditConfig`/override bypass.
 
 ### Supply-chain audit
 
@@ -825,10 +644,9 @@ Automated dependency updates tuned to the repo's posture:
 transitive** advisories are explicitly acknowledged in `pnpm-workspace.yaml` under
 `auditConfig.ignoreGhsas` — each with its dependency path and why it's low-risk for
 this app — so the audit is green on the accepted status quo and goes **red the
-moment a new advisory appears**. The allowlist is **empty since 2026-07-15**: the
-three long-standing entries (`effect` via uploadthing, `esbuild` dev-server via
-drizzle-kit, `postcss` stringify via next) were remediated with temporary scoped
-`overrides:` in the same file — removal conditions in
+moment a new advisory appears**. The allowlist is currently **empty**: the
+long-standing entries were remediated with temporary scoped `overrides:` in the same
+file — removal conditions in
 [MAINTENANCE.md → Watch items](../MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 — so the audit now guards those overrides live. When a future advisory has no fix
 path at all, allowlist it with its reason and prune the entry once the upstream fix
@@ -874,10 +692,8 @@ migrations (above) against the target database.
 
 ### Fly.io (worked runbook)
 
-> ✅ **Verified end-to-end 2026-07-13** — this exact runbook deployed a test app to Fly
-> (managed `fly postgres`): `/api/health` 200 `{"database":"up"}`, prod security headers,
-> `fly status` 1/1 passing, and a real sign-up → session → user row in the managed Postgres. See
-> [VERIFICATION.md](../VERIFICATION.md) Phase 6.
+> ✅ **Verified end-to-end** — record: [VERIFICATION.md](../VERIFICATION.md) Phase 6 /
+> [docs/archive/](../archive/).
 
 A committed **`fly.toml`** (repo root) deploys the web app from `docker/Dockerfile` — the
 standalone `:3000` server with the `/api/health` readiness check wired in. It runs the **web
@@ -897,8 +713,7 @@ fly apps create <your-app>
 # 2. Managed Postgres, same region. SAVE the credentials it prints.
 fly postgres create --name <your-app>-db --region <region>
 # Attach → sets the app's DATABASE_URL secret to the DIRECT (session-mode) internal
-# connection. That directness matters: pg-boss + the SSE LISTEN/NOTIFY listener need a
-# session connection, not a transaction pooler (see Managed Postgres & pooling above).
+# connection — required by pg-boss + the SSE listener (DATABASE.md → Connection pooling).
 fly postgres attach <your-app>-db -a <your-app>
 
 # 3. Migrate from your machine — the runtime image has no drizzle-kit (see Migrations

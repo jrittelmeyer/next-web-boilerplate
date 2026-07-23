@@ -26,9 +26,9 @@ turbo-first model and lets each package pick the right environment:
 | Package | Config | Environment | Example |
 | --- | --- | --- | --- |
 | `@repo/validators` | `packages/validators/vitest.config.ts` | `node` | `src/index.test.ts` (the `updateNameSchema` schema) |
-| `@repo/auth` | `packages/auth/vitest.config.ts` | `node` | `src/config.test.ts` (the pure env-driven config helpers — P3-3) |
-| `@repo/email` | `packages/email/vitest.config.ts` | `node` | `src/templates.test.tsx` (renders every template to HTML + plain text — A5) |
-| `@repo/jobs` | `packages/jobs/vitest.config.ts` | `node` | `src/handlers/welcome-email.test.ts` (job contract + handler, `@repo/email` mocked — D7) |
+| `@repo/auth` | `packages/auth/vitest.config.ts` | `node` | `src/config.test.ts` (the pure env-driven config helpers) |
+| `@repo/email` | `packages/email/vitest.config.ts` | `node` | `src/templates.test.tsx` (renders every template to HTML + plain text) |
+| `@repo/jobs` | `packages/jobs/vitest.config.ts` | `node` | `src/handlers/welcome-email.test.ts` (job contract + handler, `@repo/email` mocked) |
 | `@repo/ui` | `packages/ui/vitest.config.ts` | `jsdom` | `src/components/button.test.tsx` (renders the `Button`) |
 | `@repo/db` | `packages/db/vitest.config.ts` | `node` | `__tests__/integration/posts.test.ts` (real Postgres — **opt-in only**) |
 | `web` | `apps/web/vitest.config.ts` | `node` | `src/server/actions/post.test.ts` (Server Action branches; `@/env` stubbed) |
@@ -38,7 +38,7 @@ default `pnpm test` / `turbo test` fan-out skips it — its tests need a live da
 and run only where one exists (see [Integration Test Pattern](#integration-test-pattern)).
 
 `apps/web` has a **`node`-environment Vitest project** (`apps/web/vitest.config.ts`)
-for its Server Actions + `lib/*` logic (C2). The historical blocker was that importing
+for its Server Actions + `lib/*` logic. The historical blocker was that importing
 most app modules pulls in `@/env`, which validates environment variables at import and
 throws without `DATABASE_URL`/`BETTER_AUTH_SECRET` — and the server-only `lib/*` modules
 import `server-only`, which throws on import outside a React Server build. The config
@@ -72,7 +72,7 @@ app's Playwright specs are never picked up by a unit run.
 **Always test (Vitest):**
 - Zod validators in `@repo/validators` (pure, fast).
 - Business-logic utilities in `packages/` — when the logic lives inside a module with
-  heavy imports, extract it: `@repo/auth`'s `src/config.ts` (P3-3) pulls the pure,
+  heavy imports, extract it: `@repo/auth`'s `src/config.ts` pulls the pure,
   env-driven helpers (provider registration, trusted-origins parsing, the email-change
   token decode) out of `auth.ts` so they unit-test in plain `node` without the
   DB/email/`server-only` wiring; `config.test.ts` stubs env per test via `vi.stubEnv`.
@@ -81,7 +81,7 @@ app's Playwright specs are never picked up by a unit run.
   the workspace deps mocked. `src/server/actions/post.test.ts` + `admin.test.ts` and
   `src/lib/rate-limit.test.ts` + `rbac.test.ts` are the worked examples; the DB-backed
   data-layer mirror lives in `@repo/db`'s integration tests (below).
-- Email template rendering (A5) — `@repo/email`'s `src/templates.test.tsx` renders every
+- Email template rendering — `@repo/email`'s `src/templates.test.tsx` renders every
   template to HTML **and** the plain-text alternative through the same
   `@react-email/render` calls the send path uses (`render(el)` / `render(el, { plainText:
   true })`), asserting non-empty output carrying the dynamic content (name, links). A
@@ -90,19 +90,19 @@ app's Playwright specs are never picked up by a unit run.
   would otherwise only surface via a manual `email export`.
 
 **Test with Playwright:**
-- Authentication flows — `e2e/auth.spec.ts` drives the real C1 UI (sign up → land on
+- Authentication flows — `e2e/auth.spec.ts` drives the real auth UI (sign up → land on
   `/dashboard`, sign in, sign out re-gates, `/posts` recognizes the session) via the
   `(auth)`/`(dashboard)` pages. Helpers in `e2e/support/auth.ts` fill the forms.
 - The example entity end-to-end — `e2e/posts.spec.ts` (create → list → delete).
-- RBAC / admin surface (D2) — `e2e/admin.spec.ts` (promote/demote another user through
+- RBAC / admin surface — `e2e/admin.spec.ts` (promote/demote another user through
   the `/admin` UI; the self-demotion guard shows "(you)"; a non-admin 404s and never
   sees the Admin link).
-- The `/account` surface — `e2e/account.spec.ts` (P3-1: serial one-user lifecycle —
+- The `/account` surface — `e2e/account.spec.ts` (serial one-user lifecycle —
   name change, immediate email change, password change + re-login; see
   [Cookie-cache staleness](#playwright-pattern) below), `e2e/account-sessions.spec.ts`
-  (P2-1: revoke across two browser contexts), and `e2e/account-deletion.spec.ts`
-  (P2-2: danger zone).
-- Organizations (Tier 4 · Band 4) — `e2e/organization.spec.ts`: **serial across two
+  (revoke across two browser contexts), and `e2e/account-deletion.spec.ts`
+  (danger zone).
+- Organizations — `e2e/organization.spec.ts`: **serial across two
   browser contexts** (an owner and the invitee — the accept flow is genuinely a *second*
   user), covering create → invite → the three accept-link states (signed-out prompt /
   wrong-account mismatch / accept) → membership, then post org-scoping (publish under the
@@ -111,7 +111,7 @@ app's Playwright specs are never picked up by a unit run.
   authenticated `list-invitations` endpoint (the same source the UI's "Copy link" uses)
   rather than a delivered mail; the workspace switch waits on the `set-active` round-trip
   so the session cookie is fresh before `/posts` reloads and re-scopes.
-- Two-factor auth (Tier 4 · Band 2) — `e2e/two-factor.spec.ts`, **serial**, two throwaway
+- Two-factor auth — `e2e/two-factor.spec.ts`, **serial**, two throwaway
   users: one runs the `/account` lifecycle (enroll → regenerate backup codes → disable),
   the other leaves 2FA on and proves the **sign-in challenge** (sign out → sign in →
   answer the TOTP step → `/dashboard`, then again via the **backup-code** fallback). The
@@ -130,19 +130,21 @@ app's Playwright specs are never picked up by a unit run.
 - Accessibility — `e2e/a11y.spec.ts`: the public pages (`/`, `/posts`, `/login`,
   `/signup`) plus the signed-in `/account`, `/admin`, and `/admin/audit` surfaces (see
   [Accessibility](#accessibility-axe)).
-- Audit read UI (B2) — `e2e/admin-audit.spec.ts`: seeds a target user + a future-dated
+- Audit read UI — `e2e/admin-audit.spec.ts`: seeds a target user + a future-dated
   `role_changed` audit row, then asserts `/admin/audit` renders it with the `LEFT JOIN`-resolved
   target email + label/detail, and that garbled / past-the-end cursors degrade to a valid page.
-- Admin plugin (Tier 4 · Band 4) — `e2e/admin-ban.spec.ts` (ban blocks sign-in + revokes
+- Admin plugin — `e2e/admin-ban.spec.ts` (ban blocks sign-in + revokes
   sessions; unban restores) and `e2e/admin-impersonate.spec.ts` (cookie-swap round-trip via a
-  cache-bypassed `get-session` probe; the admin must re-sign-in after promotion — see AUTH.md).
-- Passkeys (Tier 4 · Band 3) — `e2e/passkey.spec.ts`: full lifecycle (register → rename →
-  sign out → passkey sign-in → delete) via Chrome's CDP **virtual authenticator** (see AUTH.md).
-- GDPR data export (Tier 4 · Band 3) — `e2e/data-export.spec.ts`: fresh sign-up → download →
+  cache-bypassed `get-session` probe; the admin must re-sign-in after promotion — see
+  [auth/rbac-admin.md](auth/rbac-admin.md)).
+- Passkeys — `e2e/passkey.spec.ts`: full lifecycle (register → rename →
+  sign out → passkey sign-in → delete) via Chrome's CDP **virtual authenticator** (see
+  [auth/factors.md](auth/factors.md)).
+- GDPR data export — `e2e/data-export.spec.ts`: fresh sign-up → download →
   asserts the real credential password hash + live session token are **absent** from the JSON.
-- i18n (Tier 4 · Band 4) — `e2e/i18n.spec.ts`: **DB-free** public flows — switcher en↔es,
+- i18n — `e2e/i18n.spec.ts`: **DB-free** public flows — switcher en↔es,
   localized `<title>`, hreflang links, locale-preserving auth redirect (see [I18N.md](I18N.md)).
-- Realtime notifications (Tier 4 · A22) — `e2e/notifications.spec.ts`: **two browser
+- Realtime notifications — `e2e/notifications.spec.ts`: **two browser
   contexts** for the same user, both waiting for the feed's "Live" stream badge before
   acting; device B clicks "Send test notification" and device A — which never reloads —
   receives the row + unread badge over its open `EventSource` (the NOTIFY → single
@@ -174,7 +176,7 @@ Each test-bearing package owns its `coverage` block (provider `v8`, reporters
 | `@repo/validators` | 100% lines/functions/branches/statements | Pure logic — exactly what a coverage gate should hold, and the package already sits at 100%. A new untested schema fails the gate, which is the point. |
 | `@repo/ui` | 11% lines/statements, 10% functions, 27% branches | A regression **floor**, not a target — most components are shadcn primitives we intentionally don't unit-test ("don't test trivial presentational UI", above), so the `all: true` aggregate sits low by design and each new untested primitive erodes it slightly. The floor tracks the value the `button`/`empty-state`/`theme-toggle`/`textarea` smokes hold, with a small margin; re-base it only on an actual breach (lowering a passing floor weakens the guard). |
 | `web` | 95% lines/functions/statements, 88% branches | Coverage `include` is an **explicit file list** in `apps/web/vitest.config.ts` (the source of truth — a scoped set of `server/actions/*` + `lib/*` + `server/realtime/sse.ts` + `stores/ui-store.ts`, e.g. `auth-redirect`, `data-export`, `consent`, `audit-format`, `i18n-metadata`) — not all of `src/`, which would force a near-zero floor. ⚠️ **A newly-tested `lib/*` / `server/actions/*` file is NOT measured until its path is added to that list** (the tell: the coverage totals don't move). They sit at 100% statements/lines/functions and ~91% branches (the gap is defensive `?? fallback` paths a failed Zod parse / non-Error throw can't reach); the floor sits a few points under, so a real drop fails CI without churning on those. |
-| `@repo/auth` | 90% lines/functions/statements, 80% branches | `include` is scoped to `src/config.ts` — the pure env-driven config helpers extracted from `auth.ts` (P3-3), sitting at 100% on all four metrics under the house 90/90/80/90 floor. `auth.ts` itself is only the `betterAuth()` composition over DB/email/jobs wiring; every E2E auth flow exercises it, so it stays out of the unit gate. |
+| `@repo/auth` | 90% lines/functions/statements, 80% branches | `include` is scoped to `src/config.ts` — the pure env-driven config helpers extracted from `auth.ts`, sitting at 100% on all four metrics under the house 90/90/80/90 floor. `auth.ts` itself is only the `betterAuth()` composition over DB/email/jobs wiring; every E2E auth flow exercises it, so it stays out of the unit gate. |
 | `@repo/email` | 95% lines/functions/statements, 90% branches | `include` is scoped to `src/templates/**` — the render smoke tests take every template to HTML **and** plain-text (both prop-set and default-prop passes), sitting at 100% on all four metrics; the floor sits a few points under so adding an untested template trips the gate. `send.tsx`/`client.ts` (the Resend + `server-only` bootstrap, the email analog of jobs' `boss.ts`) stay out of the `include` — smoke-tested only for graceful degradation. |
 | `@repo/jobs` | 90% lines/functions/statements, 80% branches | `include` is scoped to the pure parts — `handlers/**` + `queues.ts` (the job contract + handler logic, `@repo/email` mocked); the pg-boss I/O bootstrap (`boss.ts`/`worker.ts`) is left to the `test:integration` round-trip in the `e2e` lane. |
 
@@ -213,7 +215,7 @@ How it's wired so the default run stays DB-free:
 
 The worked example is **`__tests__/integration/posts.test.ts`** — it runs the exact
 SQL behind the tRPC `post.list` procedure (select + `leftJoin` author name +
-newest-first, plus the D1 **keyset-cursor pagination**: page-by-page with no overlap
+newest-first, plus the **keyset-cursor pagination**: page-by-page with no overlap
 and a `null` cursor at the end) and the `createPost`/`updatePost`/`deletePost` actions
 against real Postgres (incl. the `$onUpdate` `updatedAt` bump), plus the FK
 `onDelete: "cascade"`. It's scoped to a dedicated test author so it cleans up after
@@ -254,7 +256,7 @@ describe("posts (integration)", () => {
 > the workspace deps mocked. The query mirrors the procedure exactly, so it covers that
 > path against real Postgres.
 
-**`@repo/jobs` follows the same split (D7):**
+**`@repo/jobs` follows the same split:**
 - **Unit** (`verify` lane, DB-free) — `vitest.config.ts` covers the pure parts: the job
   contract (`queues.ts`) and the handlers with their providers mocked (`@repo/email`,
   `@sentry/node` for the DLQ consumer). Coverage is scoped to `handlers/**` + `queues.ts`;
@@ -265,7 +267,7 @@ describe("posts (integration)", () => {
   asserts the payload survives the round-trip; `dead-letter.test.ts` (`pgboss_test_dlq`)
   proves an exhausted job (retries spent) is copied to the dead-letter queue with its
   original payload. CI runs them in the `e2e` job right after the `@repo/db` integration
-  tests. See [SERVICES.md](SERVICES.md) → Background jobs.
+  tests. See [services/jobs.md](services/jobs.md).
 
 ## Playwright Pattern
 
@@ -289,7 +291,7 @@ database (26 specs total as of the 2026-07-22 image-optimization spec), so the s
 belongs in the DB-backed E2E lane (the `e2e` job — every PR and push to main), which
 runs against a Postgres service.
 
-**Direct-endpoint image assertions (audit B2, 2026-07-22):**
+**Direct-endpoint image assertions (2026-07-22):**
 `e2e/image-optimization.spec.ts` never opens a page — it drives `/_next/image` with
 Playwright's `request` fixture against a committed `/public` fixture PNG and asserts
 the response is a real transform (PNG→webp under `Accept: image/webp`; an
@@ -297,7 +299,7 @@ IHDR-width check proving the same-format resize; 400 for a non-allowlisted remot
 `url=`, rejected before any fetch). This is the only place CI actually *invokes*
 the sharp image engine — install + build alone never do.
 
-**One spec never runs in the default suite:** `csp-nonce.spec.ts` (path-to-100 #10)
+**One spec never runs in the default suite:** `csp-nonce.spec.ts`
 asserts the `CSP_MODE=nonce` build's per-request-nonce matrix, so
 `playwright.config.ts` routes it to its own project **only when `CSP_MODE=nonce`**
 (and then runs *just* it + the mode-agnostic `security-headers.spec.ts`, against a
@@ -307,17 +309,17 @@ variable-gated `csp-nonce` lane, which builds the app in nonce mode
 `CSP_MODE=nonce CI=true pnpm --filter web test:e2e` (bash — the mode must reach the
 Turbo-driven build).
 
-**Admin bootstrap (D2).** `e2e/admin.spec.ts` needs a logged-in admin, but promotion is
+**Admin bootstrap.** `e2e/admin.spec.ts` needs a logged-in admin, but promotion is
 never self-service (no UI or seed admin). It signs up users through the UI, then
 promotes one via a **direct DB write** — `promoteToAdmin(email)` in `e2e/support/db.ts`,
-the sanctioned out-of-band path (see [AUTH.md](AUTH.md#promoting-an-admin-never-self-service)).
+the sanctioned out-of-band path (see [auth/rbac-admin.md](auth/rbac-admin.md)).
 That helper imports `@repo/db`, so the *Playwright process itself* (not just the booted
 server) needs `DATABASE_URL`: `test:e2e` therefore runs under `dotenv -e ../../.env`
 (mirroring `dev`/`build`/`start`), which loads the local `.env` and **no-ops when the
 file is absent** (CI, where `DATABASE_URL` already comes from the job env). The shared
 `@repo/db` pool is intentionally left open — Playwright terminates the worker at the end.
 
-**Auth through the real UI (C1).** The auth spec drives the `(auth)` forms, not the
+**Auth through the real UI.** The auth spec drives the `(auth)` forms, not the
 HTTP API — `signUp`/`signIn`/`signOut` in `e2e/support/auth.ts` fill the fields by
 label and wait for the navigation the app performs (`/dashboard` on success, `/login`
 on sign-out), so the suite exercises the same path a user does:
@@ -352,18 +354,19 @@ the `post.list` refetch, making `networkidle` a reliable "hydrated" gate here), 
 fill, then assert the value held as a guard. This is the one non-obvious thing about
 testing a controlled form end-to-end.
 
-**Cookie-cache staleness (P3-1).** `e2e/account.spec.ts` is a **serial** one-user
+**Cookie-cache staleness.** `e2e/account.spec.ts` is a **serial** one-user
 lifecycle (`test.describe.configure({ mode: "serial" })`, one shared context) — a single
 sign-up keeps the file inside Better Auth's 5-per-60s sign-up limiter, and later tests
 build on earlier mutations (the re-login uses the changed email + changed password).
 After a profile mutation, a plain reload can legitimately re-render **stale** session
-data for up to 5 minutes: the Step-19 cookie cache serves `getSession()` from a signed
+data for up to 5 minutes: the cookie cache serves `getSession()` from a signed
 cookie, and `updateUserName` writes the user table directly, so the cookie never hears
 about it. Assert authoritatively against
-`GET /api/auth/get-session?disableCookieCache=true` (the P2-1 probe) — it reads the DB
+`GET /api/auth/get-session?disableCookieCache=true` (the cache-bypass probe) — it reads the DB
 and re-issues the cookie cache, after which a reload deterministically renders the fresh
 values. UI success is asserted on each form's `role=status` copy, never on
-`router.refresh()` committing (see [AUTH.md](AUTH.md) — the Next 16.2.9 race).
+`router.refresh()` committing (see [auth/account-page.md](auth/account-page.md) — the
+Next 16.2.9 race).
 
 ### How Playwright gets a server + DB
 
@@ -411,7 +414,7 @@ The wiring (`playwright.config.ts`):
   `e2e/support/email-capture.ts`. In `E2E_BASE_URL` mode both the second server and the
   project are dropped (an external server has no capture directory to read).
 
-**The suppression E2E (path-to-100 #8)** rides the same :3001 server, which also
+**The suppression E2E** rides the same :3001 server, which also
 carries a fake-but-well-formed `RESEND_WEBHOOK_SECRET` (shared constant in
 `e2e/support/resend-webhook.ts`). The spec **self-signs** a Permanent-bounce payload —
 the svix scheme is just HMAC-SHA256 over `` `${id}.${timestamp}.${rawBody}` `` with
@@ -437,7 +440,7 @@ expect(blocking).toEqual([]);
 
 It covers the public pages — the DB-free landing page, the form-bearing `/posts` page,
 `/login`, and `/signup` — plus the signed-in `/account`, `/admin`, and `/admin/audit`
-surfaces (P3-2; audit page added with the B2 read UI). The signed-in test bootstraps ONE
+surfaces. The signed-in test bootstraps ONE
 user (sign-up + out-of-band `promoteToAdmin`, the admin.spec pattern) and scans the three
 pages via full-page `goto`, keeping the file — which
 runs first alphabetically, ahead of the `account-*` signups — to a single hit on Better

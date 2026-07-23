@@ -243,12 +243,12 @@ All are optional and independent; the app keeps building/running if you skip any
 - [x] **Magic-link sign-in** (env-gated on email config): with Resend set, `/login` shows
   "Email me a sign-in link" → request → link in the email signs you in; the link is
   single-use. Mechanics →
-  [context/AUTH.md](context/AUTH.md#magic-link-sign-in-env-gated-path-to-100-6).
+  [context/auth/factors.md](context/auth/factors.md).
   ✅ verified 2026-07-16 — full record: [archive/VERIFICATION_PROVENANCE.md](archive/VERIFICATION_PROVENANCE.md#resend-email)
 - [x] **Bounce/complaint suppression** (`POST /api/resend/webhook`, gated on
   `RESEND_WEBHOOK_SECRET`): a permanent-bounce or complaint event adds the address to
   `email_suppressions`; every send helper then skips it. Mechanics →
-  [SERVICES.md → Resend](context/SERVICES.md#bounce--complaint-handling-path-to-100-8).
+  [services/resend.md](context/services/resend.md).
   ✅ verified 2026-07-16 — full record: [archive/VERIFICATION_PROVENANCE.md](archive/VERIFICATION_PROVENANCE.md#resend-email)
 - [x] **Degraded check** (regression guard): with the keys removed, all of the above no-op gracefully and signup returns to the immediate-session path. (Blank the key **from bash** — PowerShell `$env:X=""` deletes the var and dotenv-cli reloads the live key.) ✅ verified 2026-07-05 — full record: [archive/VERIFICATION_PROVENANCE.md](archive/VERIFICATION_PROVENANCE.md#resend-email)
 
@@ -271,7 +271,7 @@ All are optional and independent; the app keeps building/running if you skip any
 > zero collector traffic), OTLP-only, and dual Sentry + OTLP — full record:
 > [archive/VERIFICATION_PROVENANCE.md → OpenTelemetry](archive/VERIFICATION_PROVENANCE.md#opentelemetry-opt-in-otlp-trace-export).
 
-- [x] Run a local collector + set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`, restart (no rebuild), drive a few pages → span batches appear in `docker logs` within ~5s. _The exact config + one-liner is in [SERVICES.md → OpenTelemetry](context/SERVICES.md#opentelemetry-export-opt-in-path-to-100-9)._
+- [x] Run a local collector + set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`, restart (no rebuild), drive a few pages → span batches appear in `docker logs` within ~5s. _The exact config + one-liner is in [services/sentry.md](context/services/sentry.md)._
 - [x] **Degraded check** (regression guard): endpoint unset → zero OTel activity; the Sentry init is byte-identical to before (`openTelemetrySpanProcessors: []`). ✅ verified 2026-07-16 — full record: [archive/VERIFICATION_PROVENANCE.md](archive/VERIFICATION_PROVENANCE.md#opentelemetry-opt-in-otlp-trace-export)
 
 ### BetterStack (logs) + dashboards-as-code
