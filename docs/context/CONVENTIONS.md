@@ -1,6 +1,8 @@
 # Conventions
 
-> When to load: writing any code in this project.
+> The hard rules live in AGENTS.md (always loaded). Load this file for the full
+> naming table, the `apps/web/src` file-structure map, export/knip details, git
+> hooks, and the rationale behind the rules.
 
 ## TypeScript
 
