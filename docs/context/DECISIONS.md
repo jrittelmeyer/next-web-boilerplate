@@ -272,7 +272,7 @@
     (e.g. double CSP headers, which browsers enforce as the intersection).
   - **Nonce mode does NOT unwind D4's `"use cache"` showcase** (the M4 recipe did):
     `experimental.useCache: true` keeps the directive compiling and caching under
-    `cacheComponents: false` — source-verified in the installed Next 16.2.9 (`useCache`
+    `cacheComponents: false` — source-verified in the installed Next 16.2.11 (`useCache`
     *defaults from* `cacheComponents`; an explicit `true` survives it off) and live-verified
     (post create → `updateTag("posts")` busts the cached count in nonce mode). What nonce mode
     gives up is the static/PPR posture only.

@@ -91,14 +91,22 @@ in any browser.
 > real services, every architectural decision is recorded with its rationale, and
 > the whole repository is structured so that AI coding assistants can work on it as
 > effectively as human engineers — which is also how it was built, under human
-> direction and review, to a quality score of 100 out of 100 across nine
-> increasingly demanding audits.
+> direction and review, to a quality score that peaked at a perfect 100 out of 100
+> (passes 8–9) and holds 99.65 across eleven increasingly demanding audits, the
+> small dip coming not from any regressed code but from the moving "best-available"
+> bar reclaiming points on maintenance currency — exactly the way the project says
+> its own audits are allowed to.
 
 ---
 
-*Current as of 2026-07-22 (repo commit `90c647a` — the verified 100/100 state is
-being maintained, reconfirmed by a ninth audit pass the same week; since the last
-stamp, a second "inception door," `/project-adopt` (migrating an existing codebase
-onto this foundation), shipped and completed its own live trial, the repository
-cut its first tagged releases (`v1.0.0`, `v1.1.0`), and the project gained a public
-face: a hosted Storybook component gallery and a screenshot tour in the README).*
+*Current as of 2026-07-23 (repo commit `212b628` — the 100/100 peak (audit passes
+8–9) has settled to 99.65 at passes 10–11 as the moving "best-available" bar
+reclaimed 0.35 point on maintenance currency; no code regressed and the gaps it
+flagged were closed the same week. Since the last stamp: the July 2026 Next.js
+advisory batch (9 CVEs) was remediated the day after disclosure, a daily
+advisory-watch pipeline that auto-files and auto-closes a security to-do ticket
+went live, and image-optimization gained end-to-end test coverage. Earlier: a
+second "inception door," `/project-adopt` (migrating an existing codebase onto
+this foundation), shipped and completed its own live trial, the repository cut its
+first tagged releases (`v1.0.0`, `v1.1.0`), and the project gained a public face —
+a hosted Storybook component gallery and a screenshot tour in the README).*

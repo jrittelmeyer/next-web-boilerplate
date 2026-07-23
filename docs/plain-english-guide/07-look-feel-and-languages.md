@@ -112,7 +112,7 @@ lives in the URL (not a hidden setting) *specifically because* that's the only
 approach that preserves the instant-page-speed machinery from
 [Chapter 3](03-the-foundation.md) — the alternatives silently disable it; and
 coverage is **complete and kept honest by machine**: the English and Spanish
-catalogs hold identical sets of entries (485 each, compared key-by-key), so a
+catalogs hold identical sets of entries (491 each, compared key-by-key), so a
 screen can't quietly ship in one language only.
 
 **Business value of the chapter:** the product looks consistent and professional

@@ -90,7 +90,7 @@ The CI `verify` lane in one place, plus the dev tools that are wired but not par
 ### Supply chain
 
 - [ ] **Audit** — `pnpm audit --audit-level high --ignore-registry-errors`
-  - _Expect:_ exits **0** — `No known vulnerabilities found` (this box, 2026-07-15: the former transitive advisories are remediated by the pnpm `overrides:` trio and the `ignoreGhsas` allowlist is empty, so the audit guards those overrides live). A *new* high/critical turns it red.
+  - _Expect:_ exits **0** (this box, 2026-07-23: `--audit-level high` passes; several transitive advisories are remediated live by the pnpm `overrides:` entries in `pnpm-workspace.yaml`, and two `fast-uri` GHSAs are deferred in `auditConfig.ignoreGhsas` pending the fix's age-gate — so a bare `pnpm audit` reports `2 high (2 ignored)`, not a clean tree; see [MAINTENANCE.md → Watch items](MAINTENANCE.md)). A *new* high/critical outside the allowlist turns it red.
 - [ ] **Renovate config valid** — `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`
   - _Expect:_ `Config validated successfully` (downloads the renovate package on first run).
 
@@ -121,7 +121,7 @@ The CI `verify` lane in one place, plus the dev tools that are wired but not par
   - Back in Shell A → _Expect (email unset):_ `[jobs] welcome-email for you@example.com skipped — email not configured` (proves the job crossed processes; a real send appears here once Resend is set — Phase 4).
 - [ ] **E2E + a11y suite** — `$env:CI="true"; pnpm test:e2e`  _(then `Remove-Item Env:\CI`)_
   - `CI=true` forces `workers=1` + retries, mitigating a **known local flake**.
-  - _Expect (CI):_ all specs green (19 as of A22: home, auth, posts, notifications, admin, admin-audit, admin-ban, admin-impersonate, admin-pagination, a11y, security-headers, account, account-sessions, account-deletion, data-export, i18n, organization, passkey, two-factor).
+  - _Expect (CI):_ all specs green — the full `apps/web/e2e/*.spec.ts` set (home, auth, posts, admin family, a11y, security-headers, account family, data-export, i18n, organization, passkey, two-factor, billing-org, csp-nonce, email-suppression, image-optimization, magic-link, state, uploads).
   - ⚠️ **Known environmental flake on this dev box:** the `signUp → /dashboard` redirect is timing-fragile here — during this dry-run **10 passed**, `posts.spec` was flaky (passed on retry), and `admin.spec` failed on that redirect. **This is environmental, not a code bug** (documented in PROJECT_STATUS / [BACKLOG → Watch](BACKLOG.md)); the suite is **green in CI**. If a spec fails locally: rerun, or trust the CI lane — `gh run watch <id>`, confirmed with `gh run view <id> --json status,conclusion`.
 
 ---

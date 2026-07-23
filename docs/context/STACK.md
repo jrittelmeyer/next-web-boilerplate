@@ -17,7 +17,7 @@ Versions below were verified against the **npm registry dist-tags** (authoritati
 | Package | Version | Notes |
 | --- | --- | --- |
 | node | 24 (Krypton) | Active LTS as of mid-2026; 22 is in Maintenance |
-| next | ^16.2.9 | App Router only; Pages Router is legacy |
+| next | ^16.2.11 | App Router only; Pages Router is legacy. 16.2.11 patched the 2026-07-22 advisory batch (9 GHSAs) |
 | react / react-dom | ^19.2.7 | Required peer of Next.js 16 |
 | babel-plugin-react-compiler | 1.0.0 | verified 2026-06-25 (D3); enables `reactCompiler: true` in `next.config.ts`. Exact-pinned (compiler iterates fast); React Compiler **1.0 stable**, targets React 19 natively so **no `react-compiler-runtime`** (that's only for React 17/18). Next gates the Babel pass behind an SWC analysis → Turbopack-compatible. See [DECISIONS.md](DECISIONS.md) |
 | typescript | ^6.0.3 | **Stay on TS 6.** TS 7 GA'd (`7.0.2`, 2026-07-08) as the native Go compiler but **dropped the JS Compiler API** (`ts.createProgram`/`readConfigFile` etc.) — so stable `next build` and every library-API consumer can't use it until that API returns in **TS 7.1 (~Q4 2026)**. The `tsc` CLI works and is ~3.6× faster; a 2026-07-13 cutover attempt was reverted. **Movement:** Next canary ships experimental TS7 support since 2026-07-10 (`experimental.useTypeScriptCli`, vercel/next.js#95639) — **re-gate on that reaching a stable Next release**, not TS GA. See [BACKLOG.md](../BACKLOG.md) |

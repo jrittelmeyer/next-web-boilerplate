@@ -156,7 +156,7 @@ gold-standard `script-src`, build with `CSP_MODE=nonce`** — locally
   `"use cache"` showcase (`post-stats.tsx` + the `updateTag("posts")` busts)
   **keeps compiling and caching** — `useCache` merely *defaults from*
   `cacheComponents`; an explicit `true` survives it being off (verified in the
-  installed Next 16.2.9). Nonce mode gives up the static/PPR posture, **not** the
+  installed Next 16.2.11). Nonce mode gives up the static/PPR posture, **not** the
   function cache. It also bakes the resolved mode into every bundle via `env:
   { CSP_MODE: … }`.
 

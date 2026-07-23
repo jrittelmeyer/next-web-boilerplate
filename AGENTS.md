@@ -7,10 +7,11 @@ file before working in that area.
 > **Status:** feature-complete — the **path-to-100 program** shipped all 11 rows and
 > was **verified at 100.0/100** by the eighth audit pass (2026-07-17;
 > [docs/archive/PROJECT_AUDIT_2026-07-17.md](docs/archive/PROJECT_AUDIT_2026-07-17.md)).
-> The tenth pass (2026-07-22) scored **99.65** — no code regressed, but four
-> maintenance gaps opened, led by Renovate's scheduled update lane never having
-> delivered a PR
-> ([docs/archive/PROJECT_AUDIT_2026-07-22.md](docs/archive/PROJECT_AUDIT_2026-07-22.md)).
+> The tenth/eleventh passes (2026-07-22) held **99.65** — no code regressed; the
+> maintenance gaps they flagged were closed the same week (Renovate schedule widened,
+> PR-delivery proof due 2026-07-27; `/_next/image` e2e added; the 2026-07-22 advisory
+> batch remediated via `next` 16.2.11 + the new security-triage pipeline)
+> ([docs/archive/PROJECT_AUDIT_2026-07-22B.md](docs/archive/PROJECT_AUDIT_2026-07-22B.md)).
 > **Maintenance mode ([docs/MAINTENANCE.md](docs/MAINTENANCE.md)) is the standing
 > state.** Every integration is built and verified end-to-end — see
 > [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for exactly what's in place and

@@ -66,8 +66,8 @@ GA'd without the JS Compiler API that `next build` needs (tracked in
 
 ## Database & data safety
 
-- PostgreSQL + **Drizzle ORM** (node-postgres `Pool`), schema in `@repo/db`, 17
-  committed migrations — `db:migrate` works on a fresh clone with no codegen step.
+- PostgreSQL + **Drizzle ORM** (node-postgres `Pool`), schema + committed SQL
+  migrations in `@repo/db` — `db:migrate` works on a fresh clone with no codegen step.
 - A **copy-me example entity (`posts`)** demonstrating the full stack of patterns:
   keyset (cursor) pagination, composite + FK indexes, optimistic UI, an atomic
   multi-table transaction (`post_revisions`), org-scoping, and search indexing.

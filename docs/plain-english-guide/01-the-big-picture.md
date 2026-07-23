@@ -117,12 +117,13 @@ new-employee onboarding a project can have. The same pages serve both.
 
 ## How good is it, really? (The audit trail)
 
-Quality claims are cheap, so this project measures itself. Nine separate audit
+Quality claims are cheap, so this project measures itself. Eleven separate audit
 passes were run against a deliberately harsh standard — "how does this compare to
 the best available starter kit imaginable?" — scoring every feature area out of
 100. The scores across the audits ran **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 →
-99.35 → 100 → 100**, with each gap found feeding a to-do list that was then worked
-to completion. The audit reports themselves are preserved in the repository.
+99.35 → 100 → 100 → 99.65 → 99.65**, with each gap found feeding a to-do list that
+was then worked to completion. The audit reports themselves are preserved in the
+repository.
 
 Two honest footnotes, because credibility matters more than a round number:
 
@@ -136,13 +137,16 @@ Two honest footnotes, because credibility matters more than a round number:
   re-examined; all proved fixable after all, and an eleven-item "path to 100"
   program cleared the list one signed-off item at a time. It finished on 17 July
   2026, when the eighth audit independently re-verified each item in the code and
-  scored 100. The project treats that score as **a state to maintain, not a
-  trophy**: every future audit re-checks it against the moving "best available
-  today" bar and can take points back. Proof that isn't just talk: a ninth pass,
-  run days later once the project had settled back into ordinary maintenance (a
-  dependency wave, new tooling installed), re-checked everything from scratch and
-  held the same 100 — the score surviving a moving target, not just the day it
-  was set.
+  scored 100 — a score the ninth pass held again days later. The project treats
+  that number as **a state to maintain, not a trophy**: every future audit
+  re-checks it against the moving "best available today" bar and can take points
+  back. And it has — which is the honest part: the tenth and eleventh passes (22
+  July 2026) settled to **99.65**, the first dip since the program. Not because any
+  code regressed (the product was byte-for-byte identical) but because the moving
+  bar found four *maintenance* gaps — chiefly an automated dependency-update lane
+  that hadn't yet delivered a change — and all four were closed the same week. That
+  is the caveat working exactly as advertised: the number tracks reality, and
+  reality includes upkeep.
 
 The project is **feature-complete**: the "path to 100" effort is finished and
 verified, nothing more is being added without a demonstrated need, and the

@@ -107,6 +107,16 @@ at *two* independent layers, so no single mistake is fatal:
   the built container images (`Trivy`), and GitHub's own alerts; plus **CodeQL**,
   GitHub's deep static analyzer, hunting for exploitable patterns in the
   project's own code on every change.
+- **A daily advisory watchtower.** Vulnerabilities are announced against the
+  *world*, not against this project's code — a package that looked clean yesterday
+  can be declared dangerous today with nothing on this end having changed. So
+  beyond the scan-on-every-change gates above, a robot re-audits the entire
+  dependency list **every morning**, and the moment a new advisory lands it opens
+  a single running to-do ticket describing it — then closes that ticket
+  automatically once the list is clean again. A real batch of framework security
+  fixes in July 2026 flowed through this exact path: detected, ticketed, patched,
+  and closed inside a day. It turns "a scary security email nobody read" into a
+  tracked task that can't fall through the cracks.
 - **An ingredients list and a notarized seal:** every build publishes an **SBOM**
   ("software bill of materials" — the exact list of every package and version
   inside, the thing that lets you answer *"are we affected?"* in minutes when

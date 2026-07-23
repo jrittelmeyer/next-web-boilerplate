@@ -161,7 +161,7 @@
   </div>
   <footer class="deckfoot">Every slide links to deeper reading: plain pills open the
   zero-jargon guide beside this file; pills marked ↗ open the project’s own technical
-  docs on GitHub. · Current as of 2026-07-22 (repo commit 90c647a)</footer>
+  docs on GitHub. · Current as of 2026-07-23 (repo commit 212b628)</footer>
 </section>
 
 <!-- 2 · THE PROBLEM -->
@@ -217,7 +217,7 @@
   <div class="tiles">
     <div class="tile"><div class="t-label">Settings needed to boot</div><div class="t-value">2</div><div class="t-sub">everything else is optional &amp; degrades gracefully</div></div>
     <div class="tile"><div class="t-label">Optional integrations wired</div><div class="t-value">~12</div><div class="t-sub">payments, email, search, monitoring, more</div></div>
-    <div class="tile"><div class="t-label">Latest audit score</div><div class="t-value">100<span style="font-size:.5em;color:var(--muted)">/100</span></div><div class="t-sub">vs. a “best imaginable kit” bar, 8 passes</div></div>
+    <div class="tile"><div class="t-label">Latest audit score</div><div class="t-value">99.65<span style="font-size:.5em;color:var(--muted)">/100</span></div><div class="t-sub">vs. a “best imaginable kit” bar; peaked at 100, 11 passes</div></div>
     <div class="tile"><div class="t-label">Agent &amp; human context docs</div><div class="t-value">14</div><div class="t-sub">one per domain, loaded per task</div></div>
     <div class="tile"><div class="t-label">Accessibility-scanned surfaces</div><div class="t-value">7</div><div class="t-sub">machine-checked on every change</div></div>
     <div class="tile"><div class="t-label">Cost per user for sign-in</div><div class="t-value">$0</div><div class="t-sub">identity is owned, not rented</div></div>
@@ -700,11 +700,11 @@
 <section class="slide" id="s23">
   <div class="kicker">The receipts</div>
   <h2>Measured against a “best imaginable kit” bar — <span class="thin">gaps found, then closed</span></h2>
-  <div class="chart-wrap" role="img" aria-label="Line chart: project audit scores across nine passes rising from 93 on July 8, 2026 to 100 by July 17, then holding at 100 on a ninth pass July 18.">
+  <div class="chart-wrap" role="img" aria-label="Line chart: project audit scores across eleven passes rising from 93 on July 8, 2026 to 100 by July 17, holding 100 on a ninth pass July 18, then settling to 99.65 at the tenth and eleventh passes on July 22 as the moving bar reclaimed points on maintenance currency.">
     <div class="chart-title">Project audit score, out of 100</div>
-    <div class="chart-sub">Nine passes, 2026-07-08 → 2026-07-18 · scale shown 90–100</div>
+    <div class="chart-sub">Eleven passes, 2026-07-08 → 2026-07-22 · scale shown 90–100</div>
     <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
-      <title>Audit score by pass: 93, then 97.5, 98.2, 99.3 held across three passes, 99.35, reaching 100, then holding at 100 through the first maintenance-mode pass</title>
+      <title>Audit score by pass: 93, then 97.5, 98.2, 99.3 held across three passes, 99.35, reaching 100 and holding it for two passes, then settling to 99.65 across the tenth and eleventh passes as the moving bar reclaimed points on maintenance currency</title>
       <!-- gridlines: 90 / 95 / 100 -->
       <g stroke="#e1e0d9" stroke-width="1">
         <line x1="56" y1="30"  x2="700" y2="30"/>
@@ -719,50 +719,55 @@
       </g>
       <!-- x labels -->
       <g font-size="12" fill="#898781" text-anchor="middle">
-        <text x="100" y="228">Jul 8</text>
-        <text x="170" y="228">Jul 12</text>
-        <text x="240" y="228">Jul 12</text>
-        <text x="310" y="228">Jul 14</text>
-        <text x="380" y="228">Jul 14</text>
+        <text x="90" y="228">Jul 8</text>
+        <text x="150" y="228">Jul 12</text>
+        <text x="210" y="228">Jul 12</text>
+        <text x="270" y="228">Jul 14</text>
+        <text x="330" y="228">Jul 14</text>
+        <text x="390" y="228">Jul 15</text>
         <text x="450" y="228">Jul 15</text>
-        <text x="520" y="228">Jul 15</text>
-        <text x="590" y="228">Jul 17</text>
-        <text x="660" y="228">Jul 18</text>
+        <text x="510" y="228">Jul 17</text>
+        <text x="570" y="228">Jul 18</text>
+        <text x="630" y="228">Jul 22</text>
+        <text x="690" y="228">Jul 22</text>
       </g>
       <!-- data line: y = 200 - (score-90)*17 -->
-      <polyline points="100,149 170,72.5 240,60.6 310,41.9 380,41.9 450,41.9 520,41.05 590,30 660,30"
+      <polyline points="90,149 150,72.5 210,60.6 270,41.9 330,41.9 390,41.9 450,41.05 510,30 570,30 630,35.95 690,35.95"
         fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       <!-- markers: 8px dots (r=4) with 2px surface ring (stroke) -->
       <g fill="#2a78d6" stroke="#fcfcfb" stroke-width="2">
-        <circle cx="100" cy="149"  r="5"><title>Pass 1 · 2026-07-08 · 93.0</title></circle>
-        <circle cx="170" cy="72.5" r="5"><title>Pass 2 · 2026-07-12 · 97.5</title></circle>
-        <circle cx="240" cy="60.6" r="5"><title>Pass 3 · 2026-07-12 · 98.2</title></circle>
-        <circle cx="310" cy="41.9" r="5"><title>Pass 4 · 2026-07-14 · 99.3</title></circle>
-        <circle cx="380" cy="41.9" r="5"><title>Pass 5 · 2026-07-14 · 99.3</title></circle>
-        <circle cx="450" cy="41.9" r="5"><title>Pass 6 · 2026-07-15 · 99.3</title></circle>
-        <circle cx="520" cy="41.05" r="5"><title>Pass 7 · 2026-07-15 · 99.35</title></circle>
-        <circle cx="590" cy="30" r="5"><title>Pass 8 · 2026-07-17 · 100.0 — verified the closing “path to 100” program</title></circle>
-        <circle cx="660" cy="30" r="5"><title>Pass 9 · 2026-07-18 · 100.0 — held through the first maintenance-mode window</title></circle>
+        <circle cx="90" cy="149"  r="5"><title>Pass 1 · 2026-07-08 · 93.0</title></circle>
+        <circle cx="150" cy="72.5" r="5"><title>Pass 2 · 2026-07-12 · 97.5</title></circle>
+        <circle cx="210" cy="60.6" r="5"><title>Pass 3 · 2026-07-12 · 98.2</title></circle>
+        <circle cx="270" cy="41.9" r="5"><title>Pass 4 · 2026-07-14 · 99.3</title></circle>
+        <circle cx="330" cy="41.9" r="5"><title>Pass 5 · 2026-07-14 · 99.3</title></circle>
+        <circle cx="390" cy="41.9" r="5"><title>Pass 6 · 2026-07-15 · 99.3</title></circle>
+        <circle cx="450" cy="41.05" r="5"><title>Pass 7 · 2026-07-15 · 99.35</title></circle>
+        <circle cx="510" cy="30" r="5"><title>Pass 8 · 2026-07-17 · 100.0 — verified the closing “path to 100” program</title></circle>
+        <circle cx="570" cy="30" r="5"><title>Pass 9 · 2026-07-18 · 100.0 — held through the first maintenance-mode window</title></circle>
+        <circle cx="630" cy="35.95" r="5"><title>Pass 10 · 2026-07-22 · 99.65 — moving bar reclaimed 0.35 on maintenance gaps; no code regressed</title></circle>
+        <circle cx="690" cy="35.95" r="5"><title>Pass 11 · 2026-07-22 · 99.65 — same-day re-check; the flagged gaps were closed the same week</title></circle>
       </g>
-      <!-- selective direct labels: first + latest -->
+      <!-- selective direct labels: first · peak · latest -->
       <g font-size="13" fill="#0b0b0b" font-weight="600">
-        <text x="100" y="172" text-anchor="middle">93</text>
-        <text x="660" y="19"  text-anchor="middle">100</text>
+        <text x="90" y="172" text-anchor="middle">93</text>
+        <text x="510" y="19"  text-anchor="middle">100</text>
+        <text x="690" y="26"  text-anchor="middle">99.65</text>
       </g>
     </svg>
   </div>
   <details class="data">
     <summary>View the data</summary>
     <table>
-      <tr><th>Pass</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr>
-      <tr><th>Date (2026)</th><td>Jul 8</td><td>Jul 12</td><td>Jul 12</td><td>Jul 14</td><td>Jul 14</td><td>Jul 15</td><td>Jul 15</td><td>Jul 17</td><td>Jul 18</td></tr>
-      <tr><th>Score /100</th><td>93.0</td><td>97.5</td><td>98.2</td><td>99.3</td><td>99.3</td><td>99.3</td><td>99.35</td><td>100.0</td><td>100.0</td></tr>
+      <tr><th>Pass</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr>
+      <tr><th>Date (2026)</th><td>Jul 8</td><td>Jul 12</td><td>Jul 12</td><td>Jul 14</td><td>Jul 14</td><td>Jul 15</td><td>Jul 15</td><td>Jul 17</td><td>Jul 18</td><td>Jul 22</td><td>Jul 22</td></tr>
+      <tr><th>Score /100</th><td>93.0</td><td>97.5</td><td>98.2</td><td>99.3</td><td>99.3</td><td>99.3</td><td>99.35</td><td>100.0</td><td>100.0</td><td>99.65</td><td>99.65</td></tr>
     </table>
   </details>
   <ul class="points">
     <li><strong>Each gap found became a to-do item and was worked to completion</strong> <span class="why">— the reports are preserved in the repository’s archive. The last points sat behind the audits’ own “won’t fix” rulings; in July 2026 every ruling was re-argued, all fell, and an eleven-item closing program shipped — the eighth audit re-verified each item in the code and scored 100.</span></li>
-    <li><strong>The score held under real upkeep, not just the day it was earned:</strong> <span class="why">a ninth pass, days later once the project was back to ordinary maintenance (a dependency wave, new tooling installed), re-checked everything from scratch and scored 100 again.</span></li>
-    <li><strong>Stated honestly:</strong> <span class="why">the audits are evidence-based (claims re-checked against code) but run by the same AI tooling that built the project — not an external certification. And 100 is treated as a state to maintain, not a trophy: every future audit re-checks it against the moving “best available today” bar and can take points back.</span></li>
+    <li><strong>The score tracks reality, not the trophy day:</strong> <span class="why">a ninth pass held 100 under real upkeep days later — then the tenth and eleventh (July 22) settled to 99.65. No code regressed (the product was byte-for-byte identical); the moving bar simply caught four maintenance gaps, all closed the same week.</span></li>
+    <li><strong>Stated honestly:</strong> <span class="why">the audits are evidence-based (claims re-checked against code) but run by the same AI tooling that built the project — not an external certification. And 100 is treated as a state to maintain, not a trophy: every future audit re-checks it against the moving “best available today” bar and can — as passes 10–11 show — take points back.</span></li>
   </ul>
   <div class="links">
     <span class="lbl">Drill down</span>

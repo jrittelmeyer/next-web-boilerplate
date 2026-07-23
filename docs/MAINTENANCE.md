@@ -40,7 +40,7 @@ The full per-dependency record (versions, pin style, and *why*) is
    must match `better-auth` exactly).
 5. **Audit allowlist hygiene** — `pnpm audit` gates CI. For a transitive advisory,
    prefer a scoped **override** in `pnpm-workspace.yaml` when a compatible fixed
-   version exists (see the dated Dependabot trio there — each carries its removal
+   version exists (see the dated override entries there — each carries its removal
    condition, mirrored in the Watch items below); acknowledge it in
    `auditConfig.ignoreGhsas` (with its reason) only when nothing fixable exists.
    **Prune both kinds** once the upstream fix lands. Same for the `vite` version

@@ -416,7 +416,7 @@ the `@sentry/cli` binary — the build succeeds without observability creds.
 > **Turbopack note:** Next 16's `next build` uses Turbopack. The Sentry SDK's
 > *runtime* instrumentation works regardless of bundler, and source-map **upload now
 > works under Turbopack too** — supported and on by default since
-> `@sentry/nextjs@10.13` and `next@15.4.1` (this repo: 10.59 / 16.2.9), via Next's
+> `@sentry/nextjs@10.13` and `next@15.4.1` (this repo: 10.59 / 16.2.11), via Next's
 > `runAfterProductionCompile` hook, so **no webpack build is needed**. The boilerplate
 > default uploads nothing (no
 > token); to enable upload, set `SENTRY_AUTH_TOKEN` (+ `SENTRY_ORG`/`SENTRY_PROJECT`)

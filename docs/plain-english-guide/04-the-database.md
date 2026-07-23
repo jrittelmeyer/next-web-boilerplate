@@ -58,7 +58,7 @@ for honest re-evaluation. That candor is typical of the project.
 
 ## Migrations — renovating the filing cabinet without losing a file
 
-**Technical name:** schema **migrations** (16 of them committed so far).
+**Technical name:** schema **migrations** (18 of them committed so far).
 
 **The problem they solve:** the database's structure evolves — new tables, new
 columns. In production, those changes must be applied to a *live database full of
