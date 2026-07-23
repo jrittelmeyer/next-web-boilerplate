@@ -26,6 +26,15 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
   for a non-allowlisted remote `url=`), so the overridden `sharp` engine (see
   Security below) is exercised on every e2e run instead of merely installed —
   the 2026-07-22 audit's last open row.
+- **Daily security-audit watch lane + auto-filed triage issue** — new
+  `.github/workflows/security-audit.yml` runs `pnpm audit` daily (moderate+
+  threshold) and turns a red result into a rolling `security-triage` issue
+  (labeled, assigned, auto-closed by the next green run) via
+  `.github/scripts/security-triage-issue.sh`; ci.yml's audit lane syncs the same
+  issue on non-PR runs on `main` (push / heartbeat / dispatch). Advisories publish against the world, not the
+  tree — a fully green repo can wake up red (the 2026-07-22 Next.js batch), and
+  a red scheduled run previously had no consumer. Triage procedure:
+  [`docs/MAINTENANCE.md` → Security response runbook](docs/MAINTENANCE.md#security-response-runbook).
 
 ### Fixed
 

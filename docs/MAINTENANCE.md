@@ -116,6 +116,48 @@ The live list is [`BACKLOG.md`](BACKLOG.md). Currently:
 - The **e2e signup flake** — intermittent, absorbed by Playwright retries, not a code
   bug; harden only if it ever turns a lane red.
 
+## Security response runbook
+
+Advisories publish against the *world*, not against this repo's commits — a fully
+green tree can wake up red (the 2026-07-22 Next.js batch dropped 9 GHSAs on a tree
+whose CI had passed hours earlier). The pipeline guarantees detection **and** a
+backlog entry; this runbook is the human half.
+
+**Signals, ranked.** `pnpm audit` is the authoritative gate (it queries live
+advisory data per run; of the four packages remediated 2026-07-22, Dependabot
+alerted on **one**). Dependabot alerts and their emails are the supplementary
+signal — cross-check both, trust `pnpm audit`.
+
+**Automated cadence.** Three lanes watch for advisories; the first two run
+`pnpm audit` and sync one rolling **`security-triage` issue** (created red,
+appended while red, auto-closed by the next green run that provably audited —
+`.github/scripts/security-triage-issue.sh`):
+
+- **`security-audit.yml`** — daily 05:00 UTC watch lane; red at **moderate+**.
+- **ci.yml → Audit (supply chain)** — every PR/push + the Thursday heartbeat;
+  *merge gate* at high/critical, but its triage-sync step files/closes the issue
+  at the same moderate+ watch threshold (non-PR runs on `main` only — push,
+  heartbeat, manual dispatch).
+- **Dependabot** — GitHub-side rescans with their own alerts/emails (also what
+  auto-closes its alerts after a fix lands; observed latency ~90 min).
+
+**Triage, when the issue fires** (or on any maintenance resume — check the open
+issue list, the latest scheduled-run conclusions, and run `pnpm audit` before
+declaring the ledger clear):
+
+1. **Direct dependency with a fixed version** → bump it (registry-verified). A fix
+   younger than the 7-day age gate needs a dated `minimumReleaseAgeExclude` entry
+   in `pnpm-workspace.yaml` (pnpm's gate doesn't exempt security fixes) — remove
+   it once the version ages out.
+2. **Transitive with a compatible fixed version** → scoped override in
+   `pnpm-workspace.yaml` + plain `pnpm install` (never `pnpm update --recursive` —
+   it re-resolves the whole lockfile).
+3. **No fixed version anywhere** → dated `auditConfig.ignoreGhsas` entry with its
+   reason and expected exit condition.
+4. **Record it in the same commit**: CHANGELOG **Security** entry + a Watch item
+   above (with its removal condition), then the full gate and a CI watch. The
+   green push closes the triage issue; confirm the Dependabot alerts auto-close.
+
 ## Periodic audit cadence
 
 Two review passes keep docs and code from drifting — run them on real need (a big

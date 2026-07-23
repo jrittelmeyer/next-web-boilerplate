@@ -493,7 +493,8 @@ throwaway Postgres, proving the nonce mode on every PR/push while the always-on
 `e2e` lane keeps proving the static default; a fork that never uses nonce mode
 leaves the variable unset) and the still-dormant `perf` (`ENABLE_PERF`); a separate
 `.github/workflows/codeql.yml` runs static analysis (see
-[Dependency & security automation](#dependency--security-automation-step-26)).
+[Dependency & security automation](#dependency--security-automation-step-26)) and
+`.github/workflows/security-audit.yml` is the daily advisory watch lane (below).
 All workflow actions are **pinned to full commit SHAs** (P1-5) with the release
 version in a trailing comment — a moved/retagged upstream ref can't change what
 runs in CI; Renovate maintains the digests (see the Renovate section below).
@@ -545,6 +546,20 @@ allowlisted in `pnpm-workspace.yaml` (see
 [Supply chain](#dependency--security-automation-step-26)), so a **new**
 high/critical advisory turns it red while the accepted status quo stays green.
 `--ignore-registry-errors` keeps a flaky advisory API from failing the build.
+On non-PR runs on `main` (push / heartbeat / manual dispatch) a follow-up step
+re-audits at **moderate+** with its own captured output and syncs the rolling
+`security-triage` issue (files it red, closes it green) via
+`.github/scripts/security-triage-issue.sh` — see the daily watch lane below.
+
+**`security-audit.yml`** (separate workflow) — the daily advisory **watch lane**
+(cron 05:00 UTC + `workflow_dispatch`): `pnpm audit` at the stricter moderate+
+threshold, a best-effort Dependabot-alerts cross-check, and the same
+`security-triage` issue sync. Advisories publish against the world, not this
+repo's commits — a green tree can wake up red (the 2026-07-22 Next.js batch), and
+the weekly Thursday heartbeat alone leaves up to a 6-day blind window. The issue
+(labeled `security-triage`, assigned to the repo owner) is the machine guarantee
+that a finding lands in the prioritized backlog; triage procedure:
+[MAINTENANCE.md → Security response runbook](../MAINTENANCE.md#security-response-runbook).
 
 There's no root `.env` in CI; the app's build script loads `../../.env` via
 `dotenv-cli`, which no-ops when the file is absent. `next build` validates env at

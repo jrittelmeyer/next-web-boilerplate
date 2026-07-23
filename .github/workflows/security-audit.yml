@@ -1,0 +1,89 @@
+name: Security audit
+
+# Daily advisory watch. Advisories publish against the *world*, not against this
+# repo's commits — the 2026-07-22 Next.js batch (9 GHSAs) landed on an untouched
+# tree with a fully green CI, and the weekly Thursday heartbeat leaves up to a
+# 6-day blind window in maintenance mode. This lane closes that window: it runs
+# `pnpm audit` every day and turns a red result into a labeled, assigned
+# `security-triage` ISSUE (the prioritized-backlog guarantee) instead of an
+# unread red run. The next green run closes the issue automatically.
+#
+# Division of labor with ci.yml's "Audit (supply chain)" lane: that lane is the
+# MERGE gate (fails at high/critical so unfixable moderates can't flake PRs
+# red); this lane is the WATCH gate and goes red at moderate+ — a moderate-only
+# advisory still lands in the backlog without ever blocking a merge. Both lanes
+# sync the same rolling issue via .github/scripts/security-triage-issue.sh.
+# Triage procedure: docs/MAINTENANCE.md → Security response runbook.
+#
+# Third-party actions are pinned to full commit SHAs (same policy as ci.yml).
+
+on:
+  schedule:
+    # Daily 05:00 UTC — offset from CodeQL (Mon 04:30) and the CI heartbeat
+    # (Thu 04:30). Cheap job (~1 min): install + lockfile audit, no build.
+    - cron: "0 5 * * *"
+  # Manual trigger — also how this lane is verified without waiting for the cron.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write # files / closes the rolling security-triage issue
+
+jobs:
+  audit:
+    name: Daily advisory audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Full audit at the WATCH threshold (moderate+). Exit code is captured, not
+      # propagated — the triage sync below must run either way; the final step
+      # re-raises the failure so a finding still shows as a red run.
+      - name: pnpm audit
+        id: audit
+        run: |
+          set +e
+          pnpm audit --audit-level moderate --ignore-registry-errors 2>&1 | tee audit-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      # Supplementary signal only — pnpm audit is the authoritative gate here
+      # (of the four packages remediated 2026-07-22, Dependabot alerted on ONE).
+      # The workflow GITHUB_TOKEN has no Dependabot-alerts permission, so this is
+      # best-effort: it annotates the log when it can, never fails the run.
+      - name: Dependabot alerts (best-effort cross-check)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          count="$(gh api "repos/${GITHUB_REPOSITORY}/dependabot/alerts?state=open&per_page=100" --jq 'length')" \
+            || { echo "Dependabot alerts API unavailable to GITHUB_TOKEN (expected) — cross-check manually: gh api repos/${GITHUB_REPOSITORY}/dependabot/alerts?state=open"; exit 0; }
+          echo "Open Dependabot alerts: ${count}"
+
+      # Red → file (or append to) the rolling security-triage issue; green →
+      # close it. One open issue at a time; see the script header.
+      - name: Sync the security-triage issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ steps.audit.outputs.exit_code }}" != "0" ]; then
+            bash .github/scripts/security-triage-issue.sh red audit-output.txt
+          else
+            bash .github/scripts/security-triage-issue.sh green audit-output.txt
+          fi
+
+      - name: Propagate audit status
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        run: |
+          echo "::error::pnpm audit found moderate+ advisories — triage via the security-triage issue (docs/MAINTENANCE.md → Security response runbook)"
+          exit 1

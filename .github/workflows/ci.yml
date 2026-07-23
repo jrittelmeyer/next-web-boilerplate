@@ -106,6 +106,9 @@ jobs:
   audit:
     name: Audit (supply chain)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # the triage-sync step files / closes the security-triage issue
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -125,8 +128,40 @@ jobs:
       # each with a documented reason — so a NEW high/critical advisory turns this
       # red while the accepted status quo stays green. --ignore-registry-errors
       # keeps a flaky advisory API from failing the build (exit 0 on registry error).
+      # `shell: bash` is load-bearing: the DEFAULT runner shell is `bash -e` with
+      # NO pipefail, so `| tee` would make the step's exit code tee's (always 0)
+      # and silently kill this merge gate. Explicit bash = `-eo pipefail`.
       - name: pnpm audit
-        run: pnpm audit --audit-level high --ignore-registry-errors
+        id: audit
+        shell: bash
+        run: pnpm audit --audit-level high --ignore-registry-errors 2>&1 | tee audit-output.txt
+
+      # Keep the rolling security-triage issue in sync on non-PR runs on `main`
+      # (push / heartbeat / manual dispatch — a red PR run already has a human
+      # looking at it, a fork PR's token can't write issues, and a dispatch on a
+      # WIP branch must not touch main's issue from the wrong tree). The triage
+      # threshold is MODERATE — stricter than the merge gate above, so a
+      # moderate-only advisory still lands in the backlog without blocking merges
+      # — re-run with its own tee so the filed issue carries the moderate-level
+      # tables (--audit-level filters the PRINTED output, not just the exit
+      # code). A green run (e.g. the remediation push) closes the issue. Shared
+      # logic: .github/scripts/security-triage-issue.sh; the daily watch lane
+      # (security-audit.yml) syncs the same issue. Procedure:
+      # docs/MAINTENANCE.md → Security response runbook.
+      - name: Sync the security-triage issue
+        if: ${{ !cancelled() && steps.audit.outcome != 'skipped' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          pnpm audit --audit-level moderate --ignore-registry-errors 2>&1 | tee triage-audit-output.txt
+          code=${PIPESTATUS[0]}
+          set -e
+          if [ "$code" -ne 0 ]; then
+            bash .github/scripts/security-triage-issue.sh red triage-audit-output.txt
+          else
+            bash .github/scripts/security-triage-issue.sh green triage-audit-output.txt
+          fi
 
   e2e:
     name: E2E (Playwright)
