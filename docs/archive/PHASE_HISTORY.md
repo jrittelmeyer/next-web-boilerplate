@@ -1850,3 +1850,55 @@ originally written (relative to `docs/context/`).
     green, and next-intl internals + the vitest navigation stubs type-checked untouched. The
     rejection is architectural fit, not breakage — revisit only if the app ever drops locale path
     routing or adopts a `pathnames` map (which supersedes it anyway).
+
+
+## Context-engineering overhaul (2026-07-23) — archived program record
+
+One-day program (signed off in-session; 8 boilerplate commits b62b702..9d129f7 + kit
+9033e50): applied the context-engineering & token-economics curriculum end-to-end.
+
+- **ai-dev-kit 0.7.0** — doc-audit 0.2.0 (hunt 7: standing-instruction budget &
+  placement — prime directive, thin pointers, cache stability, leaf sweep, load-when
+  precision; description trimmed), checkpoint 0.2.0 (three-strikes rule; resume
+  prompt written to disk + seed pointer), project-init/adopt 0.2.0 (append-row
+  register mechanic), live-verify 0.1.1, NEW context-guard hook (advise-only nudge on
+  AGENTS.md/CLAUDE.md/context-doc edits — proven firing live the same session),
+  adapter contextBudget block + docs.handoff + full exactPin list, PLAYBOOK
+  techniques 11 (standing-instruction economy) + 12 (session economics), README
+  "keep the consumer thin" snippet. Both kit CI lanes green; --check green (14 files).
+- **Always-loaded prefix** — AGENTS.md 132→109 ln (stable 2-line status; stack
+  anchor; three-strikes/plan-to-disk/fork-exploration agreements; CONVENTIONS hard
+  rules folded in, retiring the always-firing router row); CLAUDE.md 33→17 ln thin
+  pointer. Project-controlled prefix ~4.6k → ~3.0k tok/session and stops churning.
+- **Living docs** — PROJECT_STATUS 7th compaction (40,040→12,091 chars) with the
+  written shipped-row protocol; BACKLOG 24,050→5,937; MAINTENANCE = canonical Watch
+  home (union-merged); VERIFICATION 74,276→55,828 with 42 narratives moved verbatim
+  to archive/VERIFICATION_PROVENANCE.md (all 38 headings byte-identical);
+  archive/README full 17-file index + same-commit rule.
+- **Context-doc splits** — SERVICES.md → services/ ×9 + 70-line anchor-keeping index
+  (Stripe task 18.2k→~4.2k tok); AUTH.md → auth/ ×5 + 80-line index (auth task
+  17.7k→~4-7k; auth/core.md gained six customRules the old doc omitted — verified
+  against auth.ts); DECISIONS topical 12.2k→6.5k tok with five anecdotes archived
+  byte-verbatim above; DEPLOYMENT env/CI prose → pointers + rationale; DATABASE
+  standalone-canonical (subscriptions shape, pgboss); four duplicated blocks
+  single-homed after union-merge; ~200 provenance tags pruned from body prose;
+  AGENTS.md router table file-precise.
+- **Leaf AGENTS.md ×5** — packages/{db,ui,jobs,auth,email}, anchor-pointer style
+  ≤20 lines, sibling @AGENTS.md CLAUDE.md pointers; apps/web + validators +
+  observability + tooling/* deliberately skipped.
+- **Memory overhaul** — 31.3k→20.5k tok; MEMORY.md index 1,365→~700 tok with
+  ≤120-char hooks + a write-time budget header; project-state 27.8k→8.4k chars
+  (durable-build-rules extracted; per-item lessons archived verbatim to
+  PROJECT_STATE_LESSONS.md); agreement quartet retired into repo/adapter owners;
+  ts7/fly/kit-program compressed.
+- **Self-sustaining layers** — write-time (memory header rules + the STATUS
+  shipped-row protocol), edit-time (context-guard hook), merge-time
+  (scripts/docs-sanity.mjs in the CI verify lane: links + AGENTS.md commands +
+  warn-only 150-line budget), periodic (doc-audit hunt 7 vs adapter budgets),
+  why-layer (PLAYBOOK 11-12). Rejected as noise: cron/session-counter audit nudges.
+- **init-app --slim** — generic archive-link retarget added (54 links, 8 files);
+  scratch-verified fresh + idempotent, and docs-sanity passes INSIDE the slim
+  consumer copy (the shipped CI lane would have failed on dangling archive links).
+- **settings.local.json hygiene** — 121 dead entries removed incl. 17
+  credential-bearing (session cookie, BetterStack/Upstash tokens, one-time JWTs);
+  10 read-only gh-run wildcard generalizations; backup retained in scratchpad.

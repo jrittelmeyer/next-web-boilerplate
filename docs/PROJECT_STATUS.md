@@ -60,10 +60,10 @@ _Last updated: 2026-07-23._
   passes re-run the currency checks). The TS7 cutover stays outside it (externally
   gated — stable-Next TS7 support; experimental in canary since 2026-07-10).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
-  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.6.1;
-  all programs COMPLETE 2026-07-19); this repo consumes the installed `.claude/` output
-  (edit a clone, re-install — never the copies). Kit story: the kit repo's CHANGELOG +
-  [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
+  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.7.0,
+  the 2026-07-23 context-engineering release); this repo consumes the installed
+  `.claude/` output (edit a clone, re-install — never the copies). Kit story: the kit
+  repo's CHANGELOG + [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
 
 ## Build progress
 
@@ -100,6 +100,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Launch — public template | 1 | PUBLISHED 2026-07-14: fresh single-commit history, hardening on, fresh-consumer proof; donation link 07-15 | [archived rows](archive/PHASE_HISTORY.md#build-progress-table--archived-from-project_statusmd-2026-07-23-7th-compaction) |
 | Path-to-100 — #1–#11 | 11 | all 13 deferred audit points recovered; **VERIFIED 100.0/100** 2026-07-17 | [Path-to-100](archive/PHASE_HISTORY.md#path-to-100-program-2026-07-16--17--archived-per-row-record) |
 | Maintenance — 2026-07-15 → 23 | 18 | advisory batches #1–#3 (incl. `next` 16.2.11) · security-triage pipeline · Renovate majors + schedule fix · kit programs/extraction · CI heartbeat · Pages Storybook · tagged releases · screenshot tour · image-opt e2e · init-app slim/tidy | [archived rows](archive/PHASE_HISTORY.md#build-progress-table--archived-from-project_statusmd-2026-07-23-7th-compaction) · [ai-dev-kit](archive/PHASE_HISTORY.md#ai-dev-kit-program-2026-07-17--18--archived-record) |
+| Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 Date-gated watch (full detail:
 [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)):
