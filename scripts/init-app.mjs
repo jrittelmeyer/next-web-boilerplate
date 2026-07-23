@@ -17,8 +17,10 @@
  *     CHANGELOG.md to an empty skeleton. Kept: FEATURES, GETTING_STARTED,
  *     VERIFICATION, MAINTENANCE, docs/context/ — those document YOUR app's
  *     foundation; their known pointers at the removed docs are retargeted at the
- *     public template repo or rewritten (see MENTION_PATCHES), and anything left
- *     is listed file:line. Interactive runs ask; non-interactive runs skip
+ *     public template repo or rewritten (see MENTION_PATCHES), every remaining
+ *     relative link into docs/archive/ is retargeted there generically (the
+ *     shipped docs-sanity CI lane would fail on dangling links), and anything
+ *     left is listed file:line. Interactive runs ask; non-interactive runs skip
  *     unless --slim.
  *   • prints the remaining setup checklist
  *
@@ -34,7 +36,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 const root = resolve(import.meta.dirname, "..");
@@ -325,6 +327,57 @@ All notable changes to this project will be documented in this file.
 }
 
 /**
+ * Rewrite every remaining relative markdown link that resolves into docs/archive/
+ * at the public template repo. Slim removes the archive, and the shipped
+ * docs-sanity CI lane fails on dangling links — the content still exists in the
+ * template's public history, so the retargeted links stay truthful. Runs after
+ * the content-matched patches so hand-crafted rewrites win where they exist.
+ */
+function retargetArchiveLinks() {
+  const targets = [];
+  const docsDir = resolve(root, "docs");
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".md")) targets.push(full);
+    }
+  };
+  if (existsSync(docsDir)) walk(docsDir);
+  for (const f of ["README.md", "AGENTS.md", "CLAUDE.md"]) {
+    const full = resolve(root, f);
+    if (existsSync(full)) targets.push(full);
+  }
+
+  const LINK = /\]\(([^)\s]+)\)/g;
+  let filesChanged = 0;
+  let linksChanged = 0;
+  for (const file of targets) {
+    const original = readFileSync(file, "utf8");
+    const next = original.replace(LINK, (match, target) => {
+      if (/^(https?:|mailto:|#)/.test(target)) return match;
+      const [pathPart, anchor] = target.split("#");
+      const relFromRoot = relative(root, resolve(dirname(file), pathPart)).replaceAll("\\", "/");
+      if (relFromRoot !== "docs/archive" && !relFromRoot.startsWith("docs/archive/")) {
+        return match;
+      }
+      linksChanged++;
+      const kind = relFromRoot === "docs/archive" ? "tree" : "blob";
+      return `](${TEMPLATE_REPO}/${kind}/main/${relFromRoot}${anchor ? `#${anchor}` : ""})`;
+    });
+    if (next !== original) {
+      writeFileSync(file, next);
+      filesChanged++;
+    }
+  }
+  if (linksChanged > 0) {
+    console.log(
+      `  • Retargeted ${linksChanged} archive link${linksChanged === 1 ? "" : "s"} in ${filesChanged} file${filesChanged === 1 ? "" : "s"} at the template repo (slim removes docs/archive).`,
+    );
+  }
+}
+
+/**
  * List remaining mentions of removed docs, file:line each. After the tidy above,
  * what's left is either the init/slim flow describing itself (intentional) or new
  * drift the content-matched patches couldn't reach.
@@ -378,6 +431,7 @@ function slim() {
   patchDocsReadme();
   patchAgentsMd();
   patchLeftoverMentions();
+  retargetArchiveLinks();
   reportDanglingReferences();
 }
 
