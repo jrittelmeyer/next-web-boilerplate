@@ -173,6 +173,27 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     hole and now asserts the "…vulnerabilities found" trailer before accepting a
     green, mirroring the guard `security-triage-issue.sh` already applied. A genuine
     npm outage now turns the lane red and needs a re-run — the safe direction to fail.
+- **`contrarian` subagent — shipped but unevaluated** (2026-07-27) — two open items,
+  deliberately not closed at merge:
+  - **Its acceptance test has not run.** The subagent registry is snapshotted at session
+    start, so `contrarian` doesn't resolve until Claude Code reloads. The honest first
+    test is to reload and run it against the plan that introduced it — that work is a
+    template-surface change, i.e. its own ALWAYS trigger. **If it returns only
+    restatements of findings already on the table, that is the signal, not a formality.**
+  - **No kill criterion is committed.** The design rests on the Tenth Man Rule, which
+    presumes an independent mind; here it is the same base model reading a plan the
+    proposer wrote — three correlation channels (same weights, same framing, usually the
+    proposer's own summary). Two mitigations are in the CLAUDE.md policy (hand it the plan
+    *file path* plus primary sources, never your own rationale; require ≥1 finding it
+    verified itself). What is missing is a pre-committed definition of failure, so
+    keep-or-delete gets decided on evidence rather than sunk cost. **Decide before the
+    policy accretes more triggers.**
+- **`main` has no branch protection** (noted 2026-07-27) —
+  `gh api repos/…/branches/main/protection` returns 404, so *no* status check is required
+  and a red PR is one click from merging. Every "this blocks merge" convention in this repo
+  — including the advisory-PR-before-feature-PR ordering used on 2026-07-27 — is
+  self-imposed discipline with no machine backstop. Owner decision whether to add it; not a
+  build row, and CI changes can't substitute (they turn a lane red, they can't stop a merge).
 - **`minimumReleaseAgeExclude` for `next` + `@next/*`** (added 2026-07-23) — the
   2026-07-22 Next.js advisory batch (9 GHSAs vs `<16.2.11`) was remediated by
   bumping to 16.2.11, published 2026-07-21 — inside the 7-day age gate, which

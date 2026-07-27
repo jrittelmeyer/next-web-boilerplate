@@ -17,7 +17,9 @@ Full detail + removal conditions: [docs/MAINTENANCE.md](MAINTENANCE.md) (canonic
 - **TypeScript 7 cutover** — GA'd (`typescript@7.0.2`) but ships no JS Compiler API; blocked until TS7 support reaches a **stable** Next release (`useTypeScriptCli` — experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026).
 - **Maintenance-only (Tier 3 G)** — the standing state since 2026-07-17 (verified 100.0/100); Renovate scheduled-lane PR-delivery proof due at the next Monday window (2026-07-27).
 - **e2e signup flake** — intermittent, absorbed by retries, not a code bug; harden only if it ever turns a lane red.
-- **Temporary security overrides** — six pnpm `overrides:` (2026-07-15 + 2026-07-22 batches) + the `fast-uri` `ignoreGhsas` pair (ages out ~2026-07-26) + the `next`/`@next/*` age-exclude (remove 2026-07-28).
+- **Temporary security overrides** — seven pnpm `overrides:` (2026-07-15 · 07-22 · 07-27 batches; `fast-uri: 3.1.4` graduated from a deferral to a real override on 07-27) + the `brace-expansion` `GHSA-mh99-v99m-4gvg` ignore (raise to 5.0.8 and drop it ≥ 2026-07-30) + the `next`/`@next/*` age-exclude (remove 2026-07-28) + `better-auth`/`@better-auth/passkey` → 1.6.25 (≥ 2026-07-30).
+- **`contrarian` subagent — unevaluated** (shipped 2026-07-27) — its acceptance test hasn't run (the registry snapshots at session start, so it needs a Claude Code reload), and no kill criterion is committed. Same base model reviewing the proposer's own plan is an assumption, not a demonstrated property.
+- **`main` has no branch protection** — `gh api …/branches/main/protection` → 404, so no status check is actually required. Every merge-ordering discipline is self-imposed. Owner decision, not a build row.
 - **Ship a real derived product end-to-end** — owner-driven, in flight (via `/project-init`); unlocks the gated B1 intake-drop row and feeds the on-ramp rows with real lessons.
 
 ## Tier 4 — Future upgrade paths (documented, unscheduled)
