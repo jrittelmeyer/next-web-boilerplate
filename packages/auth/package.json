@@ -13,11 +13,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/passkey": "1.6.20",
+    "@better-auth/passkey": "1.6.23",
     "@repo/db": "workspace:*",
     "@repo/email": "workspace:*",
     "@repo/jobs": "workspace:*",
-    "better-auth": "^1.6.20",
+    "better-auth": "^1.6.23",
     "server-only": "^0.0.1"
   },
   "peerDependencies": {

@@ -15,4 +15,8 @@ One imperative per line; mechanics + rationale live in
 - `role` is deliberately NOT in `additionalFields` — change roles only via
   `setUserRole`/direct DB write
   ([auth/rbac-admin.md](../../docs/context/auth/rbac-admin.md)).
-- `@better-auth/passkey` is exact-pinned in lockstep with `better-auth` core.
+- `@better-auth/passkey` is exact-pinned in lockstep with `better-auth` core — an
+  upstream constraint, not just convention: each release peers `better-auth: ^<same>`.
+- Since 1.6.22 (GHSA-qq9h-g4jm-xgf3), magic-link and email-OTP sign-in **revoke
+  unproven credentials** — a password set but never verified stops working once its
+  owner signs in passwordlessly. Expected, not a regression.

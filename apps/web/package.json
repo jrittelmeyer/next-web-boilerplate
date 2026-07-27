@@ -34,7 +34,7 @@
     "@uploadthing/react": "^7.3.3",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
-    "better-auth": "^1.6.20",
+    "better-auth": "^1.6.23",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "1.18.0",
     "meilisearch": "^0.58.0",

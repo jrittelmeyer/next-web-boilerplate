@@ -33,7 +33,7 @@ ceiling.
 | tailwindcss | ^4.3.1 | v4: config in CSS, no tailwind.config.js |
 | drizzle-orm | ^0.45.2 | |
 | drizzle-kit | latest 0.x | CLI for migrations and Drizzle Studio — verify at install |
-| better-auth | ^1.6.20 | also a direct dep of apps/web (route handler + proxy) |
+| better-auth | ^1.6.23 | also a direct dep of apps/web (route handler + proxy); floor raised 2026-07-27 for GHSA-qq9h-g4jm-xgf3 (account takeover — see MAINTENANCE.md → Watch items) |
 | @trpc/server + @trpc/client | ^11.18.0 | verified latest 2026-06-22 |
 | @trpc/tanstack-react-query | ^11.18.0 | tRPC v11's recommended TanStack integration (`useTRPC()` + `queryOptions`), replacing the older `@trpc/react-query` `createTRPCReact` adapter |
 | @tanstack/react-query | ^5.101.0 | |
@@ -69,7 +69,7 @@ ceiling.
 | @manypkg/cli | 0.25.1 (exact) | root devDep (2026-07-08) — `pnpm lint:deps` cross-package pin-consistency check in the CI `verify` lane |
 | qrcode.react | 4.2.0 (exact) | `apps/web` (2026-07-08) — the 2FA enrollment QR (inline SVG, no network/CSP cost) |
 | sonner | ^2.0.7 | `@repo/ui` only (2026-07-08) — the `Toaster` primitive; `toast` re-exported from the same module so the app needs no second pin |
-| @better-auth/passkey | 1.6.20 (exact) | `@repo/auth` (2026-07-09) — **pinned in lockstep with `better-auth` core** (the plugin reaches core internals; bump both together) |
+| @better-auth/passkey | 1.6.23 (exact) | `@repo/auth` (2026-07-09) — **pinned in lockstep with `better-auth` core** (the plugin reaches core internals; bump both together). Not just convention: 1.6.23 peers `better-auth: ^1.6.23`, so leaving this behind desyncs the peer graph |
 | size-limit / @size-limit/file | 12.1.0 (exact) | `apps/web` devDeps (2026-07-10) — gates `.size-limit.json` on the emitted Turbopack chunks (see DEPLOYMENT.md → Performance budgets) |
 | esbuild | 0.28.1 (exact) | `@repo/jobs` devDep (2026-07-10) — bundles `worker.ts` into the one-file worker image (`build.mjs`) |
 | next-intl | 4.13.1 (exact) | `apps/web` (2026-07-11) — `[locale]` path routing + messages (see I18N.md) |

@@ -104,8 +104,9 @@ Per-program summary (Rows = archived row count; full rows →
 
 Date-gated watch (full detail:
 [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)):
-`fast-uri` override eligible ≥ 2026-07-26 · Renovate PR-delivery proof due 2026-07-27 ·
-`next`/`@next/*` age-exclude removal 2026-07-28.
+Renovate PR-delivery proof due 2026-07-27 · `next`/`@next/*` age-exclude removal
+2026-07-28 · `brace-expansion` → 5.0.8 (and drop its `ignoreGhsas` entry) ≥ 2026-07-30 ·
+`better-auth`/`@better-auth/passkey` → 1.6.25 ≥ 2026-07-30.
 
 ## Fresh project on-ramp (clone → build a real app)
 

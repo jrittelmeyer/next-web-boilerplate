@@ -50,24 +50,35 @@ overrides:
   # peer warnings from uploadthing's exact 3.17.7 pins. Remove when uploadthing
   # ships on effect >=3.20.
   effect: 3.21.4
-  # postcss <8.5.10 (GHSA-qx2v-qp2m-jg93 — XSS via unescaped </style> in stringify),
-  # via next's own exact pin. 8.5.15 was already in the lockfile (tailwind/vite
-  # chains) — this dedupes onto it; the ranged key leaves already-safe copies alone.
-  # Remove when next's pin reaches >=8.5.10.
-  "postcss@<8.5.10": 8.5.15
+  # postcss <=8.5.17 (GHSA-r28c-9q8g-f849, HIGH — path traversal via the `prev`
+  # source-map annotation). Supersedes GHSA-qx2v-qp2m-jg93 (<8.5.10, XSS via unescaped
+  # </style> in stringify), which 8.5.20 also fixes. Reached BOTH ways: next@16.2.11's
+  # own exact 8.4.31 pin AND the plain 8.5.15 the tailwind/vite chains resolve — the
+  # previous `postcss@<8.5.10` key only rewrote the former, so the 8.5.15 copies stayed
+  # vulnerable once the new advisory landed; the key floor moves to the advisory floor
+  # to close that hole. 8.5.20 is the newest patched release that clears the 7-day age
+  # gate (published 2026-07-19; 8.5.21+ are all <7d as of 2026-07-27). Ranged key so an
+  # already-safe >=8.5.18 copy is left alone. Remove when next's own pin AND the natural
+  # tree resolution both reach >=8.5.18.
+  "postcss@<8.5.18": 8.5.20
   # esbuild <=0.24.2 (GHSA-67mh-4wv8-2f99 — dev server lets any site read responses),
   # via drizzle-kit → @esbuild-kit/core-utils (deprecated upstream, frozen on 0.18.x).
   # Child-scoped so the healthy 0.25.12/0.28.1 copies elsewhere in the tree stay
   # untouched; 0.25.12 was already in the lockfile. Remove when drizzle-kit drops
   # @esbuild-kit.
   "@esbuild-kit/core-utils>esbuild": 0.25.12
-  # brace-expansion <5.0.7 (GHSA-3jxr-9vmj-r5cp, HIGH — O(2^n) DoS in expand() on
-  # crafted brace patterns), via minimatch@10.2.5 (eslint, and glob@13.0.6 used by
-  # Storybook/Sentry's webpack plugin/react-email — all build-tooling paths, not
-  # request-handling code). 5.0.7 is already in-range for minimatch's own
-  # `^5.0.5` — this is a plain fix-forward, not a pin-bypass like the three above;
-  # remove once Renovate/a routine bump naturally carries the lockfile past 5.0.7
-  # (age-gate clears 2026-07-06; published 2026-06-29).
+  # brace-expansion — TWO advisories on the same expand()/expand_() path, via
+  # minimatch@10.2.5 (eslint, and glob@13.0.6 used by Storybook/Sentry's webpack
+  # plugin/react-email — all build-tooling paths, not request-handling code):
+  #   - GHSA-3jxr-9vmj-r5cp (<5.0.7, HIGH — O(2^n) DoS in expand() on crafted brace
+  #     patterns): FIXED by this override. 5.0.7 is in-range for minimatch's own
+  #     `^5.0.5` — a plain fix-forward, not a pin-bypass.
+  #   - GHSA-mh99-v99m-4gvg / CVE-2026-14257 (<=5.0.7, HIGH — expand_() caps the result
+  #     COUNT but not each result's LENGTH, so ~7.5 KB of input reaches an uncatchable
+  #     OOM): NOT fixed by 5.0.7. The fix, 5.0.8, was published 2026-07-23 — inside the
+  #     7-day gate — and this is a build-tool-only DoS, so it takes the documented
+  #     ignoreGhsas deferral rather than a minimumReleaseAgeExclude (see auditConfig).
+  # Raise this to 5.0.8 and drop the ignore on/after 2026-07-30.
   brace-expansion: 5.0.7
   # ——— Advisory remediation (2026-07-22): transitive-only advisories, all newly
   # disclosed since the prior day's green CI run (pnpm audit queries live
@@ -80,11 +91,11 @@ overrides:
   # confusion via a literal backslash / failed IDN canonicalization), via
   # ajv@8.20.0 (webpack's schema-utils, reached by @sentry/webpack-plugin and
   # Storybook's builder-vite — build-tooling only, zero request-handling
-  # exposure). NOT yet overridden: 3.1.4 was published 2026-07-19, inside the
-  # 7-day age gate — deliberately deferred rather than forcing a
-  # minimumReleaseAgeExclude for a build-tool-only finding. Add
-  # `fast-uri: 3.1.4` here once it clears the gate (~2026-07-26); tracked in
-  # MAINTENANCE.md → Watch items.
+  # exposure). 3.1.4 CLEARED the 7-day gate 2026-07-26 (published 2026-07-19) and is
+  # in-range for ajv's own `^3.0.1`; the two deferral entries this pair held in
+  # auditConfig.ignoreGhsas were removed with this override (lockfile was on 3.1.2).
+  # Remove once a routine bump naturally carries the lockfile past 3.1.4.
+  fast-uri: 3.1.4
   #
   # dompurify <=3.4.11 (GHSA-c2j3-45gr-mqc4, low — CUSTOM_ELEMENT_HANDLING
   # bypasses afterSanitizeElements), via posthog-js's own sanitizer dependency
@@ -133,12 +144,15 @@ minimumReleaseAgeExclude:
 # status quo and goes red the moment a NEW advisory appears. Prune an entry once the
 # fix lands in the lockfile (an ignore for an absent advisory is a harmless no-op).
 # Re-emptied 2026-07-15 (the three long-standing entries — effect · esbuild ·
-# postcss — got remediated by the Dependabot overrides above); two TEMPORARY
-# entries added back 2026-07-22 for fast-uri (see the override block's comment
-# above — the fix, 3.1.4, is real but 3 days too fresh for minimumReleaseAge;
-# build-tool-only path, zero request-handling exposure). Remove both and add
-# `fast-uri: 3.1.4` to overrides once it clears the gate (~2026-07-26).
+# postcss — got remediated by the Dependabot overrides above). The two fast-uri
+# entries added 2026-07-22 were REMOVED 2026-07-27: 3.1.4 aged out of the gate and is
+# a real override above. One TEMPORARY entry remains, same shape and same reasoning —
+# the fix is real but too fresh for minimumReleaseAge, on a build-tooling-only path.
 auditConfig:
   ignoreGhsas:
-    - GHSA-v2hh-gcrm-f6hx # fast-uri host confusion (backslash authority) — fix too fresh, see above
-    - GHSA-4c8g-83qw-93j6 # fast-uri host confusion (failed IDN canonicalization) — fix too fresh, see above
+    # brace-expansion expand_() uncontrolled result-length growth → uncatchable OOM
+    # (CVE-2026-14257). Fix 5.0.8 published 2026-07-23, inside the 7-day gate;
+    # build-tooling-only path (minimatch → eslint / glob → Storybook, Sentry webpack
+    # plugin, react-email), zero request-handling exposure. REMOVE this entry and raise
+    # the brace-expansion override to 5.0.8 on/after 2026-07-30.
+    - GHSA-mh99-v99m-4gvg

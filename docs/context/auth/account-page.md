@@ -84,7 +84,7 @@ server-side, `{ data, error }` (no throw), no new CSP origin. Cards:
   `changeEmail`'s graceful split, but the branch is **per-deployment**, decided at config time:
   - **Email configured** → `sendDeleteAccountVerification` is registered, and Better Auth then
     **always** takes the verification-gated path — even when a valid password is in the body
-    (verified in the 1.6.20 source: the callback branch precedes the immediate-delete branch).
+    (re-verified in the 1.6.23 source: the callback branch precedes the immediate-delete branch).
     `/delete-user` stores a one-time token (24h, `deleteTokenExpiresIn` default) and emails a
     confirmation link (`DeleteAccount` template); nothing is deleted until it's opened. The link
     completes via `/delete-user/callback`, which requires an **active session in the clicking
