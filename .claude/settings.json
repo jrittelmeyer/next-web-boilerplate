@@ -24,6 +24,17 @@
             "statusMessage": "ai-dev-kit: live-verify reminder"
           }
         ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/contrarian-nudge.mjs",
+            "timeout": 10,
+            "statusMessage": "contrarian: plan sign-off nudge"
+          }
+        ]
       }
     ],
     "PostToolUse": [

@@ -13,6 +13,21 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **`contrarian` review subagent + a sign-off nudge** — `.claude/agents/contrarian.md`
+  is a read-only devil's-advocate agent that steel-mans a plan, audits its unstated
+  assumptions by likelihood × impact, runs a pre-mortem, and returns severity-tagged
+  findings that each carry a **required** recommendation (objection-without-alternative
+  is an explicit anti-pattern in its prompt). `CLAUDE.md` carries the trigger policy —
+  standing-authorized, always for schema, auth/RBAC, package boundaries, non-patch
+  dependency adds, and any edit to the **template surface**, which is spelled out as a
+  path set rather than a prose category so it stays checkable.
+  `.claude/hooks/contrarian-nudge.mjs` fires a reminder on `ExitPlanMode`; it points at
+  the policy rather than restating it, because a second copy of a trigger list drifts.
+  This also makes `.claude/agents/` and top-level `.claude/hooks/*.mjs` a new
+  **repo-owned** layer inside a directory that was previously all installer output —
+  ownership rules are now in
+  [`context/CONVENTIONS.md` → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude),
+  and `pnpm docs:sanity` asserts the wiring stays intact.
 - **Hosted Storybook component gallery** — `@repo/ui`'s Storybook publishes to
   GitHub Pages on every change touching `packages/ui/**` (new
   `.github/workflows/pages.yml`), linked from the README and
