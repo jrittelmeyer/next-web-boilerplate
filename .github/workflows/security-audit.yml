@@ -82,8 +82,22 @@ jobs:
             bash .github/scripts/security-triage-issue.sh green audit-output.txt
           fi
 
+      # TWO ways this lane must go red: a real finding, or an audit that never ran.
+      # --ignore-registry-errors turns an advisory-endpoint outage into exit 0, so
+      # gating only on exit_code concluded SUCCESS for a run that checked nothing —
+      # exactly what happened 2026-07-26 and hid three highs for a day. The triage
+      # script already refuses to CLOSE the issue on an outage, so issue state was
+      # never wrong; the RUN CONCLUSION was, and that is what a human reads in
+      # `gh run list`. Same trailer assertion as ci.yml's merge gate: a completed
+      # report always ends in "…vulnerabilities found".
       - name: Propagate audit status
-        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        if: ${{ !cancelled() }}
         run: |
-          echo "::error::pnpm audit found moderate+ advisories — triage via the security-triage issue (docs/MAINTENANCE.md → Security response runbook)"
-          exit 1
+          if ! grep -qE 'No known vulnerabilities|vulnerabilities found' audit-output.txt; then
+            echo "::error::advisory endpoint returned no completed audit (outage?) — the tree was NOT checked; re-run before trusting a green"
+            exit 1
+          fi
+          if [ "${{ steps.audit.outputs.exit_code }}" != "0" ]; then
+            echo "::error::pnpm audit found moderate+ advisories — triage via the security-triage issue (docs/MAINTENANCE.md → Security response runbook)"
+            exit 1
+          fi

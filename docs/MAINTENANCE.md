@@ -169,10 +169,15 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   - postcss + brace-expansion: see the retargeted override bullets above.
   - **The 2026-07-26 daily audit's green was a false green** — the advisory endpoint
     returned invalid JSON and `--ignore-registry-errors` turned that into exit 0, so
-    the run never audited and left #10 untouched. ci.yml's merge gate had the same
-    hole and now asserts the "…vulnerabilities found" trailer before accepting a
-    green, mirroring the guard `security-triage-issue.sh` already applied. A genuine
-    npm outage now turns the lane red and needs a re-run — the safe direction to fail.
+    the run never audited and left #10 untouched. **Both** lanes now assert the
+    "…vulnerabilities found" trailer a completed report always emits, mirroring the
+    guard `security-triage-issue.sh` already applied before closing the issue:
+    `ci.yml`'s merge gate (so a PR can't merge on an unaudited tree) and
+    `security-audit.yml`'s **Propagate audit status** (which previously gated only on
+    a non-zero exit, so an outage skipped it and the run concluded *success*). Issue
+    state was never wrong — the script's guard held — but the **run conclusion** was,
+    and that is what a human reads in `gh run list`. A genuine npm outage now turns
+    both lanes red and needs a re-run; that is the safe direction to fail.
 - **`contrarian` subagent — shipped but unevaluated** (2026-07-27) — two open items,
   deliberately not closed at merge:
   - **Its acceptance test has not run.** The subagent registry is snapshotted at session

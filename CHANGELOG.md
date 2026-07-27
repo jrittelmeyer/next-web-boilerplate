@@ -88,14 +88,18 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
   `brace-expansion` takes the deferral instead: GHSA-mh99-v99m-4gvg affects `<=5.0.7`
   and the fix (5.0.8) is inside the age gate, on a build-tooling-only path — raise it
   2026-07-30.
-- **2026-07-27: the audit merge gate no longer passes an unaudited tree** — ci.yml ran
+- **2026-07-27: neither audit lane can report green on an unaudited tree** — both ran
   `pnpm audit --ignore-registry-errors` with no assertion that an audit actually
   completed, so an advisory-endpoint outage produced a green over an unchecked
   lockfile. It did exactly that on 2026-07-26, papering over the three highs above for
-  a day. The step now requires the "…vulnerabilities found" trailer a completed report
+  a day. Both now require the "…vulnerabilities found" trailer a completed report
   always emits — the same guard `.github/scripts/security-triage-issue.sh` already used
-  before closing the triage issue. **A genuine npm outage now turns the lane red**
-  rather than green; that is the intended direction to fail.
+  before closing the triage issue: `ci.yml`'s merge gate, and `security-audit.yml`'s
+  status propagation, which previously fired only on a non-zero exit so an outage
+  skipped it and the daily run concluded *success*. The triage issue was never wrongly
+  closed (its own guard held) — the misleading part was the **run conclusion**, which
+  is what a human reads. **A genuine npm outage now turns both lanes red** rather than
+  green; that is the intended direction to fail.
 - **2026-07-23: `next` 16.2.9 → 16.2.11** — remediates the 2026-07-22 Next.js
   advisory batch (9 GHSAs against `>=16.0.0 <16.2.11`: 4 high, including a
   middleware/proxy bypass and Server-Action DoS/SSRF, plus 5 moderate). The
