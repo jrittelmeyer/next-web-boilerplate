@@ -12,6 +12,9 @@
  * 3. Warn-only: AGENTS.md above its ~150-line standing-instruction budget emits
  *    a GitHub warning annotation; it never fails the build (a heuristic, not
  *    physics).
+ * 4. Repo-owned Claude Code hook handlers (.claude/hooks/*.mjs) and their
+ *    .claude/settings.json wiring must agree in both directions — nothing imports
+ *    them, so a lost wiring silently disarms a hook with every other gate green.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -68,6 +71,41 @@ const commandsSection = agents.split(/^## Commands$/m)[1]?.split(/^## /m)[0] ?? 
 for (const match of commandsSection.matchAll(/`pnpm ([a-z][\w:.-]*)`/g)) {
   if (!(match[1] in scripts)) {
     failures.push(`AGENTS.md Commands names "pnpm ${match[1]}" — not in package.json scripts`);
+  }
+}
+
+// 4. Every repo-owned Claude Code hook handler (.claude/hooks/*.mjs, top level — the
+//    ai-dev-kit/ subdirectory is installer-managed) must be wired to a command in
+//    .claude/settings.json, and every .claude/hooks command must resolve to a real file.
+//    Nothing imports these handlers, so a lost or mistyped wiring disarms the hook while
+//    every other gate stays green. Catches both real failure modes: a bad hand-merge of
+//    settings.json, and relocating a handler under `.claude/hooks/ai-dev-kit/` (where the
+//    installer would strip its entry). See CONVENTIONS.md → Agent tooling.
+const settingsPath = join(root, ".claude", "settings.json");
+if (existsSync(settingsPath)) {
+  const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+  const commands = Object.values(settings.hooks ?? {})
+    .flat()
+    .flatMap((entry) => entry?.hooks ?? [])
+    .map((hook) => String(hook?.command ?? ""));
+
+  const hooksDir = join(root, ".claude", "hooks");
+  const handlers = existsSync(hooksDir)
+    ? readdirSync(hooksDir).filter((f) => f.endsWith(".mjs"))
+    : [];
+  for (const handler of handlers) {
+    if (!commands.some((c) => c.includes(`.claude/hooks/${handler}`))) {
+      failures.push(
+        `.claude/hooks/${handler} is repo-owned but no .claude/settings.json hook runs it`,
+      );
+    }
+  }
+
+  for (const command of commands) {
+    const referenced = command.match(/\.claude\/hooks\/[\w./-]+\.mjs/)?.[0];
+    if (referenced && !existsSync(join(root, referenced))) {
+      failures.push(`.claude/settings.json runs "${referenced}" — no such file`);
+    }
   }
 }
 

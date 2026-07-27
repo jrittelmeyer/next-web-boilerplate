@@ -115,3 +115,39 @@ Biome's `organizeImports` assist handles ordering automatically. Manually mainta
 - **Why type-check is pre-push, not pre-commit:** the repo's types cross package boundaries and `type-check` `dependsOn` `^build`, so a per-file `tsc` would be unsound. The full check is heavier, so it sits at the less-frequent push boundary while `pre-commit` stays fast by touching only staged files.
 - **Markdown isn't linted by the hooks** — Biome doesn't lint Markdown; markdownlint stays editor-only (see `.markdownlint.jsonc`).
 - **husky internals** live in the git-ignored `.husky/_/`; the committed hooks are `.husky/{pre-commit,commit-msg,pre-push}`. The `prepare` script no-ops safely where there's no `.git` (the Docker build, CI installs), so it never breaks those.
+
+## Agent tooling (`.claude/`)
+
+Claude Code hooks, not git hooks. `.claude/` is **template surface**: `scripts/init-app.mjs`
+never touches it, so everything here ships verbatim into every generated project. Three
+layers, with different ownership:
+
+| Path | Owner | Rule |
+| --- | --- | --- |
+| `.claude/skills/`, `.claude/hooks/ai-dev-kit/` | ai-dev-kit (installer output) | Never edit in place — edit a kit clone and re-run `install.mjs`; `install.mjs --check` guards drift. |
+| `.claude/agents/`, `.claude/hooks/*.mjs` (top level) | this repo | Hand-maintained; edit directly. Add each to `knip.jsonc`'s root `entry` list — nothing imports them, so knip reports them as dead files otherwise. |
+| `.claude/settings.json` | this repo, merged by the installer | See below. |
+
+**`settings.json` survives a kit install** — it is not regenerated. The installer mutates
+only its `hooks` key, and within each event strips only entries whose `command` contains the
+literal marker `.claude/hooks/ai-dev-kit/`; the header of `install.mjs` says as much
+("the adapter config and settings.json are user-owned and never checked"). A repo-owned hook
+whose command points *outside* that path is preserved by construction.
+
+That marker — not `--check` — is the real reason `contrarian-nudge.mjs` sits at the top level.
+`--check` walks the kit **source** tree and diffs each source file against its destination, so
+a destination-only file is never visited and would not be flagged in either location.
+**Moving a repo-owned handler under `.claude/hooks/ai-dev-kit/` would put the marker in its
+command string and make the next install delete its wiring** — so don't. The one visible
+effect of a reinstall is a one-time reordering of the `PreToolUse` groups (kit entries append
+after repo-owned ones); it is idempotent thereafter. `pnpm docs:sanity` asserts every
+repo-owned handler is still wired, so a bad hand-merge fails a gate instead of silently
+disarming the hook.
+
+`permissions` is tracked and shared; `settings.local.json` is gitignored, personal, and holds
+no `hooks` key — it is not a place to put shared wiring.
+
+**Known false positive:** the kit's `skill-drift-guard` matches any `.claude/{skills,hooks}/`
+path, so editing a *repo-owned* top-level hook triggers a "this is installer output, edit a kit
+clone instead" nudge. That advice is exactly backwards for those files — ignore it there. The
+guard's own escape clause says the same: if the file isn't in the kit manifest, disregard.

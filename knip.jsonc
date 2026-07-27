@@ -21,7 +21,16 @@
         // github.com/jrittelmeyer/ai-dev-kit): stdin→stdout scripts invoked by
         // Claude Code hooks, never imported, so knip can't see them on the import
         // graph and would flag them as unused files.
-        ".claude/hooks/ai-dev-kit/*.mjs"
+        ".claude/hooks/ai-dev-kit/*.mjs",
+        // Repo-owned hook handlers (hand-maintained; NOT installer output — see
+        // CONVENTIONS.md → Agent tooling for why they sit at the top level). Same
+        // stdin→stdout shape, but referenced from `.claude/settings.json`, which knip
+        // doesn't parse — so they're invisible to the import graph too. A glob, not a
+        // filename: the reason is structural to the file class, and knip.jsonc ships
+        // verbatim to generated projects, which get their own hooks. `*` doesn't cross
+        // `/`, so this neither subsumes nor shadows the ai-dev-kit entry above — both
+        // are load-bearing.
+        ".claude/hooks/*.mjs"
       ]
     },
     "apps/web": {
