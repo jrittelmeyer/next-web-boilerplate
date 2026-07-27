@@ -14,6 +14,15 @@ runtime dependency beyond `qrcode.react` for the enrollment QR. The plugin manag
 hostname by `twoFactorIssuer()` (`config.ts`; `localhost` fallback) — a fork wanting a
 brand name changes it there.
 
+**Account lockout is on by default** (since `better-auth` 1.6.23, adopted 2026-07-27): 10
+consecutive failed verifications lock the factor for 15 minutes, counted per account across
+challenges and factors (NIST SP 800-63B §5.2.2). The plugin owns the state — the
+`failed_verification_count` / `locked_until` columns on `two_factor` — and clears both on a
+successful verify. Nothing in this repo configures it; pass `accountLockout` to
+`twoFactor()` to tune `maxFailedAttempts` / `durationSeconds` or set `enabled: false`. Worth
+knowing when a test or a support ticket reports 2FA "silently rejecting a correct code":
+check `locked_until` before suspecting the TOTP clock.
+
 ### Enroll = two stages, and it only turns on at the SECOND
 
 Enrollment is deliberately two-step so an abandoned setup leaves the user **un-enrolled**

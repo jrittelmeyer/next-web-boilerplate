@@ -116,8 +116,14 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   gate:
   - `effect: 3.21.4` → remove when **uploadthing** ships on effect >=3.20 (7.7.4
     exact-pins 3.17.7).
-  - `"postcss@<8.5.10": 8.5.15` → remove when **next**'s own postcss pin reaches
-    >=8.5.10 (16.2.11 still pins 8.4.31 — re-checked 2026-07-22).
+  - `"postcss@<8.5.18": 8.5.20` → **retargeted 2026-07-27**. The original
+    `"postcss@<8.5.10": 8.5.15` only rewrote consumers declaring `<8.5.10` (next's
+    exact 8.4.31 pin); the tailwind/vite chains resolved a plain `postcss@8.5.15`
+    that the key never touched — and 8.5.15 became vulnerable itself when
+    GHSA-r28c-9q8g-f849 (`<=8.5.17`, path traversal via the `prev` source-map
+    annotation) landed, so **the key floor had to move, not just the value**.
+    8.5.20 is the newest patched release clearing the 7-day gate. Remove when
+    next's own pin **and** the natural tree resolution both reach >=8.5.18.
   - `"@esbuild-kit/core-utils>esbuild": 0.25.12` → remove when **drizzle-kit** drops
     the deprecated `@esbuild-kit` loader.
 
@@ -132,8 +138,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   signal** (checking Dependabot alone would have missed a HIGH on `sharp`, which sits
   in Next's image-optimization path). Remove each when its upstream moves, then
   `pnpm install` + the full gate:
-  - `brace-expansion: 5.0.7` → remove once a routine bump naturally carries the
-    lockfile past 5.0.7 (already in-range for **minimatch**'s own `^5.0.5`).
+  - `brace-expansion: 5.0.7` → **raise to 5.0.8 on/after 2026-07-30** and drop the
+    `GHSA-mh99-v99m-4gvg` ignore added with it. A second advisory on the same path
+    (`<=5.0.7` — `expand_()` caps the result *count* but not each result's *length*,
+    so ~7.5 KB of input reaches an uncatchable OOM) means 5.0.7 is no longer a fix;
+    5.0.8 was published 2026-07-23, inside the 7-day gate, and the path is
+    build-tooling only, so it took the `ignoreGhsas` deferral rather than a
+    `minimumReleaseAgeExclude`.
   - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile
     past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).
   - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
@@ -141,12 +152,27 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     Its `/_next/image` runtime path is e2e-covered since 2026-07-22
     (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that installs but no
     longer transforms turns the e2e lane red instead of passing silently.
-  - **`fast-uri` NOT yet overridden** — the fix (3.1.4) was published 2026-07-19,
-    inside the 7-day age gate at triage time. Two GHSAs are temporarily
-    acknowledged in `auditConfig.ignoreGhsas` (build-tool-only path — webpack's
-    schema-utils via `ajv`, zero request-handling exposure). Once 3.1.4 clears the
-    gate (~2026-07-26): add `fast-uri: 3.1.4` to `overrides`, remove both GHSAs
-    from `ignoreGhsas`, `pnpm install` + full gate.
+  - `fast-uri: 3.1.4` → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
+    the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
+    `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. Remove the override once a routine
+    bump naturally carries the lockfile past 3.1.4.
+- **Advisory batch 2026-07-27** (closed [#10](https://github.com/jrittelmeyer/next-web-boilerplate/issues/10),
+  red since 2026-07-25) — three highs, one of them a **direct** dependency:
+  - **`better-auth` 1.6.20 → 1.6.23** (with `@better-auth/passkey` in lockstep).
+    GHSA-qq9h-g4jm-xgf3 (CVSS 8.3, account takeover via pre-account) was **live-exposed
+    here**, not transitive: its four preconditions — version `<1.6.22`, the magic-link
+    or email-OTP plugin, email+password with open registration, and an account
+    pre-existing at the address — all hold whenever `isEmailConfigured()` is true, which
+    is the intended production path and is inherited by every derived project. 1.6.23 is
+    the newest patched release clearing the 7-day gate. **Follow-up: 1.6.25 becomes
+    installable 2026-07-30.**
+  - postcss + brace-expansion: see the retargeted override bullets above.
+  - **The 2026-07-26 daily audit's green was a false green** — the advisory endpoint
+    returned invalid JSON and `--ignore-registry-errors` turned that into exit 0, so
+    the run never audited and left #10 untouched. ci.yml's merge gate had the same
+    hole and now asserts the "…vulnerabilities found" trailer before accepting a
+    green, mirroring the guard `security-triage-issue.sh` already applied. A genuine
+    npm outage now turns the lane red and needs a re-run — the safe direction to fail.
 - **`minimumReleaseAgeExclude` for `next` + `@next/*`** (added 2026-07-23) — the
   2026-07-22 Next.js advisory batch (9 GHSAs vs `<16.2.11`) was remediated by
   bumping to 16.2.11, published 2026-07-21 — inside the 7-day age gate, which

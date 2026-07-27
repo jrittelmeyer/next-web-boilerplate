@@ -120,6 +120,8 @@ function raw(): RawExportData {
     backupCodes: "SECRET-backup-codes",
     userId: "u1",
     verified: true,
+    failedVerificationCount: 0,
+    lockedUntil: null,
     createdAt: D1,
     updatedAt: D2,
   };

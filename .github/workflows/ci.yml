@@ -134,15 +134,31 @@ jobs:
       # Fails the build on high/critical advisories. Known, unfixable transitive
       # advisories are allowlisted in pnpm-workspace.yaml (auditConfig.ignoreGhsas),
       # each with a documented reason — so a NEW high/critical advisory turns this
-      # red while the accepted status quo stays green. --ignore-registry-errors
-      # keeps a flaky advisory API from failing the build (exit 0 on registry error).
+      # red while the accepted status quo stays green.
       # `shell: bash` is load-bearing: the DEFAULT runner shell is `bash -e` with
       # NO pipefail, so `| tee` would make the step's exit code tee's (always 0)
       # and silently kill this merge gate. Explicit bash = `-eo pipefail`.
+      #
+      # --ignore-registry-errors exits 0 on an advisory-API outage, so on its own it
+      # hands this gate a green over a tree that was never audited — which is exactly
+      # what happened on 2026-07-26, papering over three untriaged highs. The trailer
+      # assertion below closes that: a COMPLETED report always ends in a
+      # "…vulnerabilities found" line (clean = "No known vulnerabilities found";
+      # policy-green with ignoreGhsas entries = "N vulnerabilities found … (N
+      # ignored)"), while an outage emits only retry/fetch-failed noise. Same guard
+      # the triage script already applies before closing the issue
+      # (.github/scripts/security-triage-issue.sh) — a security gate must not treat
+      # "didn't run" as "clean". Deliberate trade: a genuine npm outage now turns this
+      # lane red and needs a re-run, which is the safe direction to fail.
       - name: pnpm audit
         id: audit
         shell: bash
-        run: pnpm audit --audit-level high --ignore-registry-errors 2>&1 | tee audit-output.txt
+        run: |
+          pnpm audit --audit-level high --ignore-registry-errors 2>&1 | tee audit-output.txt
+          if ! grep -qE 'No known vulnerabilities|vulnerabilities found' audit-output.txt; then
+            echo "::error::advisory endpoint returned no completed audit (outage?) — failing closed rather than passing an unaudited tree"
+            exit 1
+          fi
 
       # Keep the rolling security-triage issue in sync on non-PR runs on `main`
       # (push / heartbeat / manual dispatch — a red PR run already has a human

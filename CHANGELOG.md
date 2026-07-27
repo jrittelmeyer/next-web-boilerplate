@@ -48,6 +48,39 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-07-27: `better-auth` 1.6.20 → 1.6.23 (account takeover)** — GHSA-qq9h-g4jm-xgf3
+  (CVSS 8.3, high) let an attacker take over an account that already existed at an email
+  address, via the passwordless sign-in path. **This template met every precondition on
+  its default configuration**: `better-auth <1.6.22`, the `magicLink` plugin registered,
+  email+password with open registration, and no `disableSignUp` — i.e. the moment
+  `RESEND_API_KEY` is set. If you generated a project from this template before this
+  entry and you configure email, **bump `better-auth` and `@better-auth/passkey` to
+  >=1.6.23** (they are pinned in lockstep — 1.6.23 peers `better-auth: ^1.6.23`). The
+  fix, shipped in 1.6.22, revokes unproven credentials during magic-link and email-OTP
+  sign-in, so an unverified password set before the upgrade stops working after it.
+  **Migration 0018 is required with this bump**: 1.6.23 adds 2FA account lockout (on by
+  default — 10 consecutive failed verifications lock the factor for 15 minutes) backed by
+  two new `two_factor` columns, `failed_verification_count` and `locked_until`. Because
+  this repo hand-maintains the Better Auth schema, a missing column makes the Drizzle
+  adapter throw on **every failed 2FA verification** — apply the migration when you bump.
+- **2026-07-27: transitive advisories — `postcss`, `fast-uri`, `brace-expansion`** —
+  `postcss` moves to 8.5.20 for GHSA-r28c-9q8g-f849 (path traversal via the `prev`
+  source-map annotation). Note the override **key** moved too (`<8.5.10` → `<8.5.18`):
+  the old key only rewrote next's exact pin and never touched the `postcss@8.5.15` the
+  tailwind/vite chains resolved, which the new advisory made vulnerable — a retargeted
+  value alone would have left the tree exposed. `fast-uri` 3.1.4 graduates from a dated
+  `ignoreGhsas` deferral to a real override now that it clears the 7-day age gate.
+  `brace-expansion` takes the deferral instead: GHSA-mh99-v99m-4gvg affects `<=5.0.7`
+  and the fix (5.0.8) is inside the age gate, on a build-tooling-only path — raise it
+  2026-07-30.
+- **2026-07-27: the audit merge gate no longer passes an unaudited tree** — ci.yml ran
+  `pnpm audit --ignore-registry-errors` with no assertion that an audit actually
+  completed, so an advisory-endpoint outage produced a green over an unchecked
+  lockfile. It did exactly that on 2026-07-26, papering over the three highs above for
+  a day. The step now requires the "…vulnerabilities found" trailer a completed report
+  always emits — the same guard `.github/scripts/security-triage-issue.sh` already used
+  before closing the triage issue. **A genuine npm outage now turns the lane red**
+  rather than green; that is the intended direction to fail.
 - **2026-07-23: `next` 16.2.9 → 16.2.11** — remediates the 2026-07-22 Next.js
   advisory batch (9 GHSAs against `>=16.0.0 <16.2.11`: 4 high, including a
   middleware/proxy bypass and Server-Action DoS/SSRF, plus 5 moderate). The
