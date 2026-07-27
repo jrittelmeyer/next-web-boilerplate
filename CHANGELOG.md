@@ -58,6 +58,11 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
   >=1.6.23** (they are pinned in lockstep — 1.6.23 peers `better-auth: ^1.6.23`). The
   fix, shipped in 1.6.22, revokes unproven credentials during magic-link and email-OTP
   sign-in, so an unverified password set before the upgrade stops working after it.
+  **Migration 0018 is required with this bump**: 1.6.23 adds 2FA account lockout (on by
+  default — 10 consecutive failed verifications lock the factor for 15 minutes) backed by
+  two new `two_factor` columns, `failed_verification_count` and `locked_until`. Because
+  this repo hand-maintains the Better Auth schema, a missing column makes the Drizzle
+  adapter throw on **every failed 2FA verification** — apply the migration when you bump.
 - **2026-07-27: transitive advisories — `postcss`, `fast-uri`, `brace-expansion`** —
   `postcss` moves to 8.5.20 for GHSA-r28c-9q8g-f849 (path traversal via the `prev`
   source-map annotation). Note the override **key** moved too (`<8.5.10` → `<8.5.18`):

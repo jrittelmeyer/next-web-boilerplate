@@ -314,6 +314,14 @@ Two-factor authentication and [DECISIONS.md](DECISIONS.md) → Two-factor.
   the one-time enroll `totpURI`); one index — `two_factor_user_id_idx` — because every
   verify/disable/regenerate and the user-delete cascade resolve the row by `user_id`,
   and Postgres doesn't auto-index FK columns.
+- **`failed_verification_count` + `locked_until`** (migration 0018) — the plugin's
+  account-lockout pair, added in `better-auth` 1.6.23 and **on by default**. Both are
+  plugin-managed (`input: false`, `returned: false`): the counter increments atomically
+  on each failed verify, `locked_until` is stamped once the budget is spent, and both
+  reset on success. They are **not optional** — the Drizzle adapter throws on every
+  failed 2FA verification if either column is missing, which is exactly how their
+  absence surfaced when 1.6.23 landed. A reminder that a hand-maintained plugin schema
+  has to be re-checked against the plugin's model on every non-patch bump.
 - **`user.two_factor_enabled`** (added to `schema/auth.ts`, next to the RBAC `role`) — a
   plugin-managed boolean (`input: false`, default `false`); the login form's session gate reads
   it. Flipped `true` by the first successful `verifyTotp()`, back to `false` by `disable()`.

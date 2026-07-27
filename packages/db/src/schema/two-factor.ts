@@ -1,4 +1,4 @@
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
 /**
@@ -33,6 +33,15 @@ export const twoFactor = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     verified: boolean("verified").notNull().default(true),
+    // Account-lockout pair, added by the plugin in better-auth 1.6.23 and ON BY DEFAULT
+    // (10 consecutive failures → a 15-minute lock; `accountLockout` on the plugin tunes
+    // or disables it). Both are `input: false, returned: false` — the plugin increments
+    // the counter atomically on a failed verify, sets `lockedUntil` when the budget is
+    // spent, and clears both on success. Omitting either makes the Drizzle adapter throw
+    // on every failed 2FA verification, which is how their absence first surfaced.
+    failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+    // Nullable by contract: the plugin writes `lockedUntil: null` to clear a lock.
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
