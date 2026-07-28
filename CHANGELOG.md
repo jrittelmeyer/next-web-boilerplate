@@ -14,7 +14,8 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 ### Added
 
 - **`contrarian` review subagent + a sign-off nudge** — `.claude/agents/contrarian.md`
-  is a read-only devil's-advocate agent that steel-mans a plan, audits its unstated
+  is a devil's-advocate agent (no file-editing and no shell — its `tools:` are
+  `Read, Glob, Grep, WebSearch, WebFetch`) that steel-mans a plan, audits its unstated
   assumptions by likelihood × impact, runs a pre-mortem, and returns severity-tagged
   findings that each carry a **required** recommendation (objection-without-alternative
   is an explicit anti-pattern in its prompt). `CLAUDE.md` carries the trigger policy —
@@ -60,6 +61,42 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
   result). Now a full-day `["on monday"]` window with an explicit `timezone`
   and explicit PR limits (`prHourlyLimit: 0`, `prConcurrentLimit: 10`). **If
   you copied `.github/renovate.json` before this fix, apply the same change.**
+
+### Fixed
+
+- **2026-07-28: three false statements about the agent tooling, and a check that could
+  not fail.** Found by running `contrarian` against its own introducing plan — the
+  acceptance test PR #11 deferred.
+  - The `contrarian` agent was documented as **read-only** while its `tools:` granted
+    `Bash`. Shell access is not read-only, and a non-interactive agent run executes
+    commands with no permission prompt (verified with a non-allowlisted `whoami`).
+    `Bash` is now removed from its `tools:`, so the description and the grant agree.
+  - `pnpm docs:sanity`'s hook-wiring assertion was wrapped in
+    `if (existsSync(settings.json))` — deleting that file **skipped the check silently**
+    rather than failing it. Now an orphaned repo-owned handler fails regardless, with a
+    message naming both valid exits (restore the wiring, *or* delete the handler) — a
+    generated project that declines this template's `.claude/` config still passes.
+  - "The subagent registry is snapshotted at session start, so it doesn't resolve until
+    Claude Code reloads" was **wrong**, and appeared in three places. Registration is
+    surface-dependent; a session started days later still could not dispatch the agent,
+    and `claude --agent <slug>` works when the registry does not. Corrected with the
+    fallback recipe in
+    [`context/CONVENTIONS.md` → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
+  - `docs:sanity` additionally asserts that every agent in `.claude/agents/` is
+    referenced by `CLAUDE.md` and vice versa — **existence only**. Whether a well-formed
+    agent actually registers is not observable from CI, so a frontmatter-shape validator
+    would certify the wrong property; that limitation is documented rather than papered
+    over.
+
+### Changed
+
+- **2026-07-28: removed the dated `minimumReleaseAgeExclude` for `next` + `@next/*`**
+  added 2026-07-23 for the advisory batch. 16.2.11 cleared the 7-day gate on schedule, so
+  the bypass is gone and the supply-chain gate is unconditional again. Verified
+  falsifiably: requesting the still-gated `next@16.2.12` is refused with the exclude
+  removed and accepted with it restored. Note this is a **no-op at install** — `apps/web`
+  declares `^16.2.11`, which the lockfile already satisfies — so the gate re-arms at the
+  next *resolution* (a Renovate bump or `pnpm add`), not at `pnpm install`.
 
 ### Security
 

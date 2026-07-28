@@ -15,6 +15,11 @@
  * 4. Repo-owned Claude Code hook handlers (.claude/hooks/*.mjs) and their
  *    .claude/settings.json wiring must agree in both directions — nothing imports
  *    them, so a lost wiring silently disarms a hook with every other gate green.
+ *    An ABSENT settings.json is not a failure (a generated project may decline this
+ *    template's config); an orphaned handler is.
+ * 5. Subagents in .claude/agents/ and the policy in CLAUDE.md must reference each
+ *    other. Existence only — actual registration is surface-dependent and not
+ *    observable from CI (see CONVENTIONS.md → Agent tooling).
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -66,6 +71,7 @@ for (const file of files) {
 }
 
 const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
+const claudeMd = readFileSync(join(root, "CLAUDE.md"), "utf8");
 const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
 const commandsSection = agents.split(/^## Commands$/m)[1]?.split(/^## /m)[0] ?? "";
 for (const match of commandsSection.matchAll(/`pnpm ([a-z][\w:.-]*)`/g)) {
@@ -81,31 +87,70 @@ for (const match of commandsSection.matchAll(/`pnpm ([a-z][\w:.-]*)`/g)) {
 //    every other gate stays green. Catches both real failure modes: a bad hand-merge of
 //    settings.json, and relocating a handler under `.claude/hooks/ai-dev-kit/` (where the
 //    installer would strip its entry). See CONVENTIONS.md → Agent tooling.
+// A missing settings.json is NOT a failure on its own: a generated project may
+// legitimately decline this template's allowlist, or drop `.claude/` wholesale. What is
+// never valid is a repo-owned handler with nothing to run it, so the check is an XOR and
+// its message names BOTH exits — a template must not assert its own config is the only
+// valid one (this runs in downstream CI too).
 const settingsPath = join(root, ".claude", "settings.json");
-if (existsSync(settingsPath)) {
-  const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-  const commands = Object.values(settings.hooks ?? {})
-    .flat()
-    .flatMap((entry) => entry?.hooks ?? [])
-    .map((hook) => String(hook?.command ?? ""));
+const hooksDir = join(root, ".claude", "hooks");
+const handlers = existsSync(hooksDir)
+  ? readdirSync(hooksDir).filter((f) => f.endsWith(".mjs"))
+  : [];
+const commands = existsSync(settingsPath)
+  ? Object.values(JSON.parse(readFileSync(settingsPath, "utf8")).hooks ?? {})
+      .flat()
+      .flatMap((entry) => entry?.hooks ?? [])
+      .map((hook) => String(hook?.command ?? ""))
+  : [];
 
-  const hooksDir = join(root, ".claude", "hooks");
-  const handlers = existsSync(hooksDir)
-    ? readdirSync(hooksDir).filter((f) => f.endsWith(".mjs"))
-    : [];
-  for (const handler of handlers) {
-    if (!commands.some((c) => c.includes(`.claude/hooks/${handler}`))) {
-      failures.push(
-        `.claude/hooks/${handler} is repo-owned but no .claude/settings.json hook runs it`,
-      );
-    }
+for (const handler of handlers) {
+  if (!commands.some((c) => c.includes(`.claude/hooks/${handler}`))) {
+    failures.push(
+      `.claude/hooks/${handler} is a repo-owned handler that nothing runs — either restore its wiring in .claude/settings.json, or delete the orphaned handler`,
+    );
   }
+}
 
-  for (const command of commands) {
-    const referenced = command.match(/\.claude\/hooks\/[\w./-]+\.mjs/)?.[0];
-    if (referenced && !existsSync(join(root, referenced))) {
-      failures.push(`.claude/settings.json runs "${referenced}" — no such file`);
-    }
+for (const command of commands) {
+  const referenced = command.match(/\.claude\/hooks\/[\w./-]+\.mjs/)?.[0];
+  if (referenced && !existsSync(join(root, referenced))) {
+    failures.push(`.claude/settings.json runs "${referenced}" — no such file`);
+  }
+}
+
+// 5. Every subagent CLAUDE.md mandates must exist, and vice versa. Deliberately an
+//    EXISTENCE check, not a frontmatter-shape one: whether a well-formed agent actually
+//    REGISTERS is surface-dependent and only observable by running the CLI (see
+//    CONVENTIONS.md → Agent tooling), so a shape validator would pass green in exactly
+//    the world where invocation is broken. A dangling reference is what this can catch.
+const agentsDir = join(root, ".claude", "agents");
+const agentNames = existsSync(agentsDir)
+  ? readdirSync(agentsDir)
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => ({
+        file: f,
+        name: readFileSync(join(agentsDir, f), "utf8").match(/^name:\s*(\S+)/m)?.[1],
+      }))
+  : [];
+
+for (const { file, name } of agentNames) {
+  if (!name) {
+    failures.push(`.claude/agents/${file} has no \`name:\` frontmatter — it cannot register`);
+  } else if (!claudeMd.includes(`\`${name}\``)) {
+    failures.push(
+      `.claude/agents/${file} defines "${name}" but CLAUDE.md never references it — an agent no policy invokes is dead weight`,
+    );
+  }
+}
+
+// Unanchored on purpose: the phrase sits mid-sentence in CLAUDE.md, and a `^`-anchored
+// pattern matched nothing — the check passed while the agent file was deleted.
+for (const mandated of claudeMd.matchAll(/`([a-z][a-z0-9-]*)` is standing-authorized/g)) {
+  if (!agentNames.some((a) => a.name === mandated[1])) {
+    failures.push(
+      `CLAUDE.md says \`${mandated[1]}\` is standing-authorized but no .claude/agents/*.md defines it`,
+    );
   }
 }
 

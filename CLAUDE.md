@@ -24,9 +24,12 @@ Claude-Code-specific notes:
     package-boundary crossing · non-patch dependency adds · and any edit to the
     **template surface**, defined as a path set rather than a vibe:
     `scripts/init-app.mjs` · `.claude/**` · `.github/workflows/**` · `knip.jsonc` ·
-    `pnpm-workspace.yaml` · `tooling/**` · root configs · `AGENTS.md`/`CLAUDE.md`.
-    Those ship verbatim into every generated project, where a wrong call costs a
-    migration to undo.
+    `pnpm-workspace.yaml` · `tooling/**` · root configs · `AGENTS.md`/`CLAUDE.md` ·
+    `docs/context/CONVENTIONS.md` § Agent tooling. Those ship verbatim into every
+    generated project, where a wrong call costs a migration to undo. The
+    `CONVENTIONS.md` entry is deliberate: the load-bearing kit-boundary rules live
+    there, not here, so without it a rule whose breakage deletes hook wiring would
+    sit on the Skip list as "a doc edit".
   - **Also** when a plan comes together with no friction on a non-trivial step —
     frictionless consensus is the trigger, not a reason to skip.
   - **Skip** for: copy/doc/i18n edits, mechanical refactors, test-only changes,
@@ -35,7 +38,13 @@ Claude-Code-specific notes:
     Code-level defects are `/code-review`'s job, not `contrarian`'s.
   - Hand it the plan's **file path** plus primary sources, never your own summary:
     anchoring a second instance of the same model on the proposer's framing is what
-    turns dissent into agreement. Require at least one finding it verified itself.
+    turns dissent into agreement. Require at least one finding it verified itself,
+    and hand over the plan **before** its outcome log exists — a resolved plan is
+    the strongest anchor there is.
+  - **If `contrarian` is not in the subagent registry, it is the surface, not the
+    file.** Fall back to `claude --agent contrarian -p "<prompt>"`, which reads
+    `.claude/agents/` directly. Reloading does *not* fix it. Detail:
+    [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
   - `.claude/hooks/contrarian-nudge.mjs` fires on `ExitPlanMode`, but a `PreToolUse`
     hook's context lands *next to the tool result* — after the plan is on screen —
     and plans here are usually files, not `ExitPlanMode` calls. It is a **next-turn

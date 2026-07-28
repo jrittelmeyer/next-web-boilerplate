@@ -151,3 +151,37 @@ no `hooks` key — it is not a place to put shared wiring.
 path, so editing a *repo-owned* top-level hook triggers a "this is installer output, edit a kit
 clone instead" nudge. That advice is exactly backwards for those files — ignore it there. The
 guard's own escape clause says the same: if the file isn't in the kit manifest, disregard.
+
+### Subagent registration is surface-dependent
+
+A well-formed `.claude/agents/*.md` does **not** register everywhere, and this is the single
+most confusing thing about the directory. Verified 2026-07-28 against `contrarian`:
+
+| Where | Registers? |
+| --- | --- |
+| `claude` CLI (v2.1.220) | **Yes** — appears in the Agent-tool registry, dispatchable by slug |
+| `claude --agent <slug> -p "…"` | **Yes** — reads the file directly; works everywhere |
+| Some hosted/desktop surfaces | **No** — `.claude/agents/` is never read; only built-ins resolve |
+| `--agents '<json>'` | **No** — does not inject into the Agent-tool registry |
+
+The symptom is `Agent type 'contrarian' not found. Available agents: claude,
+claude-code-guide, Explore, general-purpose, Plan, statusline-setup`. **Restarting the session
+does not fix it** — a widely repeated claim that this repo carried in three places and that a
+session started days after the agent landed disproved. Upstream:
+[claude-code#59881](https://github.com/anthropics/claude-code/issues/59881), closed
+`not_planned` by a staleness bot rather than on the merits.
+
+Practical rule: when the registry lacks the agent, use `claude --agent <slug> -p "<prompt>"`.
+It loads the same file, system prompt, and `tools:` allowlist.
+
+**This is why `docs:sanity` checks agent *existence* and not frontmatter shape.** A shape
+validator passes green in exactly the world where registration is broken, which would certify
+the wrong property. Registration can only be observed by running the CLI, which CI does not do
+— so it is unguarded on purpose, and stated here rather than papered over with a check that
+looks equivalent.
+
+**Agents get no `Bash`.** `contrarian`'s `tools:` is `Read, Glob, Grep, WebSearch, WebFetch`.
+"No `Write`/`Edit`" does *not* make an agent read-only: `Bash` covers `rm`, `>`, and
+`git reset`, and a non-interactive run executes shell commands with no permission prompt
+(confirmed by running a non-allowlisted `whoami` from an agent session). An agent that is
+standing-authorized — invoked without asking — should not carry a shell.

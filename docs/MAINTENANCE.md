@@ -178,33 +178,47 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     state was never wrong — the script's guard held — but the **run conclusion** was,
     and that is what a human reads in `gh run list`. A genuine npm outage now turns
     both lanes red and needs a re-run; that is the safe direction to fail.
-- **`contrarian` subagent — shipped but unevaluated** (2026-07-27) — two open items,
-  deliberately not closed at merge:
-  - **Its acceptance test has not run.** The subagent registry is snapshotted at session
-    start, so `contrarian` doesn't resolve until Claude Code reloads. The honest first
-    test is to reload and run it against the plan that introduced it — that work is a
-    template-surface change, i.e. its own ALWAYS trigger. **If it returns only
-    restatements of findings already on the table, that is the signal, not a formality.**
-  - **No kill criterion is committed.** The design rests on the Tenth Man Rule, which
-    presumes an independent mind; here it is the same base model reading a plan the
-    proposer wrote — three correlation channels (same weights, same framing, usually the
-    proposer's own summary). Two mitigations are in the CLAUDE.md policy (hand it the plan
-    *file path* plus primary sources, never your own rationale; require ≥1 finding it
-    verified itself). What is missing is a pre-committed definition of failure, so
-    keep-or-delete gets decided on evidence rather than sunk cost. **Decide before the
-    policy accretes more triggers.**
+- **`contrarian` subagent — evaluated 2026-07-28; both open items now closed.**
+  - **The acceptance test RAN and passed its pre-committed bar.** It produced findings
+    absent from both the plan and the PR body, each citing a file:line it read itself —
+    including two that were *correct and material*: `.claude/agents/contrarian.md`
+    granted `Bash` while `CHANGELOG.md` called the agent "read-only", and the
+    `docs:sanity` wiring assertion failed **open** on a missing `settings.json`. A second
+    run against this remediation plan then caught that its own verification step could
+    not fail. That is the apparatus working, not a ritual.
+  - **The "reload fixes it" claim was false and is deleted.** Registration is
+    **surface-dependent**, not session-snapshot-dependent: the agent resolves in the
+    `claude` CLI and under `claude --agent <slug>`, and not at all on some hosted
+    surfaces — a session started days after the agent merged still could not dispatch it.
+    Full table + fallback recipe: [CONVENTIONS.md → Agent
+    tooling](context/CONVENTIONS.md#agent-tooling-claude). **Registration itself is not
+    CI-verifiable** (it requires running the CLI); `docs:sanity` guards existence only,
+    deliberately.
+  - **Kill criterion (committed 2026-07-28, replacing the quality-based draft):** *if
+    **three consecutive** merged PRs touching a path in CLAUDE.md's ALWAYS set carry no
+    `## Contrarian disposition` heading in the PR body, the policy is dead — delete it or
+    make the gate blocking.* Anchored to PR bodies because they are durable and greppable
+    (`gh pr list --search … --json body`); the first draft anchored to *plan files*, which
+    `git ls-files` shows are never committed. Chosen over a quality test because the
+    likelier failure is **non-invocation**, not weak findings — the acceptance test itself
+    went unrun for a day because the assumed invocation path did not exist.
 - **`main` has no branch protection** (noted 2026-07-27) —
   `gh api repos/…/branches/main/protection` returns 404, so *no* status check is required
   and a red PR is one click from merging. Every "this blocks merge" convention in this repo
   — including the advisory-PR-before-feature-PR ordering used on 2026-07-27 — is
   self-imposed discipline with no machine backstop. Owner decision whether to add it; not a
   build row, and CI changes can't substitute (they turn a lane red, they can't stop a merge).
-- **`minimumReleaseAgeExclude` for `next` + `@next/*`** (added 2026-07-23) — the
-  2026-07-22 Next.js advisory batch (9 GHSAs vs `<16.2.11`) was remediated by
-  bumping to 16.2.11, published 2026-07-21 — inside the 7-day age gate, which
-  doesn't exempt security fixes (the exclude is the policy's documented path).
-  **Remove both entries once 16.2.11 ages out (2026-07-28)**, then `pnpm install`
-  + the full gate.
+- ~~**`minimumReleaseAgeExclude` for `next` + `@next/*`**~~ — **CLOSED 2026-07-28, on
+  schedule.** 16.2.11 (published 2026-07-21T16:00:01Z) cleared the 7-day gate that day;
+  every `@next/*` entry in the lockfile is either 16.2.11 (published ~2 minutes *earlier*)
+  or `@next/eslint-plugin-next@16.2.9`, so nothing still needed the bypass and a frozen
+  install could not break. Proven falsifiably rather than assumed: `pnpm --filter web add
+  next@16.2.12 --lockfile-only` is **refused on age grounds with the exclude removed**
+  (exit 1, naming `next` and all eight `@next/swc-*` siblings) and **succeeds with it
+  restored** (exit 0). Note the removal is a **no-op at install** — `apps/web` declares
+  `^16.2.11`, which the lockfile already satisfies, so a lockfile-driven install never
+  consults the registry; the gate re-arms at the next *resolution* (Renovate, `pnpm add`).
+  16.2.12 becomes admissible 2026-08-01.
 - The **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is
   intermittently flaky (absorbed by `retries: 2`, but it twice burned 2 of 3 CI
   attempts). **Not a code bug** — a fragile signup+redirect timing flow on modest
