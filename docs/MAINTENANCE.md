@@ -103,8 +103,12 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   scheduled Renovate batch had **not opened as of 2026-07-22**, and the 2026-07-22
   audit found it **blocked, not waiting** — the scheduled lane has never produced a PR
   (0 `renovate/*` branches ever; all 7 merged PRs came from manual dashboard-approval
-  clicks). The widening fix **SHIPPED 2026-07-22**; **confirm PRs actually open at the
-  next Monday window (2026-07-27)**. The 7 approved majors merged 2026-07-18;
+  clicks). The widening fix **SHIPPED 2026-07-22** — and **the proof FAILED anyway: the
+  2026-07-27 Monday window passed with still zero `renovate/*` branches ever
+  opened** (`git ls-remote --heads origin 'refs/heads/renovate/*'` → empty; all 7
+  merged Renovate PRs came from manual dashboard clicks). **This is now a
+  diagnosis job, not a wait** — next stop is the Mend app side (run logs / mode /
+  cadence at developer.mend.io); owner's call on when to run it. The 7 approved majors merged 2026-07-18;
   typescript-v7 stays held per the TS7 gate above; `actions/setup-node v7` is a new
   pending-approval major, and `@testing-library/jest-dom v7` sits age-gated in the
   dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The

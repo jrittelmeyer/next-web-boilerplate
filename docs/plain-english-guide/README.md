@@ -99,14 +99,19 @@ in any browser.
 
 ---
 
-*Current as of 2026-07-23 (repo commit `212b628` — the 100/100 peak (audit passes
-8–9) has settled to 99.65 at passes 10–11 as the moving "best-available" bar
-reclaimed 0.35 point on maintenance currency; no code regressed and the gaps it
-flagged were closed the same week. Since the last stamp: the July 2026 Next.js
-advisory batch (9 CVEs) was remediated the day after disclosure, a daily
-advisory-watch pipeline that auto-files and auto-closes a security to-do ticket
-went live, and image-optimization gained end-to-end test coverage. Earlier: a
-second "inception door," `/project-adopt` (migrating an existing codebase onto
-this foundation), shipped and completed its own live trial, the repository cut its
-first tagged releases (`v1.0.0`, `v1.1.0`), and the project gained a public face —
-a hosted Storybook component gallery and a screenshot tour in the README).*
+*Current as of 2026-07-29 (repo commit `87c24c2`). The audit score stands at
+99.65 — it peaked at a perfect 100 across eleven passes, and the small dip was
+maintenance currency, not regressed code. Since the last stamp: a high-severity
+sign-in vulnerability (an account-takeover path in the authentication library)
+was fixed the day the daily security watch surfaced it, and that watchdog itself
+was hardened so it can no longer report "all clear" on a day it failed to
+actually run its check — a failure it had exhibited exactly once, caught and
+closed; the project's instruction files were reorganized so an AI assistant
+loads 70–80% less material per task; and a standing devil's-advocate AI
+reviewer joined the workflow and immediately caught real documentation errors,
+including in its own setup ([Chapter 11](11-built-with-ai-agents.md)). Earlier:
+the July 2026 Next.js advisory batch (9 CVEs) remediated the day after
+disclosure, the daily advisory-watch pipeline, image-optimization test coverage,
+a second "inception door" (`/project-adopt`), the first tagged releases
+(`v1.0.0`, `v1.1.0`), and the project's public face — a hosted Storybook
+component gallery and a screenshot tour in the README.*

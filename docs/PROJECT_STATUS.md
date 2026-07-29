@@ -14,7 +14,7 @@
 > docs/archive/PHASE_HISTORY.md in the same commit. Never re-expand rows — this is
 > the seventh compaction; the append-log must not regrow.**
 
-_Last updated: 2026-07-23._
+_Last updated: 2026-07-29._
 
 ## Where we are
 

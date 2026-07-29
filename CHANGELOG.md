@@ -61,9 +61,6 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
   result). Now a full-day `["on monday"]` window with an explicit `timezone`
   and explicit PR limits (`prHourlyLimit: 0`, `prConcurrentLimit: 10`). **If
   you copied `.github/renovate.json` before this fix, apply the same change.**
-
-### Fixed
-
 - **2026-07-28: three false statements about the agent tooling, and a check that could
   not fail.** Found by running `contrarian` against its own introducing plan — the
   acceptance test PR #11 deferred.

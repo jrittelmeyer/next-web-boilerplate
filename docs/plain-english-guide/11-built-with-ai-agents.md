@@ -189,6 +189,20 @@ code, not vibes), the bar was designed to be harsh, and the
 found-gaps-then-fixed-them trail is public. It's the software equivalent of
 publishing your inspection reports along with the house.
 
+The newest layer of this loop, added in late July 2026, is a standing
+**devil's-advocate reviewer** — a second AI instance whose assigned job is to
+argue *against* a plan before the human signs off: challenge its assumptions,
+hunt for the failure nobody mentioned, and never raise an objection without
+proposing an alternative. It earned its keep immediately. On its first real
+assignments it caught the project's own documentation describing the reviewer
+as unable to change anything while its actual configuration quietly granted it
+a command line (fixed the same day), then caught a safety check that silently
+*passed* when the file it was supposed to inspect didn't exist. And in the same
+honest-arc spirit as the audits, the policy ships with its own kill switch: if
+three plans in a row that should have been challenged sail through without a
+recorded challenge, the rule is declared dead rather than left standing as
+paper process.
+
 ## What to take away
 
 For a technical-leadership audience, the defensible claims are:
