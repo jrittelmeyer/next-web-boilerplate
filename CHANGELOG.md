@@ -54,6 +54,24 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Fixed
 
+- **Claude Code hooks no longer die from a subdirectory** (ai-dev-kit 0.7.2) — all five
+  hook commands in `.claude/settings.json` wired their handler on a repo-relative path
+  (`node .claude/hooks/…`). Hooks are spawned with the **session cwd, not the project
+  root**, so after any `cd` into `apps/web` or `packages/*` the path resolved against that
+  subdirectory and the hook died with `MODULE_NOT_FOUND`. Entirely silent: only exit 2
+  blocks a hook, these advise, and `docs:sanity`'s existing `existsSync` check passed
+  either way — 14 lost runs here and 274 in a consumer repo over a 50-session window, with
+  every gate green. Commands are now anchored as
+  `node "${CLAUDE_PROJECT_DIR}/.claude/hooks/…"`; **braced and double-quoted are both
+  load-bearing** (a bare `$CLAUDE_PROJECT_DIR` is `$null` under the PowerShell hook shell,
+  an unquoted path word-splits under bash on a project path containing a space). Exec form
+  (`args`) was evaluated and rejected — it moves the path out of `command`, where the
+  installer's ownership marker looks, so the next install would append duplicates.
+  `pnpm docs:sanity` now **fails** on an un-anchored command, closing the gap that let this
+  survive: the wiring was asserted to *exist*, never to *resolve*. Generated projects
+  inherit `.claude/` verbatim, so every project made from this template carried the bug.
+  Rationale and the residual limit (`CLAUDE_PROJECT_DIR` is the launch cwd, not the git
+  root): [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
 - **Renovate schedule widened so scheduled updates can actually land** — the
   config shipped `"schedule": ["before 6am on monday"]` with no `timezone` key:
   a 6-hour UTC window per week that the hosted app's run cadence may never

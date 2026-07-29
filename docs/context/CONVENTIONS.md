@@ -144,6 +144,35 @@ after repo-owned ones); it is idempotent thereafter. `pnpm docs:sanity` asserts 
 repo-owned handler is still wired, so a bad hand-merge fails a gate instead of silently
 disarming the hook.
 
+**Every handler path must be anchored on `${CLAUDE_PROJECT_DIR}`, braced and double-quoted:**
+
+```json
+"command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/dep-check-nudge.mjs\""
+```
+
+Hooks are spawned with the **session cwd, not the project root**, so a repo-relative
+`node .claude/hooks/…` resolves against whatever subdirectory the session last `cd`'d into
+and dies with `MODULE_NOT_FOUND`. The failure is invisible: only exit 2 blocks a hook, these
+advise, and every gate stayed green — it cost this repo 14 silently-lost runs and a consumer
+274 before anyone looked. Both details are load-bearing: a **bare** `$CLAUDE_PROJECT_DIR`
+reads as `$null` under the PowerShell hook shell (Windows without Git Bash), and an
+**unquoted** path word-splits under bash when the project path contains a space. The official
+hooks-guide examples use the bare form — they are POSIX-only, don't copy them here.
+`pnpm docs:sanity` now fails on an un-anchored command, and the kit's `smoke-hooks.mjs`
+asserts the same over `hooks.json`.
+
+Exec form (`args`) is cleaner at runtime — Claude Code substitutes the placeholder itself and
+spawns with no shell — but it is **wrong here**: it moves the path out of `command`, which is
+exactly where the installer's ownership marker looks, so kit entries stop being recognised and
+the next install appends duplicates. It also degrades worse on adopter builds predating `args`,
+where the shell form degrades to precisely the prior behaviour. Revisit when the marker keys
+on `args` too. Do **not** reach for `"shell": "bash"` for determinism either — it hard-throws
+on Windows without Git Bash.
+
+Residual limit: `CLAUDE_PROJECT_DIR` is the **launch cwd**, not the git root, so starting
+`claude` from inside `apps/web` still misses. Strictly better than a relative path, which broke
+on any `cd`.
+
 `permissions` is tracked and shared; `settings.local.json` is gitignored, personal, and holds
 no `hooks` key — it is not a place to put shared wiring.
 

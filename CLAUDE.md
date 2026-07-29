@@ -12,8 +12,10 @@ Claude-Code-specific notes:
   `node <clone>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json
   --dest <this repo> --global --hooks`; `install.mjs --check` guards drift.
 - Run `/checkpoint` at each step boundary.
-- `.claude/settings.json` (tracked) holds the shared permission allowlist **and the
-  repo-owned hook wiring**; `settings.local.json` stays untracked/gitignored.
+- `.claude/settings.json` (tracked) holds the shared permission allowlist **and all hook
+  wiring — whose `hooks` key is co-owned**, so fix a kit handler's entry upstream, not
+  here ([CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude));
+  `settings.local.json` stays untracked/gitignored.
 - **Subagents** live in `.claude/agents/` (repo-owned and tracked — *not*
   kit-managed; edit them directly). `contrarian` is standing-authorized: invoke it
   without asking, fold its findings into the plan **before** presenting that plan
