@@ -6,7 +6,7 @@
 > [PROJECT_STATUS.md](PROJECT_STATUS.md) (also the only home of the audit score
 > litany), and the full per-item prose is in
 > [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md). The audits that seeded past
-> backlogs live in [docs/archive/](archive/) (Phase B + the eleven `/project-audit`
+> backlogs live in [docs/archive/](archive/) (Phase B + the twelve `/project-audit`
 > scoring passes). Everything below goes plan → sign-off → build. Don't reintroduce
 > shipped-item entries here.
 
@@ -41,13 +41,17 @@ Full detail + removal conditions: [docs/MAINTENANCE.md](MAINTENANCE.md) (canonic
 > points; see Watch). The 2026-07-22 pass scored **99.65** — the first drop since,
 > and none of it code — and all four of its rows shipped same-day (rows archived
 > likewise); the audit ledger is clear again
-> ([archive/PROJECT_AUDIT_2026-07-22.md](archive/PROJECT_AUDIT_2026-07-22.md)).
+> ([archive/PROJECT_AUDIT_2026-07-22.md](archive/PROJECT_AUDIT_2026-07-22.md)). The
+> twelfth pass (2026-07-29) verified F2–F4 closed and scored **99.9** — F1 (Renovate
+> delivery) is the sole open deduction; its diagnosis row is in Open rows
+> ([archive/PROJECT_AUDIT_2026-07-29.md](archive/PROJECT_AUDIT_2026-07-29.md)).
 
 ### Open rows
 
 | Band | Area | Upgrade | Documented in | Notes |
 | --- | --- | --- | --- | --- |
 | B4 | Toolchain | **TypeScript 7 cutover** (outside the program) | STACK.md | **Blocked on TS7 support reaching a stable Next release** (experimental in canary since 2026-07-10; TS 7.1 ~Q4 2026 restores the JS API for the rest of the toolchain) — full detail in Watch above. Costs no audit points. |
+| B1 | Tooling / deps | **Restore Renovate PR delivery** — owner half: diagnose at developer.mend.io (org mode Silent vs Interactive, per-repo run logs); fallback half, agent-buildable if Mend won't cooperate: self-hosted Renovate via `renovatebot/github-action` on a weekly cron reusing the committed `.github/renovate.json` (removes the app dependency entirely) | [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) · [audit report](archive/PROJECT_AUDIT_2026-07-29.md) | Config exonerated — the widening shipped 2026-07-22 as specified and the 07-27 window still delivered zero `renovate/*` branches, ever. The stall is growing (48 dashboard entries · 50 outdated) and override retirements (dompurify, fast-uri) queue behind it. Recovers the audit's last open deduction (Monorepo & tooling +2). Plan → sign-off before the fallback build. |
 | B1 | On-ramp / kit | **Intake-drop convention for `/project-init`** — template half: seed a committed `docs/intake/` (README: drop planning docs here → run `/project-init`) + a GETTING_STARTED sentence + init-app kept-list mention; kit half: `init.intakeDir` adapter field (default `docs/intake/`), intake enumeration in project-init §1, raw docs → `docs/archive/product-intake/` in the inception commit after brief sign-off (prevents a second source of truth beside `PRODUCT.md`) | [GETTING_STARTED.md](GETTING_STARTED.md#starting-from-an-idea-run-project-init) | Direction owner-approved 2026-07-18; **build after the first real derived-project inception run (in flight) supplies lessons.** Kit half edits an ai-dev-kit clone → re-install (`--dest`), never the installed copies. Verified: init-app `--slim`'s delete list doesn't touch `docs/intake/`. Sibling convention shipped 2026-07-19: `intake/source/` (gitignored **code** drop for `/project-adopt`) stays separate — committed planning docs vs never-committed source. Plan → sign-off before building. |
 | B3 | Docs / positioning | **README / tagline reframe around the agent-native workflow** (OWNER-DIRECTED) — lead with the real differentiator: the context-doc system + working agreements + verification culture + ai-dev-kit's two inception doors, not the wiring | README.md · AGENTS.md | Dozens of starters have the wiring; nothing else has the operating system around it, and today it's buried in AGENTS.md / the docs. This is framing/marketing judgment — needs an owner decision, not a mechanical build. Pairs with the visual surface + the derived-product proof. |
 | B1 | Kit | **Second ai-dev-kit adapter (portability proof)** — author an adapter for a different stack to exercise the kit's stack-agnostic claim end-to-end | ai-dev-kit repo (`adapters/`) · [CLAUDE.md](../CLAUDE.md) | **Recommend waiting for a real second-stack project to pull it** — an adapter with no consuming repo is unverifiable. On real need. |

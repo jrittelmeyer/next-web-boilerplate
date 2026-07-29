@@ -108,7 +108,10 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   opened** (`git ls-remote --heads origin 'refs/heads/renovate/*'` → empty; all 7
   merged Renovate PRs came from manual dashboard clicks). **This is now a
   diagnosis job, not a wait** — next stop is the Mend app side (run logs / mode /
-  cadence at developer.mend.io); owner's call on when to run it. The 7 approved majors merged 2026-07-18;
+  cadence at developer.mend.io); owner's call on when to run it. Fallback if the
+  app side won't cooperate: self-hosted Renovate via `renovatebot/github-action`
+  on a cron, reusing the committed config — tracked as a B1 row in
+  [`BACKLOG.md`](BACKLOG.md). The 7 approved majors merged 2026-07-18;
   typescript-v7 stays held per the TS7 gate above; `actions/setup-node v7` is a new
   pending-approval major, and `@testing-library/jest-dom v7` sits age-gated in the
   dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The

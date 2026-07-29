@@ -36,10 +36,11 @@ _Last updated: 2026-07-29._
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row SHIPPED (2026-07-07 → 13)**, incl. A23–A32 + A13.
-  Eleven `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
-  (latest: [PROJECT_AUDIT_2026-07-22B.md](archive/PROJECT_AUDIT_2026-07-22B.md); the
-  07-22 flagged rows all shipped same-day — the audit ledger is clear).
+  Twelve `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
+  (latest: [PROJECT_AUDIT_2026-07-29.md](archive/PROJECT_AUDIT_2026-07-29.md); the
+  07-22 findings F2–F4 verified closed; F1 — Renovate delivery, Mend-side — is the
+  one open deduction, now a B1 diagnosis row in [BACKLOG.md](BACKLOG.md)).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
