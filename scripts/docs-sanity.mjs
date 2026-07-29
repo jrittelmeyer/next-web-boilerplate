@@ -117,6 +117,18 @@ for (const command of commands) {
   if (referenced && !existsSync(join(root, referenced))) {
     failures.push(`.claude/settings.json runs "${referenced}" — no such file`);
   }
+  // Hooks are spawned with the SESSION cwd, not the project root, so a repo-relative
+  // handler path resolves against whatever subdirectory the session last cd'd into and
+  // dies with MODULE_NOT_FOUND. That failure is invisible — only exit 2 blocks a hook,
+  // these advise, and the existsSync check above passes either way — so it cost this repo
+  // 14 silently-lost runs and a consumer 274 before anyone noticed. Braced and quoted are
+  // both load-bearing: bare $CLAUDE_PROJECT_DIR is $null under the PowerShell hook shell,
+  // and an unquoted path word-splits under bash when the project path has a space.
+  if (referenced && !command.includes(`"\${CLAUDE_PROJECT_DIR}/${referenced}"`)) {
+    failures.push(
+      `.claude/settings.json runs "${referenced}" on a path relative to the session cwd — it will silently fail from any subdirectory. Write it as node "\${CLAUDE_PROJECT_DIR}/${referenced}" (braced and double-quoted). For ai-dev-kit/ handlers, fix hooks/hooks.json in the kit and reinstall — an edit here is reverted by the next install.`,
+    );
+  }
 }
 
 // 5. Every subagent CLAUDE.md mandates must exist, and vice versa. Deliberately an
