@@ -23,6 +23,7 @@
     "pg": "^8.21.0"
   },
   "devDependencies": {
+    "@repo/calendar": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^24",
     "@types/pg": "^8.20.0",

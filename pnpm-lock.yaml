@@ -279,6 +279,9 @@ importers:
         specifier: ^8.21.0
         version: 8.21.0
     devDependencies:
+      '@repo/calendar':
+        specifier: workspace:*
+        version: link:../calendar
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript

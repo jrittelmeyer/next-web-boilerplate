@@ -26,6 +26,11 @@ export {
   toDayNumber,
 } from "./civil";
 export {
+  type DerivedEventInstants,
+  type DeriveEventInstantsInput,
+  deriveEventInstants,
+} from "./derive";
+export {
   type CivilResolutionKind,
   canonicalizeTimeZone,
   civilToInstant,
