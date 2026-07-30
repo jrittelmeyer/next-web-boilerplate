@@ -10,3 +10,4 @@ export * from "./rate-limit";
 export * from "./subscriptions";
 export * from "./two-factor";
 export * from "./uploads";
+export * from "./user-preferences";

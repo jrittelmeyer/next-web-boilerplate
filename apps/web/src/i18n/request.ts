@@ -24,6 +24,18 @@ export default getRequestConfig(async ({ requestLocale }) => {
       dateTime: {
         short: { dateStyle: "medium", timeStyle: "short" },
         dateOnly: { dateStyle: "medium" },
+        // Calendar-chrome formats. Every one exists so a grid can be built out of
+        // `format.dateTime(referenceInstant, …)` calls instead of hand-rolled
+        // `Intl` instances or hard-coded weekday/month arrays — which is what keeps
+        // 12h-vs-24h, weekday names and numeral systems correct per locale for
+        // free. See docs/context/I18N.md → Formatting dates, numbers & currency.
+        hourOnly: { hour: "numeric" },
+        timeOnly: { timeStyle: "short" },
+        weekdayShort: { weekday: "short" },
+        weekdayLong: { weekday: "long" },
+        dayNumeric: { day: "numeric" },
+        monthYear: { month: "long", year: "numeric" },
+        fullDate: { dateStyle: "full" },
       },
     },
     // A global default timeZone is REQUIRED for absolute times: without it a date

@@ -74,6 +74,7 @@ export default defineConfig({
         "src/server/realtime/sse.ts",
         "src/lib/subscription.ts",
         "src/lib/user-agent.ts",
+        "src/lib/user-preferences.ts",
         "src/stores/ui-store.ts",
       ],
       reporter: ["text", "json", "lcov"],

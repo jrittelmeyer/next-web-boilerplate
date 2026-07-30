@@ -134,6 +134,13 @@
       "when": 1785125112546,
       "tag": "0018_quick_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785437154869,
+      "tag": "0019_bouncy_lake",
+      "breakpoints": true
     }
   ]
 }

@@ -13,18 +13,21 @@ import { and, desc, eq, gt } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AvatarCard } from "@/components/account/avatar-card";
 import { ChangeEmailForm } from "@/components/account/change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { DeleteAccountCard } from "@/components/account/delete-account-card";
 import { PasskeysCard } from "@/components/account/passkeys-card";
+import { PreferencesCard } from "@/components/account/preferences-card";
 import { PrivacyCard } from "@/components/account/privacy-card";
 import { SessionsCard } from "@/components/account/sessions-card";
 import { TwoFactorCard } from "@/components/account/two-factor-card";
 import { UpdateNameForm } from "@/components/account/update-name-form";
-import type { Locale } from "@/i18n/routing";
+import { type Locale, routing } from "@/i18n/routing";
 import { describeUserAgent } from "@/lib/user-agent";
+import { resolveUserPreferences } from "@/lib/user-preferences";
 
 export async function generateMetadata({
   params,
@@ -102,82 +105,108 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
     orderBy: (row, { desc }) => [desc(row.createdAt)],
   });
 
+  // Display preferences. Read from Postgres, not from the session — Better Auth's
+  // cookie cache is up to 5 minutes stale, and this is the very page where the
+  // value gets changed, so a stale read would look like the save had failed.
+  const activeLocale = hasLocale(routing.locales, locale) ? locale : routing.defaultLocale;
+  const preferences = await resolveUserPreferences(session.user.id, activeLocale);
+
+  // A SCOPED timeZone override, rather than a per-request one in i18n/request.ts:
+  // reading a preference there would make every next-intl route dynamic and kill
+  // the static prerender of /, /login, /signup and all of /es/* — a global
+  // regression to buy a local feature. Nested here, the provider inherits messages
+  // and formats from the request config and overrides only the zone, so every
+  // timestamp below (session activity, passkey dates) renders in the user's zone
+  // on both the SSR and hydration passes.
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground">{t("subtitle")}</p>
-      </div>
+    <NextIntlClientProvider timeZone={preferences.timeZone}>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("profileTitle")}</CardTitle>
-          <CardDescription>{t("profileDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          <AvatarCard
-            image={session.user.image ?? null}
-            name={session.user.name}
-            email={session.user.email}
-          />
-          <UpdateNameForm defaultName={session.user.name} />
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium">
-              {t("emailLabel")}
-              <span className="ml-2 font-normal text-muted-foreground">
-                {session.user.email}
-                {session.user.emailVerified ? t("verified") : t("unverified")}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("profileTitle")}</CardTitle>
+            <CardDescription>{t("profileDescription")}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <AvatarCard
+              image={session.user.image ?? null}
+              name={session.user.name}
+              email={session.user.email}
+            />
+            <UpdateNameForm defaultName={session.user.name} />
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium">
+                {t("emailLabel")}
+                <span className="ml-2 font-normal text-muted-foreground">
+                  {session.user.email}
+                  {session.user.emailVerified ? t("verified") : t("unverified")}
+                </span>
               </span>
-            </span>
-            <ChangeEmailForm emailVerified={session.user.emailVerified} />
-            <span className="text-xs text-muted-foreground">
-              {session.user.emailVerified ? t("verifiedHint") : t("unverifiedHint")}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+              <ChangeEmailForm emailVerified={session.user.emailVerified} />
+              <span className="text-xs text-muted-foreground">
+                {session.user.emailVerified ? t("verifiedHint") : t("unverifiedHint")}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("passwordTitle")}</CardTitle>
-          <CardDescription>
-            {hasPassword ? t("passwordDescription") : t("passwordDescriptionSocial")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {hasPassword ? (
-            <ChangePasswordForm />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {t.rich("passwordResetPointer", {
-                link: (chunks) => (
-                  <a
-                    href="/forgot-password"
-                    className="text-foreground underline underline-offset-4"
-                  >
-                    {chunks}
-                  </a>
-                ),
-              })}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("passwordTitle")}</CardTitle>
+            <CardDescription>
+              {hasPassword ? t("passwordDescription") : t("passwordDescriptionSocial")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {hasPassword ? (
+              <ChangePasswordForm />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t.rich("passwordResetPointer", {
+                  link: (chunks) => (
+                    <a
+                      href="/forgot-password"
+                      className="text-foreground underline underline-offset-4"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                })}
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-      <TwoFactorCard enabled={session.user.twoFactorEnabled ?? false} hasPassword={hasPassword} />
+        <TwoFactorCard enabled={session.user.twoFactorEnabled ?? false} hasPassword={hasPassword} />
 
-      <PasskeysCard initialPasskeys={passkeys} />
+        <PasskeysCard initialPasskeys={passkeys} />
 
-      <SessionsCard sessions={sessions} />
+        <SessionsCard sessions={sessions} />
 
-      {/* Privacy & data (B3 · Band 3): analytics consent (withdrawable) + data export.
+        {/* Privacy & data (B3 · Band 3): analytics consent (withdrawable) + data export.
           Client component — self-gates on NEXT_PUBLIC_POSTHOG_KEY for the analytics part. */}
-      <PrivacyCard />
+        <PrivacyCard />
 
-      {/* Danger zone (P2-2). `hasPassword` picks the intent gate (password vs
+        {/* Display preferences (time zone, week start, clock). Governs how every
+          absolute timestamp in the app is rendered for this user — the setting the
+          i18n config has asked for since it hard-coded UTC. */}
+        <PreferencesCard
+          defaultValues={{
+            timeZone: preferences.hasTimeZone ? preferences.timeZone : null,
+            weekStart: preferences.weekStart,
+            timeFormat: preferences.timeFormat,
+          }}
+        />
+
+        {/* Danger zone (P2-2). `hasPassword` picks the intent gate (password vs
           type-to-confirm); `emailConfigured` only shapes the up-front copy — the
           card branches its post-submit behavior on the server's response. */}
-      <DeleteAccountCard hasPassword={hasPassword} emailConfigured={isEmailConfigured()} />
-    </div>
+        <DeleteAccountCard hasPassword={hasPassword} emailConfigured={isEmailConfigured()} />
+      </div>
+    </NextIntlClientProvider>
   );
 }

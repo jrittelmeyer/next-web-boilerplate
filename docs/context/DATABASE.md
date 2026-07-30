@@ -443,6 +443,39 @@ stops enforcing once you scale horizontally. See
   the limiter store automatically (drop the explicit `storage: "database"`); this table is then
   unused. See [auth/core.md](auth/core.md).
 
+## Display preferences (`user_preferences` — per-user time zone, migration 0019)
+
+Where per-user *display* settings live: `time_zone` (IANA), `week_start` (0 = Sunday,
+1 = Monday, 6 = Saturday) and `time_format` (`12h` / `24h`). Every column is
+**nullable, and NULL means "inherit the default"** — app-wide UTC for the zone,
+locale-derived for the other two. That distinguishes "never chose" from
+"deliberately chose UTC", which a `NOT NULL DEFAULT` could not, and lets a row carry
+only the one preference a user actually set.
+
+**Why a separate table rather than columns on `user`:** the Better Auth schema is
+hand-maintained and must not be widened — the same rule that put `stripeCustomerId`
+on `subscriptions`. Named `user_preferences`, not something calendar-specific,
+because these govern every rendered timestamp in the app (`/account` session
+activity, `/admin/audit` rows) and not just one feature.
+
+- `user_id` is the **primary key and the FK** (natural key, the `subscriptions.id`
+  precedent). Being the PK it is already indexed, so the "index every FK" rule is
+  satisfied without a second index — Postgres does not auto-index a *referencing*
+  column, but it does index a primary key. `ON DELETE cascade`.
+- The zone is stored **exactly as supplied** once validated, never canonicalised.
+  `Intl`'s preferred spelling is not stable across Node versions — this ICU build
+  resolves `Asia/Kolkata` *to* `Asia/Calcutta`, the reverse of the modern IANA
+  primary — so normalising on write would make rows written by different runtimes
+  disagree as text while behaving identically. Validate with `canonicalizeTimeZone`
+  (`@repo/calendar`), never `Intl.supportedValuesOf().includes(...)`, which rejects
+  the legacy aliases real inputs use.
+- Read via `resolveUserPreferences()` (`apps/web/src/lib/user-preferences.ts`),
+  which reads Postgres directly rather than the session: Better Auth's cookie cache
+  is up to 5 minutes stale, and `/account` is the very page where the value changes.
+  It also re-validates the stored zone on read — a zone can be retired from the IANA
+  database, and handing a dead one to `Intl` throws, which would take down every
+  page that renders a timestamp instead of degrading one preference.
+
 ## Admin plugin columns (ban + impersonation)
 
 The Better Auth `admin()` plugin (migration 0014) adds **no new table** — it

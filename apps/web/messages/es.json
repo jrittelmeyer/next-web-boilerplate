@@ -304,6 +304,26 @@
       "preparing": "Preparando…",
       "downloaded": "Tu exportación de datos se ha descargado."
     },
+    "preferences": {
+      "title": "Preferencias de visualización",
+      "description": "Cómo se te muestran las fechas y horas en la aplicación.",
+      "timeZoneLabel": "Zona horaria",
+      "timeZonePlaceholder": "America/New_York",
+      "timeZoneHelp": "Déjalo vacío para usar UTC. Las marcas de tiempo del resto de la aplicación siguen esta preferencia.",
+      "detect": "Detectar",
+      "weekStartLabel": "Primer día de la semana",
+      "weekStartAuto": "Según mi idioma",
+      "weekStartSunday": "Domingo",
+      "weekStartMonday": "Lunes",
+      "weekStartSaturday": "Sábado",
+      "timeFormatLabel": "Reloj",
+      "timeFormatAuto": "Según mi idioma",
+      "timeFormat12h": "12 horas (1:30 p. m.)",
+      "timeFormat24h": "24 horas (13:30)",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Guardado: tus preferencias de visualización están actualizadas."
+    },
     "delete": {
       "title": "Eliminar cuenta",
       "description": "Elimina permanentemente tu cuenta y todos sus datos: perfil, publicaciones, archivos subidos, sesiones y registros de suscripción.",

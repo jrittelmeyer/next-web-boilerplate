@@ -16,6 +16,7 @@ import {
   twoFactorPasswordSchema,
   unbanUserSchema,
   updateNameSchema,
+  updateUserPreferencesSchema,
   zodFieldErrors,
 } from "./index";
 
@@ -402,6 +403,102 @@ describe("zodFieldErrors (A7)", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(zodFieldErrors(result.error)).toEqual({});
+    }
+  });
+});
+
+describe("updateUserPreferencesSchema", () => {
+  it("accepts a fully-specified set of preferences", () => {
+    const result = updateUserPreferencesSchema.safeParse({
+      timeZone: "America/New_York",
+      weekStart: 1,
+      timeFormat: "24h",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null on every field — 'inherit the default' is a storable intent", () => {
+    const result = updateUserPreferencesSchema.safeParse({
+      timeZone: null,
+      weekStart: null,
+      timeFormat: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ timeZone: null, weekStart: null, timeFormat: null });
+    }
+  });
+
+  it("trims the zone and rejects an empty one", () => {
+    const trimmed = updateUserPreferencesSchema.safeParse({
+      timeZone: "  Europe/London  ",
+      weekStart: null,
+      timeFormat: null,
+    });
+    expect(trimmed.success).toBe(true);
+    if (trimmed.success) expect(trimmed.data.timeZone).toBe("Europe/London");
+
+    const empty = updateUserPreferencesSchema.safeParse({
+      timeZone: "   ",
+      weekStart: null,
+      timeFormat: null,
+    });
+    expect(empty.success).toBe(false);
+    if (!empty.success) {
+      expect(zodFieldErrors(empty.error)).toEqual({ timeZone: "Choose a time zone" });
+    }
+  });
+
+  it("rejects an over-long zone id", () => {
+    const result = updateUserPreferencesSchema.safeParse({
+      timeZone: "A".repeat(65),
+      weekStart: null,
+      timeFormat: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it.each([0, 1, 6])("accepts week start %i", (weekStart) => {
+    const result = updateUserPreferencesSchema.safeParse({
+      timeZone: null,
+      weekStart,
+      timeFormat: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each([2, 7, -1, "1"])("rejects week start %s", (weekStart) => {
+    const result = updateUserPreferencesSchema.safeParse({
+      timeZone: null,
+      weekStart,
+      timeFormat: null,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(zodFieldErrors(result.error)).toEqual({
+        weekStart: "Choose a first day of the week",
+      });
+    }
+  });
+
+  it.each(["12h", "24h"])("accepts clock format %s", (timeFormat) => {
+    const result = updateUserPreferencesSchema.safeParse({
+      timeZone: null,
+      weekStart: null,
+      timeFormat,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown clock format", () => {
+    const result = updateUserPreferencesSchema.safeParse({
+      timeZone: null,
+      weekStart: null,
+      timeFormat: "military",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(zodFieldErrors(result.error)).toEqual({ timeFormat: "Choose a clock format" });
     }
   });
 });

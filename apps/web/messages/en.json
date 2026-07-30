@@ -304,6 +304,26 @@
       "preparing": "Preparing…",
       "downloaded": "Your data export has been downloaded."
     },
+    "preferences": {
+      "title": "Display preferences",
+      "description": "How dates and times are shown to you across the app.",
+      "timeZoneLabel": "Time zone",
+      "timeZonePlaceholder": "America/New_York",
+      "timeZoneHelp": "Leave empty to use UTC. Timestamps elsewhere in the app follow this setting.",
+      "detect": "Detect",
+      "weekStartLabel": "First day of the week",
+      "weekStartAuto": "Follow my language",
+      "weekStartSunday": "Sunday",
+      "weekStartMonday": "Monday",
+      "weekStartSaturday": "Saturday",
+      "timeFormatLabel": "Clock",
+      "timeFormatAuto": "Follow my language",
+      "timeFormat12h": "12-hour (1:30 PM)",
+      "timeFormat24h": "24-hour (13:30)",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved — your display preferences are up to date."
+    },
     "delete": {
       "title": "Delete account",
       "description": "Permanently delete your account and all of its data — profile, posts, uploads, sessions, and subscription records.",

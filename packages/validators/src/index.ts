@@ -329,3 +329,29 @@ export const notificationPayloadSchema = z.object({
 });
 
 export type NotificationPayload = z.infer<typeof notificationPayloadSchema>;
+
+/**
+ * Per-user display preferences. `null` on any field means "inherit the default"
+ * (app-wide for the zone, locale-derived for the rest) and is a distinct, storable
+ * intent from picking a value — so every field is nullable rather than optional.
+ *
+ * The unions are duplicated from `WEEK_STARTS` / `TIME_FORMATS` in
+ * `@repo/db/schema/user-preferences.ts` (the canonical source) so this package
+ * stays DB-free — the same convention as `setUserRoleSchema` ↔ `ROLES`.
+ *
+ * `timeZone` is validated for SHAPE only. Whether the runtime actually knows the
+ * zone is checked by the caller via `canonicalizeTimeZone` in `@repo/calendar`,
+ * which this package must not import: the dependency runs
+ * `@repo/calendar → @repo/validators`, never the reverse.
+ */
+export const updateUserPreferencesSchema = z.object({
+  timeZone: z.string().trim().min(1, "Choose a time zone").max(64).nullable(),
+  weekStart: z
+    .union([z.literal(0), z.literal(1), z.literal(6)], {
+      message: "Choose a first day of the week",
+    })
+    .nullable(),
+  timeFormat: z.enum(["12h", "24h"], { message: "Choose a clock format" }).nullable(),
+});
+
+export type UpdateUserPreferencesInput = z.infer<typeof updateUserPreferencesSchema>;

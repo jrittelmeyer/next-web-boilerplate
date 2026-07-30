@@ -21,6 +21,7 @@
     "@opentelemetry/exporter-trace-otlp-http": "0.220.0",
     "@opentelemetry/sdk-trace-base": "^2.8.0",
     "@repo/auth": "workspace:*",
+    "@repo/calendar": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/email": "workspace:*",
     "@repo/ui": "workspace:*",
