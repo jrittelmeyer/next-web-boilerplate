@@ -41,7 +41,14 @@ test.afterAll(async () => {
 test("changing the display name saves and persists", async () => {
   await page.goto("/account");
   await page.getByLabel("Display name").fill(newName);
-  await page.getByRole("button", { name: "Save" }).click();
+  // Scoped to this form on purpose: /account hosts several independent forms, and
+  // Playwright's `name` option is a SUBSTRING match by default, so a bare
+  // { name: "Save" } collides with every other save button the page grows.
+  await page
+    .locator("form")
+    .filter({ has: page.getByLabel("Display name") })
+    .getByRole("button", { name: "Save" })
+    .click();
   await expect(page.getByText("Saved — your name is now")).toBeVisible();
 
   // Authoritative: the DB-backed session read carries the new name (and refreshes

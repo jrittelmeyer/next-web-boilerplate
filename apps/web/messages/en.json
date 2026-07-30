@@ -320,8 +320,8 @@
       "timeFormatAuto": "Follow my language",
       "timeFormat12h": "12-hour (1:30 PM)",
       "timeFormat24h": "24-hour (13:30)",
-      "save": "Save",
-      "saving": "Saving…",
+      "save": "Update preferences",
+      "saving": "Updating…",
       "saved": "Saved — your display preferences are up to date."
     },
     "delete": {
