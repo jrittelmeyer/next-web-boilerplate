@@ -145,13 +145,14 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   signal** (checking Dependabot alone would have missed a HIGH on `sharp`, which sits
   in Next's image-optimization path). Remove each when its upstream moves, then
   `pnpm install` + the full gate:
-  - `brace-expansion: 5.0.7` → **raise to 5.0.8 on/after 2026-07-30** and drop the
-    `GHSA-mh99-v99m-4gvg` ignore added with it. A second advisory on the same path
-    (`<=5.0.7` — `expand_()` caps the result *count* but not each result's *length*,
-    so ~7.5 KB of input reaches an uncatchable OOM) means 5.0.7 is no longer a fix;
-    5.0.8 was published 2026-07-23, inside the 7-day gate, and the path is
-    build-tooling only, so it took the `ignoreGhsas` deferral rather than a
-    `minimumReleaseAgeExclude`.
+  - `brace-expansion: 5.0.8` → **raised 2026-07-30 as scheduled**, and the
+    `GHSA-mh99-v99m-4gvg` ignore was dropped with it (allowlist empty again). The
+    second advisory on this path (`<=5.0.7` — `expand_()` caps the result *count* but
+    not each result's *length*, so ~7.5 KB of input reaches an uncatchable OOM) meant
+    5.0.7 was never a fix for it; 5.0.8 cleared the 7-day gate on 2026-07-30 and is
+    in-range for minimatch's own `^5.0.5`. **The override stays live** — remove it once
+    a routine bump naturally carries the lockfile past 5.0.8. (5.0.9 became `latest`
+    on 2026-07-30 and was deliberately not taken: ~10 h old, inside the gate.)
   - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile
     past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).
   - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
@@ -171,8 +172,12 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     or email-OTP plugin, email+password with open registration, and an account
     pre-existing at the address — all hold whenever `isEmailConfigured()` is true, which
     is the intended production path and is inherited by every derived project. 1.6.23 is
-    the newest patched release clearing the 7-day gate. **Follow-up: 1.6.25 becomes
-    installable 2026-07-30.**
+    the newest patched release clearing the 7-day gate. **Follow-up CLOSED 2026-07-30 —
+    1.6.25 installed** (with `@better-auth/passkey` in lockstep) once it cleared the
+    gate at 15:48:12Z. Not advisory-driven and **no migration**: the 1.6.23→1.6.25 model
+    definitions were diffed against the installed artifacts and every difference is
+    cosmetic. See the CHANGELOG **Security** entry for the 1.6.24 `Origin`-enforcement
+    behaviour change on the magic-link / email-OTP send endpoints.
   - postcss + brace-expansion: see the retargeted override bullets above.
   - **The 2026-07-26 daily audit's green was a false green** — the advisory endpoint
     returned invalid JSON and `--ignore-registry-errors` turned that into exit 0, so

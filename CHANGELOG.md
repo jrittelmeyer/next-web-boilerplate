@@ -115,6 +115,30 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-07-30: `brace-expansion` 5.0.7 → 5.0.8 — the deferred advisory closed on
+  schedule** — GHSA-mh99-v99m-4gvg / CVE-2026-14257 (high; `expand_()` caps the result
+  *count* but not each result's *length*, so ~7.5 KB of input reaches an uncatchable
+  OOM) affects `<=5.0.7`, so the 5.0.7 override taken on 2026-07-22 was never a fix for
+  it. The fix 5.0.8 published 2026-07-23T11:39:25Z, cleared the 7-day age gate on
+  2026-07-30, and is in-range for minimatch's own `^5.0.5` — a plain fix-forward.
+  **`auditConfig.ignoreGhsas` is empty again**, which is its steady state: the deferral
+  existed only because the fix was younger than `minimumReleaseAge`, and it was deleted
+  the day the fix aged in rather than bypassed with a `minimumReleaseAgeExclude`.
+  `pnpm audit` now guards both brace-expansion advisories live. Note 5.0.9 became
+  `latest` on 2026-07-30 (~10 h old at install time) and was **deliberately not taken** —
+  inside the gate; the same wait-don't-exclude rule applies to it.
+- **2026-07-30: `better-auth` 1.6.23 → 1.6.25 (+ `@better-auth/passkey` in lockstep)** —
+  **not advisory-driven**: neither release carries a GHSA, and this is hardening plus bug
+  fixes taken while the tree was already being touched. **No schema change** — the
+  1.6.23→1.6.25 model definitions were diffed artifact-by-artifact against the installed
+  packages and every difference is cosmetic (JSDoc, a widened export list, a build-chunk
+  hash), so **no migration accompanies this bump** — in contrast to 1.6.23, which added
+  two `two_factor` columns as a *patch*. **Behavioural change worth knowing (1.6.24,
+  upstream #10368):** the magic-link and email-OTP *send* endpoints now enforce `Origin`
+  on cookieless requests — a request with a **wrong** `Origin` is rejected, while one
+  with **no** `Origin` header (server-to-server) still works and same-origin browser
+  traffic is unaffected. If you drive those endpoints from a script against a non-default
+  origin, send the trusted `Origin` or none at all.
 - **2026-07-27: `better-auth` 1.6.20 → 1.6.23 (account takeover)** — GHSA-qq9h-g4jm-xgf3
   (CVSS 8.3, high) let an attacker take over an account that already existed at an email
   address, via the passwordless sign-in path. **This template met every precondition on

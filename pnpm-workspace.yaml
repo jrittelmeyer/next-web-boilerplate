@@ -75,11 +75,13 @@ overrides:
   #     `^5.0.5` — a plain fix-forward, not a pin-bypass.
   #   - GHSA-mh99-v99m-4gvg / CVE-2026-14257 (<=5.0.7, HIGH — expand_() caps the result
   #     COUNT but not each result's LENGTH, so ~7.5 KB of input reaches an uncatchable
-  #     OOM): NOT fixed by 5.0.7. The fix, 5.0.8, was published 2026-07-23 — inside the
-  #     7-day gate — and this is a build-tool-only DoS, so it takes the documented
-  #     ignoreGhsas deferral rather than a minimumReleaseAgeExclude (see auditConfig).
-  # Raise this to 5.0.8 and drop the ignore on/after 2026-07-30.
-  brace-expansion: 5.0.7
+  #     OOM): FIXED by this override since 2026-07-30. 5.0.8 (published
+  #     2026-07-23T11:39:25Z) cleared the 7-day gate that day, so the ignoreGhsas
+  #     deferral it had been holding was dropped and the allowlist re-emptied — pnpm
+  #     audit now guards BOTH advisories live. 5.0.8 is likewise in-range for
+  #     minimatch's own `^5.0.5`, so this stays a fix-forward, not a pin-bypass.
+  # Remove this override once a routine bump naturally carries the lockfile past 5.0.8.
+  brace-expansion: 5.0.8
   # ——— Advisory remediation (2026-07-22): transitive-only advisories, all newly
   # disclosed since the prior day's green CI run (pnpm audit queries live
   # advisory data — nothing in the lockfile changed to surface these). Only
@@ -139,16 +141,13 @@ minimumReleaseAge: 10080 # 7 days
 # its path + why it's low-risk for this app, so the audit stays green on the accepted
 # status quo and goes red the moment a NEW advisory appears. Prune an entry once the
 # fix lands in the lockfile (an ignore for an absent advisory is a harmless no-op).
-# Re-emptied 2026-07-15 (the three long-standing entries — effect · esbuild ·
-# postcss — got remediated by the Dependabot overrides above). The two fast-uri
-# entries added 2026-07-22 were REMOVED 2026-07-27: 3.1.4 aged out of the gate and is
-# a real override above. One TEMPORARY entry remains, same shape and same reasoning —
-# the fix is real but too fresh for minimumReleaseAge, on a build-tooling-only path.
+# EMPTY — and empty is the steady state. Every deferral so far has been temporary by
+# construction, with the same shape each time: a real fix exists but is younger than
+# minimumReleaseAge, so the advisory is parked here — never waved through with a
+# minimumReleaseAgeExclude — and the entry is deleted the day the fix ages in and
+# becomes a real override above. Re-emptied 2026-07-15 (effect · esbuild · postcss),
+# 2026-07-27 (the two fast-uri GHSAs), and 2026-07-30 (GHSA-mh99-v99m-4gvg, once
+# brace-expansion 5.0.8 cleared the gate). `pnpm audit` therefore guards every
+# override above live, and goes red the moment one regresses or a new advisory lands.
 auditConfig:
-  ignoreGhsas:
-    # brace-expansion expand_() uncontrolled result-length growth → uncatchable OOM
-    # (CVE-2026-14257). Fix 5.0.8 published 2026-07-23, inside the 7-day gate;
-    # build-tooling-only path (minimatch → eslint / glob → Storybook, Sentry webpack
-    # plugin, react-email), zero request-handling exposure. REMOVE this entry and raise
-    # the brace-expansion override to 5.0.8 on/after 2026-07-30.
-    - GHSA-mh99-v99m-4gvg
+  ignoreGhsas: []

@@ -20,8 +20,14 @@ One imperative per line; mechanics + rationale live in
 - Since 1.6.22 (GHSA-qq9h-g4jm-xgf3), magic-link and email-OTP sign-in **revoke
   unproven credentials** — a password set but never verified stops working once its
   owner signs in passwordlessly. Expected, not a regression.
-- A non-patch `better-auth` bump can add columns to a plugin's model. The schema is
-  hand-maintained in `@repo/db`, so **re-check every plugin table against the installed
-  version's model** and generate a migration in the same PR — 1.6.23 added two
-  (`two_factor.failed_verification_count`, `locked_until`) and the adapter throws at
-  runtime, not at build time, when one is missing.
+- **Any** `better-auth` bump can add columns to a plugin's model — patches included, so
+  version distance is not a screening rule. The schema is hand-maintained in `@repo/db`:
+  **re-check every plugin table against the installed version's model** and migrate in
+  the same PR — the *patch* 1.6.23 added two (`two_factor.failed_verification_count`,
+  `locked_until`), and the adapter throws at runtime, not build time, when one is
+  missing. Diff the installed artifacts under `node_modules/.pnpm`; release notes omit
+  schema changes.
+- Since 1.6.24, the magic-link and email-OTP **send** endpoints enforce `Origin` on
+  cookieless requests: a wrong `Origin` is rejected, an absent one (server-to-server)
+  still works, same-origin browsers are unaffected. Expected when driving them
+  headlessly — not a regression.
