@@ -85,6 +85,48 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   re-derive the affected rows through `deriveEventInstants` in a one-off migration. Never
   "fix" it by moving the check into a constraint.
 
+- **`/admin/audit` intermittently trips `scrollable-region-focusable`** — axe rates it
+  *serious*, so it fails the e2e a11y gate when it fires. The node is
+  `<div data-slot="table-container" class="relative w-full overflow-x-auto">` in
+  `packages/ui/src/components/table.tsx`: an `overflow-x: auto` container with no
+  focusable content and no `tabindex`, which axe reports only when the table **actually**
+  overflows — so it depends on the rendered column widths, and the audit table's widest
+  column is a generated e2e email address. Seen once on 2026-07-31 and **not reproducible
+  on a re-run of the same build**; the surface is untouched by the calendar work.
+  *Removal condition:* give the scroll container `tabIndex={0}` plus a `role="region"`
+  and an accessible name (the standard shadcn remedy) — a `@repo/ui` change that touches
+  every table in the app, which is why it is recorded rather than folded into an
+  unrelated branch.
+
+- **Calendar override integrity — two writer-enforced invariants** — an override must
+  carry its master's `uid`, and its parent must be a recurring event. Both are cross-row
+  predicates a `CHECK` cannot express, so the database enforces neither. **Detection, not
+  prevention:** the two scans in
+  `packages/db/__tests__/integration/calendar-recurrence.test.ts` ("the two
+  writer-enforced invariants — detected, never blocked") plant the corruption and name
+  the offending rows. The third rule — an override lives in its master's calendar — *is*
+  enforced, by the composite FK `calendar_events_parent_same_calendar`.
+  *Removal condition:* none — this is the design; a guard that can make an existing row
+  un-editable is worse than the drift it prevents. *Action when it fires against real
+  data:* find the writer that produced it (a split that skipped the `uid` rewrite is the
+  likely shape) and repair the rows, never add a constraint that would strand them.
+
+- **Calendar cascade-moved overrides keep a stale `updated_at`** — the composite FK's
+  `ON UPDATE CASCADE` is a *database* write, so it bypasses drizzle's `$onUpdate`. Moving
+  a master to another calendar therefore moves its overrides with correct data and an old
+  timestamp. Harmless today; it is a **trap for Phase 6's feed `ETag`**, which must not
+  derive change detection from `updated_at` alone for override rows. Recorded in
+  `packages/db/AGENTS.md`. *Removal condition:* Phase 6 lands a change-detection scheme
+  that does not read `updated_at` on its own.
+
+- **Calendar range caps under real load** — `MAX_RANGE_ROWS` (2,000) now covers concrete
+  rows *and* expanded occurrences merged into one stream, and `MAX_RANGE_SERIES` (200)
+  bounds expansion work per request. A month that used to fit may now truncate. The merge
+  makes the truncation tail-shaped rather than category-shaped, and `truncated` /
+  `seriesTruncated` are reported separately — but the numbers themselves have not been
+  exercised against a large tenant. *Removal condition:* a live run with a
+  many-series calendar confirms both caps, or moves them.
+
 - **TypeScript 7 cutover** — **GA'd as `typescript@7.0.2` (2026-07-08)** but not yet
   adoptable here (proven by a 2026-07-13 cutover attempt — owner-approved age-gate
   override; repo undeployed → no prod risk): TS 7's package IS the native **Go**
