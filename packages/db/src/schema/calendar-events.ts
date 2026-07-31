@@ -1,8 +1,8 @@
 import { and, isNull, sql } from "drizzle-orm";
 import {
-  type AnyPgColumn,
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   pgTable,
@@ -113,20 +113,31 @@ export const calendarEvents = pgTable(
     // and the masters view are final, and Phase 2 adds no index migration to a table
     // that by then has rows.
     /**
-     * Phase 2. A per-occurrence override points at its series master. The self-FK
-     * lands now, inert, so deleting a series takes its overrides with it from the
-     * first row Phase 2 writes — a cascade added later would leave the rows written
-     * in between orphaned.
+     * A per-occurrence override points at its series master.
+     *
+     * The FK is declared at the table level as a COMPOSITE
+     * `(recurrence_parent_id, calendar_id) → (id, calendar_id)` — see
+     * `calendar_events_parent_same_calendar` below for why — so this column
+     * deliberately carries no `.references()` of its own.
      */
-    recurrenceParentId: uuid("recurrence_parent_id").references(
-      (): AnyPgColumn => calendarEvents.id,
-      { onDelete: "cascade" },
-    ),
-    /** Phase 2. The occurrence's ORIGINAL civil start — never the moved-to time. */
+    recurrenceParentId: uuid("recurrence_parent_id"),
+    /** The occurrence's ORIGINAL civil start — never the moved-to time. */
     recurrenceId: timestamp("recurrence_id", { mode: "string", precision: 0 }),
-    /** Phase 2. Opaque RFC 5545 RRULE; the grammar's owner is @repo/validators. */
+    /**
+     * Opaque RFC 5545 RRULE. The grammar's owner is `@repo/calendar/rrule.ts` —
+     * `@repo/validators/calendar` constrains only the string's *shape*, the same
+     * split `localDateTimeSchema` and `parseLocalDateTime` already use. Two RFC 5545
+     * parsers in two packages would be two answers.
+     */
     rrule: text("rrule"),
-    /** Phase 2. The one denormalised fact: NULL = unbounded series. */
+    /**
+     * The one denormalised fact: NULL = unbounded series.
+     *
+     * Computed from the RRULE alone and **deliberately blind to `EXDATE`s**, so it
+     * is a permanent over-estimate. That asymmetry is load-bearing: the range query
+     * uses it to *exclude* masters, so over-estimating costs a wasted expansion and
+     * under-estimating makes an entire series vanish from the grid.
+     */
     seriesEndAt: timestamp("series_end_at", { withTimezone: true }),
 
     /** Soft delete, so Phase 6 feed subscribers can learn a deletion happened. */
@@ -195,6 +206,33 @@ export const calendarEvents = pgTable(
       .on(t.calendarId, t.uid, t.recurrenceId)
       .nullsNotDistinct(),
 
+    // The target for the composite self-FK below. Redundant with the primary key
+    // for uniqueness; Postgres requires a unique constraint on the exact referenced
+    // column list, and a PK on `id` alone does not satisfy `(id, calendar_id)`.
+    unique("calendar_events_id_calendar_id_key").on(t.id, t.calendarId),
+
+    // An override must live in the SAME CALENDAR as its master. Measured against
+    // PG 18 before this migration: without it, an override in a different calendar
+    // inserts happily — and `updateEvent` already lets a user move an event between
+    // calendars, so the moment overrides exist that path would strand them.
+    //
+    // `ON UPDATE CASCADE` is the half that earns this constraint rather than a
+    // writer rule: moving a master to another calendar moves every one of its
+    // overrides with it, automatically (verified: 10 of 10 followed). It also makes
+    // acl.md's "an override authorizes against its master's calendar" true by
+    // construction instead of by convention.
+    //
+    // ⚠️ The cascade is a database write, so it bypasses drizzle's `$onUpdate` —
+    // a moved override keeps its old `updated_at`. Phase 6's feed must not derive
+    // change detection from `updated_at` alone for override rows.
+    foreignKey({
+      name: "calendar_events_parent_same_calendar",
+      columns: [t.recurrenceParentId, t.calendarId],
+      foreignColumns: [t.id, t.calendarId],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+
     // The hot month-view path. Overrides fall in here naturally (an override has no
     // rrule of its own), which is exactly why the range query must NOT read through
     // calendarEventMasters — see the view's comment below.
@@ -209,7 +247,31 @@ export const calendarEvents = pgTable(
     // Both indexes above are partial and exclude soft-deleted rows, so neither can
     // serve the calendar-delete cascade. Postgres does not auto-index FK columns.
     index("calendar_events_calendar_id_idx").on(t.calendarId),
-    index("calendar_events_recurrence_parent_id_idx").on(t.recurrenceParentId),
+    // The override-suppression scan: "which occurrences of these masters already
+    // have an override row?" — the question the month grid must answer before it
+    // can expand a series, since an overridden occurrence arrives as a real row
+    // instead.
+    //
+    // PARTIAL, and that is the whole point. Measured on PG 18 at 22,400 rows /
+    // 2,000 overrides, after VACUUM (ANALYZE), on the identical query:
+    //   (recurrence_parent_id)                    176 kB  Index Scan + Filter  1,971 buffers
+    //   (recurrence_parent_id, recurrence_id)     232 kB  — plain
+    //   + calendar_id                             272 kB  — plain
+    //   THIS ONE                                   96 kB  Index Only Scan, 0 heap  15 buffers
+    // A plain btree stores NULL keys, so a non-partial index over a mostly-NULL
+    // column is not small — the plain three-column variant is 55% LARGER than the
+    // single-column index it would replace. The partial predicate is what actually
+    // buys "override rows only", and it lands smaller than what it replaces.
+    //
+    // `calendar_id` is deliberately absent: measured, it costs +42% size for noise,
+    // and `calendar_events_parent_same_calendar` makes the predicate redundant.
+    //
+    // This index also serves the self-FK cascade — verified, because a strict
+    // `recurrence_parent_id = $1` implies `IS NOT NULL` and Postgres can prove the
+    // predicate. No companion plain index is needed.
+    index("calendar_events_override_idx")
+      .on(t.recurrenceParentId, t.recurrenceId)
+      .where(sql`${t.recurrenceParentId} IS NOT NULL`),
   ],
 );
 

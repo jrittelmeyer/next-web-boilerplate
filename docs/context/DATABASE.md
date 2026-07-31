@@ -476,7 +476,7 @@ activity, `/admin/audit` rows) and not just one feature.
   database, and handing a dead one to `Intl` throws, which would take down every
   page that renders a timestamp instead of degrading one preference.
 
-## Calendars and events (migration 0020)
+## Calendars and events (migrations 0020, 0021)
 
 `calendars` + `calendar_events`, plus the `calendar_event_masters` view. The full
 rationale — why civil time is the source of truth, why the derived instants are guarded
@@ -498,6 +498,25 @@ Three things to know before writing any query against them:
   spelling out `rrule IS NULL AND deleted_at IS NULL`.
 - **Never write *through* the view.** Postgres makes it auto-updatable and drizzle emits
   no `WITH CHECK OPTION`.
+
+`0021` adds `calendar_recurrence_dates` (`EXDATE`/`RDATE` as rows, not a jsonb array —
+so "skip this occurrence" is `ON CONFLICT DO NOTHING` rather than read-modify-write) and
+changes three things on `calendar_events`, all measured first:
+
+- **`calendar_events_override_idx` replaces `calendar_events_recurrence_parent_id_idx`** —
+  `(recurrence_parent_id, recurrence_id) WHERE recurrence_parent_id IS NOT NULL`. Partial,
+  because a plain btree **stores NULL keys**: the non-partial variant is larger than the
+  index it replaces, while this one is smaller *and* turns the override-suppression scan
+  from an `Index Scan` + filter into an `Index Only Scan`. It still serves the self-FK
+  cascade, since `= $1` implies `IS NOT NULL`.
+- **`calendar_events_parent_same_calendar`** — a composite self-FK
+  `(recurrence_parent_id, calendar_id) → (id, calendar_id)`. An override cannot live in a
+  different calendar from its master, and `ON UPDATE CASCADE` moves overrides with a master
+  that changes calendar. That cascade is a database write, so it **bypasses drizzle's
+  `$onUpdate`** and leaves `updated_at` stale on the moved rows.
+- **`calendar_events_id_calendar_id_key`** — the unique that FK requires as its target.
+
+Full rationale in [calendar/recurrence.md](calendar/recurrence.md).
 
 ## Admin plugin columns (ban + impersonation)
 
@@ -536,6 +555,15 @@ pnpm --filter @repo/db db:studio
 # Push schema directly (dev only, skips migration files)
 pnpm --filter @repo/db db:push
 ```
+
+**Review the generated SQL before applying it — the generator's statement order is not
+always valid.** `0021` was emitted with a composite foreign key *before* the `UNIQUE`
+constraint it references, which Postgres rejects with `there is no unique constraint
+matching given keys for referenced table`. Reordering the two statements by hand is the
+fix, and doing it before the migration is applied is ordinary workflow — editing an
+*applied* migration is what the forward-only rule forbids. drizzle-kit's console summary
+is not a review either: it reports table and column counts and stays silent about views
+and constraint swaps entirely.
 
 ## Backup, restore & disaster recovery
 

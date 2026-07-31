@@ -1,6 +1,7 @@
 export * from "./audit-log";
 export * from "./auth";
 export * from "./calendar-events";
+export * from "./calendar-recurrence-dates";
 export * from "./calendars";
 export * from "./email-suppressions";
 export * from "./notifications";

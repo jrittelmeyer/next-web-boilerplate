@@ -148,6 +148,13 @@
       "when": 1785453140867,
       "tag": "0020_nostalgic_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785506903598,
+      "tag": "0021_simple_white_tiger",
+      "breakpoints": true
     }
   ]
 }
