@@ -212,6 +212,13 @@ describe("the invariant the whole design exists for", () => {
     expect((third ?? 0) - (second ?? 0)).toBe(7 * MS_PER_DAY);
   });
 
+  // 9 zones × 1,460 readings ≈ 39k Intl round-trips — deliberately exhaustive, and the
+  // slowest test in the package by two orders of magnitude. It needs ~0.6 s on a dev
+  // machine, but on CI it shares a 2-core runner with six other test files (including
+  // the 535-case rrule corpus) and has measured 5,032 ms against vitest's 5,000 ms
+  // default — a red that says nothing about correctness. The timeout is explicit and
+  // generous here rather than a package-wide `testTimeout`, which would relax the limit
+  // for the 38 fast tests too and let a genuine hang sit for half a minute.
   it("round-trips every reading that is not in a gap, in every corpus zone", () => {
     const zones = [
       "America/New_York",
@@ -236,7 +243,7 @@ describe("the invariant the whole design exists for", () => {
         expect(civilEquals(instantToCivil(resolved.instantMs, zone), civil)).toBe(true);
       }
     }
-  });
+  }, 30_000);
 });
 
 describe("canonicalizeTimeZone", () => {
