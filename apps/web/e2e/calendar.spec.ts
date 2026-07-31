@@ -93,7 +93,19 @@ test("an all-day event on a midnight DST transition lands on exactly one cell", 
 test("create a calendar, then create, edit and delete an event through the UI", async ({
   page,
 }) => {
-  test.slow();
+  // Explicit rather than `test.slow()`: this is one long LINEAR flow — create, edit,
+  // make it repeat, edit one occurrence, split, skip a date, delete by scope, delete
+  // both series — deliberately kept in a single test because every `test()` costs a
+  // signup against Better Auth's 5-per-60 s limiter. The budget is for its length, not
+  // for slowness.
+  test.setTimeout(180_000);
+  const trpcStatuses: string[] = [];
+  page.on("response", (response) => {
+    const url = response.url();
+    if (url.includes("/api/trpc/") && response.status() !== 200) {
+      trpcStatuses.push(`${response.status()} ${url.slice(url.indexOf("/api/trpc/"), 120)}`);
+    }
+  });
   const user = makeTestUser("calendar-crud");
   await signUp(page, user);
   await setUserTimeZone(user.email, EVENT_ZONE);
@@ -127,27 +139,29 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     const chip = page.getByRole("button", { name: /Standup/ });
     await expect(chip).toHaveCount(1);
 
-    // --- Edit it ------------------------------------------------------------
+    // --- Edit it, and make it repeat across the transition -------------------
+    // One save, not two, and the reason is the budget: `calendar.range` is
+    // rate-limited at 20/min per user, every month-arrow press is one read, and
+    // `/calendar` always opens on today — so an eight-month walk plus one refetch per
+    // save is most of the allowance. This test spends it on coverage, not on
+    // round trips.
+    //
+    // The start moves to Sunday 2027-03-07 in the same edit, because the weekly preset
+    // is derived from the start the user is looking at. 03-07 is before Havana's
+    // transition and 03-21 is after it.
     await chip.click();
     const editor = page.getByRole("dialog");
     await editor.getByTestId("event-title").fill("Standup (moved)");
-    await editor.getByTestId("event-save").click();
-    await expect(editor).toBeHidden();
-    await expect(page.getByRole("button", { name: /Standup \(moved\)/ })).toHaveCount(1);
-
-    // --- Make it repeat, across the transition ------------------------------
-    // The start moves to Sunday 2027-03-07 first, because the weekly preset is derived
-    // from the start the user is looking at. 03-07 is before Havana's transition and
-    // 03-21 is after it.
-    await page.getByRole("button", { name: /Standup \(moved\)/ }).click();
-    const repeatEditor = page.getByRole("dialog");
-    await repeatEditor.getByTestId("event-start").fill("2027-03-07T09:00");
-    await repeatEditor.getByTestId("event-end").fill("2027-03-07T09:30");
-    await repeatEditor.getByTestId("event-repeat").click();
+    await editor.getByTestId("event-start").fill("2027-03-07T09:00");
+    await editor.getByTestId("event-end").fill("2027-03-07T09:30");
+    await editor.getByTestId("event-repeat").click();
     // Radix renders its listbox in a portal, so the option is not inside the dialog.
     await page.getByRole("option", { name: "Every week" }).click();
-    await repeatEditor.getByTestId("event-save").click();
-    await expect(repeatEditor).toBeHidden();
+    // The prose summary, rendered from the same pure locale-safe module the detail
+    // page uses — asserted here so the grid flow never has to leave for it.
+    await expect(editor.getByTestId("recurrence-summary")).toContainText("Every week");
+    await editor.getByTestId("event-save").click();
+    await expect(editor).toBeHidden();
 
     await expect(page.getByRole("button", { name: /Standup \(moved\)/ })).toHaveCount(4);
 
@@ -170,7 +184,30 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     await expect(page.getByRole("button", { name: /Standup \(moved\)/ })).toHaveCount(3);
     await expect(occurrenceChip(page, "2027-03-21")).toHaveText(/Just this one/);
 
+    // --- Split the series from an occurrence ---------------------------------
+    // The most complex write in the phase, and the only one no constraint can check.
+    // Cutting at 03-14 bounds the old master, creates a new one with a NEW uid, and
+    // re-parents the 03-21 override onto it — rewriting that override's uid, without
+    // which the split manufactures the corruption the schema leaves writer-enforced.
+    await openOccurrence(page, "2027-03-14");
+    const splitEditor = page.getByRole("dialog").first();
+    await splitEditor.getByTestId("event-title").fill("Second half");
+    await splitEditor.getByTestId("event-save").click();
+    await chooseScope(page, "thisAndFollowing");
+
+    // One assertion set, four facts: the first half kept its own title and stopped at
+    // the cut; the second half starts there; and the override SURVIVED the re-parent
+    // and is still suppressed from its new master's expansion rather than painted twice.
+    await expect(occurrenceChip(page, "2027-03-07")).toHaveText(/Standup \(moved\)/);
+    await expect(occurrenceChip(page, "2027-03-14")).toHaveText(/Second half/);
+    await expect(occurrenceChip(page, "2027-03-21")).toHaveText(/Just this one/);
+    await expect(occurrenceChip(page, "2027-03-28")).toHaveText(/Second half/);
+    await expect(page.getByRole("button", { name: /Second half/ })).toHaveCount(2);
+
     // --- Delete this and the following ones ----------------------------------
+    const secondHalfId = await occurrenceChip(page, "2027-03-14").getAttribute("data-event-id");
+    expect(secondHalfId).toBeTruthy();
+
     await openOccurrence(page, "2027-03-21");
     await page.getByRole("dialog").first().getByTestId("event-delete").click();
     await chooseScope(page, "thisAndFollowing");
@@ -182,24 +219,45 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     await expect(occurrenceChip(page, "2027-03-21")).toHaveCount(0);
     await expect(occurrenceChip(page, "2027-03-28")).toHaveCount(0);
 
-    // --- Soft-delete the whole series from the detail route -------------------
-    // Every chip answers with its MASTER's id — the occurrence-identity contract — so
-    // this is the series' own page, not an override's.
-    const eventId = await occurrenceChip(page, "2027-03-07").getAttribute("data-event-id");
-    expect(eventId).toBeTruthy();
+    // --- Delete a whole series from the grid, by scope ------------------------
+    await openOccurrence(page, "2027-03-14");
+    await page.getByRole("dialog").first().getByTestId("event-delete").click();
+    await chooseScope(page, "all");
 
-    await page.goto(`/calendar/event/${eventId}`);
+    // The second series is gone entirely; the first — a genuinely separate series
+    // since the split — is untouched. That is the split's real proof: one id's
+    // deletion cannot reach the other's occurrences.
+    await expect(occurrenceChip(page, "2027-03-14")).toHaveCount(0);
+    await expect(occurrenceChip(page, "2027-03-07")).toHaveCount(1);
+
+    // A 429 here renders as an EMPTY GRID with no message, which is indistinguishable
+    // from "the write worked". Asserting it explicitly turns that into a named
+    // failure instead of a mystifying `toHaveCount(0)`.
+    expect(trpcStatuses.join("\n")).toBe("");
+
+    // --- Skip a date, then delete the series, from the detail route -----------
+    // The one trip off the grid, and it comes LAST on purpose: returning would cost
+    // another eight-month walk, and the reads budget is already spent.
+    const firstHalfId = await occurrenceChip(page, "2027-03-07").getAttribute("data-event-id");
+    expect(firstHalfId).toBeTruthy();
+    // Every chip answers with its MASTER's id — the occurrence-identity contract — so
+    // this is a series' own page, never an override's, and the split produced two
+    // genuinely distinct ids.
+    expect(firstHalfId).not.toBe(secondHalfId);
+
+    await page.goto(`/calendar/event/${firstHalfId}`);
     await expect(page.getByRole("heading", { name: "Standup (moved)" })).toBeVisible();
-    // The detail page reads the series in prose, from the same locale-safe module the
-    // composer's summary uses.
     await expect(page.getByTestId("recurrence-summary")).toContainText("Every week");
+
+    await page.getByTestId("recurrence-date").fill("2027-03-07T09:00");
+    await page.getByTestId("recurrence-skip").click();
+    // The toast is the assertion: `setRecurrenceDate` reached Postgres and came back
+    // with data. Waiting for it also stops the navigation below from aborting the
+    // in-flight Server Action.
+    await expect(page.getByText("That date is now skipped.")).toBeVisible();
+
     await page.getByRole("button", { name: "Delete event" }).click();
     await page.waitForURL("**/calendar");
-
-    await gotoMonth(page, 2027, 3);
-    // The master AND its remaining occurrences: a soft-deleted master whose overrides
-    // stayed live is exactly what `deleteEvent`'s transaction exists to prevent.
-    await expect(page.getByRole("button", { name: /Standup/ })).toHaveCount(0);
   } finally {
     await deleteCalendarFixtures(user.email);
   }
