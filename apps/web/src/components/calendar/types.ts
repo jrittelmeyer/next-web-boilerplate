@@ -23,8 +23,15 @@ export type CalendarEventSummary = RouterOutput["calendar"]["range"]["items"][nu
  *
  * `resolvedColor` is the event's own colour or, when it has none, the calendar's —
  * resolved once so a chip never has to know which calendar it came from.
+ *
+ * `key` exists because **`id` is not unique in this list and must not be.** Every
+ * occurrence of a series answers with its master's id — that is the occurrence-identity
+ * contract, and it is what makes a chip usable as the target of a scoped write — so a
+ * multi-day series can put two occurrences in the same day cell, and React would see one
+ * key twice. `key` identifies the *occurrence*; `id` identifies what to write to.
  */
 export interface CalendarEventView extends CalendarEventSummary {
+  readonly key: string;
   readonly startAtMs: number;
   readonly endAtMs: number;
   readonly resolvedColor: CalendarColor;
@@ -36,6 +43,7 @@ export function toEventView(
 ): CalendarEventView {
   return {
     ...event,
+    key: event.recurrenceId === null ? event.id : `${event.id}#${event.recurrenceId}`,
     startAtMs: event.startAt.getTime(),
     endAtMs: event.endAt.getTime(),
     resolvedColor: (event.color as CalendarColor | null) ?? calendarColor,

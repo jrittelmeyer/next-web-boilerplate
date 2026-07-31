@@ -46,7 +46,7 @@ export function MonthGrid({
   timeZone: string;
   events: readonly CalendarEventView[];
   onOpenDay: (date: string) => void;
-  onOpenEvent: (eventId: string) => void;
+  onOpenEvent: (event: CalendarEventView) => void;
 }) {
   const t = useTranslations("Calendar.grid");
   const format = useFormatter();
@@ -175,7 +175,10 @@ export function MonthGrid({
                       {lanes.map((segment, lane) =>
                         segment ? (
                           <EventChip
-                            key={segment.event.id}
+                            // The OCCURRENCE's key, not the event's id: every occurrence
+                            // of a series answers with its master's id, so a multi-day
+                            // series can put two of them in one cell.
+                            key={segment.event.key}
                             event={segment.event}
                             showLabel={column === segment.startColumn}
                             continuesBefore={

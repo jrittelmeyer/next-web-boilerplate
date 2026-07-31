@@ -26,15 +26,19 @@ import {
   CALENDAR_COLORS,
   type CreateEventValues,
   createEventSchema,
+  type EditScope,
   EVENT_STATUSES,
   EVENT_TRANSPARENCIES,
   EVENT_VISIBILITIES,
 } from "@repo/validators/calendar";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { allDayWallRange, inclusiveEndDate } from "@/lib/calendar/grid";
 import { applyFieldErrors } from "@/lib/forms";
-import { createEvent, updateEvent } from "@/server/actions/calendar";
+import { createEvent, deleteEvent, updateEvent } from "@/server/actions/calendar";
+import { EditScopeDialog } from "./edit-scope-dialog";
+import { RecurrenceField } from "./recurrence-field";
 import type { CalendarSummary } from "./types";
 
 /** The storage form, `"YYYY-MM-DD HH:MM:SS"`, from a `datetime-local` value. */
@@ -47,7 +51,13 @@ const toDateTimeLocal = (wall: string) => wall.slice(0, 16).replace(" ", "T");
 const INHERIT = "inherit";
 
 export interface EventComposerDefaults {
+  /** **Always a series master's id**, never an override's — the identity contract. */
   readonly id?: string;
+  /**
+   * Set when the editor was opened on one occurrence of a series. Its presence is what
+   * turns Save and Delete into scoped writes, and what makes the scope dialog appear.
+   */
+  readonly recurrenceId?: string | null;
   readonly calendarId: string;
   readonly title: string;
   readonly description: string | null;
@@ -62,7 +72,14 @@ export interface EventComposerDefaults {
   readonly startTzid: string;
   readonly endWall: string;
   readonly endTzid: string;
-  /** `null` = a one-off. The recurrence builder lands on this in the next step. */
+  /**
+   * The **series master's** rule — `null` for a one-off.
+   *
+   * Deliberately the master's even when the editor is showing an override, whose own
+   * `rrule` is NULL by constraint (`calendar_events_override_not_recurring`): seeding
+   * this field from the override row would submit "no rule" for a `thisAndFollowing`
+   * edit, which the action refuses.
+   */
   readonly rrule?: string | null;
 }
 
@@ -119,12 +136,39 @@ export function EventComposer({
 
   const values = form.watch();
   const hint = disambiguationHint(values);
+  const recurrenceId = defaults.recurrenceId ?? null;
 
-  async function onSubmit(submitted: CreateEventValues) {
+  // Which write is waiting on a scope. `null` means no dialog is open.
+  const [pending, setPending] = useState<{
+    intent: "edit" | "delete";
+    values: CreateEventValues | null;
+  } | null>(null);
+
+  /**
+   * Whether `scope: "all"` would drop the series' overrides and skipped dates.
+   *
+   * The same four inputs the action compares: change any of them and every stored
+   * `recurrence_id` names an occurrence that no longer exists. Computed here so the
+   * warning is shown *before* the write rather than explained after it.
+   */
+  const movesTheSeries =
+    (values.rrule ?? null) !== (defaults.rrule ?? null) ||
+    String(values.startWall) !== defaults.startWall ||
+    String(values.startTzid) !== defaults.startTzid ||
+    String(values.endTzid) !== defaults.endTzid;
+
+  async function save(submitted: CreateEventValues, scope: EditScope | null) {
     const result = defaults.id
-      ? // No scope yet: every event this composer can reach is still a one-off, and
-        // `scope` and `recurrenceId` are both-or-neither by schema.
-        await updateEvent({ ...submitted, id: defaults.id, scope: null, recurrenceId: null })
+      ? await updateEvent({
+          ...submitted,
+          // An override may not carry a rule of its own — the schema refines it and
+          // `calendar_events_override_not_recurring` enforces it.
+          rrule: scope === "this" ? null : submitted.rrule,
+          id: defaults.id,
+          // `scope` and `recurrenceId` are both-or-neither by schema.
+          scope,
+          recurrenceId: scope === null ? null : recurrenceId,
+        })
       : await createEvent(submitted);
     if ("error" in result) {
       if (result.fieldErrors) applyFieldErrors(form.setError, result.fieldErrors);
@@ -133,6 +177,47 @@ export function EventComposer({
     }
     toast.success(defaults.id ? t("updated") : t("created"));
     onDone();
+  }
+
+  async function remove(scope: EditScope | null) {
+    if (!defaults.id) return;
+    const result = await deleteEvent({
+      id: defaults.id,
+      scope,
+      recurrenceId: scope === null ? null : recurrenceId,
+    });
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(t("deleted"));
+    onDone();
+  }
+
+  async function onSubmit(submitted: CreateEventValues) {
+    // An occurrence cannot be written without saying which occurrences it applies to,
+    // so the dialog comes first and the values wait for it.
+    if (defaults.id && recurrenceId !== null) {
+      setPending({ intent: "edit", values: submitted });
+      return;
+    }
+    await save(submitted, null);
+  }
+
+  function onDelete() {
+    if (recurrenceId !== null) {
+      setPending({ intent: "delete", values: null });
+      return;
+    }
+    void remove(null);
+  }
+
+  async function onScopeChosen(scope: EditScope) {
+    const chosen = pending;
+    setPending(null);
+    if (!chosen) return;
+    if (chosen.intent === "delete") return await remove(scope);
+    if (chosen.values) await save(chosen.values, scope);
   }
 
   function setAllDay(next: boolean) {
@@ -318,6 +403,24 @@ export function EventComposer({
 
         <FormField
           control={form.control}
+          name="rrule"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("repeatLabel")}</FormLabel>
+              <RecurrenceField
+                value={field.value ?? null}
+                // Presets follow the start the user is actually looking at, so
+                // "monthly" means the 14th when the event starts on the 14th.
+                startWall={String(values.startWall)}
+                onChange={field.onChange}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="location"
           render={({ field }) => (
             <FormItem>
@@ -491,8 +594,30 @@ export function EventComposer({
           <Button type="button" variant="outline" onClick={onDone}>
             {t("cancel")}
           </Button>
+          {defaults.id ? (
+            <Button
+              type="button"
+              variant="destructive"
+              className="ml-auto"
+              data-testid="event-delete"
+              onClick={onDelete}
+            >
+              {t("delete")}
+            </Button>
+          ) : null}
         </div>
       </form>
+
+      {pending ? (
+        <EditScopeDialog
+          intent={pending.intent}
+          // Deleting never drops anything the user did not ask to lose, so the warning
+          // belongs to the edit path only.
+          warnOnAll={pending.intent === "edit" && movesTheSeries}
+          onCancel={() => setPending(null)}
+          onConfirm={(scope) => void onScopeChosen(scope)}
+        />
+      ) : null}
     </Form>
   );
 }

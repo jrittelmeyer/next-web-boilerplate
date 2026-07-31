@@ -21,6 +21,15 @@ appended, or `canWriteCalendar` silently inverts.
 The two are separate on purpose. From Phase 6 a writer may add events to a calendar they
 must not be able to delete out from under its owner.
 
+**An override authorizes against its master's calendar — now by construction, not by
+convention.** `calendar_events_parent_same_calendar` is a composite FK on
+`(recurrence_parent_id, calendar_id)`, so an override *cannot* exist in a different
+calendar from its master, and its `ON UPDATE CASCADE` moves the overrides when a master
+changes calendar. Scoped writes never take a `calendarId` of their own for the same reason:
+`updateEvent` refuses a calendar change under `scope: "this"` or `"thisAndFollowing"`
+([api.md](api.md)), because moving the whole series is the operation that is correct
+automatically.
+
 ## Phase 1 grants exactly one thing
 
 Ownership is the `calendars.user_id` column. It is **transferred, never shared**.

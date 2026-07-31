@@ -180,6 +180,17 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
   is a cache guarded by a CHECK over a stored offset, so a backfill script, a seed, or a
   future feature that writes an event some other way fails loudly instead of shipping a
   meeting that is an hour off twice a year.
+- **Repeating events that survive a DST transition.** A weekly 09:00 meeting reads 09:00
+  on both sides of every clock change, because occurrences are generated in *civil* time
+  and each one resolves its own offset afterwards — not because anything corrects them
+  after the fact. Edit or delete **this occurrence / this and following / all**, skip a
+  date, add a date; "this and following" is a real series split, not a flag.
+- **The recurrence engine is checked against an independent oracle, once.** 528 rules
+  were expanded by `rrule@2.8.1` into a checked-in fixture that the permanent test diffs
+  against — so CI never runs a 2.7-year-stale dependency, and the corpus is a diff a
+  reviewer can read. The fixture was committed *before* the expander was written, and its
+  hash is pinned in the test, because otherwise a red differential has one one-line "fix"
+  that turns the oracle into a mirror of the engine.
 - **Accessible by construction:** one tab stop for the whole grid (roving `tabindex`,
   arrow-key navigation, `Enter` for a focus-trapped day view), scanned by axe in CI with
   events on it.

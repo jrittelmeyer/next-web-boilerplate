@@ -1,7 +1,24 @@
-import { calendarEventMasters, calendarEvents, calendars } from "@repo/db/schema";
-import { eventRangeSchema, MAX_RANGE_ROWS } from "@repo/validators/calendar";
-import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { log } from "@logtail/next";
+import {
+  addCivilDays,
+  expandSeries,
+  formatLocalDateTime,
+  instantToCivil,
+  type LocalDateTime,
+} from "@repo/calendar";
+import {
+  calendarEventMasters,
+  calendarEvents,
+  calendarRecurrenceDates,
+  calendars,
+  type EventStatus,
+  type EventTransparency,
+  type EventVisibility,
+} from "@repo/db/schema";
+import { eventRangeSchema, MAX_RANGE_ROWS, MAX_RANGE_SERIES } from "@repo/validators/calendar";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { z } from "zod";
+import { partitionRecurrenceDates } from "@/lib/calendar/recurrence-dates";
 import { createTRPCRouter, userRateLimitedProcedure } from "../trpc";
 
 /**
@@ -23,6 +40,70 @@ import { createTRPCRouter, userRateLimitedProcedure } from "../trpc";
  * the wrong bound it is fast and wrong.
  */
 const MAX_SPAN_SLACK_DAYS = 367;
+
+/**
+ * One chip on the month grid, whether it is a row or not.
+ *
+ * **`id` is the series master's id for anything that belongs to a series** — including a
+ * materialised override, whose own row id is deliberately never exposed. The grid renders
+ * virtual occurrences and overrides as identical chips, and every scoped write names an
+ * occurrence by `(master id, recurrenceId)`; handing the client an override's own id
+ * would make the chip it came from unusable as the target of `scope: "all"`. See
+ * docs/context/calendar/api.md → the occurrence-identity contract.
+ *
+ * `recurrenceId` is `null` for a one-off and the occurrence's **original** civil start
+ * for anything else — never the moved-to time.
+ */
+interface RangeItem {
+  id: string;
+  calendarId: string;
+  title: string;
+  location: string | null;
+  color: string | null;
+  status: EventStatus;
+  visibility: EventVisibility;
+  transparency: EventTransparency;
+  allDay: boolean;
+  startWall: string;
+  startTzid: string;
+  endWall: string;
+  endTzid: string;
+  startAt: Date;
+  endAt: Date;
+  recurrenceId: string | null;
+  /** True when the chip belongs to a repeating event, so it can carry a repeat glyph. */
+  recurring: boolean;
+}
+
+/**
+ * The `recurrence_id` window the suppression scan reads.
+ *
+ * `recurrence_id` is a civil reading, the window is two instants, and the two live in
+ * different spaces — so the bounds are the window read as UTC civil ±1 day, which is
+ * safely wider than any real offset (±14 h) in both directions. Wider is free here: the
+ * scan only ever answers "which of these occurrences already have a row", and an extra
+ * day of candidates costs a handful of index entries.
+ */
+function suppressionBounds(fromMs: number, toMs: number): { lo: LocalDateTime; hi: LocalDateTime } {
+  return {
+    lo: formatLocalDateTime(addCivilDays(instantToCivil(fromMs, "UTC"), -1)),
+    hi: formatLocalDateTime(addCivilDays(instantToCivil(toMs, "UTC"), 1)),
+  };
+}
+
+/**
+ * Total, so the merged stream is deterministic: a grid that reshuffles on every refetch
+ * is the failure this avoids, and two occurrences of the same series share an `id`.
+ */
+function compareRangeItems(a: RangeItem, b: RangeItem): number {
+  const byStart = a.startAt.getTime() - b.startAt.getTime();
+  if (byStart !== 0) return byStart;
+  if (a.id !== b.id) return a.id < b.id ? -1 : 1;
+  const left = a.recurrenceId ?? "";
+  const right = b.recurrenceId ?? "";
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
 
 export const calendarRouter = createTRPCRouter({
   /**
@@ -89,7 +170,7 @@ export const calendarRouter = createTRPCRouter({
         and(eq(calendars.userId, ctx.session.user.id), inArray(calendars.id, input.calendarIds)),
       );
     const visibleIds = visible.map((row) => row.id);
-    if (visibleIds.length === 0) return { items: [], truncated: false };
+    if (visibleIds.length === 0) return { items: [], truncated: false, seriesTruncated: false };
 
     const from = new Date(input.fromMs);
     const to = new Date(input.toMs);
@@ -97,9 +178,12 @@ export const calendarRouter = createTRPCRouter({
     // bound parameter is trivially index-usable and consults nothing.
     const earliestStart = new Date(input.fromMs - MAX_SPAN_SLACK_DAYS * 86_400_000);
 
-    const rows = await ctx.db
+    // --- Branch A: concrete rows, on `calendar_events_concrete_idx` ------------
+    const concreteRows = await ctx.db
       .select({
         id: calendarEvents.id,
+        parentId: calendarEvents.recurrenceParentId,
+        recurrenceId: calendarEvents.recurrenceId,
         calendarId: calendarEvents.calendarId,
         title: calendarEvents.title,
         location: calendarEvents.location,
@@ -120,7 +204,9 @@ export const calendarRouter = createTRPCRouter({
         and(
           inArray(calendarEvents.calendarId, visibleIds),
           // Spelled out, not inherited from a view — this pair is what makes
-          // calendar_events_concrete_idx provable to the planner.
+          // calendar_events_concrete_idx provable to the planner. It now legitimately
+          // matches per-occurrence overrides too, which is exactly why the range query
+          // could never read through `calendar_event_masters`.
           isNull(calendarEvents.rrule),
           isNull(calendarEvents.deletedAt),
           // Overlap: the event starts before the window ends and ends after it
@@ -135,29 +221,229 @@ export const calendarRouter = createTRPCRouter({
       .orderBy(asc(calendarEvents.startAt), asc(calendarEvents.id))
       .limit(MAX_RANGE_ROWS + 1);
 
-    // One extra row is the probe: if it came back, the window holds more than the cap
-    // and the UI must say so. A silently short month is the failure mode this exists
-    // to make visible.
-    const truncated = rows.length > MAX_RANGE_ROWS;
-    return { items: truncated ? rows.slice(0, MAX_RANGE_ROWS) : rows, truncated };
+    const items: RangeItem[] = concreteRows.map(({ id, parentId, ...row }) => ({
+      ...row,
+      // The identity contract: an override answers with its MASTER's id.
+      id: parentId ?? id,
+      recurring: parentId !== null,
+    }));
+
+    // --- Branch B: series masters, on `calendar_events_recurring_idx` ----------
+    const masters = await ctx.db
+      .select({
+        id: calendarEvents.id,
+        calendarId: calendarEvents.calendarId,
+        title: calendarEvents.title,
+        location: calendarEvents.location,
+        color: calendarEvents.color,
+        status: calendarEvents.status,
+        visibility: calendarEvents.visibility,
+        transparency: calendarEvents.transparency,
+        allDay: calendarEvents.allDay,
+        startWall: calendarEvents.startWall,
+        startTzid: calendarEvents.startTzid,
+        endWall: calendarEvents.endWall,
+        endTzid: calendarEvents.endTzid,
+        rrule: calendarEvents.rrule,
+      })
+      .from(calendarEvents)
+      .where(
+        and(
+          inArray(calendarEvents.calendarId, visibleIds),
+          isNotNull(calendarEvents.rrule),
+          isNull(calendarEvents.deletedAt),
+          // `series_end_at` may over-estimate and never under-estimates, which is what
+          // makes it safe to EXCLUDE a master on. NULL is an unbounded series.
+          or(isNull(calendarEvents.seriesEndAt), gte(calendarEvents.seriesEndAt, from)),
+          // No occurrence can start before DTSTART, so a series beginning after the
+          // window contributes nothing — and would otherwise spend one of the
+          // MAX_RANGE_SERIES slots proving it.
+          lte(calendarEvents.startAt, to),
+        ),
+      )
+      .orderBy(asc(calendarEvents.startAt), asc(calendarEvents.id))
+      .limit(MAX_RANGE_SERIES + 1);
+
+    const seriesTruncated = masters.length > MAX_RANGE_SERIES;
+    const expandable = seriesTruncated ? masters.slice(0, MAX_RANGE_SERIES) : masters;
+    let truncated = items.length > MAX_RANGE_ROWS;
+
+    if (expandable.length > 0) {
+      const masterIds = expandable.map((master) => master.id);
+      const bounds = suppressionBounds(input.fromMs, input.toMs);
+
+      const [dateRows, overrideRows] = await Promise.all([
+        ctx.db
+          .select({
+            eventId: calendarRecurrenceDates.eventId,
+            kind: calendarRecurrenceDates.kind,
+            dateWall: calendarRecurrenceDates.dateWall,
+          })
+          .from(calendarRecurrenceDates)
+          .where(inArray(calendarRecurrenceDates.eventId, masterIds)),
+        // --- The suppression scan, on `calendar_events_override_idx` ----------
+        //
+        // No `calendar_id` predicate: measured, it costs +42% index size for noise, and
+        // `calendar_events_parent_same_calendar` already makes it redundant.
+        //
+        // No `deleted_at` predicate either, and that is deliberate. A soft-deleted
+        // override still means *this occurrence is not a plain occurrence*, so filtering
+        // it would resurrect the base occurrence at its original time — the opposite of
+        // what the user asked for. The writer contract is what guarantees an override is
+        // never soft-deleted while its master is live; this query does not paper over a
+        // writer that broke it.
+        ctx.db
+          .select({
+            parentId: calendarEvents.recurrenceParentId,
+            recurrenceId: calendarEvents.recurrenceId,
+          })
+          .from(calendarEvents)
+          .where(
+            and(
+              inArray(calendarEvents.recurrenceParentId, masterIds),
+              gte(calendarEvents.recurrenceId, bounds.lo),
+              lte(calendarEvents.recurrenceId, bounds.hi),
+            ),
+          ),
+      ]);
+
+      const modifiersByMaster = new Map<string, { kind: string; dateWall: string }[]>();
+      for (const row of dateRows) {
+        const list = modifiersByMaster.get(row.eventId);
+        if (list) list.push(row);
+        else modifiersByMaster.set(row.eventId, [row]);
+      }
+
+      const overriddenByMaster = new Map<string, LocalDateTime[]>();
+      for (const row of overrideRows) {
+        if (row.parentId === null || row.recurrenceId === null) continue;
+        const list = overriddenByMaster.get(row.parentId);
+        if (list) list.push(row.recurrenceId);
+        else overriddenByMaster.set(row.parentId, [row.recurrenceId]);
+      }
+
+      const unknownKinds = new Set<string>();
+      for (const master of expandable) {
+        if (master.rrule === null) continue;
+        const modifiers = partitionRecurrenceDates(modifiersByMaster.get(master.id) ?? []);
+        for (const row of modifiers.unknown) unknownKinds.add(row.kind);
+
+        try {
+          const series = expandSeries(
+            {
+              rrule: master.rrule,
+              startWall: master.startWall,
+              startTzid: master.startTzid,
+              endWall: master.endWall,
+              endTzid: master.endTzid,
+              exdates: modifiers.exdates,
+              rdates: modifiers.rdates,
+              overriddenRecurrenceIds: overriddenByMaster.get(master.id) ?? [],
+            },
+            { fromMs: input.fromMs, toMs: input.toMs },
+            MAX_RANGE_ROWS,
+          );
+          if (series.truncated) truncated = true;
+          for (const occurrence of series.occurrences) {
+            items.push({
+              id: master.id,
+              calendarId: master.calendarId,
+              title: master.title,
+              location: master.location,
+              color: master.color,
+              status: master.status,
+              visibility: master.visibility,
+              transparency: master.transparency,
+              allDay: master.allDay,
+              startWall: occurrence.startWall,
+              startTzid: occurrence.startTzid,
+              endWall: occurrence.endWall,
+              endTzid: occurrence.endTzid,
+              startAt: new Date(occurrence.startAtMs),
+              endAt: new Date(occurrence.endAtMs),
+              recurrenceId: occurrence.recurrenceId,
+              recurring: true,
+            });
+          }
+        } catch (error) {
+          // One unreadable rule is one series missing from the grid, not a 500 for the
+          // whole month. Detect and report — the posture the schema's writer-enforced
+          // invariants already take.
+          log.error("calendar.range series could not be expanded", {
+            eventId: master.id,
+            error: error instanceof Error ? error.message : error,
+          });
+        }
+      }
+
+      if (unknownKinds.size > 0) {
+        // Loud, never a silent skip: the row was accepted by the unique constraint, so
+        // the user believes their skip stuck (lib/calendar/recurrence-dates.ts).
+        log.error("calendar.recurrence-date kind not recognised", {
+          kinds: [...unknownKinds],
+        });
+      }
+    }
+
+    // ONE time-ordered stream, capped once. If branch A could consume the cap alone, a
+    // tenant with 2,000 one-off events in a month would get zero occurrences from every
+    // series — a *category*-shaped truncation, strictly worse than the tail-shaped one
+    // the banner copy was written for.
+    items.sort(compareRangeItems);
+    truncated ||= items.length > MAX_RANGE_ROWS;
+    return { items: items.slice(0, MAX_RANGE_ROWS), truncated, seriesTruncated };
   }),
 
   /**
-   * One event, for the detail route.
+   * One event for the editor — and optionally one **occurrence** of it.
    *
-   * Reads through `calendar_event_masters` — the rule the range query is the
-   * exception to. The view already excludes soft-deleted rows and per-occurrence
-   * overrides, which is exactly right for a detail page: an override is not a thing
-   * with its own URL, it is an edit to an occurrence of something that is.
+   * The `id` is always a series master's, so the lookup reads through
+   * `calendar_event_masters`: the rule the range query is the documented exception to.
+   * An override is not a thing with its own URL, and passing one here is a `null`, not a
+   * row.
+   *
+   * `recurrenceId` names an occurrence, and the override row is resolved **here** rather
+   * than by the client — the same resolution the scoped actions do. Without it the editor
+   * would seed from the master, and a user who changed only the title of an
+   * already-moved occurrence would silently revert its description and link to the
+   * series' own. That is the same erase the workspace already avoids by not seeding the
+   * composer from a grid row.
+   *
+   * `seriesRrule` is always the **master's** rule, even when `event` is an override
+   * (whose own `rrule` is NULL by constraint). An editor that seeded its repeat field
+   * from the returned row would submit "no rule" for a `thisAndFollowing` edit.
    */
-  byId: userRateLimitedProcedure.input(z.object({ id: z.uuid() })).query(async ({ ctx, input }) => {
-    const [row] = await ctx.db
-      .select()
-      .from(calendarEventMasters)
-      .innerJoin(calendars, eq(calendars.id, calendarEventMasters.calendarId))
-      .where(and(eq(calendarEventMasters.id, input.id), eq(calendars.userId, ctx.session.user.id)))
-      .limit(1);
-    if (!row) return null;
-    return { event: row.calendar_event_masters, calendar: row.calendars };
-  }),
+  byId: userRateLimitedProcedure
+    .input(z.object({ id: z.uuid(), recurrenceId: z.string().nullish() }))
+    .query(async ({ ctx, input }) => {
+      const [row] = await ctx.db
+        .select()
+        .from(calendarEventMasters)
+        .innerJoin(calendars, eq(calendars.id, calendarEventMasters.calendarId))
+        .where(
+          and(eq(calendarEventMasters.id, input.id), eq(calendars.userId, ctx.session.user.id)),
+        )
+        .limit(1);
+      if (!row) return null;
+
+      const master = row.calendar_event_masters;
+      const recurrenceId = input.recurrenceId ?? null;
+      if (recurrenceId === null) {
+        return { event: master, calendar: row.calendars, seriesRrule: master.rrule };
+      }
+
+      const [override] = await ctx.db
+        .select()
+        .from(calendarEvents)
+        .where(
+          and(
+            eq(calendarEvents.recurrenceParentId, master.id),
+            eq(calendarEvents.recurrenceId, recurrenceId),
+            isNull(calendarEvents.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      return { event: override ?? master, calendar: row.calendars, seriesRrule: master.rrule };
+    }),
 });

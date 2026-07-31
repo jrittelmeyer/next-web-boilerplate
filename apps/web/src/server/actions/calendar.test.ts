@@ -12,6 +12,7 @@ const {
   dbInsert,
   dbUpdate,
   dbDelete,
+  dbSelect,
   dbTransaction,
   findCalendar,
   findEvent,
@@ -25,6 +26,7 @@ const {
   dbInsert: vi.fn(),
   dbUpdate: vi.fn(),
   dbDelete: vi.fn(),
+  dbSelect: vi.fn(),
   dbTransaction: vi.fn(),
   findCalendar: vi.fn(),
   findEvent: vi.fn(),
@@ -40,6 +42,7 @@ vi.mock("@repo/db", () => ({
     insert: dbInsert,
     update: dbUpdate,
     delete: dbDelete,
+    select: dbSelect,
     transaction: dbTransaction,
     query: {
       calendars: { findFirst: findCalendar },
@@ -65,6 +68,7 @@ import {
   createEvent,
   deleteCalendar,
   deleteEvent,
+  setRecurrenceDate,
   updateCalendar,
   updateEvent,
 } from "./calendar";
@@ -72,6 +76,7 @@ import {
 const CAL = "3f1b0a5e-6b0e-4b0f-9a2a-1c2d3e4f5a6b";
 const OTHER_CAL = "9c8d7e6f-5a4b-4c3d-8e2f-1a0b9c8d7e6f";
 const EVENT = "11111111-2222-4333-8444-555555555555";
+const NEW_MASTER = "22222222-3333-4444-8555-666666666666";
 const SESSION = { user: { id: "u1" } };
 
 const calendarInput = {
@@ -103,6 +108,23 @@ const eventInput = {
 /** Scoped writes are both-or-neither; a one-off carries neither. */
 const noScope = { scope: null, recurrenceId: null } as const;
 
+/** The shape `findEventTarget` reads. A one-off, in the calendar the caller owns. */
+const eventTarget = {
+  id: EVENT,
+  calendarId: CAL,
+  uid: "uid-master",
+  deletedAt: null,
+  rrule: null as string | null,
+  recurrenceParentId: null as string | null,
+  startWall: "2027-03-15 09:00:00",
+  startTzid: "America/New_York",
+  endWall: "2027-03-15 09:30:00",
+  endTzid: "America/New_York",
+};
+
+/** …and the same row once it is a weekly series. */
+const seriesTarget = { ...eventTarget, rrule: "FREQ=WEEKLY;BYDAY=MO" };
+
 /** `db.insert(...).values(...).returning(...)` resolving to `rows`. */
 function insertReturning(rows: unknown[]) {
   return { values: () => ({ returning: () => Promise.resolve(rows) }) };
@@ -112,6 +134,64 @@ function updateReturning(rows: unknown[]) {
   return { set: () => ({ where: () => ({ returning: () => Promise.resolve(rows) }) }) };
 }
 
+/** `db.select(...).from(...).where(...)` resolving to `rows` — the recurrence-date read. */
+function selectReturning(rows: unknown[]) {
+  return { from: () => ({ where: () => Promise.resolve(rows) }) };
+}
+
+/**
+ * A transaction whose `tx` records every statement it is handed.
+ *
+ * The scoped writes are defined by *which* statements land inside one transaction — a
+ * split that inserted its new master outside the transaction that re-parents the
+ * overrides would leave orphans on any failure — so the tests assert on the recording
+ * rather than on a return value.
+ */
+interface TxLog {
+  inserts: Record<string, unknown>[];
+  updates: Record<string, unknown>[];
+  deletes: number;
+}
+
+function recordingTransaction(
+  rows: unknown[] = [{ id: NEW_MASTER, calendarId: CAL }],
+  selectRows: unknown[] = [],
+): TxLog {
+  const log: TxLog = { inserts: [], updates: [], deletes: 0 };
+  dbTransaction.mockImplementation(async (callback: (tx: unknown) => unknown) =>
+    callback({
+      insert: () => ({
+        values: (row: Record<string, unknown>) => {
+          log.inserts.push(row);
+          return {
+            returning: () => Promise.resolve(rows),
+            onConflictDoNothing: () => Promise.resolve(),
+          };
+        },
+      }),
+      update: () => ({
+        set: (row: Record<string, unknown>) => {
+          log.updates.push(row);
+          // Awaitable AND `.returning()`-able: the soft delete awaits `where()` while
+          // the whole-event update chains `.returning()` off it.
+          return {
+            where: () =>
+              Object.assign(Promise.resolve(), { returning: () => Promise.resolve(rows) }),
+          };
+        },
+      }),
+      delete: () => ({
+        where: () => {
+          log.deletes += 1;
+          return Promise.resolve();
+        },
+      }),
+      select: () => selectReturning(selectRows),
+    }),
+  );
+  return log;
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   getSessionApi.mockResolvedValue(SESSION);
@@ -119,16 +199,19 @@ beforeEach(() => {
   getCalendarRole.mockResolvedValue("owner");
   getActiveOrganizationId.mockResolvedValue(null);
   findCalendar.mockResolvedValue({ organizationId: null });
-  findEvent.mockResolvedValue({ id: EVENT, calendarId: CAL, deletedAt: null });
+  findEvent.mockResolvedValue(eventTarget);
   dbInsert.mockReturnValue(insertReturning([{ id: EVENT, calendarId: CAL }]));
   dbUpdate.mockReturnValue(updateReturning([{ id: EVENT, calendarId: CAL }]));
   dbDelete.mockReturnValue({ where: () => Promise.resolve() });
+  dbSelect.mockReturnValue(selectReturning([]));
   // The default transaction just runs the callback against a tx that behaves like db.
   dbTransaction.mockImplementation(
     async (callback: (tx: unknown) => unknown) =>
       await callback({
         insert: () => insertReturning([{ id: CAL, name: "Work" }]),
         update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
+        delete: () => ({ where: () => Promise.resolve() }),
+        select: () => selectReturning([]),
       }),
   );
 });
@@ -493,7 +576,7 @@ describe("updateEvent", () => {
   it("authorizes the SOURCE calendar, not just the destination", async () => {
     // The event lives on a calendar the caller cannot write; moving it into their
     // own must still be refused.
-    findEvent.mockResolvedValue({ id: EVENT, calendarId: OTHER_CAL, deletedAt: null });
+    findEvent.mockResolvedValue({ ...eventTarget, calendarId: OTHER_CAL });
     getCalendarRole.mockImplementation(async (calendarId: string) =>
       calendarId === CAL ? "owner" : null,
     );
@@ -503,7 +586,7 @@ describe("updateEvent", () => {
   });
 
   it("authorizes the DESTINATION calendar on a move", async () => {
-    findEvent.mockResolvedValue({ id: EVENT, calendarId: CAL, deletedAt: null });
+    findEvent.mockResolvedValue(eventTarget);
     getCalendarRole.mockImplementation(async (calendarId: string) =>
       calendarId === CAL ? "owner" : null,
     );
@@ -588,5 +671,605 @@ describe("deleteEvent", () => {
     expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({
       error: "Failed to delete the event.",
     });
+  });
+});
+
+// --- Recurrence (Phase 2) ----------------------------------------------------
+
+/** The same one-off, made weekly. Monday 2027-03-15 is the series' DTSTART. */
+const seriesInput = { ...eventInput, rrule: "FREQ=WEEKLY;BYDAY=MO" } as const;
+/** The third occurrence — two before it, so a split at it is a real split. */
+const THIRD = "2027-03-29 09:00:00";
+
+describe("createEvent with a rule", () => {
+  it("stores the CANONICAL rule and a series_end_at", async () => {
+    let written: Record<string, unknown> = {};
+    dbInsert.mockReturnValue({
+      values: (row: Record<string, unknown>) => {
+        written = row;
+        return { returning: () => Promise.resolve([{ id: EVENT, calendarId: CAL }]) };
+      },
+    });
+
+    // Lower case, parts out of RFC order: two users building the same recurrence must
+    // get byte-identical rows, or the split's text comparison and Phase 6's ICS upsert
+    // both quietly stop matching.
+    await createEvent({ ...eventInput, rrule: "byday=mo;freq=weekly;count=3" });
+    expect(written.rrule).toBe("FREQ=WEEKLY;COUNT=3;BYDAY=MO");
+    expect(written.seriesEndAt).toBeInstanceOf(Date);
+  });
+
+  it("leaves series_end_at NULL for an unbounded series", async () => {
+    let written: Record<string, unknown> = {};
+    dbInsert.mockReturnValue({
+      values: (row: Record<string, unknown>) => {
+        written = row;
+        return { returning: () => Promise.resolve([{ id: EVENT, calendarId: CAL }]) };
+      },
+    });
+    await createEvent(seriesInput);
+    expect(written.seriesEndAt).toBeNull();
+  });
+
+  it("reports an unsupported part under the rrule field, naming it", async () => {
+    // The grammar's owner is parseRRule; the action only attributes the failure.
+    const result = await createEvent({ ...eventInput, rrule: "FREQ=WEEKLY;BYWEEKNO=3" });
+    expect(result).toMatchObject({
+      error: "Please fix the fields below.",
+      fieldErrors: { rrule: expect.stringContaining("BYWEEKNO") },
+    });
+    expect(dbInsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects COUNT and UNTIL together, which rrule@2.8.1 accepts", async () => {
+    expect(
+      await createEvent({ ...eventInput, rrule: "FREQ=DAILY;COUNT=2;UNTIL=20270401T000000Z" }),
+    ).toMatchObject({ fieldErrors: { rrule: expect.stringContaining("COUNT and UNTIL") } });
+  });
+});
+
+describe("the occurrence-identity contract", () => {
+  it("refuses an UNSCOPED write whose target is an override", async () => {
+    // This is the half that closes the soft-delete hole: it is the only path by which
+    // an override could be soft-deleted while its master is still live.
+    findEvent.mockResolvedValue({ ...eventTarget, recurrenceParentId: NEW_MASTER });
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toMatchObject({
+      fieldErrors: { id: expect.any(String) },
+    });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toMatchObject({
+      fieldErrors: { id: expect.any(String) },
+    });
+    expect(dbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a SCOPED write whose target is an override", async () => {
+    findEvent.mockResolvedValue({ ...eventTarget, recurrenceParentId: NEW_MASTER });
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: THIRD,
+      }),
+    ).toMatchObject({ fieldErrors: { id: expect.any(String) } });
+  });
+
+  it("refuses a scope on an event that does not repeat", async () => {
+    expect(
+      await updateEvent({ ...eventInput, id: EVENT, scope: "this", recurrenceId: THIRD }),
+    ).toMatchObject({ fieldErrors: { scope: expect.any(String) } });
+    expect(
+      await deleteEvent({ id: EVENT, scope: "thisAndFollowing", recurrenceId: THIRD }),
+    ).toMatchObject({ fieldErrors: { scope: expect.any(String) } });
+  });
+
+  it("refuses to move ONE occurrence to another calendar", async () => {
+    // The composite FK ties an override to its master's calendar, and moving the whole
+    // series is correct automatically through ON UPDATE CASCADE.
+    findEvent.mockResolvedValue(seriesTarget);
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        calendarId: OTHER_CAL,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: THIRD,
+      }),
+    ).toMatchObject({ fieldErrors: { calendarId: expect.any(String) } });
+  });
+
+  it("answers with the MASTER's id, never the override's", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    dbInsert.mockReturnValue({
+      values: () => ({ onConflictDoUpdate: () => Promise.resolve() }),
+    });
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: THIRD,
+      }),
+    ).toEqual({ data: { id: EVENT, calendarId: CAL } });
+  });
+});
+
+describe("updateEvent, scope: this", () => {
+  it("writes an override carrying the master's uid and calendar, with no rule", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    let written: Record<string, unknown> = {};
+    dbInsert.mockReturnValue({
+      values: (row: Record<string, unknown>) => {
+        written = row;
+        return { onConflictDoUpdate: () => Promise.resolve() };
+      },
+    });
+
+    await updateEvent({
+      ...seriesInput,
+      rrule: null,
+      id: EVENT,
+      scope: "this",
+      recurrenceId: THIRD,
+    });
+
+    expect(written).toMatchObject({
+      calendarId: CAL,
+      uid: "uid-master",
+      recurrenceParentId: EVENT,
+      recurrenceId: THIRD,
+      rrule: null,
+      seriesEndAt: null,
+    });
+  });
+});
+
+describe("updateEvent, scope: thisAndFollowing", () => {
+  it("splits the series, rewriting the uid on every re-parented override", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction();
+
+    const result = await updateEvent({
+      ...seriesInput,
+      id: EVENT,
+      scope: "thisAndFollowing",
+      recurrenceId: THIRD,
+    });
+    expect(result).toEqual({ data: { id: NEW_MASTER, calendarId: CAL } });
+
+    const created = log.inserts[0];
+    expect(created?.uid).toEqual(expect.any(String));
+    // A NEW uid: a subscriber that saw one UID split into two events at the same UID
+    // would show a duplicate.
+    expect(created?.uid).not.toBe("uid-master");
+
+    // The uid rewrite is the assertion, not the re-parenting: without it the split
+    // manufactures the exact corruption the schema leaves writer-enforced.
+    const reparent = log.updates.find((row) => "recurrenceParentId" in row);
+    expect(reparent).toEqual({ recurrenceParentId: NEW_MASTER, uid: created?.uid });
+
+    // The recurrence-date rows follow their occurrences.
+    expect(log.updates).toContainEqual({ eventId: NEW_MASTER });
+
+    // …and the first half is bounded rather than left running.
+    const bounded = log.updates.find((row) => typeof row.rrule === "string");
+    expect(bounded?.rrule).toEqual(expect.stringContaining("UNTIL="));
+  });
+
+  it("splits a COUNT rule by COUNT, not by UNTIL", async () => {
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=5;BYDAY=MO" });
+    const log = recordingTransaction();
+
+    await updateEvent({
+      ...seriesInput,
+      rrule: "FREQ=WEEKLY;COUNT=5;BYDAY=MO",
+      id: EVENT,
+      scope: "thisAndFollowing",
+      recurrenceId: THIRD,
+    });
+
+    // Two occurrences before the cut, so 2 + 3 = the original 5. Translating this into
+    // an UNTIL would drag the UTC-UNTIL-vs-zoned-DTSTART question into the commonest
+    // edit in the product.
+    expect(log.inserts[0]?.rrule).toBe("FREQ=WEEKLY;COUNT=3;BYDAY=MO");
+    expect(log.updates.find((row) => typeof row.rrule === "string")?.rrule).toBe(
+      "FREQ=WEEKLY;COUNT=2;BYDAY=MO",
+    );
+  });
+
+  it("treats a cut at the FIRST occurrence as scope: all", async () => {
+    // Taking it literally would write COUNT=0 — a rule parseRRule then refuses to read.
+    findEvent.mockResolvedValue(seriesTarget);
+    const result = await updateEvent({
+      ...seriesInput,
+      id: EVENT,
+      scope: "thisAndFollowing",
+      recurrenceId: "2027-03-15 09:00:00",
+    });
+    expect(result).toEqual({ data: { id: EVENT, calendarId: CAL } });
+    expect(dbTransaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a date that is not part of the series", async () => {
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO" });
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO",
+        id: EVENT,
+        scope: "thisAndFollowing",
+        recurrenceId: "2027-06-07 09:00:00",
+      }),
+    ).toMatchObject({ fieldErrors: { recurrenceId: expect.any(String) } });
+  });
+
+  it("refuses to turn repetition off from a date onward", async () => {
+    // It would leave the re-parented overrides pointing at a non-recurring parent.
+    findEvent.mockResolvedValue(seriesTarget);
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "thisAndFollowing",
+        recurrenceId: THIRD,
+      }),
+    ).toMatchObject({ fieldErrors: { rrule: expect.any(String) } });
+  });
+});
+
+describe("updateEvent, scope: all", () => {
+  it("drops the overrides and the skipped dates when the series MOVES", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction([{ id: EVENT, calendarId: CAL }]);
+
+    await updateEvent({
+      ...seriesInput,
+      rrule: "FREQ=WEEKLY;BYDAY=TU",
+      id: EVENT,
+      scope: "all",
+      recurrenceId: THIRD,
+    });
+    // Two deletes, one transaction: the overrides and the recurrence dates. A master
+    // whose identity moved while its modifiers survived is the corrupt state.
+    expect(log.deletes).toBe(2);
+  });
+
+  it("keeps them when only the title changed", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    recordingTransaction();
+    await updateEvent({
+      ...seriesInput,
+      title: "Renamed",
+      id: EVENT,
+      scope: "all",
+      recurrenceId: THIRD,
+    });
+    expect(dbTransaction).not.toHaveBeenCalled();
+    expect(dbUpdate).toHaveBeenCalled();
+  });
+
+  it("feeds the surviving RDATEs into series_end_at", async () => {
+    // series_end_at may over-estimate and must never under-estimate: an RDATE past the
+    // rule's own end is the one thing that can extend a series, and dropping it here
+    // would make the whole series vanish from the grid.
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO" });
+    dbSelect.mockReturnValue(selectReturning([{ kind: "rdate", dateWall: "2029-01-01 09:00:00" }]));
+    let written: Record<string, unknown> = {};
+    dbUpdate.mockReturnValue({
+      set: (row: Record<string, unknown>) => {
+        written = row;
+        return {
+          where: () => ({ returning: () => Promise.resolve([{ id: EVENT, calendarId: CAL }]) }),
+        };
+      },
+    });
+
+    await updateEvent({
+      ...seriesInput,
+      rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO",
+      title: "Renamed",
+      id: EVENT,
+      scope: "all",
+      recurrenceId: THIRD,
+    });
+    expect((written.seriesEndAt as Date).getUTCFullYear()).toBe(2029);
+  });
+
+  it("logs an unrecognised recurrence-date kind instead of dropping it", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    dbSelect.mockReturnValue(
+      selectReturning([{ kind: "exrule", dateWall: "2027-04-05 09:00:00" }]),
+    );
+    await updateEvent({ ...seriesInput, title: "Renamed", id: EVENT, ...noScope });
+    expect(logError).toHaveBeenCalledWith(
+      "calendar.recurrence-date kind not recognised",
+      expect.objectContaining({ kinds: ["exrule"] }),
+    );
+  });
+});
+
+describe("deleteEvent, scoped", () => {
+  it("is rate limited", async () => {
+    rateLimit.mockResolvedValue({ success: false });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toMatchObject({
+      error: expect.stringContaining("Too many requests"),
+    });
+  });
+
+  it("skips ONE occurrence with an EXDATE and hard-deletes its override", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction();
+
+    expect(await deleteEvent({ id: EVENT, scope: "this", recurrenceId: THIRD })).toEqual({
+      data: { id: EVENT },
+    });
+    expect(log.inserts[0]).toEqual({ eventId: EVENT, kind: "exdate", dateWall: THIRD });
+    // HARD: the EXDATE is the durable record of the skip, so a soft-deleted override
+    // beside it is redundant state that can disagree with it.
+    expect(log.deletes).toBe(1);
+    // An EXDATE never recomputes series_end_at — that column is blind to exclusions.
+    expect(log.updates).toEqual([]);
+  });
+
+  it("bounds the series and drops everything at or after the cut", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction();
+
+    await deleteEvent({ id: EVENT, scope: "thisAndFollowing", recurrenceId: THIRD });
+    expect(log.updates[0]?.rrule).toEqual(expect.stringContaining("UNTIL="));
+    expect(log.deletes).toBe(2);
+  });
+
+  it("soft-deletes a master AND its overrides in one transaction", async () => {
+    // Measured: an override matches the concrete branch exactly, so soft-deleting the
+    // master alone leaves the grid painting the occurrences of a deleted series.
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction();
+
+    await deleteEvent({ id: EVENT, ...noScope });
+    expect(log.updates).toHaveLength(2);
+    expect(log.updates[0]?.deletedAt).toBeInstanceOf(Date);
+    expect(log.updates[1]?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it("deletes the whole series when the cut is its first occurrence", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction();
+    await deleteEvent({
+      id: EVENT,
+      scope: "thisAndFollowing",
+      recurrenceId: "2027-03-15 09:00:00",
+    });
+    expect(log.updates).toHaveLength(2);
+    expect(log.deletes).toBe(0);
+  });
+});
+
+describe("setRecurrenceDate", () => {
+  const skip = { eventId: EVENT, kind: "exdate", dateWall: THIRD } as const;
+
+  it("refuses without a session and when rate limited", async () => {
+    getSessionApi.mockResolvedValue(null);
+    expect(await setRecurrenceDate(skip)).toEqual({ error: "Unauthorized" });
+    getSessionApi.mockResolvedValue(SESSION);
+    rateLimit.mockResolvedValue({ success: false });
+    expect(await setRecurrenceDate(skip)).toMatchObject({
+      error: expect.stringContaining("Too many requests"),
+    });
+  });
+
+  it("returns field errors for a bad input", async () => {
+    expect(await setRecurrenceDate({ ...skip, eventId: "nope" })).toMatchObject({
+      error: "Please fix the fields below.",
+    });
+  });
+
+  it("refuses an event that does not repeat, and an override", async () => {
+    expect(await setRecurrenceDate(skip)).toMatchObject({
+      fieldErrors: { eventId: expect.any(String) },
+    });
+    findEvent.mockResolvedValue({ ...seriesTarget, recurrenceParentId: NEW_MASTER });
+    expect(await setRecurrenceDate(skip)).toMatchObject({
+      fieldErrors: { id: expect.any(String) },
+    });
+  });
+
+  it("requires write access on the master's calendar", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    getCalendarRole.mockResolvedValue("reader");
+    expect(await setRecurrenceDate(skip)).toEqual({ error: "Forbidden" });
+  });
+
+  it("writes an EXDATE idempotently and does NOT recompute series_end_at", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction();
+    expect(await setRecurrenceDate(skip)).toEqual({ data: { eventId: EVENT, kind: "exdate" } });
+    expect(log.inserts[0]).toEqual(skip);
+    expect(log.updates).toEqual([]);
+  });
+
+  it("recomputes series_end_at for an RDATE, reading the rows back inside the write", async () => {
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO" });
+    const log = recordingTransaction(undefined, [
+      { kind: "rdate", dateWall: "2029-01-01 09:00:00" },
+    ]);
+    await setRecurrenceDate({ ...skip, kind: "rdate", dateWall: "2029-01-01 09:00:00" });
+    expect((log.updates[0]?.seriesEndAt as Date).getUTCFullYear()).toBe(2029);
+  });
+
+  it("maps a failed write", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    dbTransaction.mockRejectedValue(new Error("boom"));
+    expect(await setRecurrenceDate(skip)).toEqual({
+      error: "Failed to update the repeating event.",
+    });
+  });
+
+  it("treats a missing or soft-deleted master as not found", async () => {
+    findEvent.mockResolvedValue(undefined);
+    expect(await setRecurrenceDate(skip)).toEqual({ error: "Event not found" });
+    findEvent.mockResolvedValue({ ...seriesTarget, deletedAt: new Date() });
+    expect(await setRecurrenceDate(skip)).toEqual({ error: "Event not found" });
+  });
+
+  it("logs an unrecognised kind found while recomputing", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    const log = recordingTransaction(undefined, [{ kind: "exrule", dateWall: THIRD }]);
+    await setRecurrenceDate({ ...skip, kind: "rdate" });
+    expect(log.updates).toHaveLength(1);
+    expect(logError).toHaveBeenCalledWith(
+      "calendar.recurrence-date kind not recognised",
+      expect.objectContaining({ kinds: ["exrule"] }),
+    );
+  });
+});
+
+describe("a stored rule that no longer parses", () => {
+  // Detect and report, never crash: the same posture the schema's writer-enforced
+  // invariants take. A grammar narrowed by a later phase must not make an existing
+  // series un-editable and un-deletable.
+  const broken = { ...seriesTarget, rrule: "FREQ=HOURLY" };
+
+  it("is a message on every scoped path, not a 500", async () => {
+    findEvent.mockResolvedValue(broken);
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        id: EVENT,
+        scope: "thisAndFollowing",
+        recurrenceId: THIRD,
+      }),
+    ).toEqual({ error: "This repeating event's rule could not be read." });
+    expect(
+      await deleteEvent({ id: EVENT, scope: "thisAndFollowing", recurrenceId: THIRD }),
+    ).toEqual({ error: "This repeating event's rule could not be read." });
+    expect(await setRecurrenceDate({ eventId: EVENT, kind: "rdate", dateWall: THIRD })).toEqual({
+      error: "This repeating event's rule could not be read.",
+    });
+  });
+
+  it("still lets the whole event be edited, which is how it gets fixed", async () => {
+    findEvent.mockResolvedValue(broken);
+    recordingTransaction([{ id: EVENT, calendarId: CAL }]);
+    expect(await updateEvent({ ...seriesInput, id: EVENT, ...noScope })).toEqual({
+      data: { id: EVENT, calendarId: CAL },
+    });
+  });
+});
+
+describe("recurrence writes that fail", () => {
+  it("reports a bad submitted rule on an unscoped update", async () => {
+    expect(
+      await updateEvent({ ...eventInput, rrule: "FREQ=SECONDLY", id: EVENT, ...noScope }),
+    ).toMatchObject({ fieldErrors: { rrule: expect.stringContaining("SECONDLY") } });
+  });
+
+  it("refuses a cut past a UNTIL bound", async () => {
+    findEvent.mockResolvedValue({
+      ...seriesTarget,
+      rrule: "FREQ=WEEKLY;UNTIL=20270401T000000Z;BYDAY=MO",
+    });
+    expect(
+      await deleteEvent({
+        id: EVENT,
+        scope: "thisAndFollowing",
+        recurrenceId: "2028-01-03 09:00:00",
+      }),
+    ).toMatchObject({ fieldErrors: { recurrenceId: expect.any(String) } });
+  });
+
+  it("partitions the RDATE rows across the cut", async () => {
+    // A COUNT rule, because an RDATE cannot bound an unbounded series: `series_end_at`
+    // stays NULL there, and NULL is not an under-estimate.
+    const counted = "FREQ=WEEKLY;COUNT=5;BYDAY=MO";
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: counted });
+    dbSelect.mockReturnValue(
+      selectReturning([
+        { kind: "rdate", dateWall: "2027-03-17 09:00:00" },
+        { kind: "rdate", dateWall: "2029-01-01 09:00:00" },
+      ]),
+    );
+    const log = recordingTransaction();
+
+    await updateEvent({
+      ...seriesInput,
+      rrule: counted,
+      id: EVENT,
+      scope: "thisAndFollowing",
+      recurrenceId: THIRD,
+    });
+    // The 2029 RDATE moved with the second half, so only IT extends a series_end_at —
+    // the first half's bound must not inherit it.
+    expect((log.inserts[0]?.seriesEndAt as Date).getUTCFullYear()).toBe(2029);
+    const bounded = log.updates.find((row) => typeof row.rrule === "string");
+    expect((bounded?.seriesEndAt as Date).getUTCFullYear()).toBe(2027);
+  });
+
+  it("maps a failed split and a failed occurrence write", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    dbTransaction.mockRejectedValue(new Error("boom"));
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        id: EVENT,
+        scope: "thisAndFollowing",
+        recurrenceId: THIRD,
+      }),
+    ).toEqual({ error: "Failed to update the event." });
+
+    dbInsert.mockReturnValue({
+      values: () => ({ onConflictDoUpdate: () => Promise.reject(new Error("boom")) }),
+    });
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: THIRD,
+      }),
+    ).toEqual({ error: "Failed to update the event." });
+  });
+
+  it("maps a failed scoped delete", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    dbTransaction.mockRejectedValue(new Error("boom"));
+    expect(await deleteEvent({ id: EVENT, scope: "this", recurrenceId: THIRD })).toEqual({
+      error: "Failed to delete the event.",
+    });
+    expect(
+      await deleteEvent({ id: EVENT, scope: "thisAndFollowing", recurrenceId: THIRD }),
+    ).toEqual({ error: "Failed to delete the event." });
+  });
+
+  it("surfaces a split insert that returns no row", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    recordingTransaction([]);
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        id: EVENT,
+        scope: "thisAndFollowing",
+        recurrenceId: THIRD,
+      }),
+    ).toEqual({ error: "Failed to update the event." });
+  });
+
+  it("surfaces a whole-event update that returns no row while dropping modifiers", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    recordingTransaction([]);
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: "FREQ=WEEKLY;BYDAY=TU",
+        id: EVENT,
+        scope: "all",
+        recurrenceId: THIRD,
+      }),
+    ).toEqual({ error: "Failed to update the event." });
   });
 });

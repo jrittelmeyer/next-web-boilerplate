@@ -308,6 +308,7 @@ export const deleteEventSchema = z.object({
 });
 
 export type DeleteEventInput = z.infer<typeof deleteEventSchema>;
+export type DeleteEventValues = z.input<typeof deleteEventSchema>;
 
 /** Skip an occurrence (`exdate`) or add one (`rdate`). */
 export const recurrenceDateSchema = z.object({
@@ -338,11 +339,27 @@ export const MAX_RANGE_CALENDARS = 20;
 /** Just over a year, so a "whole year" view fits in one call and nothing else does. */
 export const MAX_RANGE_DAYS = 400;
 /**
- * Hard row cap. The response carries `truncated: true` rather than silently
+ * Hard row cap, over the **merged** stream of concrete rows and expanded
+ * occurrences. The response carries `truncated: true` rather than silently
  * returning a short list — a month that quietly loses its 2,001st event is the
  * failure mode this exists to make visible.
+ *
+ * Merged, and time-ordered, on purpose: if the concrete branch could consume the
+ * cap on its own, a tenant with 2,000 one-off events in a month would get zero
+ * occurrences from every series — including the daily standup they opened the grid
+ * to see. That truncation is *category*-shaped, which is strictly worse than the
+ * tail-shaped one this copy was written for.
  */
 export const MAX_RANGE_ROWS = 2000;
+/**
+ * How many series masters one window query will expand. The only bound on
+ * `MAX_RANGE_SERIES × MAX_RECURRENCE_COUNT` iterations of in-process expansion,
+ * which is why it is a number rather than "however many came back".
+ *
+ * Reported separately as `seriesTruncated`: "some events are hidden" and "some
+ * repeating events are hidden" are different problems to the reader.
+ */
+export const MAX_RANGE_SERIES = 200;
 
 const MS_PER_DAY = 86_400_000;
 

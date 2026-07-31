@@ -102,6 +102,38 @@ written; the probe results are what changed three of them.
   deleted_at IS NULL` spelled out. Measured: through the view the planner cannot prove the
   partial index applicable (`Seq Scan`), and the view hides the override rows a range scan
   must include — fast *and*, from Phase 2, silently wrong. An `EXPLAIN` assertion pins it.
+  Phase 2 adds a third query to the same procedure, the **override-suppression scan**, and
+  with it migration `0021`: `(recurrence_parent_id, recurrence_id) WHERE
+  recurrence_parent_id IS NOT NULL`, **131× fewer index buffers and smaller than the index
+  it replaces** (96 kB vs 176 kB). A plain btree stores NULL keys, so the non-partial
+  variant is 55% *larger*, not the same size — measure index shapes, never infer them.
+- **Recurrence is stored as a rule plus modifier rows, never as expanded events.** An
+  `RRULE` string on the master, one `calendar_recurrence_dates` row per `EXDATE`/`RDATE`,
+  and a full `calendar_events` row per per-occurrence override. Rows rather than a jsonb
+  array because "skip this occurrence" as an array element is read-modify-write, so two
+  users skipping two occurrences in the same second silently resurrect one; as a row it is
+  `ON CONFLICT DO NOTHING`. Expansion happens **in the app, per window**, so an unbounded
+  series never materialises.
+- **The `RRULE` grammar has exactly one owner: `packages/calendar/src/rrule.ts`.**
+  `@repo/validators/calendar` constrains only the string's *shape* — the same split
+  `localDateTimeSchema` and `parseLocalDateTime` already use. Two RFC 5545 parsers in two
+  packages would be two answers. Ours is deliberately stricter than the obvious reference
+  implementation: measured, `rrule@2.8.1` accepts a rule with no `FREQ`, `COUNT` and
+  `UNTIL` together, `INTERVAL=0`, and `COUNT=-1` (416,011 occurrences).
+- **The differential oracle is a checked-in fixture, not a live dependency.**
+  `rrule@2.8.1` runs **once**, at build time, into `src/__fixtures__/rrule-corpus.json`;
+  the permanent test diffs our engine against that file and CI never executes a
+  2.7-year-stale package. Two anti-tamper gates, because a red differential has exactly one
+  one-line "fix" — rerun the generator — which converts the oracle into a mirror of the
+  engine: the fixture was **committed before `expand.ts` was written**, and its SHA-256 is
+  **pinned in the test**, so regenerating is a visible two-file diff a reviewer must
+  approve.
+- **`id` is always the series master's; an occurrence is named by `(id, recurrenceId)`.**
+  The grid renders virtual occurrences and materialised overrides as identical chips and
+  both ids are `uuid`, so an override's own id never leaves the server. A write whose
+  target is an override is refused *whether or not it carries a scope* — the unscoped half
+  is what stops an override being soft-deleted while its master is live, which is the one
+  state the suppression query deliberately refuses to paper over.
 - **Events soft-delete; calendars hard-delete.** A Phase-6 feed subscriber has to learn
   that a deletion *happened*, which a removed row cannot announce. A soft-deleted
   *calendar*, by contrast, would leave its events reachable by id and invisible in every

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { deleteEvent } from "@/server/actions/calendar";
+import { RecurrenceDatesField } from "./recurrence-dates-field";
+import { RecurrenceSummary } from "./recurrence-summary";
 
 /**
  * The single-event page body.
@@ -36,6 +38,8 @@ export function EventDetail({
     startTzid: string;
     endWall: string;
     endTzid: string;
+    /** `null` for a one-off. This page only ever renders a master, never an override. */
+    rrule: string | null;
   };
   calendarName: string;
 }) {
@@ -46,7 +50,9 @@ export function EventDetail({
 
   async function onDelete() {
     setDeleting(true);
-    const result = await deleteEvent({ id: event.id });
+    // Unscoped: this page only ever shows a series master or a one-off, and an
+    // unscoped delete of a master soft-deletes its overrides too.
+    const result = await deleteEvent({ id: event.id, scope: null, recurrenceId: null });
     setDeleting(false);
     if ("error" in result) {
       toast.error(result.error);
@@ -101,6 +107,11 @@ export function EventDetail({
           </>
         ) : null}
 
+        <dt className="text-sm font-medium">{t("repeats")}</dt>
+        <dd className="text-sm">
+          <RecurrenceSummary rrule={event.rrule} />
+        </dd>
+
         <dt className="text-sm font-medium">{t("status")}</dt>
         <dd className="text-sm">{t(`statusValue.${event.status}`)}</dd>
 
@@ -113,6 +124,14 @@ export function EventDetail({
 
       {event.description ? (
         <p className="whitespace-pre-wrap text-sm">{event.description}</p>
+      ) : null}
+
+      {event.rrule ? (
+        <RecurrenceDatesField
+          eventId={event.id}
+          startWall={event.startWall}
+          startTzid={event.startTzid}
+        />
       ) : null}
 
       <div className="flex gap-2">
