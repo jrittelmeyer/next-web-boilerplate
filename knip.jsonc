@@ -44,6 +44,18 @@
         "src/test/*.ts"
       ]
     },
+    "packages/calendar": {
+      "entry": [
+        // The frozen differential oracle's generator. A stdin-free `node scripts/…`
+        // script nothing imports, so knip can't see it on the import graph — but it is
+        // the only thing that can rebuild `src/__fixtures__/rrule-corpus.json`, and it
+        // is what makes `rrule` a used devDependency rather than an orphan. Deliberately
+        // NOT wired into a package script: regenerating the oracle must be an explicit
+        // act a reviewer approves, not something a test run can trigger. See
+        // docs/context/calendar/recurrence.md.
+        "scripts/generate-rrule-corpus.mjs"
+      ]
+    },
     "packages/email": {
       // knip's react-email plugin assumes `email dev` (the preview script) requires
       // this package on react-email >= 6; this repo's preview + `email export` are
