@@ -25,7 +25,11 @@ One imperative per line; mechanics + rationale live in
   `civilToInstant` / `resolveCivil`, even for a query bound.
 - A new module joins the coverage run automatically (`all: true`); the gate is
   **100/100/100/100**.
-- **The recurrence engine is only swappable until the first `recurrence_id` row
-  exists.** `recurrence_id` is produced by this engine, so after Phase 2 ships data
-  a different engine orphans override rows. The package boundary is a *code* seam,
-  not a *data* seam — swapping later costs a data migration.
+- **The engine-swap window is CLOSED.** `recurrence_id` is produced by this engine and
+  Phase 2 ships rows carrying it, so a different engine that computes one occurrence
+  differently orphans its override. The package boundary is a *code* seam, not a *data*
+  seam: swapping from here costs a data migration, not a refactor.
+- `rrule` is an exact-pinned **devDependency** — the frozen differential oracle's
+  generator only (`scripts/generate-rrule-corpus.mjs`, knip `entry`). It is deliberately
+  not wired into a package script: regenerating the oracle must be an explicit act a
+  reviewer approves, not something a test run can trigger. Runtime dependencies stay zero.

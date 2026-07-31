@@ -30,7 +30,7 @@ export function EventChip({
   showLabel: boolean;
   continuesBefore: boolean;
   continuesAfter: boolean;
-  onOpen: (eventId: string) => void;
+  onOpen: (event: CalendarEventView) => void;
 }) {
   const t = useTranslations("Calendar.chip");
   const format = useFormatter();
@@ -41,7 +41,10 @@ export function EventChip({
   const time = event.allDay ? null : format.dateTime(event.startAt, "timeOnly");
 
   const label = event.allDay ? event.title : `${time} ${event.title}`;
-  const accessibleLabel = continuesBefore ? t("continued", { title: event.title }) : label;
+  const named = continuesBefore ? t("continued", { title: event.title }) : label;
+  // The glyph is decorative; the fact it stands for goes into the name, because a
+  // screen-reader user gets no visual cue that this chip is one of many.
+  const accessibleLabel = event.recurring ? t("repeating", { label: named }) : named;
 
   return (
     <button
@@ -54,7 +57,7 @@ export function EventChip({
       // composer's fields because the day popover had taken focus.
       onClick={(clickEvent) => {
         clickEvent.stopPropagation();
-        onOpen(event.id);
+        onOpen(event);
       }}
       aria-label={accessibleLabel}
       title={label}
@@ -75,6 +78,11 @@ export function EventChip({
         <span className="truncate">
           {time ? <span className="tabular-nums text-muted-foreground">{time} </span> : null}
           {event.title}
+          {event.recurring ? (
+            <span aria-hidden="true" className="ml-1 text-muted-foreground">
+              ↻
+            </span>
+          ) : null}
         </span>
       ) : null}
     </button>

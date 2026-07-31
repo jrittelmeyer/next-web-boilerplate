@@ -671,7 +671,8 @@
   },
   "Calendar": {
     "chip": {
-      "continued": "{title} (continued)"
+      "continued": "{title} (continued)",
+      "repeating": "{label}, repeats"
     },
     "grid": {
       "ariaLabel": "Calendar for {month}"
@@ -684,6 +685,7 @@
     },
     "workspace": {
       "truncated": "This month has more events than can be shown. Hide some calendars to see the rest.",
+      "seriesTruncated": "This month has more repeating events than can be shown. Hide some calendars to see the rest.",
       "noCalendars": "Create a calendar to start adding events.",
       "dayDescription": "Events on this day.",
       "dayEmpty": "Nothing scheduled.",
@@ -767,15 +769,75 @@
         "transparent": "Free"
       },
       "urlLabel": "Link",
+      "repeatLabel": "Repeats",
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
+      "delete": "Delete",
       "created": "Event created.",
-      "updated": "Event updated."
+      "updated": "Event updated.",
+      "deleted": "Event deleted."
+    },
+    "recurrence": {
+      "never": "Does not repeat",
+      "unreadable": "Custom repeat rule",
+      "customLabel": "Repeat rule (RRULE)",
+      "preset": {
+        "never": "Does not repeat",
+        "daily": "Every day",
+        "weekly": "Every week",
+        "monthly": "Every month",
+        "yearly": "Every year",
+        "custom": "Custom…"
+      },
+      "every": {
+        "DAILY": "{interval, plural, =1 {Every day} other {Every # days}}",
+        "WEEKLY": "{interval, plural, =1 {Every week} other {Every # weeks}}",
+        "MONTHLY": "{interval, plural, =1 {Every month} other {Every # months}}",
+        "YEARLY": "{interval, plural, =1 {Every year} other {Every # years}}"
+      },
+      "inMonths": "{base} in {months}",
+      "onOrdinals": "{base} on the {days}",
+      "onWeekdays": "{base} on {days}",
+      "positions": "{base}, taking the {positions}",
+      "count": "{base}, {count, plural, =1 {once} other {# times}}",
+      "until": "{base}, until {date}",
+      "ordinal": "{position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "fromEnd": "{position, selectordinal, =1 {last} one {#st from last} two {#nd from last} few {#rd from last} other {#th from last}}",
+      "ordinalWeekday": "{position} {weekday}",
+      "dayOfMonth": "{position} day"
+    },
+    "recurrenceDates": {
+      "label": "A single date in this series",
+      "help": "Read in {zone}, the series' own time zone — the same reading the occurrence has.",
+      "skip": "Skip this date",
+      "add": "Add this date",
+      "skipped": "That date is now skipped.",
+      "added": "That date was added to the series."
+    },
+    "scope": {
+      "confirm": "Continue",
+      "cancel": "Cancel",
+      "dropsOverrides": "This change moves the whole series, so any occurrences you moved individually — and any dates you skipped — will be lost.",
+      "edit": {
+        "title": "Change which occurrences?",
+        "description": "This event repeats. Choose what your changes apply to.",
+        "this": "Only this occurrence",
+        "thisAndFollowing": "This and all later occurrences",
+        "all": "Every occurrence"
+      },
+      "delete": {
+        "title": "Delete which occurrences?",
+        "description": "This event repeats. Choose what to delete.",
+        "this": "Only this occurrence",
+        "thisAndFollowing": "This and all later occurrences",
+        "all": "Every occurrence"
+      }
     },
     "detail": {
       "when": "When",
       "asEntered": "Entered as {start} ({startZone}) to {end} ({endZone})",
+      "repeats": "Repeats",
       "location": "Location",
       "url": "Link",
       "status": "Status",

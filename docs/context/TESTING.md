@@ -294,6 +294,36 @@ live tz database rather than blocking them — see
 [calendar/model.md](calendar/model.md#derived-instants-are-enforced-by-arithmetic-not-by-tzdata)
 for why blocking would be the wrong answer.
 
+⚠️ **`VACUUM (ANALYZE)` runs before the suppression query's `EXPLAIN`, and the comment
+says why.** Measured: on a freshly-inserted, `ANALYZE`d-but-not-`VACUUM`ed table the
+planner still chooses `Index Only Scan` — but reports **563 heap fetches instead of 0**,
+because the visibility map is unset. Without the `VACUUM` the assertion would pin a node
+type whose defining property is absent, which is worse than not asserting it. Buffer
+counts (1,971 → 15) stay in the comment: a measurement is not an invariant.
+
+### The frozen differential oracle (`packages/calendar`)
+
+`rrule@2.8.1` is the independent oracle for the recurrence engine, and it runs **once**.
+`scripts/generate-rrule-corpus.mjs` emits `src/__fixtures__/rrule-corpus.json` — 528 rules
+generated as a deterministic cross-product of the *supported* grammar, each with rrule's
+expansion — and the permanent test diffs our engine against that file. CI never executes a
+2.7-year-stale dependency, generated projects never inherit it in their test path, and the
+corpus is a reviewable diff artifact rather than a runtime.
+
+**A red differential has exactly one one-line "fix" — rerun the generator — which converts
+the oracle into a mirror of the engine. Two gates stop that:**
+
+1. **The fixture was committed before `expand.ts` was written** (`74b475e` precedes
+   `3561c8d`), so it cannot have been fitted to the implementation.
+2. **Its SHA-256 is pinned in `rrule-corpus.test.ts`**, so regenerating is a visible
+   two-file diff a reviewer must approve, not a blob change nobody reads.
+
+Regeneration is a documented **two-step**, because Biome reformats the JSON: run the
+generator, let Biome format it, then update the pin from the committed bytes.
+
+⚠️ **If the differential goes red, do not rerun the generator.** Fix the engine, or
+adjudicate the divergence against RFC 5545 and record the citation in the fixture.
+
 **`@repo/jobs` follows the same split:**
 - **Unit** (`verify` lane, DB-free) — `vitest.config.ts` covers the pure parts: the job
   contract (`queues.ts`) and the handlers with their providers mocked (`@repo/email`,

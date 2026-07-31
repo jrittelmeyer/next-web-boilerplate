@@ -204,6 +204,42 @@ it is the only thing that catches a regression here before Phase 2 makes it wron
 well as slow. The view is **auto-updatable** and drizzle emits no `WITH CHECK OPTION`,
 so it is technically a write path: never write through it.
 
+From Phase 2 the range query is **three** queries, not one: the concrete branch above, a
+masters branch on `calendar_events_recurring_idx`, and the **override-suppression scan** —
+*which occurrences of these masters already have an override row?* — on
+`calendar_events_override_idx`. That third access pattern is what migration `0021` exists
+for. Measured on PG 18 at 22,400 rows / 2,000 overrides, after `VACUUM (ANALYZE)`, on the
+identical query:
+
+| Index | Size | Plan | Index-side buffers |
+| --- | --- | --- | --- |
+| `(recurrence_parent_id)` — Phase 1's | 176 kB | `Index Scan`, `recurrence_id` as a Filter, 1,405 rows discarded | 1,971 |
+| `(recurrence_parent_id, recurrence_id)` plain | 232 kB | — | — |
+| `+ calendar_id` plain | 272 kB | — | — |
+| **`(recurrence_parent_id, recurrence_id) WHERE recurrence_parent_id IS NOT NULL`** | **96 kB** | **`Index Only Scan`, Heap Fetches 0** | **15** |
+| `+ calendar_id`, partial | 136 kB | `Index Only Scan`, Heap Fetches 0 | 17 |
+
+**A plain btree stores NULL keys**, so "only override rows are non-NULL, therefore the
+index is the same size" is false — the plain three-column variant is 55% *larger* than the
+single-column index it would replace. The partial predicate is what actually buys "override
+rows only", and it lands smaller than what it replaces. `calendar_id` is absent because it
+buys nothing measurable and `calendar_events_parent_same_calendar` makes it redundant. The
+partial index still serves the FK cascade, verified: a strict `= $1` implies `IS NOT NULL`,
+which Postgres can prove against the predicate.
+
+### Override integrity — one rule of three is enforced by the database
+
+| Rule | Enforced by |
+| --- | --- |
+| An override lives in its master's calendar | **`calendar_events_parent_same_calendar`** — a composite FK, `ON UPDATE CASCADE`, so a master that changes calendar takes its overrides with it |
+| An override carries its master's `uid` | The writer, plus a detection assertion in the integration suite |
+| An override's parent is a recurring event | The writer, plus the same detection assertion |
+
+The last two are cross-row predicates a `CHECK` cannot express. **Detected and reported,
+never blocked** — the same posture this document takes for the derived-instant residual,
+and for the same reason: a guard that can make an existing row un-editable is worse than
+the drift it prevents.
+
 ## Testing
 
 `packages/calendar` is gated at **100/100/100/100** with `all: true`, the

@@ -56,12 +56,19 @@ export function CalendarWorkspace({
   // of full event bodies is a lot of wire for text nothing on the grid renders — so
   // seeding the composer from a grid row would submit `null` for both and silently
   // erase them. The detail read is the one that has the whole event.
-  const [editingId, setEditingId] = useState<string | null>(null);
+  //
+  // The whole chip is kept, not just its id: `byId` answers with the series master (or
+  // the override row, when one exists), and only the chip knows which *occurrence* was
+  // clicked — a virtual occurrence has no row anywhere to read its own times from.
+  const [editing, setEditing] = useState<CalendarEventView | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
 
   const editingQuery = useQuery({
-    ...trpc.calendar.byId.queryOptions({ id: editingId ?? "" }),
-    enabled: editingId !== null,
+    ...trpc.calendar.byId.queryOptions({
+      id: editing?.id ?? "",
+      recurrenceId: editing?.recurrenceId ?? null,
+    }),
+    enabled: editing !== null,
   });
 
   const calendarsQuery = useQuery(trpc.calendar.list.queryOptions({}));
@@ -117,26 +124,34 @@ export function CalendarWorkspace({
   }
 
   const loaded = editingQuery.data;
-  const editingDefaults: EventComposerDefaults | null = loaded
-    ? {
-        id: loaded.event.id,
-        calendarId: loaded.event.calendarId,
-        title: loaded.event.title,
-        description: loaded.event.description,
-        location: loaded.event.location,
-        url: loaded.event.url,
-        color: loaded.event.color,
-        status: loaded.event.status,
-        visibility: loaded.event.visibility,
-        transparency: loaded.event.transparency,
-        allDay: loaded.event.allDay,
-        startWall: loaded.event.startWall,
-        startTzid: loaded.event.startTzid,
-        endWall: loaded.event.endWall,
-        endTzid: loaded.event.endTzid,
-      }
-    : null;
-  const activeDefaults = editingId ? editingDefaults : composer;
+  const editingDefaults: EventComposerDefaults | null =
+    loaded && editing
+      ? {
+          // The chip's id, not the loaded row's: for an override those differ, and the
+          // one a scoped write may name is the master's.
+          id: editing.id,
+          recurrenceId: editing.recurrenceId,
+          calendarId: loaded.event.calendarId,
+          title: loaded.event.title,
+          description: loaded.event.description,
+          location: loaded.event.location,
+          url: loaded.event.url,
+          color: loaded.event.color,
+          status: loaded.event.status,
+          visibility: loaded.event.visibility,
+          transparency: loaded.event.transparency,
+          allDay: loaded.event.allDay,
+          // An occurrence's times come from the chip. For a materialised override the
+          // two agree; for a virtual occurrence the chip is the only place they exist,
+          // and seeding from the master would move the edit to the series' own start.
+          startWall: editing.recurrenceId === null ? loaded.event.startWall : editing.startWall,
+          startTzid: editing.recurrenceId === null ? loaded.event.startTzid : editing.startTzid,
+          endWall: editing.recurrenceId === null ? loaded.event.endWall : editing.endWall,
+          endTzid: editing.recurrenceId === null ? loaded.event.endTzid : editing.endTzid,
+          rrule: loaded.seriesRrule,
+        }
+      : null;
+  const activeDefaults = editing ? editingDefaults : composer;
 
   const dayEvents = openDay
     ? events.filter((event) => {
@@ -189,6 +204,18 @@ export function CalendarWorkspace({
           </p>
         ) : null}
 
+        {rangeQuery.data?.seriesTruncated ? (
+          // A separate sentence, not the same one. "Some events are hidden" and "some
+          // repeating events are hidden" are different problems to the reader, and
+          // hiding a calendar fixes only one of them.
+          <p
+            className="rounded-md border border-dashed p-2 text-sm text-muted-foreground"
+            role="status"
+          >
+            {t("seriesTruncated")}
+          </p>
+        ) : null}
+
         {calendarsQuery.isPending ? (
           <Skeleton className="h-96 w-full" />
         ) : calendars.length === 0 ? (
@@ -206,7 +233,7 @@ export function CalendarWorkspace({
             timeZone={timeZone}
             events={events}
             onOpenDay={setOpenDay}
-            onOpenEvent={setEditingId}
+            onOpenEvent={setEditing}
           />
         )}
       </div>
@@ -226,14 +253,14 @@ export function CalendarWorkspace({
           </DialogHeader>
           <ul className="flex flex-col gap-2">
             {dayEvents.map((event) => (
-              <li key={event.id}>
+              <li key={event.key}>
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => {
                     setOpenDay(null);
-                    setEditingId(event.id);
+                    setEditing(event);
                   }}
                 >
                   {event.title}
@@ -259,26 +286,26 @@ export function CalendarWorkspace({
       </Dialog>
 
       <Dialog
-        open={composer !== null || editingId !== null}
+        open={composer !== null || editing !== null}
         onOpenChange={(open) => {
           if (open) return;
           setComposer(null);
-          setEditingId(null);
+          setEditing(null);
         }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? t("editTitle") : t("createTitle")}</DialogTitle>
+            <DialogTitle>{editing ? t("editTitle") : t("createTitle")}</DialogTitle>
             <DialogDescription>{t("composerDescription")}</DialogDescription>
           </DialogHeader>
           {activeDefaults ? (
             <EventComposer
-              key={editingId ?? "new"}
+              key={editing?.key ?? "new"}
               defaults={activeDefaults}
               calendars={calendars}
               onDone={() => {
                 setComposer(null);
-                setEditingId(null);
+                setEditing(null);
                 refetchAll();
               }}
             />

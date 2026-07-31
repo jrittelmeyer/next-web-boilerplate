@@ -671,7 +671,8 @@
   },
   "Calendar": {
     "chip": {
-      "continued": "{title} (continúa)"
+      "continued": "{title} (continúa)",
+      "repeating": "{label}, se repite"
     },
     "grid": {
       "ariaLabel": "Calendario de {month}"
@@ -684,6 +685,7 @@
     },
     "workspace": {
       "truncated": "Este mes tiene más eventos de los que se pueden mostrar. Oculta algunos calendarios para ver el resto.",
+      "seriesTruncated": "Este mes tiene más eventos repetidos de los que se pueden mostrar. Oculta algunos calendarios para ver el resto.",
       "noCalendars": "Crea un calendario para empezar a añadir eventos.",
       "dayDescription": "Eventos de este día.",
       "dayEmpty": "Nada programado.",
@@ -767,15 +769,75 @@
         "transparent": "Libre"
       },
       "urlLabel": "Enlace",
+      "repeatLabel": "Se repite",
       "save": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
+      "delete": "Eliminar",
       "created": "Evento creado.",
-      "updated": "Evento actualizado."
+      "updated": "Evento actualizado.",
+      "deleted": "Evento eliminado."
+    },
+    "recurrence": {
+      "never": "No se repite",
+      "unreadable": "Regla de repetición personalizada",
+      "customLabel": "Regla de repetición (RRULE)",
+      "preset": {
+        "never": "No se repite",
+        "daily": "Cada día",
+        "weekly": "Cada semana",
+        "monthly": "Cada mes",
+        "yearly": "Cada año",
+        "custom": "Personalizada…"
+      },
+      "every": {
+        "DAILY": "{interval, plural, =1 {Cada día} other {Cada # días}}",
+        "WEEKLY": "{interval, plural, =1 {Cada semana} other {Cada # semanas}}",
+        "MONTHLY": "{interval, plural, =1 {Cada mes} other {Cada # meses}}",
+        "YEARLY": "{interval, plural, =1 {Cada año} other {Cada # años}}"
+      },
+      "inMonths": "{base} en {months}",
+      "onOrdinals": "{base} el {days}",
+      "onWeekdays": "{base} los {days}",
+      "positions": "{base}, tomando el {positions}",
+      "count": "{base}, {count, plural, =1 {una vez} other {# veces}}",
+      "until": "{base}, hasta el {date}",
+      "ordinal": "{position, selectordinal, other {#.º}}",
+      "fromEnd": "{position, selectordinal, =1 {último} other {#.º empezando por el final}}",
+      "ordinalWeekday": "{position} {weekday}",
+      "dayOfMonth": "día {position}"
+    },
+    "recurrenceDates": {
+      "label": "Una fecha suelta de esta serie",
+      "help": "Se lee en {zone}, la zona horaria de la serie: la misma lectura que tiene la repetición.",
+      "skip": "Omitir esta fecha",
+      "add": "Añadir esta fecha",
+      "skipped": "Esa fecha ahora se omite.",
+      "added": "Esa fecha se añadió a la serie."
+    },
+    "scope": {
+      "confirm": "Continuar",
+      "cancel": "Cancelar",
+      "dropsOverrides": "Este cambio mueve toda la serie, así que se perderán las repeticiones que hayas movido por separado y las fechas que hayas omitido.",
+      "edit": {
+        "title": "¿Qué repeticiones quieres cambiar?",
+        "description": "Este evento se repite. Elige a qué se aplican tus cambios.",
+        "this": "Solo esta repetición",
+        "thisAndFollowing": "Esta y todas las posteriores",
+        "all": "Todas las repeticiones"
+      },
+      "delete": {
+        "title": "¿Qué repeticiones quieres eliminar?",
+        "description": "Este evento se repite. Elige qué eliminar.",
+        "this": "Solo esta repetición",
+        "thisAndFollowing": "Esta y todas las posteriores",
+        "all": "Todas las repeticiones"
+      }
     },
     "detail": {
       "when": "Cuándo",
       "asEntered": "Introducido como {start} ({startZone}) a {end} ({endZone})",
+      "repeats": "Se repite",
       "location": "Ubicación",
       "url": "Enlace",
       "status": "Estado",

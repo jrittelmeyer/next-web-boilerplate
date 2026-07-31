@@ -76,17 +76,21 @@ produces less, the difference is what you forgot to delete from the schema.
 ```sql
 DROP VIEW IF EXISTS "public"."calendar_event_masters";
 --> statement-breakpoint
+DROP TABLE IF EXISTS "calendar_recurrence_dates";
+--> statement-breakpoint
 DROP TABLE IF EXISTS "calendar_events";
 --> statement-breakpoint
 DROP TABLE IF EXISTS "calendars";
 ```
 
-Three statements is all it takes: every index, CHECK, unique constraint and foreign key
-in `0020` is attached to one of those two tables, and both foreign keys into them
-(`calendar_events.calendar_id`, the `recurrence_parent_id` self-reference) go with the
-table. The view is dropped first because Postgres refuses to drop a table a view depends
-on without `CASCADE`, and an explicit `DROP VIEW` says what is happening instead of
-letting `CASCADE` silently take whatever else might have accumulated.
+Four statements is all it takes: every index, CHECK, unique constraint and foreign key in
+`0020` and `0021` is attached to one of those three tables, and every foreign key into
+them (`calendar_events.calendar_id`, the composite `recurrence_parent_id, calendar_id`
+self-reference added by `0021`, and `calendar_recurrence_dates.event_id`) goes with the
+table. `calendar_recurrence_dates` is dropped before `calendar_events` because it
+references it. The view is dropped first because Postgres refuses to drop a table a view
+depends on without `CASCADE`, and an explicit `DROP VIEW` says what is happening instead
+of letting `CASCADE` silently take whatever else might have accumulated.
 
 **This is destructive and there is no soft version of it.** `calendar_events` uses
 `deleted_at` for user-facing deletion; this drops the rows for real, including

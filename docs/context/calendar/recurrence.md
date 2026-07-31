@@ -6,9 +6,9 @@ overrides, or the edit and delete scopes. The time model underneath it all is
 [`packages/calendar/AGENTS.md`](../../../packages/calendar/AGENTS.md) and
 [`packages/db/AGENTS.md`](../../../packages/db/AGENTS.md).
 
-> **Status:** Phase 2. Schema and migration `0021` are applied. The engine
-> (`rrule.ts`, `expand.ts`, `occurrences.ts`), the scoped actions and the builder UI land
-> on this branch; attendees on overrides are Phase 3 and ICS import is Phase 6.
+> **Status:** Phase 2 is complete — schema (`0021`), the engine (`rrule.ts`, `expand.ts`,
+> `occurrences.ts`), the scoped actions, the expanded month grid and the builder UI.
+> Attendees on overrides are Phase 3 and ICS import is Phase 6.
 
 ## The grammar we support, and the parts we refuse
 
@@ -116,6 +116,31 @@ concrete branch's `rrule IS NULL AND deleted_at IS NULL` exactly, so the grid wo
 painting the occurrences of a deleted series. The writer must do both in one transaction.
 Postgres could enforce this with a trigger and deliberately does not: the schema here
 enforces *invariants*, not *behaviour*.
+
+## The three scopes, and the identity contract underneath them
+
+The full table of what each scope writes is in [api.md → The three scopes](api.md); the
+part that belongs here is *why the contract exists at all*.
+
+The grid renders a virtual occurrence and a materialised override as **identical chips**.
+That is the point — a moved occurrence should look like an occurrence, not like a
+different kind of thing. It is also what makes an id ambiguous, because both are `uuid`.
+So: **`id` is always the series master's**, `recurrenceId` names the occurrence, and the
+action resolves the override row itself. A write whose target is an override is refused
+*whether or not it carries a scope*, and the unscoped half is what stops an override being
+soft-deleted while its master is live — the state the warning above describes, closed at
+the writer rather than papered over in the query.
+
+Two consequences worth stating separately:
+
+- **The suppression query carries no `deleted_at` predicate**, deliberately. A
+  soft-deleted override still means *this occurrence is not a plain occurrence*, so
+  filtering it would resurrect the base occurrence at its original time — the opposite of
+  what the user asked for. The writer contract is what guarantees that state never exists.
+- **`scope: "all"` that moves the series drops the overrides and the skipped dates.** The
+  rule, the start wall and the two zones are what generate occurrence identities; change
+  any of them and every stored `recurrence_id` names an occurrence that no longer exists.
+  Correct, and destructive, so the composer says so before submitting.
 
 ## Reading `calendar_recurrence_dates`
 

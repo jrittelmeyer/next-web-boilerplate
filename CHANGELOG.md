@@ -13,6 +13,44 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **Calendar, Phase 2 — recurrence, per-occurrence overrides and edit scopes.** An
+  `RRULE` engine in `@repo/calendar` (`rrule.ts` · `expand.ts` · `occurrences.ts`, at
+  100/100/100/100), migration `0021` (`calendar_recurrence_dates`, a composite self-FK,
+  and a partial override index), scoped `updateEvent`/`deleteEvent`, `setRecurrenceDate`,
+  a three-query `calendar.range` that expands series in-process, and the recurrence
+  builder with a locale-safe prose summary.
+  **Four decisions carry the phase.**
+  (1) **The grammar has one owner**, `packages/calendar/src/rrule.ts`; `@repo/validators`
+  constrains only the string's shape. Ours is deliberately stricter than the obvious
+  reference implementation — measured, `rrule@2.8.1` accepts a rule with no `FREQ`,
+  `COUNT` and `UNTIL` together, `INTERVAL=0`, and `COUNT=-1` (416,011 occurrences).
+  (2) **The differential oracle is a checked-in fixture, not a live dependency.**
+  `rrule@2.8.1` ran once, into a 528-rule corpus; the permanent test diffs against that
+  file, so CI never executes a 2.7-year-stale package and generated projects never inherit
+  it. Two anti-tamper gates, because a red differential has one one-line "fix" that turns
+  the oracle into a mirror of the engine: the fixture was committed **before** `expand.ts`
+  existed, and its SHA-256 is pinned in the test.
+  (3) **`0021`'s override index is PARTIAL, and that is the whole point.** Measured on
+  PG 18 at 22,400 rows / 2,000 overrides: `(recurrence_parent_id, recurrence_id) WHERE
+  recurrence_parent_id IS NOT NULL` is **96 kB against the 176 kB it replaces**, and turns
+  1,971 index buffers into 15 — 131×. ⚠️ A plain btree **stores NULL keys**, so "only
+  override rows are non-NULL, therefore the index is the same size" is false: the
+  non-partial three-column variant is 55% *larger*. Measure index shapes, never infer them.
+  (4) **`id` is always the series master's.** The grid renders virtual occurrences and
+  materialised overrides as identical chips and both ids are `uuid`, so an override's own
+  id never leaves the server, and a write whose target is an override is refused *whether
+  or not it carries a scope* — the unscoped half is what stops an override being
+  soft-deleted while its master is live.
+  Also: a composite self-FK makes "an override lives in its master's calendar" true by
+  construction, with `ON UPDATE CASCADE` moving overrides when a master changes calendar
+  (⚠️ the cascade bypasses drizzle's `$onUpdate`, so those rows keep a stale
+  `updated_at` — Phase 6's feed `ETag` must not rely on it alone); a
+  `thisAndFollowing` split **rewrites the `uid` on every re-parented override**, without
+  which the split manufactures the exact corruption the schema leaves writer-enforced; and
+  the range response distinguishes `truncated` from `seriesTruncated`, over one merged
+  time-ordered stream, so truncation is tail-shaped rather than category-shaped.
+  Docs: [recurrence](docs/context/calendar/recurrence.md) ·
+  [model](docs/context/calendar/model.md) · [api](docs/context/calendar/api.md).
 - **Calendar, Phase 1 — calendars, events and a month grid.** `calendars` +
   `calendar_events` (migration `0020`) with the `calendar_event_masters` view,
   `@repo/validators/calendar` (a new exports-map subpath), `lib/calendar-acl.ts`,
