@@ -9,6 +9,7 @@ import {
   deleteAccountSchema,
   inviteMemberSchema,
   magicLinkRequestSchema,
+  NOTIFICATION_TYPES,
   notificationPayloadSchema,
   setUserRoleSchema,
   twoFactorBackupCodeSchema,
@@ -357,11 +358,18 @@ describe("notificationPayloadSchema (A22)", () => {
   };
 
   it("accepts a well-formed realtime notification payload", () => {
-    expect(notificationPayloadSchema.parse(valid)).toEqual(valid);
+    // A payload with no `title`/`link` keys at all is the LEGACY shape, and parsing it
+    // must succeed and fill both with null — see the rolling-deploy case below, which is
+    // why this asserts the filled shape rather than round-tripping the input.
+    expect(notificationPayloadSchema.parse(valid)).toEqual({ ...valid, title: null, link: null });
   });
 
   it("accepts the 'system' type", () => {
     expect(notificationPayloadSchema.parse({ ...valid, type: "system" }).type).toBe("system");
+  });
+
+  it.each(NOTIFICATION_TYPES)("accepts the '%s' type", (type) => {
+    expect(notificationPayloadSchema.parse({ ...valid, type }).type).toBe(type);
   });
 
   it("rejects an unknown type", () => {
@@ -370,6 +378,47 @@ describe("notificationPayloadSchema (A22)", () => {
 
   it("rejects a payload missing required fields", () => {
     expect(notificationPayloadSchema.safeParse({ id: "n1" }).success).toBe(false);
+  });
+
+  it("fills title and link with null when the keys are ABSENT, not merely null", () => {
+    // The whole reason these are `.nullable().default(null)` and not a bare
+    // `.nullable()`: a bare `.nullable()` requires the KEY to be present, so
+    // mid-rolling-deploy an old instance's notify() would publish this exact object and
+    // every new instance's bus would drop it at its safeParse — no log, no error, no
+    // Sentry. That is the bug class these fields exist to close, reintroduced by its own
+    // fix. If this test ever fails, the deploy is the outage.
+    const parsed = notificationPayloadSchema.parse(valid);
+    expect(parsed.title).toBeNull();
+    expect(parsed.link).toBeNull();
+  });
+
+  it("carries a title and a same-origin link through unchanged", () => {
+    const parsed = notificationPayloadSchema.parse({
+      ...valid,
+      type: "calendar_invite",
+      body: "alice@example.com",
+      title: "Standup",
+      link: "/calendar/event/abc",
+    });
+    expect(parsed).toMatchObject({ title: "Standup", link: "/calendar/event/abc" });
+  });
+
+  it.each([
+    "//evil.com",
+    "/\\evil.com",
+    "http://evil.com",
+    "javascript:alert(1)",
+    "calendar",
+    "",
+  ])("rejects %j as a link", (link) => {
+    // Mirrors the `notifications_link_same_origin` CHECK. `//evil.com` and `/\evil.com`
+    // both START WITH `/` and are both protocol-relative to a browser, so a naive
+    // "must begin with a slash" test would pass both straight through to an anchor.
+    expect(notificationPayloadSchema.safeParse({ ...valid, link }).success).toBe(false);
+  });
+
+  it("rejects a link containing whitespace", () => {
+    expect(notificationPayloadSchema.safeParse({ ...valid, link: "/a b" }).success).toBe(false);
   });
 });
 

@@ -332,6 +332,22 @@ per-user notifications (`/notifications`). The split stays the app's usual one:
   `sendTestNotification` (`server/actions/notification.ts`) is the demo trigger: it
   **persists** a row *and* publishes it. NOTIFY's payload cap is 8 KB — send an id +
   a few scalars, and re-fetch for anything larger.
+  **Go through `server/notifications/create.ts`, never `notify()` by hand:**
+  `createNotifications(writer, rows)` inserts and returns wire payloads;
+  `publishNotifications(payloads)` broadcasts them. The split is not tidiness —
+  `notify()` issues `pg_notify` on the **pooled** connection, so calling it inside
+  `db.transaction` can deliver a push before the row is visible to the reader that
+  follows the link. Build inside the transaction, publish after it commits.
+- **Payload shape** — `notificationPayloadSchema` (`@repo/validators`) is
+  `{ id, userId, type, body, title, link, read, createdAt }`. `type` selects the sentence
+  and (`body`, `title`) fill its slots; `title === null` means `body` is already a
+  complete sentence. `link` is a same-origin path or `null`, and **both new fields are
+  `.nullable().default(null)`** so a payload published by an older instance mid-deploy
+  still parses instead of being dropped silently by the bus's fail-closed `safeParse`.
+  `NOTIFICATION_TYPES` is duplicated in `@repo/db` and `@repo/validators` (that package
+  stays DB-free); `apps/web/src/lib/union-parity.test.ts` is what keeps them from
+  drifting — extend one alone and every notification of the new type stops arriving with
+  no log, no error and no Sentry event.
 - **Subscribe (server)** — `server/realtime/notification-bus.ts` holds **one** dedicated
   `pg` LISTEN connection per instance (via `@repo/db`'s `createPgListener`) and fans each
   notification out in-process to that user's open streams (a `Map<userId, Set<handler>>`).
@@ -354,6 +370,10 @@ per-user notifications (`/notifications`). The split stays the app's usual one:
   cache with `setQueryData` — which, because the cache is now infinite-query-shaped
   (`{ pages, pageParams }`), means **prepend into `pages[0]` and dedupe across all loaded
   pages** — see [STATE.md](STATE.md#realtime--push-state--feed-the-query-cache-tier-4--a22).
+  `notification.list` selects `title` and `link` alongside `body`, so the hydrated first
+  page renders identically to the rows pushed live. The feed has **two** render paths and
+  both switch on `type`: the `<li>` and the SSE **toast**. A `link` renders through the
+  locale-aware `Link` from `@/i18n/navigation`, never a raw `<a href>`.
 - **Unread badge** — a companion `notification.unreadCount` query is the badge's
   **authoritative** source. It's a SQL `count()` (not fetch-every-unread-row + count in
   JS), so it stays a single aggregate row regardless of how many are unread — and it

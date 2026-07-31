@@ -84,6 +84,11 @@ export default defineConfig({
         "src/lib/subscription.ts",
         "src/lib/user-agent.ts",
         "src/lib/user-preferences.ts",
+        "src/server/notifications/create.ts",
+        // Has had a test file since A22 but was never counted — and it is the file
+        // whose fail-closed `safeParse` drops a notification with no log, no error and
+        // no Sentry event. Counting it is part of closing that hole, not bookkeeping.
+        "src/server/realtime/notification-bus.ts",
         "src/stores/ui-store.ts",
       ],
       reporter: ["text", "json", "lcov"],

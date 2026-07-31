@@ -51,6 +51,13 @@ export const notificationRouter = createTRPCRouter({
           id: notifications.id,
           type: notifications.type,
           body: notifications.body,
+          // The two-slot contract lives beside NOTIFICATION_TYPES in
+          // schema/notifications.ts: `title === null` means `body` is already a complete
+          // sentence, otherwise `type` selects the sentence and (body, title) fill it.
+          // Both columns are needed HERE and not only on the SSE payload, or a reload
+          // would render the initial page differently from the rows pushed live.
+          title: notifications.title,
+          link: notifications.link,
           read: notifications.read,
           createdAt: notifications.createdAt,
         })

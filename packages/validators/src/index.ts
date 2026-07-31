@@ -315,15 +315,47 @@ export type TwoFactorBackupCodeInput = z.infer<typeof twoFactorBackupCodeSchema>
  * the DB in. `createdAt` is an ISO-8601 STRING, not a `Date`: the value round-trips
  * through `JSON.stringify` (NOTIFY payload) and `EventSource` (text frames), where a
  * `Date` would serialize to a string anyway — modelling it as a string keeps the
- * runtime value and the type honest on both sides. The `type` enum is duplicated
- * from `NOTIFICATION_TYPES` in `@repo/db/schema/notifications.ts` (canonical source)
- * — this package stays DB-free, the same convention as `setUserRoleSchema` ↔ `ROLES`.
+ * runtime value and the type honest on both sides. `NOTIFICATION_TYPES` is duplicated
+ * from `@repo/db/schema/notifications.ts` (canonical source) — this package stays
+ * DB-free, the same convention as `setUserRoleSchema` ↔ `ROLES`. It is a named const
+ * rather than an inline `z.enum([…])` so `lib/union-parity.test.ts` has something to
+ * compare against: extending the DB union alone silently breaks every new type.
+ *
+ * `title` and `link` carry the two-slot contract documented beside the DB union —
+ * `title IS NULL` means `body` is already a complete sentence.
  */
+export const NOTIFICATION_TYPES = [
+  "test",
+  "system",
+  "calendar_invite",
+  "calendar_response_accepted",
+  "calendar_response_declined",
+  "calendar_response_tentative",
+  "calendar_cancelled",
+] as const;
+
+/**
+ * A same-origin absolute path, or nothing. Rejects `//evil.com` and `/\evil.com` — both
+ * begin with `/` and both are protocol-relative to a browser — and rejects whitespace.
+ * Mirrors the `notifications_link_same_origin` CHECK; the DB is the backstop, this is
+ * the write-path gate.
+ */
+const notificationLinkSchema = z
+  .string()
+  .regex(/^\/(?![/\\])[^\s]*$/, "Link must be a same-origin path");
+
 export const notificationPayloadSchema = z.object({
   id: z.string().min(1),
   userId: z.string().min(1),
-  type: z.enum(["test", "system"]),
+  type: z.enum(NOTIFICATION_TYPES),
   body: z.string(),
+  // `.default(null)`, not a bare `.nullable()`, and that is load-bearing. A bare
+  // `.nullable()` requires the KEY to be present, so mid-rolling-deploy an old
+  // instance's `notify()` would publish a payload with no `title`/`link` and every new
+  // instance's bus would drop it at its `safeParse` — no log, no error, no Sentry. That
+  // is the exact bug class these columns exist to close, reintroduced by the fix for it.
+  title: z.string().nullable().default(null),
+  link: notificationLinkSchema.nullable().default(null),
   read: z.boolean(),
   createdAt: z.string(),
 });

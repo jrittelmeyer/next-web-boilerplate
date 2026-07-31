@@ -13,6 +13,38 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **Typed notification payloads, links and one publish path** (calendar Phase 3, part A —
+  no calendar coupling, and it closes a bug that exists in the repo today).
+  `NOTIFICATION_TYPES` gains five calendar members, extended in `@repo/db` **and**
+  `@repo/validators` in one commit because they are inseparable: the validators side was
+  an inline `z.enum([…])`, and `server/realtime/notification-bus.ts` `safeParse`s every
+  payload and **fails closed with no log, no error and no Sentry event** — so extending
+  one side alone makes every notification of the new type silently stop arriving.
+  `src/lib/union-parity.test.ts` (moved out of `lib/calendar/`, where the path was lying
+  about a non-calendar union) is what makes those two edits one commit.
+  Migration `0022` adds `title` and `link`.
+  **Three decisions worth carrying forward.**
+  (1) **The `body` contract is two slots, not one.** `title IS NULL` ⇒ `body` is already
+  a complete sentence; otherwise `type` selects the sentence and (`body`, `title`) fill
+  it. A one-slot design cannot express *"Alice declined Standup"* — two variables and a
+  status — which is why the response type splits three ways. Both feed render paths
+  switch on `type`: the `<li>` **and** the SSE toast.
+  (2) ⚠️ **`link NOT LIKE '/\%'` is the wrong spelling and accepts `/\evil.com`** —
+  backslash is `LIKE`'s **default ESCAPE character** in Postgres, so that pattern means
+  "a slash followed by a literal `%`". The shipped CHECK uses `left()` comparisons, which
+  have no escape layer. Verified on PG 18: `//evil.com`, `/\evil.com`, `http://evil.com`
+  and `javascript:…` rejected; `/calendar/event/<id>` and `NULL` accepted. Rendering goes
+  through the locale-aware `Link`, never a raw `<a href>`.
+  (3) **`.nullable().default(null)`, not a bare `.nullable()`** — a bare `.nullable()`
+  requires the key to be *present*, so mid-rolling-deploy an old instance would publish a
+  payload without the new fields and every new instance's bus would drop it silently:
+  the exact bug class above, reintroduced by its own fix.
+  `createNotifications`/`publishNotifications` split persist from publish because
+  `notify()` runs `pg_notify` on the **pooled** connection, not the caller's transaction
+  connection, so publishing inside a transaction can beat the row's visibility;
+  `sendTestNotification` is refactored onto them so there is one path, not two that
+  drift. `notification-bus.ts` joins `coverage.include` — it has had a test file since
+  A22 and had never been counted.
 - **Calendar, Phase 2 — recurrence, per-occurrence overrides and edit scopes.** An
   `RRULE` engine in `@repo/calendar` (`rrule.ts` · `expand.ts` · `occurrences.ts`, at
   100/100/100/100), migration `0021` (`calendar_recurrence_dates`, a composite self-FK,

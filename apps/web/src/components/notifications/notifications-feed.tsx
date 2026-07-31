@@ -13,6 +13,7 @@ import {
 import type { inferRouterOutputs } from "@trpc/server";
 import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@/i18n/navigation";
 import { useTRPC } from "@/lib/trpc/client";
 import { markAllRead, sendTestNotification } from "@/server/actions/notification";
 import type { AppRouter } from "@/server/trpc/root";
@@ -31,6 +32,28 @@ type FeedItem = NotificationPage["items"][number];
 type NotificationListData = InfiniteData<NotificationPage, NotificationPage["nextCursor"]>;
 
 type ConnectionStatus = "connecting" | "live" | "offline";
+
+/**
+ * `type` selects the sentence; (`body`, `title`) fill its slots — the contract documented
+ * beside `NOTIFICATION_TYPES` in `packages/db/src/schema/notifications.ts`. There is no
+ * stored user locale, so a body cannot be localized at write time; the sentence is picked
+ * here, per the reader's locale.
+ *
+ * The `satisfies` is the part that earns its keep: add a sixth calendar member to the
+ * union and this file stops compiling, instead of silently rendering the bare actor email
+ * where a sentence belongs. `test` and `system` are excluded because their bodies are
+ * already complete sentences.
+ */
+const SENTENCE_KEYS = {
+  calendar_invite: "calendarInvite",
+  calendar_response_accepted: "calendarResponseAccepted",
+  calendar_response_declined: "calendarResponseDeclined",
+  calendar_response_tentative: "calendarResponseTentative",
+  calendar_cancelled: "calendarCancelled",
+} as const satisfies Record<Exclude<FeedItem["type"], "test" | "system">, string>;
+
+const isSentenceType = (type: FeedItem["type"]): type is keyof typeof SENTENCE_KEYS =>
+  type in SENTENCE_KEYS;
 
 /**
  * The realtime notifications feed (Tier 4 · A22) — the client half of the SSE example.
@@ -90,10 +113,28 @@ export function NotificationsFeed() {
   const unreadCount = unreadCountQuery.data?.count ?? 0;
   const unreadCountQueryKey = useMemo(() => trpc.notification.unreadCount.queryKey(), [trpc]);
 
+  /**
+   * Render one notification as text. Read the contract literally: a NULL `title` means
+   * `body` is already a complete sentence — whatever the type — so it renders raw. That
+   * makes the fallback for a malformed calendar row "show the actor" rather than a
+   * sentence with an empty slot in it.
+   */
+  const describe = (notification: Pick<FeedItem, "type" | "body" | "title">) =>
+    notification.title !== null && isSentenceType(notification.type)
+      ? t(SENTENCE_KEYS[notification.type], {
+          actor: notification.body,
+          event: notification.title,
+        })
+      : notification.body;
+
   // Latest values the mount-only SSE handler needs, without making them effect deps
   // (which would tear down + re-open the stream on every render).
   const toastTitleRef = useRef(t("toastTitle"));
   toastTitleRef.current = t("toastTitle");
+  // The toast is the SECOND render path, and the one live-verify watches. It rendered
+  // `body` raw before Phase 3, which for a calendar type is a bare email address.
+  const describeRef = useRef(describe);
+  describeRef.current = describe;
   const statusRef = useRef(status);
   statusRef.current = status;
 
@@ -132,6 +173,8 @@ export function NotificationsFeed() {
         id: payload.id,
         type: payload.type,
         body: payload.body,
+        title: payload.title,
+        link: payload.link,
         read: payload.read,
         // Re-hydrate the ISO string the wire carries back into a Date, matching the
         // Date the tRPC query puts in the cache — so the cache holds one uniform shape.
@@ -152,7 +195,7 @@ export function NotificationsFeed() {
       // optimistically ++ because this same NOTIFY reaches the sender's own tab, where the
       // list dedupe above no-ops it — the server count is the single source of truth.
       void queryClient.invalidateQueries({ queryKey: unreadCountQueryKey });
-      toast(toastTitleRef.current, { description: incoming.body });
+      toast(toastTitleRef.current, { description: describeRef.current(incoming) });
     });
 
     return () => source.close();
@@ -270,9 +313,25 @@ export function NotificationsFeed() {
                   aria-hidden="true"
                 />
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className={`text-sm ${notification.read ? "text-muted-foreground" : ""}`}>
-                    {notification.body}
-                  </span>
+                  {notification.link ? (
+                    // The locale-aware `Link`, never a raw `<a href>`: `link` is a stored
+                    // value, so it is a redirect sink. Zod on the write path and the
+                    // `notifications_link_same_origin` CHECK are the other two layers
+                    // (SECURITY.md); routing it through a same-origin-only component is
+                    // the third, and the only one that survives a row written by hand.
+                    <Link
+                      href={notification.link}
+                      className={`text-sm underline-offset-4 hover:underline ${
+                        notification.read ? "text-muted-foreground" : ""
+                      }`}
+                    >
+                      {describe(notification)}
+                    </Link>
+                  ) : (
+                    <span className={`text-sm ${notification.read ? "text-muted-foreground" : ""}`}>
+                      {describe(notification)}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {format.dateTime(notification.createdAt, "short")}
                   </span>
