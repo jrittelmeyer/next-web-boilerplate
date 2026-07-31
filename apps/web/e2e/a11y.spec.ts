@@ -11,14 +11,51 @@ import { deleteCalendarFixtures, promoteToAdmin, seedCalendar, seedEvents } from
 // Postgres (DB-backed E2E lane).
 const BLOCKING_IMPACTS = new Set(["critical", "serious"]);
 
-async function blockingViolations(page: Page, url: string) {
-  await page.goto(url);
-  const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+async function blockingViolations(page: Page, url?: string, include?: string) {
+  // `url` is optional so a surface that only exists after an interaction — a dialog,
+  // for instance — can be scanned where it stands, without a navigation that would
+  // close it.
+  //
+  // `include` narrows the scan to one subtree, and it is needed for exactly one
+  // reason: a modal draws a 50%-black overlay over the page behind it, and axe
+  // computes `color-contrast` against that dimmed composite. Scanning the whole page
+  // with a dialog open therefore reports every element BEHIND the scrim — month-grid
+  // cells, chips, the overlay itself — none of which a user can see or reach. Those
+  // surfaces are already scanned undimmed by their own assertions, so narrowing here
+  // removes a false positive rather than a check.
+  if (url) await page.goto(url);
+  let builder = new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]);
+  if (include) builder = builder.include(include);
+  const { violations } = await builder.analyze();
   return violations.filter((v) => BLOCKING_IMPACTS.has(v.impact ?? ""));
 }
 
 function summarize(violations: Awaited<ReturnType<typeof blockingViolations>>): string {
   return violations.map((v) => `${v.id} (${v.impact}, ${v.nodes.length} node(s))`).join("\n");
+}
+
+/**
+ * Wait for every running CSS animation to finish.
+ *
+ * Needed before scanning a dialog, and the reason is `color-contrast` specifically.
+ * `DialogContent` opens with `fade-in-0 zoom-in-95`, so for ~200 ms its text is drawn
+ * at partial opacity and composites with whatever is behind it. axe scanned mid-fade
+ * reports the dialog's own muted text at 2.21:1 against a half-dimmed page — a real
+ * measurement of a frame no user reads. Bounded by a race so an indefinite animation
+ * (a spinner) could never hang the scan.
+ */
+async function animationsSettled(page: Page): Promise<void> {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const done = () => resolve();
+        Promise.all(document.getAnimations().map((animation) => animation.finished)).then(
+          done,
+          done,
+        );
+        setTimeout(done, 1000);
+      }),
+  );
 }
 
 test("landing page has no critical or serious a11y violations", async ({ page }) => {
@@ -111,12 +148,46 @@ test("signed-in account, admin, audit-log and calendar pages have no critical or
       timeZone: "UTC",
       allDay: true,
     },
+    // A series, so the scan sees a repeat glyph and its accessible name. The glyph is
+    // `aria-hidden` and the fact it stands for goes into the chip's own name; an empty
+    // month would never exercise either.
+    {
+      title: "Weekly sync",
+      startWall: `${month}-05 11:00:00`,
+      endWall: `${month}-05 11:30:00`,
+      timeZone: "UTC",
+      rrule: "FREQ=WEEKLY",
+    },
   ]);
   try {
     const calendarViolations = await blockingViolations(page, "/calendar");
     expect(
       calendarViolations,
       `Accessibility violations on /calendar:\n${summarize(calendarViolations)}`,
+    ).toEqual([]);
+
+    // The scope prompt, scanned where it stands. It is a native `<fieldset>` with a
+    // `<legend>` and real radios rather than a hand-rolled `role="radiogroup"`, and
+    // this is what checks the result instead of the markup. It also opens ON TOP of
+    // the composer, so the scan covers two stacked modals — the arrangement most
+    // likely to lose a label or an accessible name.
+    await page
+      .getByTestId("calendar-event-chip")
+      .filter({ hasText: "Weekly sync" })
+      .first()
+      .click();
+    await page.getByRole("dialog").first().getByTestId("event-delete").click();
+    await page.getByTestId("edit-scope-dialog").waitFor();
+    await animationsSettled(page);
+
+    const scopeViolations = await blockingViolations(
+      page,
+      undefined,
+      '[data-testid="edit-scope-dialog"]',
+    );
+    expect(
+      scopeViolations,
+      `Accessibility violations on the edit-scope dialog:\n${summarize(scopeViolations)}`,
     ).toEqual([]);
   } finally {
     await deleteCalendarFixtures(user.email);

@@ -75,13 +75,28 @@ test("an all-day event on a midnight DST transition lands on exactly one cell", 
   }
 });
 
+/**
+ * One signed-in flow, end to end: a calendar, a one-off, then the same event made
+ * weekly across a DST transition and edited and deleted **by scope**.
+ *
+ * Extended in place rather than split into more `test()` blocks: each one costs a
+ * signup against Better Auth's 5-per-60 s limiter, and this file already spends three.
+ *
+ * The calendar sits in **`America/Havana`, and so does the viewer** — both halves
+ * matter. Havana transitions at **midnight** on 2027-03-14, so a series that straddles
+ * it changes offset between two occurrences; and because the viewer's zone matches the
+ * event's, "did every occurrence keep its wall time?" is a question the rendered chips
+ * can actually answer. With a different viewer zone the chips would agree for the wrong
+ * reason, and `America/New_York` transitions at 02:00, where a 09:00 series never sees
+ * the boundary from the inside.
+ */
 test("create a calendar, then create, edit and delete an event through the UI", async ({
   page,
 }) => {
   test.slow();
   const user = makeTestUser("calendar-crud");
   await signUp(page, user);
-  await setUserTimeZone(user.email, "America/New_York");
+  await setUserTimeZone(user.email, EVENT_ZONE);
 
   try {
     await page.goto("/calendar");
@@ -90,7 +105,7 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     await page.getByRole("button", { name: "New", exact: true }).click();
     const calendarDialog = page.getByRole("dialog");
     await calendarDialog.getByLabel("Name").fill("Work");
-    await calendarDialog.getByLabel("Time zone").fill("America/New_York");
+    await calendarDialog.getByLabel("Time zone").fill(EVENT_ZONE);
     await calendarDialog.getByRole("button", { name: "Save" }).click();
     await expect(calendarDialog).toBeHidden();
     // Scoped to the rail, not `page.getByText("Work")`: the success toast says
@@ -104,7 +119,7 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     await composer.getByTestId("event-title").fill("Standup");
     await composer.getByTestId("event-start").fill("2027-03-15T09:00");
     await composer.getByTestId("event-end").fill("2027-03-15T09:30");
-    await composer.getByTestId("event-start-tzid").fill("America/New_York");
+    await composer.getByTestId("event-start-tzid").fill(EVENT_ZONE);
     await composer.getByTestId("event-save").click();
     await expect(composer).toBeHidden();
 
@@ -120,26 +135,115 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     await expect(editor).toBeHidden();
     await expect(page.getByRole("button", { name: /Standup \(moved\)/ })).toHaveCount(1);
 
-    // --- Soft-delete it from the detail route -------------------------------
-    // The row survives with `deleted_at` stamped; every read filters it out, so the
-    // grid is the honest place to confirm the deletion took.
-    const eventId = await page
-      .locator('[data-testid="calendar-event-chip"]')
-      .first()
-      .getAttribute("data-event-id");
+    // --- Make it repeat, across the transition ------------------------------
+    // The start moves to Sunday 2027-03-07 first, because the weekly preset is derived
+    // from the start the user is looking at. 03-07 is before Havana's transition and
+    // 03-21 is after it.
+    await page.getByRole("button", { name: /Standup \(moved\)/ }).click();
+    const repeatEditor = page.getByRole("dialog");
+    await repeatEditor.getByTestId("event-start").fill("2027-03-07T09:00");
+    await repeatEditor.getByTestId("event-end").fill("2027-03-07T09:30");
+    await repeatEditor.getByTestId("event-repeat").click();
+    // Radix renders its listbox in a portal, so the option is not inside the dialog.
+    await page.getByRole("option", { name: "Every week" }).click();
+    await repeatEditor.getByTestId("event-save").click();
+    await expect(repeatEditor).toBeHidden();
+
+    await expect(page.getByRole("button", { name: /Standup \(moved\)/ })).toHaveCount(4);
+
+    // **The assertion this fixture exists for.** Both chips must read the same wall
+    // time even though Havana's UTC offset changed between them. An expander working
+    // in instants reports a uniform 7 days and is silently an hour wrong from 03-14 on.
+    const before = await chipText(page, "2027-03-07");
+    const after = await chipText(page, "2027-03-21");
+    expect(after).toBe(before);
+
+    // --- Edit ONE occurrence -------------------------------------------------
+    await openOccurrence(page, "2027-03-21");
+    const scopedEditor = page.getByRole("dialog").first();
+    await scopedEditor.getByTestId("event-title").fill("Just this one");
+    await scopedEditor.getByTestId("event-save").click();
+    await chooseScope(page, "this");
+
+    // Exactly one cell changed; the other three still carry the series' title.
+    await expect(page.getByRole("button", { name: /Just this one/ })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /Standup \(moved\)/ })).toHaveCount(3);
+    await expect(occurrenceChip(page, "2027-03-21")).toHaveText(/Just this one/);
+
+    // --- Delete this and the following ones ----------------------------------
+    await openOccurrence(page, "2027-03-21");
+    await page.getByRole("dialog").first().getByTestId("event-delete").click();
+    await chooseScope(page, "thisAndFollowing");
+
+    // Later cells vanish, earlier ones remain — including the override, which is
+    // hard-deleted along with the occurrences it belonged to.
+    await expect(occurrenceChip(page, "2027-03-07")).toHaveCount(1);
+    await expect(occurrenceChip(page, "2027-03-14")).toHaveCount(1);
+    await expect(occurrenceChip(page, "2027-03-21")).toHaveCount(0);
+    await expect(occurrenceChip(page, "2027-03-28")).toHaveCount(0);
+
+    // --- Soft-delete the whole series from the detail route -------------------
+    // Every chip answers with its MASTER's id — the occurrence-identity contract — so
+    // this is the series' own page, not an override's.
+    const eventId = await occurrenceChip(page, "2027-03-07").getAttribute("data-event-id");
     expect(eventId).toBeTruthy();
 
     await page.goto(`/calendar/event/${eventId}`);
     await expect(page.getByRole("heading", { name: "Standup (moved)" })).toBeVisible();
+    // The detail page reads the series in prose, from the same locale-safe module the
+    // composer's summary uses.
+    await expect(page.getByTestId("recurrence-summary")).toContainText("Every week");
     await page.getByRole("button", { name: "Delete event" }).click();
     await page.waitForURL("**/calendar");
 
     await gotoMonth(page, 2027, 3);
+    // The master AND its remaining occurrences: a soft-deleted master whose overrides
+    // stayed live is exactly what `deleteEvent`'s transaction exists to prevent.
     await expect(page.getByRole("button", { name: /Standup/ })).toHaveCount(0);
   } finally {
     await deleteCalendarFixtures(user.email);
   }
 });
+
+/** The chips in one day cell. Their count is the assertion for a scoped delete. */
+function occurrenceChip(page: import("@playwright/test").Page, date: string) {
+  return page
+    .locator(`[data-testid="calendar-day-cell"][data-date="${date}"]`)
+    .locator('[data-testid="calendar-event-chip"]');
+}
+
+/**
+ * A chip's rendered text — the time as the viewer sees it, plus the title.
+ *
+ * Compared against another chip rather than against a literal, so the assertion does
+ * not pin next-intl's `timeOnly` format or the locale's 12/24-hour choice. What is
+ * under test is that the two are *equal*, which is precisely the DST property.
+ */
+async function chipText(page: import("@playwright/test").Page, date: string): Promise<string> {
+  return (await occurrenceChip(page, date).first().innerText()).trim();
+}
+
+async function openOccurrence(page: import("@playwright/test").Page, date: string): Promise<void> {
+  await occurrenceChip(page, date).first().click();
+  await page.getByRole("dialog").first().getByTestId("event-save").waitFor();
+}
+
+/**
+ * Answer the scope prompt.
+ *
+ * By test id, not `getByRole("dialog")`: the scope dialog opens *on top of* the
+ * composer, so two dialogs are in the tree and a role query is ambiguous.
+ */
+async function chooseScope(
+  page: import("@playwright/test").Page,
+  scope: "this" | "thisAndFollowing" | "all",
+): Promise<void> {
+  const dialog = page.getByTestId("edit-scope-dialog");
+  await dialog.waitFor();
+  await dialog.getByTestId(`edit-scope-${scope}`).check();
+  await dialog.getByTestId("edit-scope-confirm").click();
+  await expect(dialog).toBeHidden();
+}
 
 test("the month grid is a single tab stop and arrow keys move within it", async ({ page }) => {
   test.slow();

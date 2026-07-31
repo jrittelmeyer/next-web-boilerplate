@@ -97,6 +97,11 @@ export function CalendarWorkspace({
   function refetchAll() {
     queryClient.invalidateQueries({ queryKey: trpc.calendar.list.queryKey() });
     queryClient.invalidateQueries({ queryKey: trpc.calendar.range.queryKey() });
+    // `byId` too, and it is not housekeeping: this query is what SEEDS the editor, so a
+    // stale entry means reopening an event you just edited shows the old body — and
+    // saving writes it back, silently reverting the first edit. Caught by
+    // e2e/calendar.spec.ts, which opens the same event twice.
+    queryClient.invalidateQueries({ queryKey: trpc.calendar.byId.queryKey() });
   }
 
   function defaultsForDate(date: string): EventComposerDefaults | null {

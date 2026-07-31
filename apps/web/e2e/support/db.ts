@@ -189,6 +189,8 @@ export async function seedEvents(
     endWall: string;
     timeZone: string;
     allDay?: boolean;
+    /** A canonical `RRULE` value. Unbounded rules need no `series_end_at`. */
+    rrule?: string;
   }>,
 ): Promise<void> {
   await db.insert(calendarEvents).values(
@@ -212,6 +214,7 @@ export async function seedEvents(
         endOffsetMinutes: derived.endOffsetMinutes,
         startAt: new Date(derived.startAtMs),
         endAt: new Date(derived.endAtMs),
+        rrule: event.rrule ?? null,
       };
     }),
   );
