@@ -31,6 +31,31 @@ export {
   deriveEventInstants,
 } from "./derive";
 export {
+  type ExpandRRuleInput,
+  type ExpandRRuleResult,
+  expandRRule,
+} from "./expand";
+export {
+  type ExpandSeriesResult,
+  expandSeries,
+  type MaterialisedOccurrence,
+  type OccurrenceWindow,
+  type SeriesInput,
+  seriesEndInstantMs,
+} from "./occurrences";
+export {
+  formatRRule,
+  MAX_RECURRENCE_COUNT,
+  parseRRule,
+  RECURRENCE_FREQUENCIES,
+  type RecurrenceByDay,
+  type RecurrenceFrequency,
+  type RecurrenceRule,
+  type RecurrenceUntil,
+  untilInstantMs,
+  type Weekday,
+} from "./rrule";
+export {
   type CivilResolutionKind,
   canonicalizeTimeZone,
   civilToInstant,
