@@ -3,12 +3,15 @@ import {
   EVENT_STATUSES as DB_EVENT_STATUSES,
   EVENT_TRANSPARENCIES as DB_EVENT_TRANSPARENCIES,
   EVENT_VISIBILITIES as DB_EVENT_VISIBILITIES,
+  RECURRENCE_DATE_KINDS as DB_RECURRENCE_DATE_KINDS,
 } from "@repo/db/schema";
 import {
   CALENDAR_COLORS,
+  EDIT_SCOPES,
   EVENT_STATUSES,
   EVENT_TRANSPARENCIES,
   EVENT_VISIBILITIES,
+  RECURRENCE_DATE_KINDS,
 } from "@repo/validators/calendar";
 import { describe, expect, it } from "vitest";
 
@@ -39,6 +42,7 @@ describe("calendar union parity between @repo/db and @repo/validators", () => {
     ["EVENT_STATUSES", EVENT_STATUSES, DB_EVENT_STATUSES],
     ["EVENT_VISIBILITIES", EVENT_VISIBILITIES, DB_EVENT_VISIBILITIES],
     ["EVENT_TRANSPARENCIES", EVENT_TRANSPARENCIES, DB_EVENT_TRANSPARENCIES],
+    ["RECURRENCE_DATE_KINDS", RECURRENCE_DATE_KINDS, DB_RECURRENCE_DATE_KINDS],
   ] as const satisfies ReadonlyArray<readonly [string, readonly string[], readonly string[]]>;
 
   it.each(pairs)("%s is member-for-member identical, in order", (_name, validators, db) => {
@@ -46,9 +50,17 @@ describe("calendar union parity between @repo/db and @repo/validators", () => {
   });
 
   it("covers every union the calendar schema declares", () => {
-    // A fifth union added to either package without a row above would otherwise be
+    // A sixth union added to either package without a row above would otherwise be
     // unguarded — the whole class of bug this file exists for.
-    expect(pairs).toHaveLength(4);
+    expect(pairs).toHaveLength(5);
+  });
+
+  it("does not guard EDIT_SCOPES, which is deliberately action-only", () => {
+    // Parity means "the database also declares this". `EDIT_SCOPES` has no column, so a
+    // row for it above would teach the wrong rule to whoever adds the next union — and
+    // the next union might be one that genuinely needs guarding.
+    expect(EDIT_SCOPES).toEqual(["this", "thisAndFollowing", "all"]);
+    expect(pairs.map(([name]) => name)).not.toContain("EDIT_SCOPES");
   });
 
   it("still excludes a public visibility", () => {

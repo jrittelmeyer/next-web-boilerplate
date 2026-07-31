@@ -97,7 +97,11 @@ const eventInput = {
   startTzid: "America/New_York",
   endWall: "2027-03-15 09:30:00",
   endTzid: "America/New_York",
+  rrule: null,
 } as const;
+
+/** Scoped writes are both-or-neither; a one-off carries neither. */
+const noScope = { scope: null, recurrenceId: null } as const;
 
 /** `db.insert(...).values(...).returning(...)` resolving to `rows`. */
 function insertReturning(rows: unknown[]) {
@@ -136,8 +140,10 @@ describe("the shared gates", () => {
     expect(await updateCalendar({ ...calendarInput, id: CAL })).toEqual({ error: "Unauthorized" });
     expect(await deleteCalendar({ id: CAL })).toEqual({ error: "Unauthorized" });
     expect(await createEvent(eventInput)).toEqual({ error: "Unauthorized" });
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toEqual({ error: "Unauthorized" });
-    expect(await deleteEvent({ id: EVENT })).toEqual({ error: "Unauthorized" });
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toEqual({
+      error: "Unauthorized",
+    });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({ error: "Unauthorized" });
   });
 
   it("refuses a rate-limited caller before touching the database", async () => {
@@ -152,7 +158,7 @@ describe("the shared gates", () => {
     expect(await createEvent(eventInput)).toMatchObject({
       error: expect.stringContaining("Too many requests"),
     });
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toMatchObject({
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toMatchObject({
       error: expect.stringContaining("Too many requests"),
     });
   });
@@ -450,7 +456,7 @@ describe("createEvent", () => {
 
 describe("updateEvent", () => {
   it("updates and revalidates both the month view and the detail route", async () => {
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toEqual({
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toEqual({
       data: { id: EVENT, calendarId: CAL },
     });
     expect(revalidatePath).toHaveBeenCalledWith("/calendar");
@@ -467,17 +473,21 @@ describe("updateEvent", () => {
         };
       },
     });
-    await updateEvent({ ...eventInput, id: EVENT });
+    await updateEvent({ ...eventInput, ...noScope, id: EVENT });
     expect(written.uid).toBeUndefined();
     expect(written.sequence).toBeUndefined();
   });
 
   it("treats a missing or already-deleted event as not found", async () => {
     findEvent.mockResolvedValue(undefined);
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toEqual({ error: "Event not found" });
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toEqual({
+      error: "Event not found",
+    });
 
     findEvent.mockResolvedValue({ id: EVENT, calendarId: CAL, deletedAt: new Date() });
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toEqual({ error: "Event not found" });
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toEqual({
+      error: "Event not found",
+    });
   });
 
   it("authorizes the SOURCE calendar, not just the destination", async () => {
@@ -487,7 +497,9 @@ describe("updateEvent", () => {
     getCalendarRole.mockImplementation(async (calendarId: string) =>
       calendarId === CAL ? "owner" : null,
     );
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toEqual({ error: "Event not found" });
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toEqual({
+      error: "Event not found",
+    });
   });
 
   it("authorizes the DESTINATION calendar on a move", async () => {
@@ -495,38 +507,44 @@ describe("updateEvent", () => {
     getCalendarRole.mockImplementation(async (calendarId: string) =>
       calendarId === CAL ? "owner" : null,
     );
-    expect(await updateEvent({ ...eventInput, calendarId: OTHER_CAL, id: EVENT })).toEqual({
+    expect(
+      await updateEvent({ ...eventInput, ...noScope, calendarId: OTHER_CAL, id: EVENT }),
+    ).toEqual({
       error: "Forbidden",
     });
   });
 
   it("allows a move when the caller can write both calendars", async () => {
     getCalendarRole.mockResolvedValue("writer");
-    expect(await updateEvent({ ...eventInput, calendarId: OTHER_CAL, id: EVENT })).toEqual({
+    expect(
+      await updateEvent({ ...eventInput, ...noScope, calendarId: OTHER_CAL, id: EVENT }),
+    ).toEqual({
       data: { id: EVENT, calendarId: CAL },
     });
   });
 
   it("refuses a reader on the source calendar", async () => {
     getCalendarRole.mockResolvedValue("reader");
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toEqual({ error: "Forbidden" });
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toEqual({
+      error: "Forbidden",
+    });
   });
 
   it("returns field errors for bad input", async () => {
-    expect(await updateEvent({ ...eventInput, id: EVENT, title: " " })).toMatchObject({
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT, title: " " })).toMatchObject({
       error: "Please fix the fields below.",
     });
   });
 
   it("reports a bad zone on update too", async () => {
     expect(
-      await updateEvent({ ...eventInput, id: EVENT, startTzid: "Nowhere/Nothing" }),
+      await updateEvent({ ...eventInput, ...noScope, id: EVENT, startTzid: "Nowhere/Nothing" }),
     ).toMatchObject({ fieldErrors: { startTzid: expect.any(String) } });
   });
 
   it("maps an update failure and a no-row update", async () => {
     dbUpdate.mockReturnValue(updateReturning([]));
-    expect(await updateEvent({ ...eventInput, id: EVENT })).toEqual({
+    expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toEqual({
       error: "Failed to update the event.",
     });
   });
@@ -542,7 +560,7 @@ describe("deleteEvent", () => {
       },
     });
 
-    expect(await deleteEvent({ id: EVENT })).toEqual({ data: { id: EVENT } });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({ data: { id: EVENT } });
     expect(written.deletedAt).toBeInstanceOf(Date);
     // Deletion is ONE fact in ONE column; Phase 4 derives STATUS:CANCELLED from it.
     expect(written.status).toBeUndefined();
@@ -550,23 +568,25 @@ describe("deleteEvent", () => {
   });
 
   it("rejects a non-uuid id as not found", async () => {
-    expect(await deleteEvent({ id: "nope" })).toEqual({ error: "Event not found" });
+    expect(await deleteEvent({ id: "nope", ...noScope })).toEqual({ error: "Event not found" });
   });
 
   it("is idempotent-safe: an already-deleted event is not found", async () => {
     findEvent.mockResolvedValue({ id: EVENT, calendarId: CAL, deletedAt: new Date() });
-    expect(await deleteEvent({ id: EVENT })).toEqual({ error: "Event not found" });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({ error: "Event not found" });
   });
 
   it("requires write access", async () => {
     getCalendarRole.mockResolvedValue("reader");
-    expect(await deleteEvent({ id: EVENT })).toEqual({ error: "Forbidden" });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({ error: "Forbidden" });
     getCalendarRole.mockResolvedValue(null);
-    expect(await deleteEvent({ id: EVENT })).toEqual({ error: "Event not found" });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({ error: "Event not found" });
   });
 
   it("maps a failed soft delete", async () => {
     dbUpdate.mockReturnValue({ set: () => ({ where: () => Promise.reject(new Error("x")) }) });
-    expect(await deleteEvent({ id: EVENT })).toEqual({ error: "Failed to delete the event." });
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({
+      error: "Failed to delete the event.",
+    });
   });
 });

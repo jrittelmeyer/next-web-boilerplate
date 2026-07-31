@@ -62,6 +62,8 @@ export interface EventComposerDefaults {
   readonly startTzid: string;
   readonly endWall: string;
   readonly endTzid: string;
+  /** `null` = a one-off. The recurrence builder lands on this in the next step. */
+  readonly rrule?: string | null;
 }
 
 /**
@@ -111,6 +113,7 @@ export function EventComposer({
       startTzid: defaults.startTzid,
       endWall: defaults.endWall,
       endTzid: defaults.endTzid,
+      rrule: defaults.rrule ?? null,
     },
   });
 
@@ -119,7 +122,9 @@ export function EventComposer({
 
   async function onSubmit(submitted: CreateEventValues) {
     const result = defaults.id
-      ? await updateEvent({ ...submitted, id: defaults.id })
+      ? // No scope yet: every event this composer can reach is still a one-off, and
+        // `scope` and `recurrenceId` are both-or-neither by schema.
+        await updateEvent({ ...submitted, id: defaults.id, scope: null, recurrenceId: null })
       : await createEvent(submitted);
     if ("error" in result) {
       if (result.fieldErrors) applyFieldErrors(form.setError, result.fieldErrors);

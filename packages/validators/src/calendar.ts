@@ -36,6 +36,22 @@ export type EventVisibility = (typeof EVENT_VISIBILITIES)[number];
 export const EVENT_TRANSPARENCIES = ["opaque", "transparent"] as const;
 export type EventTransparency = (typeof EVENT_TRANSPARENCIES)[number];
 
+/** Mirrors `RECURRENCE_DATE_KINDS` in `@repo/db/schema/calendar-recurrence-dates.ts`. */
+export const RECURRENCE_DATE_KINDS = ["exdate", "rdate"] as const;
+export type RecurrenceDateKind = (typeof RECURRENCE_DATE_KINDS)[number];
+
+// --- Action-only unions (no DB column, so no parity row) ----------------------
+
+/**
+ * Which occurrences an edit or a delete applies to.
+ *
+ * Deliberately **not** in the parity test: that test asserts what the database also
+ * declares, and a row for a union no column carries would teach the wrong rule about
+ * what parity means.
+ */
+export const EDIT_SCOPES = ["this", "thisAndFollowing", "all"] as const;
+export type EditScope = (typeof EDIT_SCOPES)[number];
+
 // --- Primitives --------------------------------------------------------------
 
 /**
@@ -83,6 +99,26 @@ export const localDateTimeSchema = z
   .trim()
   .regex(LOCAL_DATE_TIME_PATTERN, "Enter a date and time")
   .transform((value) => `${value.length === 16 ? `${value}:00` : value}`.replace("T", " "));
+
+/**
+ * An `RRULE` value — **shape only**, exactly like `localDateTimeSchema` above.
+ *
+ * What a rule *means* is `parseRRule`'s in `@repo/calendar`, which is the grammar's one
+ * owner; reimplementing RFC 5545 here would be a second answer, and the one over there
+ * is the one with the 100% gate and a 528-rule differential corpus behind it. This
+ * catches the shapes a form can show a message for — empty, absurdly long, not
+ * `NAME=VALUE` pairs, no `FREQ` — and the action attributes everything else to the
+ * `rrule` field by catching `parseRRule`'s `RangeError`, the way `deriveTimes` already
+ * does for zones and wall readings.
+ */
+const RRULE_PATTERN = /^[A-Za-z]+=[^;=]+(?:;[A-Za-z]+=[^;=]+)*;?$/;
+
+export const rruleSchema = z
+  .string()
+  .trim()
+  .max(512, "That recurrence rule is too long")
+  .regex(RRULE_PATTERN, "That isn't a recurrence rule")
+  .refine((value) => /(^|;)FREQ=/i.test(value), "A recurrence rule needs a FREQ");
 
 const MIDNIGHT_SUFFIX = " 00:00:00";
 
@@ -184,6 +220,8 @@ const eventFields = {
   startTzid: timeZoneSchema,
   endWall: localDateTimeSchema,
   endTzid: timeZoneSchema,
+  /** `null` = a one-off. Only a series master ever carries one. */
+  rrule: rruleSchema.nullable(),
 } as const;
 
 /**
@@ -214,19 +252,72 @@ export const createEventSchema = z.object(eventFields).superRefine((value, ctx) 
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
+/**
+ * Which occurrence a scoped write acts on.
+ *
+ * Both-or-neither, and refused rather than defaulted: a `scope` with no
+ * `recurrenceId` cannot name an occurrence, and a `recurrenceId` with no `scope`
+ * doesn't say what to do with it. Silently defaulting either one is how "edit this
+ * occurrence" quietly becomes "edit the whole series".
+ *
+ * `id` is **always the series master's id** — never an override's. The grid renders
+ * virtual occurrences and materialised overrides as identical chips, and both ids are
+ * `uuid`, so nothing in the type system distinguishes them; the action resolves the
+ * override row itself and rejects an `id` that is already one. See
+ * docs/context/calendar/api.md → the occurrence-identity contract.
+ */
+const scopeFields = {
+  scope: z.enum(EDIT_SCOPES).nullable(),
+  recurrenceId: localDateTimeSchema.nullable(),
+} as const;
+
+function scopePairIssues(value: {
+  readonly scope: EditScope | null;
+  readonly recurrenceId: string | null;
+}): Array<{ path: ["scope"] | ["recurrenceId"]; message: string }> {
+  if (value.scope !== null && value.recurrenceId === null) {
+    return [{ path: ["recurrenceId"], message: "Which occurrence did you mean?" }];
+  }
+  if (value.scope === null && value.recurrenceId !== null) {
+    return [{ path: ["scope"], message: "Choose which occurrences this applies to" }];
+  }
+  return [];
+}
+
 export const updateEventSchema = z
-  .object({ ...eventFields, id: z.uuid("Event id is required") })
+  .object({ ...eventFields, ...scopeFields, id: z.uuid("Event id is required") })
   .superRefine((value, ctx) => {
     for (const issue of allDayMidnightIssues(value)) ctx.addIssue({ code: "custom", ...issue });
+    for (const issue of scopePairIssues(value)) ctx.addIssue({ code: "custom", ...issue });
+    // An override may not itself recur — `calendar_events_override_not_recurring`
+    // enforces it, and repeating it here turns a bare SQLSTATE 23514 into a sentence.
+    if (value.scope === "this" && value.rrule !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["rrule"],
+        message: "A single occurrence cannot have its own repeat rule",
+      });
+    }
   });
 
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 export const deleteEventSchema = z.object({
   id: z.uuid("Event id is required"),
+  ...scopeFields,
 });
 
 export type DeleteEventInput = z.infer<typeof deleteEventSchema>;
+
+/** Skip an occurrence (`exdate`) or add one (`rdate`). */
+export const recurrenceDateSchema = z.object({
+  eventId: z.uuid("Event id is required"),
+  kind: z.enum(RECURRENCE_DATE_KINDS),
+  dateWall: localDateTimeSchema,
+});
+
+export type RecurrenceDateInput = z.infer<typeof recurrenceDateSchema>;
+export type RecurrenceDateValues = z.input<typeof recurrenceDateSchema>;
 
 /**
  * The **pre-transform** shapes — what a form holds and what a Server Action receives,
