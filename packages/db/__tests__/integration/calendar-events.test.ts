@@ -522,3 +522,87 @@ describe("the window query's index", () => {
     expect(text).toMatch(/calendar_events_concrete_idx/);
   });
 });
+
+describe("offset drift — detected and surfaced, never blocked", () => {
+  /**
+   * The residual the arithmetic CHECK deliberately does not close.
+   *
+   * `CHECK (start_at = (start_wall - make_interval(mins => start_offset_minutes)) AT
+   * TIME ZONE 'UTC')` consults no timezone database, which is the entire point: a
+   * tzdata update can never make an existing row un-editable, and PG's `later`
+   * overlap resolution can never disagree with our `compatible` one. The price is
+   * that a writer which lies *consistently* — a naive instant carrying offset 0 —
+   * satisfies the arithmetic.
+   *
+   * That gap is covered by DETECTION, here, not by DDL. Re-deriving each row's
+   * offset from the live tz database and comparing is exactly the check the CHECK
+   * refuses to perform, and it belongs in a test rather than in a constraint for one
+   * reason: when Node's ICU and the row disagree after a political tz change, the
+   * right response is a report someone reads, not an `UPDATE` that starts failing —
+   * including the `UPDATE` that soft-deletes the row.
+   *
+   * Note this is NOT the tautology the file header warns about. The comparison is
+   * against the CURRENT tz database rather than against the value the same function
+   * produced at write time, so a row whose zone's rules changed since it was written
+   * is reported — which is the whole reason to run it.
+   */
+  it("recomputes every stored offset from the live tz database and reports mismatches", async () => {
+    for (const [uid, wall, tzid] of [
+      ["drift-ny", "2027-06-01 09:30:00", "America/New_York"],
+      ["drift-chatham", "2027-06-01 09:30:00", "Pacific/Chatham"],
+      ["drift-troll", "2027-10-31 01:30:00", "Antarctica/Troll"],
+    ] as const) {
+      await insertViaWriter({
+        uid,
+        startWall: wall,
+        startTzid: tzid,
+        endWall: wall,
+        endTzid: tzid,
+      });
+    }
+    // Planted: a consistent liar. Offset 0 with an instant that matches it — the
+    // arithmetic holds, so the constraint accepted it, and only re-derivation can
+    // see that New York is not UTC.
+    await db.execute(sql`
+      INSERT INTO calendar_events
+        (calendar_id, uid, title, start_wall, start_tzid, start_offset_minutes, start_at,
+         end_wall, end_tzid, end_offset_minutes, end_at)
+      VALUES (${CALENDAR_ID}::uuid, 'drift-liar', 'liar',
+              '2027-06-01 09:30:00', 'America/New_York', 0, '2027-06-01 09:30:00+00',
+              '2027-06-01 09:30:00', 'America/New_York', 0, '2027-06-01 09:30:00+00')
+    `);
+
+    const rows = await db
+      .select({
+        uid: calendarEvents.uid,
+        startWall: calendarEvents.startWall,
+        startTzid: calendarEvents.startTzid,
+        startOffsetMinutes: calendarEvents.startOffsetMinutes,
+        endWall: calendarEvents.endWall,
+        endTzid: calendarEvents.endTzid,
+        endOffsetMinutes: calendarEvents.endOffsetMinutes,
+      })
+      .from(calendarEvents)
+      .where(eq(calendarEvents.calendarId, CALENDAR_ID));
+
+    const drifted = rows
+      .filter((row) => {
+        const derived = deriveEventInstants({
+          startWall: row.startWall,
+          startTzid: row.startTzid,
+          endWall: row.endWall,
+          endTzid: row.endTzid,
+        });
+        return (
+          derived.startOffsetMinutes !== row.startOffsetMinutes ||
+          derived.endOffsetMinutes !== row.endOffsetMinutes
+        );
+      })
+      .map((row) => row.uid);
+
+    // The three honest rows are silent; the liar is named. If a tzdata update ever
+    // makes a legitimate row drift, THIS is where it surfaces — as a failing test
+    // someone triages, never as a row the application can no longer write to.
+    expect(drifted).toEqual(["drift-liar"]);
+  });
+});

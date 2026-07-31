@@ -65,6 +65,60 @@
   `sub.items.data[0]` (the pinned `2026-05-27.dahlia` API version moved them onto the
   item). Detail: [services/stripe.md](services/stripe.md).
 
+### Calendar
+
+Full mechanics: [calendar/model.md](calendar/model.md) · [api.md](calendar/api.md) ·
+[acl.md](calendar/acl.md). Each of these was measured against PG 18 before `0020` was
+written; the probe results are what changed three of them.
+
+- **Civil time is the source of truth; instants are a derived cache.** `start_wall` +
+  `start_tzid` is what the user meant; `start_at` exists only so a window query can use a
+  btree. Storing the instant as truth is what makes a recurring 09:00 meeting drift an
+  hour when the clocks change.
+- **Postgres never performs the conversion — but not for the reason first written down.**
+  The two-argument `timezone(text, timestamp)` behind `AT TIME ZONE <non-constant>` is
+  marked **`IMMUTABLE`** on PG 18 (only the one-arg session-`TimeZone` form is `STABLE`),
+  so it is perfectly legal in a generated column or a CHECK. We decline anyway: its
+  fall-back-overlap resolution is `later` where ours is `compatible` (measured to differ
+  by 30/60/**120** minutes), its tzdata is a separate copy from Node's ICU, and CHECKs
+  re-run on **every UPDATE** — so a skew would make rows un-editable, including the UPDATE
+  that soft-deletes them. ⚠️ A CHECK *building* proves nothing about volatility; Postgres
+  does not enforce it there. Generated columns do, and are the valid discriminator.
+- **The derived-instant guard is stored offsets + pure arithmetic, not a trigger.**
+  `start_offset_minutes` / `end_offset_minutes` (`smallint NOT NULL`, **no default**) plus
+  `CHECK (start_at = (start_wall - make_interval(mins => start_offset_minutes)) AT TIME
+  ZONE 'UTC')`. This supersedes an approved `STABLE` trigger with a ±3600 s tolerance,
+  which **rejected correct data** (an `Antarctica/Troll` overlap is 7200 s). The stored
+  offset is also the only variant that pins *which branch* of a fall-back overlap was
+  taken, and `NOT NULL` with no default is what makes a bypass writer fail loudly. The
+  residual — a writer that lies consistently in both columns — is covered by *detection*
+  in the integration suite, never by DDL.
+- **`end_at - start_at <= interval '366 days'`, by subtraction.** `timestamptz_mi` is
+  immutable; `timestamptz_pl_interval` is only `STABLE`. A correctness choice, not a
+  legality one — and it makes the bound *elapsed* time, so the window query needs **367**
+  days of slack.
+- **The read surface is split, and the split is enforced.** `calendar_event_masters` for
+  list/count/detail; the **window query reads the raw table** with `rrule IS NULL AND
+  deleted_at IS NULL` spelled out. Measured: through the view the planner cannot prove the
+  partial index applicable (`Seq Scan`), and the view hides the override rows a range scan
+  must include — fast *and*, from Phase 2, silently wrong. An `EXPLAIN` assertion pins it.
+- **Events soft-delete; calendars hard-delete.** A Phase-6 feed subscriber has to learn
+  that a deletion *happened*, which a removed row cannot announce. A soft-deleted
+  *calendar*, by contrast, would leave its events reachable by id and invisible in every
+  list. Consequence, locked by `0020`: the UID unique spans soft-deleted rows, so the
+  Phase-6 ICS upsert **resurrects** a deleted event and must say so in its import report.
+- **All-day ends are exclusive** (RFC 5545 `DTEND` for `DATE` values), and all-day events
+  are placed on the grid by their **wall dates**, in no zone at all. Placing them by
+  instant is the bug that slides them a day for half the planet.
+- **No `"public"` event visibility.** `proxy.ts` gates `PROTECTED_PREFIXES` with
+  `startsWith` and `/calendar` is one, so no URL under it can serve a signed-out visitor. A
+  visibility value no route can honour would be a lie in the schema; it lands with a public
+  route or not at all. Phase 6's RSVP page therefore lives at `/rsvp/[token]`.
+- **No platform-admin override anywhere in the calendar.** Deliberate, and stated in the
+  schema, the ACL module and [acl.md](calendar/acl.md) — because every sibling authority
+  module *has* one, so silence would read as an oversight. An admin who can read every
+  user's meeting titles is a privacy incident with a UI.
+
 ### Auth
 
 - **Better Auth rationale:** chosen on self-hosting/no-lock-in/plugins. The earlier

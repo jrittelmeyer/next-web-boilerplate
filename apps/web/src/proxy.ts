@@ -38,7 +38,13 @@ const handleI18nRouting = createMiddleware(routing);
 // `/admin`, …) is matched below by its real, locale-agnostic path. The layout is
 // the authoritative gate; this is the fast, optimistic edge redirect that spares
 // unauthenticated users the prerendered shell.
-const PROTECTED_PREFIXES = ["/dashboard", "/account", "/admin", "/organization"];
+// `/calendar` is matched with startsWith, so the detail route and every future
+// calendar URL are gated by this one entry. That is load-bearing rather than
+// convenient: `EVENT_VISIBILITIES` in @repo/db deliberately has no "public" member
+// BECAUSE no URL under /calendar can serve a signed-out visitor, and Phase 6's
+// public RSVP page therefore has to live at /rsvp/[token] — outside this prefix —
+// rather than under /calendar where startsWith would gate it.
+const PROTECTED_PREFIXES = ["/dashboard", "/account", "/admin", "/organization", "/calendar"];
 const AUTH_PAGES = ["/login", "/signup"];
 
 // Next's file-based metadata routes (opengraph-image, twitter-image, icon,

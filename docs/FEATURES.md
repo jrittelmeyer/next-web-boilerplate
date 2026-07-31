@@ -167,6 +167,31 @@ prerenderable under the Cache Components / PPR posture, and it gives real per-lo
 URLs for SEO for free. Cookie/header-based locales force every route dynamic.
 → [`context/I18N.md`](context/I18N.md)
 
+## Calendar
+
+- **Calendars + events with a month grid**, rendered in each user's own time zone.
+  Create / edit / soft-delete, all-day and multi-day events, per-calendar colours,
+  independent start and end zones (depart 09:00 New York, arrive 11:30 Los Angeles).
+- **A zero-dependency time core** (`@repo/calendar`, gated at 100% on all four metrics):
+  civil-time arithmetic and IANA zone resolution with an explicit ambiguity policy —
+  spring-forward gaps shift forward, fall-back overlaps take the earlier instant, and
+  the composer *tells the user* which one it hit before they save.
+- **The database refuses a wrong instant.** Civil time is the source of truth; `start_at`
+  is a cache guarded by a CHECK over a stored offset, so a backfill script, a seed, or a
+  future feature that writes an event some other way fails loudly instead of shipping a
+  meeting that is an hour off twice a year.
+- **Accessible by construction:** one tab stop for the whole grid (roving `tabindex`,
+  arrow-key navigation, `Enter` for a focus-trapped day view), scanned by axe in CI with
+  events on it.
+
+**Why this is in a starter at all:** dates are the single most reliably wrong thing in
+new applications, and every wrong version looks right in the developer's own time zone.
+The corpus that guards it includes a 30-minute DST shift, a two-hour one, a 24-hour gap,
+a +13:45 offset, and an 1885 local-mean-time reading — each one breaks a *different*
+plausible implementation. Delete it in ten steps if you don't want it:
+→ [`context/calendar/`](context/calendar/model.md) ·
+[remove-it](context/calendar/remove-it.md)
+
 ## Payments
 
 - **Stripe hosted Checkout** → webhook → a `subscriptions` table in your DB (insert on

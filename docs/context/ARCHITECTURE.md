@@ -127,8 +127,13 @@ writes shared primitives **straight into** `packages/ui/src/components/` — the
 (`@repo/ui/components/<name>`, `@repo/ui/lib/utils`, `@repo/ui/globals.css`); components
 use the unified `radix-ui` package. See [UI.md](UI.md) for the CLI quirks.
 
+### `packages/calendar` → `@repo/calendar`
+The calendar domain core: civil-time arithmetic and IANA zone resolution. **Pure — no I/O, no React, no Next, and zero runtime dependencies**, so it is equally usable in a Server Action, a client composer and a background job. It is the only place in the repo that converts between a wall-clock reading and an instant, and the only writer of an event's derived instants and offsets. Gated at 100/100/100/100. See [calendar/model.md](calendar/model.md) and the leaf [`AGENTS.md`](../../packages/calendar/AGENTS.md).
+
 ### `packages/validators` → `@repo/validators`
 Zod schemas that are shared between client and server (e.g., form schemas used in both React Hook Form and tRPC input validation). Keep these framework-agnostic.
+
+Two entry points: the barrel (`@repo/validators`) and **`@repo/validators/calendar`**. The subpath exists so a client bundle importing `signInSchema` doesn't drag the whole event model along; add one per bounded subsystem rather than growing the barrel. Because this package must stay free of `@repo/db`, literal unions shared with the schema are **duplicated by necessity** — pair every such duplicate with a parity test in `apps/web` (which legitimately depends on both), the way `src/lib/calendar/union-parity.test.ts` does.
 
 ### `tooling/*`
 Build tooling only — no runtime code. These packages are `devDependencies` everywhere they're used.

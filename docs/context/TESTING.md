@@ -180,6 +180,11 @@ Each test-bearing package owns its `coverage` block (provider `v8`, reporters
 | `@repo/email` | 95% lines/functions/statements, 90% branches | `include` is scoped to `src/templates/**` — the render smoke tests take every template to HTML **and** plain-text (both prop-set and default-prop passes), sitting at 100% on all four metrics; the floor sits a few points under so adding an untested template trips the gate. `send.tsx`/`client.ts` (the Resend + `server-only` bootstrap, the email analog of jobs' `boss.ts`) stay out of the `include` — smoke-tested only for graceful degradation. |
 | `@repo/jobs` | 90% lines/functions/statements, 80% branches | `include` is scoped to the pure parts — `handlers/**` + `queues.ts` (the job contract + handler logic, `@repo/email` mocked); the pg-boss I/O bootstrap (`boss.ts`/`worker.ts`) is left to the `test:integration` round-trip in the `e2e` lane. |
 
+> ⚠️ **`pnpm test` does not run `@repo/db`'s integration suite** — that package has no
+> `test` script by design, so the planted-defect tests below run only under
+> `pnpm --filter @repo/db test:integration` (and in CI's `e2e` lane). A local build loop
+> that stops at `pnpm test` never sees them.
+
 `@repo/db`'s integration tests are **not** part of the coverage gate (they're DB-backed
 and run via `test:integration`, separately from the `--coverage` unit run). To tighten
 a bar, edit the package's `thresholds`; a breach fails `vitest` (exit 1) and the CI
@@ -255,6 +260,39 @@ describe("posts (integration)", () => {
 > (auth gate, rate-limit, validation) is unit-tested in the `apps/web` Vitest project with
 > the workspace deps mocked. The query mirrors the procedure exactly, so it covers that
 > path against real Postgres.
+
+### The planted-defect pattern (`calendar-events.test.ts`)
+
+The calendar suite is the other worked example, and it exists because the *obvious*
+version of it is a tautology. A test that recomputes `deriveEventInstants()` for every
+row and compares it to rows written by `deriveEventInstants()` cannot fail — it asserts a
+function equals itself. This repo has shipped exactly that shape before
+(`MAINTENANCE.md:198` — a `docs:sanity` wiring assertion that failed *open*).
+
+So every negative case there writes through **raw `db.execute(sql...)` that bypasses the
+application writer**, carrying a deliberately wrong instant, and asserts the database
+refuses it. Reach for this whenever a constraint — not application code — is the thing
+under test.
+
+Two habits from it are worth copying:
+
+- **Assert the constraint by name, from `error.cause.constraint`.** Drizzle does not put
+  it in the message, so `rejects.toThrow(/some_constraint/)` passes for *any* failure.
+- **Build an acceptance corpus that can falsify the design, not one that confirms it.**
+  An earlier iteration of this constraint passed a 16-row corpus of modern dates and was
+  wrong for pre-1900 local mean time, for two-hour DST transitions, and for fall-back
+  overlaps — none of which were in the corpus. The corpus now pins all three overlap
+  sizes (30/60/120 min), all three gap sizes (1 h / 2 h / 24 h), a pre-1900 LMT reading,
+  and zones that transition **at midnight** (`America/New_York` transitions at 02:00, so
+  an all-day event's midnight is never in its gap and a DST assertion built on it passes
+  for the wrong reason).
+
+The same file also carries an `EXPLAIN (FORMAT JSON)` assertion at ~5k seeded rows,
+pinning that the window query uses `calendar_events_concrete_idx` and never a `Seq Scan`,
+and an offset-drift check that **reports** rows whose stored offset disagrees with the
+live tz database rather than blocking them — see
+[calendar/model.md](calendar/model.md#derived-instants-are-enforced-by-arithmetic-not-by-tzdata)
+for why blocking would be the wrong answer.
 
 **`@repo/jobs` follows the same split:**
 - **Unit** (`verify` lane, DB-free) — `vitest.config.ts` covers the pure parts: the job

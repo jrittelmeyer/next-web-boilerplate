@@ -476,6 +476,29 @@ activity, `/admin/audit` rows) and not just one feature.
   database, and handing a dead one to `Intl` throws, which would take down every
   page that renders a timestamp instead of degrading one preference.
 
+## Calendars and events (migration 0020)
+
+`calendars` + `calendar_events`, plus the `calendar_event_masters` view. The full
+rationale — why civil time is the source of truth, why the derived instants are guarded
+by stored offsets and pure arithmetic rather than by a trigger or by `AT TIME ZONE`, what
+each of the eight constraints is for, and why the read surface is deliberately **split**
+between the view and the raw table — lives in
+[calendar/model.md](calendar/model.md). Leaf rules:
+[`packages/db/AGENTS.md`](../../packages/db/AGENTS.md).
+
+Three things to know before writing any query against them:
+
+- **Never write `start_at` / `end_at` / `*_offset_minutes` by hand.** They come from
+  `deriveEventInstants` in `@repo/calendar`, and `calendar_events_start_at_derived`
+  rejects anything else. The offset columns are `NOT NULL` **with no default**, so a
+  writer that doesn't know they exist fails loudly rather than storing a plausible
+  instant.
+- **`calendar_event_masters` is the read surface for list, count and detail.** The
+  window/range query is the documented exception and reads `calendar_events` directly,
+  spelling out `rrule IS NULL AND deleted_at IS NULL`.
+- **Never write *through* the view.** Postgres makes it auto-updatable and drizzle emits
+  no `WITH CHECK OPTION`.
+
 ## Admin plugin columns (ban + impersonation)
 
 The Better Auth `admin()` plugin (migration 0014) adds **no new table** — it

@@ -21,7 +21,9 @@
     "notifications": "Notificaciones",
     "account": "Cuenta",
     "organization": "Organización",
-    "acceptInvitation": "Aceptar invitación"
+    "acceptInvitation": "Aceptar invitación",
+    "calendar": "Calendario",
+    "calendarEvent": "Evento"
   },
   "Auth": {
     "common": {
@@ -131,7 +133,8 @@
       "dashboard": "Panel",
       "posts": "Publicaciones",
       "notifications": "Notificaciones",
-      "admin": "Administración"
+      "admin": "Administración",
+      "calendar": "Calendario"
     },
     "userMenu": {
       "menuLabel": "Menú de cuenta",
@@ -665,5 +668,135 @@
     "description": "Ocurrió un error inesperado. Puedes intentarlo de nuevo o volver al inicio.",
     "tryAgain": "Intentar de nuevo",
     "goHome": "Ir al inicio"
+  },
+  "Calendar": {
+    "chip": {
+      "continued": "{title} (continúa)"
+    },
+    "grid": {
+      "ariaLabel": "Calendario de {month}"
+    },
+    "toolbar": {
+      "previousMonth": "Mes anterior",
+      "nextMonth": "Mes siguiente",
+      "today": "Hoy",
+      "newEvent": "Nuevo evento"
+    },
+    "workspace": {
+      "truncated": "Este mes tiene más eventos de los que se pueden mostrar. Oculta algunos calendarios para ver el resto.",
+      "noCalendars": "Crea un calendario para empezar a añadir eventos.",
+      "dayDescription": "Eventos de este día.",
+      "dayEmpty": "Nada programado.",
+      "addOnThisDay": "Añadir un evento este día",
+      "createTitle": "Nuevo evento",
+      "editTitle": "Editar evento",
+      "composerDescription": "Las horas se guardan tal como las escribes, en la zona que elijas."
+    },
+    "list": {
+      "heading": "Calendarios",
+      "new": "Nuevo",
+      "empty": "Aún no hay calendarios.",
+      "primary": "Principal",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "editNamed": "Editar {name}",
+      "deleteNamed": "Eliminar {name}",
+      "deleted": "Se eliminó {name}.",
+      "createTitle": "Nuevo calendario",
+      "createDescription": "Los eventos heredan el color de este calendario y su zona horaria.",
+      "editTitle": "Editar calendario",
+      "editDescription": "Cambiar el nombre no modifica sus eventos."
+    },
+    "calendarForm": {
+      "nameLabel": "Nombre",
+      "descriptionLabel": "Descripción",
+      "colorLabel": "Color",
+      "color": {
+        "chart-1": "Naranja",
+        "chart-2": "Verde azulado",
+        "chart-3": "Azul",
+        "chart-4": "Ámbar",
+        "chart-5": "Dorado"
+      },
+      "timeZoneLabel": "Zona horaria",
+      "timeZoneHelp": "Los eventos nuevos de este calendario empiezan en esta zona.",
+      "primaryLabel": "Usar como calendario principal",
+      "primaryHelp": "Los eventos nuevos irán aquí. Solo un calendario puede ser el principal.",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "created": "Se creó {name}.",
+      "updated": "Calendario actualizado."
+    },
+    "composer": {
+      "titleLabel": "Título",
+      "calendarLabel": "Calendario",
+      "allDayLabel": "Todo el día",
+      "startLabel": "Comienza",
+      "endLabel": "Termina",
+      "startZoneLabel": "Zona horaria de inicio",
+      "endZoneLabel": "Zona horaria de fin",
+      "zoneHelp": "Usa una zona de fin distinta para viajes: sales en una zona y llegas en otra.",
+      "hintGap": "Las {time} no existen en esta fecha: el reloj se adelanta. Usaremos la siguiente hora válida.",
+      "hintOverlap": "Las {time} ocurren dos veces en esta fecha: el reloj se atrasa. Usaremos la primera.",
+      "locationLabel": "Ubicación",
+      "descriptionLabel": "Descripción",
+      "colorLabel": "Color",
+      "colorInherit": "Usar el color del calendario",
+      "color": {
+        "chart-1": "Naranja",
+        "chart-2": "Verde azulado",
+        "chart-3": "Azul",
+        "chart-4": "Ámbar",
+        "chart-5": "Dorado"
+      },
+      "statusLabel": "Estado",
+      "status": {
+        "confirmed": "Confirmado",
+        "tentative": "Provisional",
+        "cancelled": "Cancelado"
+      },
+      "visibilityLabel": "Visibilidad",
+      "visibility": {
+        "default": "Predeterminada",
+        "private": "Privada"
+      },
+      "transparencyLabel": "Me muestra como",
+      "transparency": {
+        "opaque": "Ocupado",
+        "transparent": "Libre"
+      },
+      "urlLabel": "Enlace",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "created": "Evento creado.",
+      "updated": "Evento actualizado."
+    },
+    "detail": {
+      "when": "Cuándo",
+      "asEntered": "Introducido como {start} ({startZone}) a {end} ({endZone})",
+      "location": "Ubicación",
+      "url": "Enlace",
+      "status": "Estado",
+      "statusValue": {
+        "confirmed": "Confirmado",
+        "tentative": "Provisional",
+        "cancelled": "Cancelado"
+      },
+      "visibility": "Visibilidad",
+      "visibilityValue": {
+        "default": "Predeterminada",
+        "private": "Privada"
+      },
+      "transparency": "Me muestra como",
+      "transparencyValue": {
+        "opaque": "Ocupado",
+        "transparent": "Libre"
+      },
+      "delete": "Eliminar evento",
+      "deleting": "Eliminando…",
+      "deleted": "Evento eliminado."
+    }
   }
 }

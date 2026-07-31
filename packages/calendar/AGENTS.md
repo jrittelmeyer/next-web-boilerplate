@@ -16,6 +16,13 @@ One imperative per line; mechanics + rationale live in
   aliases real ICS files use.
 - Expansion is **always window-bounded** — an unbounded series must never allocate
   past `to`.
+- **Every `start_at`/`end_at`/`*_offset_minutes` write in the repo comes from
+  `deriveEventInstants`.** It returns the resolved offset rather than discarding it
+  because the database's CHECK reads that column; a caller that recomputes the instant
+  some other way writes a row Postgres rejects.
+- `timezone.ts` is the **only** place that converts a wall reading to an instant. A
+  second implementation anywhere is a second answer at every DST boundary — use
+  `civilToInstant` / `resolveCivil`, even for a query bound.
 - A new module joins the coverage run automatically (`all: true`); the gate is
   **100/100/100/100**.
 - **The recurrence engine is only swappable until the first `recurrence_id` row

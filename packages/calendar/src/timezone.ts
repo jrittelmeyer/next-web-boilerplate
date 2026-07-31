@@ -9,10 +9,23 @@
  * `en-US-u-ca-iso8601` so neither the ambient locale nor a non-Gregorian default
  * calendar can change the numbers.
  *
- * Postgres is deliberately never asked to do this conversion: `AT TIME ZONE
- * <non-constant>` is STABLE (so it is illegal in a generated column or CHECK
- * anyway), its ambiguity resolution differs from ours, and its bundled tzdata
- * drifts from Node's ICU copy for days after a political change.
+ * Postgres is deliberately never asked to do this conversion. It **can**: the
+ * two-argument `timezone(text, timestamp)` behind `AT TIME ZONE <non-constant>` is
+ * marked `IMMUTABLE` on PG 18 (only the one-argument session-`TimeZone` form is
+ * `STABLE`), so it is legal in a generated column, an index and a CHECK. That
+ * marking is a deliberate upstream fiat despite the function's dependence on a
+ * mutable timezone database — the accepted cost is rebuilding affected indexes
+ * after a tzdata update. We decline anyway, for reasons that have nothing to do
+ * with legality: its ambiguity resolution differs from ours (Postgres takes the
+ * *later* instant on a fall-back overlap, `resolveCivil` takes the earlier — the
+ * `compatible` rule), and its bundled tzdata is a separate copy from Node's ICU on
+ * a separate release cadence, so anything in the schema that consulted it would
+ * start rejecting existing rows on every UPDATE once the two skew.
+ *
+ * Note that a CHECK constraint is not evidence either way here: Postgres does not
+ * enforce volatility in CHECKs at all — a `STABLE` expression builds fine in one.
+ * Generated columns do enforce it, and are the discriminator that established the
+ * marking above.
  */
 
 import {

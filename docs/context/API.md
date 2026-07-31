@@ -370,3 +370,13 @@ is persisted, so the initial load reconciles too. **Serverless caveat:** SSE nee
 connection and a persistent DB connection — native on the Docker / `next start` target
 this repo ships, but capped/broken on serverless. See
 [DEPLOYMENT.md](DEPLOYMENT.md#realtime-sse--serverless-caveat-tier-4--a22).
+
+## Calendar (Phase 1)
+
+The calendar follows this file's split exactly — `calendar.list` / `calendar.range` /
+`calendar.byId` are tRPC reads, the six create/update/delete operations are Server
+Actions — so nothing about it is novel enough to restate here. What *is* worth reading
+before touching it: the six-step order every calendar action runs in and why the order
+matters, the `{ truncated: true }` contract on the capped window query, and the
+documented exception where the range query bypasses the masters view. All three:
+[calendar/api.md](calendar/api.md).

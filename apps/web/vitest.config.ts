@@ -49,6 +49,7 @@ export default defineConfig({
       all: true,
       include: [
         "src/server/actions/avatar.ts",
+        "src/server/actions/calendar.ts",
         "src/server/actions/post.ts",
         "src/server/actions/admin.ts",
         "src/server/actions/billing.ts",
@@ -59,6 +60,12 @@ export default defineConfig({
         "src/lib/audit-format.ts",
         "src/lib/auth-redirect.ts",
         "src/lib/avatar.ts",
+        // This list is an explicit file list, NOT a glob (a glob would drag every
+        // route and component into the denominator and force the floor to near
+        // zero). The tell that a new module was forgotten is that the totals don't
+        // move when it lands — so add the file in the same commit as the module.
+        "src/lib/calendar-acl.ts",
+        "src/lib/calendar/grid.ts",
         "src/lib/consent.ts",
         "src/lib/data-export.ts",
         "src/lib/env-schema.ts",

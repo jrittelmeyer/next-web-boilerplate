@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { makeTestUser, signUp } from "./support/auth";
-import { promoteToAdmin } from "./support/db";
+import { deleteCalendarFixtures, promoteToAdmin, seedCalendar, seedEvents } from "./support/db";
 
 // Accessibility checks (Step 29, expanded in P3-2) with axe-core. We gate on the two
 // highest-impact levels — `critical` + `serious`, the WCAG-blocking issues — so the
@@ -41,13 +41,14 @@ test("signup page has no critical or serious a11y violations", async ({ page }) 
   expect(violations, `Accessibility violations on /signup:\n${summarize(violations)}`).toEqual([]);
 });
 
-test("signed-in account, admin, and audit-log pages have no critical or serious a11y violations", async ({
+test("signed-in account, admin, audit-log and calendar pages have no critical or serious a11y violations", async ({
   page,
 }) => {
   // One signup covers ALL signed-in surfaces, keeping this file (which runs first
   // alphabetically, ahead of the account-* signups) to a single hit on Better Auth's
-  // 5-per-60s sign-up limiter. test.slow() triples the budget: the signup round-trip
-  // plus three full-page axe scans can be slow under load.
+  // 5-per-60s sign-up limiter — which is why the calendar scan was added to this
+  // test rather than as a new one. test.slow() triples the budget: the signup
+  // round-trip plus four full-page axe scans can be slow under load.
   test.slow();
 
   const user = makeTestUser("a11y");
@@ -75,4 +76,49 @@ test("signed-in account, admin, and audit-log pages have no critical or serious 
     auditViolations,
     `Accessibility violations on /admin/audit:\n${summarize(auditViolations)}`,
   ).toEqual([]);
+
+  // The month grid, scanned with events on it rather than empty. The chips are the
+  // part that can regress: a saturated `--chart-*` fill behind chip-size text fails
+  // `color-contrast` in at least one theme, so an empty grid would pass while the
+  // real screen did not. Two same-day events also force a second lane, so the lane
+  // spacers are in the tree too.
+  const calendarId = await seedCalendar(user.email, {
+    name: "A11y",
+    timeZone: "UTC",
+    isPrimary: true,
+  });
+  // Seeded into the CURRENT month, not a fixed one: /calendar opens on today, so
+  // fixed 2027 dates would scan an empty grid and the assertion would pass without
+  // ever having seen a chip. Days 10 and 15–18 exist in every month.
+  const month = new Date().toISOString().slice(0, 7);
+  await seedEvents(calendarId, [
+    {
+      title: "Morning",
+      startWall: `${month}-10 09:00:00`,
+      endWall: `${month}-10 10:00:00`,
+      timeZone: "UTC",
+    },
+    {
+      title: "Afternoon",
+      startWall: `${month}-10 14:00:00`,
+      endWall: `${month}-10 15:00:00`,
+      timeZone: "UTC",
+    },
+    {
+      title: "Conference",
+      startWall: `${month}-15 00:00:00`,
+      endWall: `${month}-18 00:00:00`,
+      timeZone: "UTC",
+      allDay: true,
+    },
+  ]);
+  try {
+    const calendarViolations = await blockingViolations(page, "/calendar");
+    expect(
+      calendarViolations,
+      `Accessibility violations on /calendar:\n${summarize(calendarViolations)}`,
+    ).toEqual([]);
+  } finally {
+    await deleteCalendarFixtures(user.email);
+  }
 });

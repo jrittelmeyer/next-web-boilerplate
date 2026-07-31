@@ -57,6 +57,9 @@ export default async function DashboardLayout({
             <Link href="/posts" className="text-muted-foreground hover:text-foreground">
               {t("posts")}
             </Link>
+            <Link href="/calendar" className="text-muted-foreground hover:text-foreground">
+              {t("calendar")}
+            </Link>
             <Link href="/notifications" className="text-muted-foreground hover:text-foreground">
               {t("notifications")}
             </Link>

@@ -13,6 +13,36 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **Calendar, Phase 1 — calendars, events and a month grid.** `calendars` +
+  `calendar_events` (migration `0020`) with the `calendar_event_masters` view,
+  `@repo/validators/calendar` (a new exports-map subpath), `lib/calendar-acl.ts`,
+  pure month-grid geometry in `lib/calendar/grid.ts`, six Server Actions, three tRPC
+  reads, the `/calendar` and `/calendar/event/[id]` routes, eight components and a
+  `Calendar` i18n namespace in both locales.
+  **The load-bearing decision — and an amendment to the signed-off program plan —** is
+  how the derived instants are guarded. The approved design was a `STABLE` trigger with
+  a ±3600 s tolerance, justified by "`AT TIME ZONE <non-constant>` is `STABLE`, so it is
+  illegal in a CHECK anyway". Probed against PG 18, **both halves were false**: the
+  two-argument `timezone(text, timestamp)` is `IMMUTABLE` (only the one-arg session form
+  is `STABLE`), and the tolerance **rejected correct data** — Postgres resolves a
+  fall-back overlap to the *later* instant where we take the earlier, so they disagree by
+  the transition size, which is 7200 s in `Antarctica/Troll`. Shipped instead:
+  `start_offset_minutes` / `end_offset_minutes` (`smallint NOT NULL`, **no default**) and
+  a tzdata-free arithmetic CHECK. It consults no timezone database, so a tzdata update
+  can never make a row un-editable; it is the only variant that rejects a wrong
+  overlap-branch row; and `NOT NULL` with no default makes a bypass writer fail loudly.
+  ⚠️ A `CHECK` being created is **not** evidence of immutability — Postgres does not
+  enforce volatility there at all; generated columns do. The old claim is corrected in
+  `packages/calendar/src/timezone.ts` and `docs/context/calendar/model.md`.
+  Also: the read surface is deliberately **split** (masters view for list/detail, raw
+  table for the window query — measured `Seq Scan` vs `Bitmap Index Scan`, and the view
+  hides override rows a range scan must include), pinned by an `EXPLAIN` assertion; the
+  integration suite writes its negative cases through **raw SQL that bypasses the
+  application writer**, because recomputing with the same function it wrote with would
+  assert that a function equals itself. Docs:
+  [`docs/context/calendar/`](docs/context/calendar/model.md) —
+  [api](docs/context/calendar/api.md) · [acl](docs/context/calendar/acl.md) ·
+  [remove-it](docs/context/calendar/remove-it.md).
 - **`contrarian` review subagent + a sign-off nudge** — `.claude/agents/contrarian.md`
   is a devil's-advocate agent (no file-editing and no shell — its `tools:` are
   `Read, Glob, Grep, WebSearch, WebFetch`) that steel-mans a plan, audits its unstated

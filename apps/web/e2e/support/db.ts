@@ -1,5 +1,16 @@
+import { deriveEventInstants } from "@repo/calendar";
 import { db } from "@repo/db";
-import { type AuditAction, auditLog, notifications, rateLimit, user } from "@repo/db/schema";
+import {
+  type AuditAction,
+  auditLog,
+  type CalendarColor,
+  calendarEvents,
+  calendars,
+  notifications,
+  rateLimit,
+  user,
+  userPreferences,
+} from "@repo/db/schema";
 import { eq, like } from "drizzle-orm";
 
 /**
@@ -118,4 +129,103 @@ export async function seedNotifications(email: string, count: number): Promise<v
       createdAt: new Date(base - i * 1000),
     })),
   );
+}
+
+/**
+ * Pin a user's display time zone by DIRECT upsert — the same sanctioned out-of-band
+ * path as the other seed helpers.
+ *
+ * The calendar specs need the VIEWER's zone to differ from the event's, because that
+ * is the only configuration in which placing an all-day event by its instant instead
+ * of its wall date shows up as a wrong answer. Driving the /account preferences form
+ * for that would cost a form round-trip per spec and couple the calendar suite to the
+ * account UI.
+ */
+export async function setUserTimeZone(email: string, timeZone: string): Promise<void> {
+  const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
+  if (!u) throw new Error(`setUserTimeZone: no user for ${email}`);
+  await db
+    .insert(userPreferences)
+    .values({ userId: u.id, timeZone })
+    .onConflictDoUpdate({ target: userPreferences.userId, set: { timeZone } });
+}
+
+/** Seed a calendar for a user (looked up by email) and return its id. */
+export async function seedCalendar(
+  email: string,
+  options: { name: string; timeZone: string; color?: CalendarColor; isPrimary?: boolean },
+): Promise<string> {
+  const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
+  if (!u) throw new Error(`seedCalendar: no user for ${email}`);
+  const [row] = await db
+    .insert(calendars)
+    .values({
+      userId: u.id,
+      name: options.name,
+      color: options.color ?? "chart-1",
+      timeZone: options.timeZone,
+      isPrimary: options.isPrimary ?? false,
+    })
+    .returning({ id: calendars.id });
+  if (!row) throw new Error("seedCalendar: insert returned no row");
+  return row.id;
+}
+
+/**
+ * Seed events on a calendar.
+ *
+ * The instants and offsets come from the real `deriveEventInstants`, not from
+ * hand-written literals — `calendar_events_start_at_derived` rejects anything else,
+ * so a fixture with a plausible-looking instant would fail at insert time rather than
+ * at assert time, and the failure would look like a schema bug rather than a fixture
+ * bug. (The *planted-defect* test in `packages/db` deliberately does the opposite: it
+ * bypasses this function with raw SQL to prove the constraint bites.)
+ */
+export async function seedEvents(
+  calendarId: string,
+  events: ReadonlyArray<{
+    title: string;
+    startWall: string;
+    endWall: string;
+    timeZone: string;
+    allDay?: boolean;
+  }>,
+): Promise<void> {
+  await db.insert(calendarEvents).values(
+    events.map((event) => {
+      const derived = deriveEventInstants({
+        startWall: event.startWall,
+        startTzid: event.timeZone,
+        endWall: event.endWall,
+        endTzid: event.timeZone,
+      });
+      return {
+        calendarId,
+        uid: crypto.randomUUID(),
+        title: event.title,
+        allDay: event.allDay ?? false,
+        startWall: event.startWall,
+        startTzid: event.timeZone,
+        endWall: event.endWall,
+        endTzid: event.timeZone,
+        startOffsetMinutes: derived.startOffsetMinutes,
+        endOffsetMinutes: derived.endOffsetMinutes,
+        startAt: new Date(derived.startAtMs),
+        endAt: new Date(derived.endAtMs),
+      };
+    }),
+  );
+}
+
+/**
+ * Delete a user's calendars, and with them their events.
+ *
+ * One statement: `calendar_events.calendar_id` cascades. Events are SOFT-deleted by
+ * the app, so cleaning up by event would leave rows behind; cleaning up by calendar
+ * removes them for real, which is what a test database wants.
+ */
+export async function deleteCalendarFixtures(email: string): Promise<void> {
+  const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
+  if (!u) return;
+  await db.delete(calendars).where(eq(calendars.userId, u.id));
 }

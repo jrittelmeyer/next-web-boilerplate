@@ -21,7 +21,9 @@
     "notifications": "Notifications",
     "account": "Account",
     "organization": "Organization",
-    "acceptInvitation": "Accept invitation"
+    "acceptInvitation": "Accept invitation",
+    "calendar": "Calendar",
+    "calendarEvent": "Event"
   },
   "Auth": {
     "common": {
@@ -131,7 +133,8 @@
       "dashboard": "Dashboard",
       "posts": "Posts",
       "notifications": "Notifications",
-      "admin": "Admin"
+      "admin": "Admin",
+      "calendar": "Calendar"
     },
     "userMenu": {
       "menuLabel": "Account menu",
@@ -665,5 +668,135 @@
     "description": "An unexpected error occurred. You can try again, or head back home.",
     "tryAgain": "Try again",
     "goHome": "Go home"
+  },
+  "Calendar": {
+    "chip": {
+      "continued": "{title} (continued)"
+    },
+    "grid": {
+      "ariaLabel": "Calendar for {month}"
+    },
+    "toolbar": {
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "today": "Today",
+      "newEvent": "New event"
+    },
+    "workspace": {
+      "truncated": "This month has more events than can be shown. Hide some calendars to see the rest.",
+      "noCalendars": "Create a calendar to start adding events.",
+      "dayDescription": "Events on this day.",
+      "dayEmpty": "Nothing scheduled.",
+      "addOnThisDay": "Add an event on this day",
+      "createTitle": "New event",
+      "editTitle": "Edit event",
+      "composerDescription": "Times are stored as you enter them, in the zone you pick."
+    },
+    "list": {
+      "heading": "Calendars",
+      "new": "New",
+      "empty": "No calendars yet.",
+      "primary": "Primary",
+      "edit": "Edit",
+      "delete": "Delete",
+      "editNamed": "Edit {name}",
+      "deleteNamed": "Delete {name}",
+      "deleted": "Deleted {name}.",
+      "createTitle": "New calendar",
+      "createDescription": "Events inherit this calendar's colour and default to its time zone.",
+      "editTitle": "Edit calendar",
+      "editDescription": "Renaming a calendar does not change its events."
+    },
+    "calendarForm": {
+      "nameLabel": "Name",
+      "descriptionLabel": "Description",
+      "colorLabel": "Colour",
+      "color": {
+        "chart-1": "Orange",
+        "chart-2": "Teal",
+        "chart-3": "Blue",
+        "chart-4": "Amber",
+        "chart-5": "Gold"
+      },
+      "timeZoneLabel": "Time zone",
+      "timeZoneHelp": "New events on this calendar start in this zone.",
+      "primaryLabel": "Make this my primary calendar",
+      "primaryHelp": "New events default here. Only one calendar can be primary.",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "created": "Created {name}.",
+      "updated": "Calendar updated."
+    },
+    "composer": {
+      "titleLabel": "Title",
+      "calendarLabel": "Calendar",
+      "allDayLabel": "All day",
+      "startLabel": "Starts",
+      "endLabel": "Ends",
+      "startZoneLabel": "Start time zone",
+      "endZoneLabel": "End time zone",
+      "zoneHelp": "Set a different end zone for travel — depart in one zone, arrive in another.",
+      "hintGap": "{time} doesn't exist on this date — the clocks skip forward. We'll use the next valid time.",
+      "hintOverlap": "{time} happens twice on this date — the clocks go back. We'll use the first one.",
+      "locationLabel": "Location",
+      "descriptionLabel": "Description",
+      "colorLabel": "Colour",
+      "colorInherit": "Use the calendar's colour",
+      "color": {
+        "chart-1": "Orange",
+        "chart-2": "Teal",
+        "chart-3": "Blue",
+        "chart-4": "Amber",
+        "chart-5": "Gold"
+      },
+      "statusLabel": "Status",
+      "status": {
+        "confirmed": "Confirmed",
+        "tentative": "Tentative",
+        "cancelled": "Cancelled"
+      },
+      "visibilityLabel": "Visibility",
+      "visibility": {
+        "default": "Default",
+        "private": "Private"
+      },
+      "transparencyLabel": "Shows me as",
+      "transparency": {
+        "opaque": "Busy",
+        "transparent": "Free"
+      },
+      "urlLabel": "Link",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "created": "Event created.",
+      "updated": "Event updated."
+    },
+    "detail": {
+      "when": "When",
+      "asEntered": "Entered as {start} ({startZone}) to {end} ({endZone})",
+      "location": "Location",
+      "url": "Link",
+      "status": "Status",
+      "statusValue": {
+        "confirmed": "Confirmed",
+        "tentative": "Tentative",
+        "cancelled": "Cancelled"
+      },
+      "visibility": "Visibility",
+      "visibilityValue": {
+        "default": "Default",
+        "private": "Private"
+      },
+      "transparency": "Shows me as",
+      "transparencyValue": {
+        "opaque": "Busy",
+        "transparent": "Free"
+      },
+      "delete": "Delete event",
+      "deleting": "Deleting…",
+      "deleted": "Event deleted."
+    }
   }
 }

@@ -71,6 +71,20 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 **This section is the canonical live Watch list** — full per-item detail and removal
 conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Currently:
 
+- **Calendar offset drift** — `calendar_events.start_offset_minutes` /
+  `end_offset_minutes` are a snapshot of what the IANA database said when the row was
+  written. That is deliberate: the CHECK guarding the derived instants is pure arithmetic
+  precisely so a tzdata update can never make an existing row un-editable (Postgres
+  re-evaluates every CHECK on every `UPDATE`, including the one that soft-deletes).
+  The trade is that after a real political timezone change, rows written under the old
+  rules keep their old offsets. **Detection, not prevention:** the assertion in
+  `packages/db/__tests__/integration/calendar-events.test.ts` ("offset drift — detected
+  and surfaced, never blocked") recomputes every row's offset from the live tz database
+  and names the mismatches. *Removal condition:* none — this is the design. *Action when
+  it fires:* confirm the zone's rules genuinely changed (Node's ICU release notes), then
+  re-derive the affected rows through `deriveEventInstants` in a one-off migration. Never
+  "fix" it by moving the check into a constraint.
+
 - **TypeScript 7 cutover** — **GA'd as `typescript@7.0.2` (2026-07-08)** but not yet
   adoptable here (proven by a 2026-07-13 cutover attempt — owner-approved age-gate
   override; repo undeployed → no prod risk): TS 7's package IS the native **Go**
