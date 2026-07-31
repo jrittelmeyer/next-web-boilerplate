@@ -13,6 +13,8 @@ import {
   MAX_RANGE_CALENDARS,
   MAX_RANGE_DAYS,
   MAX_RANGE_ROWS,
+  recurrenceDateSchema,
+  rruleSchema,
   timeZoneSchema,
   updateCalendarSchema,
   updateEventSchema,
@@ -44,7 +46,11 @@ const validEvent = {
   startTzid: "America/New_York",
   endWall: "2027-03-14 10:00:00",
   endTzid: "America/New_York",
+  rrule: null,
 } as const;
+
+/** Scoped writes are both-or-neither; a one-off carries neither. */
+const noScope = { scope: null, recurrenceId: null } as const;
 
 const validCalendar = {
   name: "Work",
@@ -269,11 +275,14 @@ describe("createEventSchema", () => {
 
 describe("updateEventSchema / deleteEventSchema", () => {
   it("adds an id and keeps every create rule", () => {
-    expect(updateEventSchema.parse({ ...validEvent, id: UUID }).id).toBe(UUID);
-    expect(updateEventSchema.safeParse({ ...validEvent, id: "nope" }).success).toBe(false);
+    expect(updateEventSchema.parse({ ...validEvent, ...noScope, id: UUID }).id).toBe(UUID);
+    expect(updateEventSchema.safeParse({ ...validEvent, ...noScope, id: "nope" }).success).toBe(
+      false,
+    );
 
     const badAllDay = updateEventSchema.safeParse({
       ...validEvent,
+      ...noScope,
       id: UUID,
       allDay: true,
       startWall: "2027-03-14T09:30",
@@ -283,14 +292,60 @@ describe("updateEventSchema / deleteEventSchema", () => {
     expect(issuePaths(badAllDay)).toContain("startWall");
 
     // Not all-day: the refinement returns early and adds nothing.
-    expect(updateEventSchema.safeParse({ ...validEvent, id: UUID, allDay: false }).success).toBe(
-      true,
-    );
+    expect(
+      updateEventSchema.safeParse({ ...validEvent, ...noScope, id: UUID, allDay: false }).success,
+    ).toBe(true);
+  });
+
+  it("takes a scope and the occurrence it names, both or neither", () => {
+    const scoped = updateEventSchema.parse({
+      ...validEvent,
+      id: UUID,
+      scope: "this",
+      recurrenceId: "2027-03-14T09:30",
+    });
+    expect(scoped).toMatchObject({ scope: "this", recurrenceId: "2027-03-14 09:30:00" });
+
+    // A scope with nothing to apply it to cannot name an occurrence...
+    const noOccurrence = updateEventSchema.safeParse({
+      ...validEvent,
+      id: UUID,
+      scope: "all",
+      recurrenceId: null,
+    });
+    expect(noOccurrence.success).toBe(false);
+    if (noOccurrence.success) throw new Error("unreachable");
+    expect(issuePaths(noOccurrence)).toContain("recurrenceId");
+
+    // ...and an occurrence with no scope does not say what to do with it. Defaulting
+    // either is how "edit this occurrence" quietly becomes "edit the whole series".
+    const noVerb = updateEventSchema.safeParse({
+      ...validEvent,
+      id: UUID,
+      scope: null,
+      recurrenceId: "2027-03-14 09:30:00",
+    });
+    expect(noVerb.success).toBe(false);
+    if (noVerb.success) throw new Error("unreachable");
+    expect(issuePaths(noVerb)).toContain("scope");
+  });
+
+  it("refuses a repeat rule on a single occurrence, at the rrule field", () => {
+    const result = updateEventSchema.safeParse({
+      ...validEvent,
+      id: UUID,
+      scope: "this",
+      recurrenceId: "2027-03-14 09:30:00",
+      rrule: "FREQ=WEEKLY",
+    });
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("unreachable");
+    expect(issuePaths(result)).toContain("rrule");
   });
 
   it("requires a uuid to delete", () => {
-    expect(deleteEventSchema.parse({ id: UUID }).id).toBe(UUID);
-    expect(deleteEventSchema.safeParse({ id: "nope" }).success).toBe(false);
+    expect(deleteEventSchema.parse({ id: UUID, ...noScope }).id).toBe(UUID);
+    expect(deleteEventSchema.safeParse({ id: "nope", ...noScope }).success).toBe(false);
   });
 });
 
@@ -359,5 +414,60 @@ describe("the duplicated unions", () => {
     expect(EVENT_STATUSES).toEqual(["confirmed", "tentative", "cancelled"]);
     expect(EVENT_VISIBILITIES).toEqual(["default", "private"]);
     expect(EVENT_TRANSPARENCIES).toEqual(["opaque", "transparent"]);
+  });
+});
+
+describe("rruleSchema", () => {
+  it("accepts a rule's SHAPE and leaves its meaning to @repo/calendar", () => {
+    expect(rruleSchema.parse(" FREQ=WEEKLY;BYDAY=MO ")).toBe("FREQ=WEEKLY;BYDAY=MO");
+    // Deliberately accepted here and rejected by parseRRule: COUNT with UNTIL, and a
+    // BYDAY that is not a weekday. One implementation of "is this a real rule", and it
+    // is the one with the 100% gate and a 528-rule differential corpus behind it.
+    expect(rruleSchema.safeParse("FREQ=WEEKLY;COUNT=2;UNTIL=20270401T130000Z").success).toBe(true);
+    expect(rruleSchema.safeParse("FREQ=WEEKLY;BYDAY=XX").success).toBe(true);
+  });
+
+  it("rejects the shapes a form can show a message for", () => {
+    expect(rruleSchema.safeParse("").success).toBe(false);
+    expect(rruleSchema.safeParse("not a rule").success).toBe(false);
+    expect(rruleSchema.safeParse("BYDAY=MO").success).toBe(false);
+    expect(firstMessage(rruleSchema.safeParse("BYDAY=MO") as never)).toMatch(/needs a FREQ/);
+    expect(rruleSchema.safeParse(`FREQ=WEEKLY;X=${"y".repeat(520)}`).success).toBe(false);
+  });
+
+  it("is nullable on an event, because most events do not repeat", () => {
+    expect(createEventSchema.parse({ ...validEvent, rrule: "FREQ=WEEKLY" }).rrule).toBe(
+      "FREQ=WEEKLY",
+    );
+    expect(createEventSchema.parse(validEvent).rrule).toBe(null);
+  });
+});
+
+describe("recurrenceDateSchema", () => {
+  it("normalises the wall reading and constrains the kind", () => {
+    expect(
+      recurrenceDateSchema.parse({ eventId: UUID, kind: "exdate", dateWall: "2027-03-14T09:30" }),
+    ).toEqual({ eventId: UUID, kind: "exdate", dateWall: "2027-03-14 09:30:00" });
+    expect(
+      recurrenceDateSchema.safeParse({
+        eventId: UUID,
+        kind: "rdate",
+        dateWall: "2027-03-14 09:30:00",
+      }).success,
+    ).toBe(true);
+    expect(
+      recurrenceDateSchema.safeParse({
+        eventId: UUID,
+        kind: "nope",
+        dateWall: "2027-03-14 09:30:00",
+      }).success,
+    ).toBe(false);
+    expect(
+      recurrenceDateSchema.safeParse({
+        eventId: "nope",
+        kind: "exdate",
+        dateWall: "2027-03-14 09:30:00",
+      }).success,
+    ).toBe(false);
   });
 });
