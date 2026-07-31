@@ -1,12 +1,13 @@
 "use server";
 
 import { auth } from "@repo/auth";
-import { db, NOTIFICATIONS_CHANNEL, notify } from "@repo/db";
+import { db } from "@repo/db";
 import { notifications } from "@repo/db/schema";
-import type { ActionResult, NotificationPayload } from "@repo/validators";
+import type { ActionResult } from "@repo/validators";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit";
+import { createNotifications, publishNotifications } from "@/server/notifications/create";
 
 // The realtime notifications example (Tier 4 · A22). Writes live in Server Actions
 // (reads live in the notification.list tRPC query, server/trpc/routers/notification.ts)
@@ -45,27 +46,18 @@ export async function sendTestNotification(): Promise<SendResult> {
     second: "2-digit",
   })}`;
 
-  const [row] = await db
-    .insert(notifications)
-    .values({ userId: session.user.id, type: "test", body })
-    .returning();
-  if (!row) return { error: "Failed to create notification." };
+  // `title: null` — a `test` body is already a complete sentence, so there is no slot
+  // to fill (the contract lives beside NOTIFICATION_TYPES in schema/notifications.ts).
+  const [payload] = await createNotifications(db, [
+    { userId: session.user.id, type: "test", body, title: null, link: null },
+  ]);
+  if (!payload) return { error: "Failed to create notification." };
 
-  // Broadcast on the single notifications channel. Every instance's listener receives
-  // it and dispatches to the streams whose userId matches this payload's. createdAt is
-  // sent as an ISO string — it round-trips through JSON.stringify (NOTIFY) and the SSE
-  // text frame; the client re-hydrates it to a Date (see the feed component).
-  const payload: NotificationPayload = {
-    id: row.id,
-    userId: row.userId,
-    type: row.type,
-    body: row.body,
-    read: row.read,
-    createdAt: row.createdAt.toISOString(),
-  };
-  await notify(NOTIFICATIONS_CHANNEL, payload);
+  // Published after the write, never inside a transaction — see notifications/create.ts
+  // for why the two legs are separate.
+  await publishNotifications([payload]);
 
-  return { data: { id: row.id } };
+  return { data: { id: payload.id } };
 }
 
 /**

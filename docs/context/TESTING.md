@@ -81,6 +81,18 @@ app's Playwright specs are never picked up by a unit run.
   the workspace deps mocked. `src/server/actions/post.test.ts` + `admin.test.ts` and
   `src/lib/rate-limit.test.ts` + `rbac.test.ts` are the worked examples; the DB-backed
   data-layer mirror lives in `@repo/db`'s integration tests (below).
+- **Cross-package literal unions** — `src/lib/union-parity.test.ts`. `@repo/validators`
+  cannot import `@repo/db` (drizzle + `pg` would land in the client bundle), so every
+  union the two share is duplicated **by necessity**; `apps/web` is the one workspace
+  that legitimately depends on both, which is what makes the assertion possible at all.
+  Order is asserted, not just membership (these are `as const` tuples whose first member
+  is the default in both packages), and **each group carries its own length meta-guard**
+  so a union added without a row fails there instead of being absorbed by another group's
+  count. It lives at `lib/`, not `lib/calendar/`: `NOTIFICATION_TYPES` is not a calendar
+  union. ⚠️ The failure it exists for is the nastiest in the repo —
+  `server/realtime/notification-bus.ts` `safeParse`s each payload and **fails closed with
+  no log, no error and no Sentry breadcrumb**, so extending one side alone makes every
+  notification of the new type simply stop arriving with nothing anywhere saying why.
 - Email template rendering — `@repo/email`'s `src/templates.test.tsx` renders every
   template to HTML **and** the plain-text alternative through the same
   `@react-email/render` calls the send path uses (`render(el)` / `render(el, { plainText:
@@ -175,7 +187,7 @@ Each test-bearing package owns its `coverage` block (provider `v8`, reporters
 | --- | --- | --- |
 | `@repo/validators` | 100% lines/functions/branches/statements | Pure logic — exactly what a coverage gate should hold, and the package already sits at 100%. A new untested schema fails the gate, which is the point. |
 | `@repo/ui` | 11% lines/statements, 10% functions, 27% branches | A regression **floor**, not a target — most components are shadcn primitives we intentionally don't unit-test ("don't test trivial presentational UI", above), so the `all: true` aggregate sits low by design and each new untested primitive erodes it slightly. The floor tracks the value the `button`/`empty-state`/`theme-toggle`/`textarea` smokes hold, with a small margin; re-base it only on an actual breach (lowering a passing floor weakens the guard). |
-| `web` | 95% lines/functions/statements, 88% branches | Coverage `include` is an **explicit file list** in `apps/web/vitest.config.ts` (the source of truth — a scoped set of `server/actions/*` + `lib/*` + `server/realtime/sse.ts` + `stores/ui-store.ts`, e.g. `auth-redirect`, `data-export`, `consent`, `audit-format`, `i18n-metadata`) — not all of `src/`, which would force a near-zero floor. ⚠️ **A newly-tested `lib/*` / `server/actions/*` file is NOT measured until its path is added to that list** (the tell: the coverage totals don't move). They sit at 100% statements/lines/functions and ~91% branches (the gap is defensive `?? fallback` paths a failed Zod parse / non-Error throw can't reach); the floor sits a few points under, so a real drop fails CI without churning on those. |
+| `web` | 95% lines/functions/statements, 88% branches | Coverage `include` is an **explicit file list** in `apps/web/vitest.config.ts` (the source of truth — a scoped set of `server/actions/*` + `lib/*` + `server/notifications/create.ts` + `server/realtime/{sse,notification-bus}.ts` + `stores/ui-store.ts`, e.g. `auth-redirect`, `data-export`, `consent`, `audit-format`, `i18n-metadata`) — not all of `src/`, which would force a near-zero floor. ⚠️ **A newly-tested `lib/*` / `server/actions/*` file is NOT measured until its path is added to that list** (the tell: the coverage totals don't move). They sit at 100% statements/lines/functions and ~91% branches (the gap is defensive `?? fallback` paths a failed Zod parse / non-Error throw can't reach); the floor sits a few points under, so a real drop fails CI without churning on those. |
 | `@repo/auth` | 90% lines/functions/statements, 80% branches | `include` is scoped to `src/config.ts` — the pure env-driven config helpers extracted from `auth.ts`, sitting at 100% on all four metrics under the house 90/90/80/90 floor. `auth.ts` itself is only the `betterAuth()` composition over DB/email/jobs wiring; every E2E auth flow exercises it, so it stays out of the unit gate. |
 | `@repo/email` | 95% lines/functions/statements, 90% branches | `include` is scoped to `src/templates/**` — the render smoke tests take every template to HTML **and** plain-text (both prop-set and default-prop passes), sitting at 100% on all four metrics; the floor sits a few points under so adding an untested template trips the gate. `send.tsx`/`client.ts` (the Resend + `server-only` bootstrap, the email analog of jobs' `boss.ts`) stay out of the `include` — smoke-tested only for graceful degradation. |
 | `@repo/jobs` | 90% lines/functions/statements, 80% branches | `include` is scoped to the pure parts — `handlers/**` + `queues.ts` (the job contract + handler logic, `@repo/email` mocked); the pg-boss I/O bootstrap (`boss.ts`/`worker.ts`) is left to the `test:integration` round-trip in the `e2e` lane. |

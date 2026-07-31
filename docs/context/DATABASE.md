@@ -396,7 +396,7 @@ See [services/resend.md](services/resend.md) (bounce & complaint handling).
 - DB-backed coverage: `packages/db/__tests__/integration/email-suppressions.test.ts`
   (case-insensitive round-trip, idempotent upsert, latest-event refresh).
 
-## Notifications (`notifications` — realtime SSE example, migration 0015)
+## Notifications (`notifications` — realtime SSE example, migrations 0015 · 0022)
 
 `schema/notifications.ts` is the **persisted backbone** of the realtime notifications
 example. It's the durable record; the live SSE push is an enhancement on
@@ -406,16 +406,46 @@ degrades cleanly to "refresh to see new" if the stream is stripped.
 - **`notifications`** — `id` (uuid PK), `user_id` (text FK → `user`, **cascade** — a
   deleted user's notifications go with them), `type` (text, typed to a
   `NotificationType` union — the `audit_log.action` precedent: add a kind with no `ALTER
-  TYPE`), `body` (text), `read` (boolean, default `false`), `created_at`. **No
-  `updated_at`** — a notification is immutable except for the single `read` flip, which
-  `read` captures.
+  TYPE`), `body` (text), `title` (text NULL), `link` (text NULL), `read` (boolean,
+  default `false`), `created_at`. **No `updated_at`** — a notification is immutable
+  except for the single `read` flip, which `read` captures.
+- **The `body` contract is two-slot, and only the code comment beside the union enforces
+  it** (`schema/notifications.ts`): `title IS NULL` ⇒ `body` is a complete, pre-composed
+  sentence (`test`, `system`); `title IS NOT NULL` ⇒ `type` selects the sentence and
+  (`body`, `title`) fill its slots — `body` the actor's email, `title` the event title.
+  There is **no stored user locale**, so a body cannot be localized at write time; the
+  renderer picks the sentence per the reader's locale ([I18N.md](I18N.md)). One slot
+  would not have been enough: *"Alice declined Standup"* needs two variables and a status,
+  which is why the response type splits three ways in the union.
+- **`link` is a same-origin path or nothing, enforced twice** — Zod on the write path,
+  `notifications_link_same_origin` as the backstop (`0022`). A stored value rendered into
+  an anchor is an open-redirect and `javascript:` sink; the constraint is spelled with
+  `left()` and **not** `NOT LIKE '/\%'`, because backslash is `LIKE`'s **default ESCAPE
+  character**, so that pattern means "a slash followed by a literal `%`" and would have
+  **accepted `/\evil.com`** — one of the two protocol-relative payloads it exists to
+  block. Proven on PG 18: `//evil.com`, `/\evil.com`, `http://evil.com` and
+  `javascript:…` rejected; `/calendar/event/<id>` and `NULL` accepted. Posture:
+  [SECURITY.md](SECURITY.md#stored-links--open-redirect-sinks).
+- **Both new columns are `.nullable().default(null)` in Zod, not a bare `.nullable()`** —
+  a bare `.nullable()` requires the key to be *present*, so mid-rolling-deploy an old
+  instance's `notify()` would publish a payload without them and every new instance's bus
+  would drop it at its `safeParse` with no log, no error and no Sentry event. That is the
+  exact failure mode these columns exist to close, reintroduced by its own fix.
 - **One index** — `notifications_user_id_created_at_id_idx` on `(user_id, created_at DESC
   NULLS FIRST, id DESC NULLS FIRST)`: `user_id` leads (every read is `WHERE user_id = $1`),
   then the keyset sort columns, so it serves the `notification.list` read **and** the
   user-delete cascade scan in one index. The `.nullsFirst()` is the same planner trap as
   the `posts` index (see Indexes above).
 - **Publish** — writes broadcast via `notify()` (`SELECT pg_notify(...)`, parameterized);
-  the app-side LISTEN bus fans out to open SSE streams. Transport + serverless caveats:
+  the app-side LISTEN bus fans out to open SSE streams. ⚠️ **`notify()` runs on the
+  POOLED connection, not the caller's transaction connection**, and `NOTIFY` is
+  transactional only for the transaction that issued it — so calling it inside
+  `db.transaction` fires on a *different* connection and can reach a subscriber **before
+  the row it describes is visible**, producing a live notification whose link then 404s.
+  Build rows inside the transaction with `createNotifications(tx, rows)` and publish with
+  `publishNotifications(payloads)` strictly after it commits
+  (`apps/web/src/server/notifications/create.ts` — the one path; `sendTestNotification`
+  uses it too, so there are not two that can drift). Transport + serverless caveats:
   [API.md](API.md#realtime--server-sent-events-sse-tier-4--a22) /
   [DEPLOYMENT.md](DEPLOYMENT.md#realtime-sse--serverless-caveat-tier-4--a22).
 

@@ -168,7 +168,12 @@
     "toastTitle": "Nueva notificación",
     "statusLive": "En vivo",
     "statusConnecting": "Conectando…",
-    "statusOffline": "Reconectando…"
+    "statusOffline": "Reconectando…",
+    "calendarInvite": "{actor} te invitó a {event}",
+    "calendarResponseAccepted": "{actor} aceptó {event}",
+    "calendarResponseDeclined": "{actor} rechazó {event}",
+    "calendarResponseTentative": "{actor} quizá asista a {event}",
+    "calendarCancelled": "{event} se canceló"
   },
   "Account": {
     "page": {

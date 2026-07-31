@@ -481,6 +481,31 @@ documented rather than enforced.
   would break the webhook on a misconfigured no-proxy host. If you run behind a proxy you
   trust to always set the header, flip the `noip` branch in `route.ts` to a `400`.
 
+## Stored links & open-redirect sinks
+
+A URL that is **stored and later rendered into an anchor** is a redirect sink, and the
+repo has already paid for one open-redirect fix. `notifications.link` is the first such
+column, so it sets the pattern for the next one.
+
+**Three layers, and each catches what the others can't:**
+
+1. **Zod on the write path** — `/^\/(?![/\\])[^\s]*$/` in `notificationPayloadSchema`
+   (`@repo/validators`). Rejects at the API boundary, with a message.
+2. **A DB `CHECK` as the backstop** — `notifications_link_same_origin` (migration
+   `0022`). This is the layer that survives a seed script, a support query, or a future
+   writer that forgets the schema.
+3. **The renderer** — the locale-aware `Link` from `@/i18n/navigation`, never a raw
+   `<a href>`. `next/link` will not emit a `javascript:` navigation.
+
+**Two payloads people miss.** `//evil.com` and `/\evil.com` both begin with `/` and are
+both **protocol-relative to a browser**, so a check that only rejects `http://` lets both
+through. ⚠️ And the obvious SQL spelling is wrong: `link NOT LIKE '/\%'` looks like it
+excludes `/\…`, but **backslash is `LIKE`'s default ESCAPE character** in Postgres, so
+the pattern actually means "a slash followed by a literal `%`" — it accepts `/\evil.com`.
+The shipped constraint uses `left(link, 2) <> '/\'`, which compares plain text with no
+escape layer. Verified on PG 18: `//evil.com`, `/\evil.com`, `http://evil.com` and
+`javascript:…` all rejected; `/calendar/event/<id>` and `NULL` accepted.
+
 ## Admin authorization & impersonation (Tier 4 · Band 4)
 
 The `/admin` operator console and the Better Auth `admin()` plugin (ban + impersonation) form a
