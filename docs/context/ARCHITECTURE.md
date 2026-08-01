@@ -133,7 +133,7 @@ The calendar domain core: civil-time arithmetic and IANA zone resolution. **Pure
 ### `packages/validators` → `@repo/validators`
 Zod schemas that are shared between client and server (e.g., form schemas used in both React Hook Form and tRPC input validation). Keep these framework-agnostic.
 
-Two entry points: the barrel (`@repo/validators`) and **`@repo/validators/calendar`**. The subpath exists so a client bundle importing `signInSchema` doesn't drag the whole event model along; add one per bounded subsystem rather than growing the barrel. Because this package must stay free of `@repo/db`, literal unions shared with the schema are **duplicated by necessity** — pair every such duplicate with a parity test in `apps/web` (which legitimately depends on both), the way `src/lib/calendar/union-parity.test.ts` does.
+Two entry points: the barrel (`@repo/validators`) and **`@repo/validators/calendar`**. The subpath exists so a client bundle importing `signInSchema` doesn't drag the whole event model along; add one per bounded subsystem rather than growing the barrel. Because this package must stay free of `@repo/db`, literal unions shared with the schema are **duplicated by necessity** — pair every such duplicate with a parity test in `apps/web` (which legitimately depends on both), the way `src/lib/union-parity.test.ts` does.
 
 ### `tooling/*`
 Build tooling only — no runtime code. These packages are `devDependencies` everywhere they're used.

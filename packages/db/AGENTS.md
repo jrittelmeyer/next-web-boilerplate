@@ -35,3 +35,9 @@ One imperative per line; mechanics + rationale live in
   the range query's concrete branch. The writer must do both in one transaction.
 - Read `calendar_recurrence_dates` by partitioning on `kind`; an unrecognised value is
   a logged error, never a `WHERE kind = …` that drops it silently.
+- Attendees hang off the **series master**: resolve `recurrence_parent_id ?? id` before
+  any attendee read or write. Only `splitSeries` copies them
+  ([attendees.md](../../docs/context/calendar/attendees.md)).
+- Compare `calendar_event_attendees.email` to `user.email` as
+  `attendees.email = lower($param)` — `user.email` has no lowercase CHECK, and
+  `lower()` on the column side loses the index.

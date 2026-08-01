@@ -15,7 +15,7 @@ import { z } from "zod";
  * `safeParse`s and fails closed with no log). A parity test in `apps/web` — which
  * legitimately depends on both packages — asserts member-for-member equality, so
  * adding a status here and forgetting the schema goes red at the gate instead of
- * at 2 a.m. See `apps/web/src/lib/calendar/union-parity.test.ts`.
+ * at 2 a.m. See `apps/web/src/lib/union-parity.test.ts`.
  */
 
 // --- Unions duplicated from @repo/db/schema (canonical source) ---------------
@@ -39,6 +39,17 @@ export type EventTransparency = (typeof EVENT_TRANSPARENCIES)[number];
 /** Mirrors `RECURRENCE_DATE_KINDS` in `@repo/db/schema/calendar-recurrence-dates.ts`. */
 export const RECURRENCE_DATE_KINDS = ["exdate", "rdate"] as const;
 export type RecurrenceDateKind = (typeof RECURRENCE_DATE_KINDS)[number];
+
+/**
+ * Mirrors `ATTENDEE_ROLES` in `@repo/db/schema/calendar-attendees.ts`. No `chair` or
+ * `resource`: the same rule that keeps `"public"` out of `EVENT_VISIBILITIES` above.
+ */
+export const ATTENDEE_ROLES = ["organizer", "required", "optional"] as const;
+export type AttendeeRole = (typeof ATTENDEE_ROLES)[number];
+
+/** Mirrors `ATTENDEE_STATUSES`. All four are reachable from the RSVP control. */
+export const ATTENDEE_STATUSES = ["needs-action", "accepted", "declined", "tentative"] as const;
+export type AttendeeStatus = (typeof ATTENDEE_STATUSES)[number];
 
 // --- Action-only unions (no DB column, so no parity row) ----------------------
 
@@ -129,6 +140,80 @@ const MIDNIGHT_SUFFIX = " 00:00:00";
  */
 const emptyToNull = (value: string | null): string | null =>
   value === null || value === "" ? null : value;
+
+// --- Attendees ---------------------------------------------------------------
+
+/**
+ * How many guests one Server Action may carry. The bound exists so a single call cannot
+ * fan out ten thousand notifications, not because fifty is a meaningful number of
+ * people; raise it when a surface needs more, and re-read `createEvent`'s notification
+ * loop before doing so.
+ */
+export const MAX_ATTENDEES = 50;
+
+/**
+ * Normalise **before** validating, which is why this pipes rather than chaining.
+ *
+ * `z.email().trim().toLowerCase()` reads like it does the same thing and does not: zod 4
+ * runs the format check in chain order, so the transforms land after it and
+ * `"  guest@example.com  "` is rejected with "Enter a valid email address" — on a chip
+ * field, which is precisely where a pasted address arrives with whitespace around it.
+ * Measured both ways before this line was written.
+ *
+ * The lower-casing is a UX affordance, not the guard. `calendar_event_attendees_email_lower`
+ * is the guard, because Phase 4's ICS import, a seed helper and a support script all
+ * write this column without passing through here.
+ */
+const attendeeEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email("Enter a valid email address"));
+
+export const attendeeInputSchema = z.object({
+  email: attendeeEmailSchema,
+  /** Matches the column default, so a surface that doesn't ask may omit it. */
+  role: z.enum(ATTENDEE_ROLES).default("required"),
+});
+
+export type AttendeeInput = z.infer<typeof attendeeInputSchema>;
+export type AttendeeValues = z.input<typeof attendeeInputSchema>;
+
+/**
+ * The three statuses an RSVP can *submit*, as opposed to the four the column can hold.
+ *
+ * `needs-action` is the state you are in before you answer, and no control offers it —
+ * so accepting it here would be decision 2's own sin (a member no surface produces) with
+ * a constraint violation attached: `calendar_event_attendees_responded_pair` requires
+ * `responded_at IS NULL` exactly when the status is `needs-action`, so a submitted
+ * `needs-action` alongside the `responded_at` stamp `respondToEvent` writes would raise
+ * a 23514 and surface as the generic write error. Narrowing here means the action can
+ * stamp `responded_at` unconditionally and that path cannot be reached at all.
+ *
+ * `attendee status coverage` in the test file asserts these two lists stay exhaustive
+ * together, so adding a fifth status to the column forces a decision here rather than
+ * silently leaving it unanswerable.
+ */
+export const ATTENDEE_RESPONSES = ["accepted", "declined", "tentative"] as const;
+export type AttendeeResponse = (typeof ATTENDEE_RESPONSES)[number];
+
+/**
+ * An RSVP. The attendee row is the authorization, so there is no calendar id here and
+ * nothing for the caller to point at but an event they were invited to.
+ */
+export const respondToEventSchema = z.object({
+  eventId: z.uuid("Event id is required"),
+  status: z.enum(ATTENDEE_RESPONSES),
+  comment: z
+    .string()
+    .trim()
+    .max(500, "Comment must be 500 characters or fewer")
+    .nullable()
+    .transform(emptyToNull),
+});
+
+export type RespondToEventInput = z.infer<typeof respondToEventSchema>;
+export type RespondToEventValues = z.input<typeof respondToEventSchema>;
 
 // --- Calendars ---------------------------------------------------------------
 
@@ -222,6 +307,17 @@ const eventFields = {
   endTzid: timeZoneSchema,
   /** `null` = a one-off. Only a series master ever carries one. */
   rrule: rruleSchema.nullable(),
+  /**
+   * The guest list, as submitted — the whole list every time, not a delta. The action
+   * diffs it against the stored rows **by email** and leaves an address present in both
+   * strictly alone, which is what keeps a re-save from resetting everyone's RSVP.
+   *
+   * `.default([])` rather than `.optional()`: "no attendees" and "don't touch the
+   * attendees" would be two different intents, and a schema that admits both would make
+   * every writer decide which one an absent key meant. There is one intent here, and an
+   * unattended event is a list of length zero.
+   */
+  attendees: z.array(attendeeInputSchema).max(MAX_ATTENDEES).default([]),
 } as const;
 
 /**
