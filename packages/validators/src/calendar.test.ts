@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ATTENDEE_RESPONSES,
+  ATTENDEE_ROLES,
+  ATTENDEE_STATUSES,
+  attendeeInputSchema,
   CALENDAR_COLORS,
   createCalendarSchema,
   createEventSchema,
@@ -10,10 +14,12 @@ import {
   EVENT_VISIBILITIES,
   eventRangeSchema,
   localDateTimeSchema,
+  MAX_ATTENDEES,
   MAX_RANGE_CALENDARS,
   MAX_RANGE_DAYS,
   MAX_RANGE_ROWS,
   recurrenceDateSchema,
+  respondToEventSchema,
   rruleSchema,
   timeZoneSchema,
   updateCalendarSchema,
@@ -407,13 +413,142 @@ describe("eventRangeSchema", () => {
 
 describe("the duplicated unions", () => {
   it("holds the members @repo/db declares", () => {
-    // The cross-package assertion lives in apps/web/src/lib/calendar/union-parity.test.ts,
-    // which can import both. This one only pins the literal text so a typo here is
-    // caught even in isolation.
+    // The cross-package assertion lives in apps/web/src/lib/union-parity.test.ts, which
+    // can import both. This one only pins the literal text so a typo here is caught even
+    // in isolation.
     expect(CALENDAR_COLORS).toEqual(["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]);
     expect(EVENT_STATUSES).toEqual(["confirmed", "tentative", "cancelled"]);
     expect(EVENT_VISIBILITIES).toEqual(["default", "private"]);
     expect(EVENT_TRANSPARENCIES).toEqual(["opaque", "transparent"]);
+    expect(ATTENDEE_ROLES).toEqual(["organizer", "required", "optional"]);
+    expect(ATTENDEE_STATUSES).toEqual(["needs-action", "accepted", "declined", "tentative"]);
+  });
+});
+
+describe("attendeeInputSchema", () => {
+  it("normalises case and surrounding whitespace before validating", () => {
+    // The ordering is the whole point: `z.email().trim().toLowerCase()` reads the same
+    // and rejects this input, because zod 4 runs the format check in chain order. A chip
+    // field is exactly where a pasted address arrives padded.
+    const parsed = attendeeInputSchema.safeParse({ email: "  Guest@Example.COM  " });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) throw new Error("unreachable");
+    expect(parsed.data.email).toBe("guest@example.com");
+  });
+
+  it("defaults the role to the column default and accepts the other two", () => {
+    const parsed = attendeeInputSchema.parse({ email: "guest@example.com" });
+    expect(parsed.role).toBe("required");
+    expect(attendeeInputSchema.parse({ email: "a@b.co", role: "optional" }).role).toBe("optional");
+    expect(attendeeInputSchema.parse({ email: "a@b.co", role: "organizer" }).role).toBe(
+      "organizer",
+    );
+    expect(attendeeInputSchema.safeParse({ email: "a@b.co", role: "chair" }).success).toBe(false);
+  });
+
+  it("rejects something that is not an address", () => {
+    const parsed = attendeeInputSchema.safeParse({ email: "not-an-address" });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) throw new Error("unreachable");
+    expect(firstMessage(parsed)).toBe("Enter a valid email address");
+  });
+});
+
+describe("attendees on an event", () => {
+  it("defaults to an empty list, so an unattended event needs no key", () => {
+    const parsed = createEventSchema.parse(validEvent);
+    expect(parsed.attendees).toEqual([]);
+  });
+
+  it("carries a normalised list through", () => {
+    const parsed = createEventSchema.parse({
+      ...validEvent,
+      attendees: [{ email: "Guest@Example.com" }, { email: "other@example.com", role: "optional" }],
+    });
+    expect(parsed.attendees).toEqual([
+      { email: "guest@example.com", role: "required" },
+      { email: "other@example.com", role: "optional" },
+    ]);
+  });
+
+  it("caps the list at MAX_ATTENDEES so one action cannot fan out a mailing list", () => {
+    const tooMany = Array.from({ length: MAX_ATTENDEES + 1 }, (_, i) => ({
+      email: `guest${i}@example.com`,
+    }));
+    expect(createEventSchema.safeParse({ ...validEvent, attendees: tooMany }).success).toBe(false);
+    const atCap = tooMany.slice(0, MAX_ATTENDEES);
+    expect(createEventSchema.safeParse({ ...validEvent, attendees: atCap }).success).toBe(true);
+  });
+
+  it("reports a bad member at its own index, so a form can mark the right chip", () => {
+    const parsed = createEventSchema.safeParse({
+      ...validEvent,
+      attendees: [{ email: "fine@example.com" }, { email: "nope" }],
+    });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) throw new Error("unreachable");
+    expect(issuePaths(parsed)).toContain("attendees.1.email");
+  });
+
+  it("is on the update shape too", () => {
+    const parsed = updateEventSchema.parse({
+      ...validEvent,
+      ...noScope,
+      id: OTHER_UUID,
+      attendees: [{ email: "guest@example.com" }],
+    });
+    expect(parsed.attendees).toEqual([{ email: "guest@example.com", role: "required" }]);
+  });
+});
+
+describe("respondToEventSchema", () => {
+  it("accepts the three answerable statuses", () => {
+    for (const status of ATTENDEE_RESPONSES) {
+      expect(respondToEventSchema.safeParse({ eventId: UUID, status, comment: null }).success).toBe(
+        true,
+      );
+    }
+  });
+
+  it("refuses needs-action, which no control offers", () => {
+    // Not pedantry: `calendar_event_attendees_responded_pair` requires `responded_at IS
+    // NULL` exactly when the status is `needs-action`, so a submitted one alongside the
+    // `responded_at` stamp the action writes would raise 23514 and surface as the generic
+    // write error. Narrowing here makes that path unreachable.
+    expect(
+      respondToEventSchema.safeParse({ eventId: UUID, status: "needs-action", comment: null })
+        .success,
+    ).toBe(false);
+  });
+
+  it("covers every column status between the two lists, exhaustively", () => {
+    // A fifth status added to the column forces a decision here rather than silently
+    // arriving unanswerable.
+    expect([...ATTENDEE_RESPONSES, "needs-action"].sort()).toEqual([...ATTENDEE_STATUSES].sort());
+  });
+
+  it("normalises a blank comment to null and caps a real one", () => {
+    const blank = respondToEventSchema.parse({ eventId: UUID, status: "accepted", comment: "  " });
+    expect(blank.comment).toBeNull();
+    const kept = respondToEventSchema.parse({
+      eventId: UUID,
+      status: "declined",
+      comment: "  Sorry, double-booked.  ",
+    });
+    expect(kept.comment).toBe("Sorry, double-booked.");
+    const tooLong = respondToEventSchema.safeParse({
+      eventId: UUID,
+      status: "tentative",
+      comment: "x".repeat(501),
+    });
+    expect(tooLong.success).toBe(false);
+  });
+
+  it("requires a uuid event id", () => {
+    expect(
+      respondToEventSchema.safeParse({ eventId: "nope", status: "accepted", comment: null })
+        .success,
+    ).toBe(false);
   });
 });
 

@@ -1,4 +1,6 @@
 import {
+  ATTENDEE_ROLES as DB_ATTENDEE_ROLES,
+  ATTENDEE_STATUSES as DB_ATTENDEE_STATUSES,
   CALENDAR_COLORS as DB_CALENDAR_COLORS,
   EVENT_STATUSES as DB_EVENT_STATUSES,
   EVENT_TRANSPARENCIES as DB_EVENT_TRANSPARENCIES,
@@ -8,6 +10,9 @@ import {
 } from "@repo/db/schema";
 import { NOTIFICATION_TYPES } from "@repo/validators";
 import {
+  ATTENDEE_RESPONSES,
+  ATTENDEE_ROLES,
+  ATTENDEE_STATUSES,
   CALENDAR_COLORS,
   EDIT_SCOPES,
   EVENT_STATUSES,
@@ -43,6 +48,8 @@ describe("union parity between @repo/db and @repo/validators", () => {
       ["EVENT_VISIBILITIES", EVENT_VISIBILITIES, DB_EVENT_VISIBILITIES],
       ["EVENT_TRANSPARENCIES", EVENT_TRANSPARENCIES, DB_EVENT_TRANSPARENCIES],
       ["RECURRENCE_DATE_KINDS", RECURRENCE_DATE_KINDS, DB_RECURRENCE_DATE_KINDS],
+      ["ATTENDEE_ROLES", ATTENDEE_ROLES, DB_ATTENDEE_ROLES],
+      ["ATTENDEE_STATUSES", ATTENDEE_STATUSES, DB_ATTENDEE_STATUSES],
     ] as const satisfies ReadonlyArray<readonly [string, readonly string[], readonly string[]]>;
 
     it.each(pairs)("%s is member-for-member identical, in order", (_name, validators, db) => {
@@ -50,9 +57,30 @@ describe("union parity between @repo/db and @repo/validators", () => {
     });
 
     it("covers every union the calendar schema declares", () => {
-      // A sixth union added to either package without a row above would otherwise be
-      // unguarded — the whole class of bug this file exists for.
-      expect(pairs).toHaveLength(5);
+      // A union added to either package without a row above would otherwise be unguarded
+      // — the whole class of bug this file exists for.
+      expect(pairs).toHaveLength(7);
+    });
+
+    it("does not guard ATTENDEE_RESPONSES, which is a submittable SUBSET", () => {
+      // `ATTENDEE_RESPONSES` is the three statuses an RSVP may submit — no column
+      // declares it, so by the same rule as EDIT_SCOPES it gets no parity row. What it
+      // does owe is exhaustiveness against the column union, and that assertion lives
+      // next to it in `packages/validators/src/calendar.test.ts`, where both halves are
+      // in scope.
+      expect(ATTENDEE_RESPONSES).toEqual(["accepted", "declined", "tentative"]);
+      expect(pairs.map(([name]) => name)).not.toContain("ATTENDEE_RESPONSES");
+      expect(DB_ATTENDEE_STATUSES).toContain("needs-action");
+      expect(ATTENDEE_RESPONSES as readonly string[]).not.toContain("needs-action");
+    });
+
+    it("still excludes the attendee roles no surface can produce", () => {
+      // The EVENT_VISIBILITIES rule, applied to the ICS vocabulary: `chair` and
+      // `resource` land with a surface that emits them, or not at all.
+      for (const absent of ["chair", "resource"]) {
+        expect(ATTENDEE_ROLES as readonly string[]).not.toContain(absent);
+        expect(DB_ATTENDEE_ROLES as readonly string[]).not.toContain(absent);
+      }
     });
 
     it("does not guard EDIT_SCOPES, which is deliberately action-only", () => {
