@@ -434,8 +434,19 @@ describe("calendar_event_masters — the list/detail read surface", () => {
       .set({ deletedAt: new Date() })
       .where(eq(calendarEvents.uid, "soft-deleted"));
 
-    const raw = await db.select().from(calendarEvents);
-    const masters = await db.select().from(calendarEventMasters);
+    // Scoped to this suite's own calendar, not the whole table. Unscoped, these two
+    // counts silently assert that the database contains nothing else — true in CI, where
+    // the postgres service is ephemeral, and false on any dev box that has ever run a
+    // live-verify. The failure then reads "the masters view returned 6 rows", which looks
+    // like the view is broken rather than like the fixture is dirty.
+    const raw = await db
+      .select()
+      .from(calendarEvents)
+      .where(eq(calendarEvents.calendarId, CALENDAR_ID));
+    const masters = await db
+      .select()
+      .from(calendarEventMasters)
+      .where(eq(calendarEventMasters.calendarId, CALENDAR_ID));
     expect(raw).toHaveLength(3);
     expect(masters).toHaveLength(1);
     expect(masters[0]?.uid).toBe("master");
