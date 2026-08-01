@@ -191,6 +191,19 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
   reviewer can read. The fixture was committed *before* the expander was written, and its
   hash is pinned in the test, because otherwise a red differential has one one-line "fix"
   that turns the oracle into a mirror of the engine.
+- **Guests, and an RSVP that arrives live.** Invite by email address; anyone with an
+  account here gets an in-app notification pushed over the existing SSE stream, sees the
+  invitation at `/calendar/invites`, and answers yes / no / maybe — and the organizer's
+  feed says *"alice@example.com declined Standup"* without either page reloading. Invite
+  someone who has not signed up yet and the invitation is waiting for them when they
+  verify their address.
+- **Re-saving an event does not un-answer anybody.** The composer posts the whole guest
+  list every time, so the write diffs it by address and leaves an unchanged one strictly
+  alone. The obvious implementation — delete and re-insert — silently returns every guest
+  to "no response yet" when the organizer fixes a typo in the title.
+- **Being invited to an event is not permission to edit it.** Attendance answers exactly
+  two questions — may you see it, may you RSVP — through a separate authority that exposes
+  no role at all, and a test asserts the module has no write predicate to reach for.
 - **Accessible by construction:** one tab stop for the whole grid (roving `tabindex`,
   arrow-key navigation, `Enter` for a focus-trapped day view), scanned by axe in CI with
   events on it.
@@ -199,8 +212,9 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
 new applications, and every wrong version looks right in the developer's own time zone.
 The corpus that guards it includes a 30-minute DST shift, a two-hour one, a 24-hour gap,
 a +13:45 offset, and an 1885 local-mean-time reading — each one breaks a *different*
-plausible implementation. Delete it in ten steps if you don't want it:
+plausible implementation. Delete it in twelve steps if you don't want it:
 → [`context/calendar/`](context/calendar/model.md) ·
+[attendees](context/calendar/attendees.md) ·
 [remove-it](context/calendar/remove-it.md)
 
 ## Payments

@@ -23,7 +23,8 @@
     "organization": "Organización",
     "acceptInvitation": "Aceptar invitación",
     "calendar": "Calendario",
-    "calendarEvent": "Evento"
+    "calendarEvent": "Evento",
+    "calendarInvites": "Invitaciones"
   },
   "Auth": {
     "common": {
@@ -686,7 +687,8 @@
       "previousMonth": "Mes anterior",
       "nextMonth": "Mes siguiente",
       "today": "Hoy",
-      "newEvent": "Nuevo evento"
+      "newEvent": "Nuevo evento",
+      "invites": "Invitaciones"
     },
     "workspace": {
       "truncated": "Este mes tiene más eventos de los que se pueden mostrar. Oculta algunos calendarios para ver el resto.",
@@ -775,6 +777,8 @@
       },
       "urlLabel": "Enlace",
       "repeatLabel": "Se repite",
+      "attendeesLabel": "Invitados",
+      "attendeesHelp": "Se invita por dirección de correo y cada persona puede aceptar, rechazar o responder quizá. Los cambios se aplican a toda la serie.",
       "save": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
@@ -864,6 +868,42 @@
       "delete": "Eliminar evento",
       "deleting": "Eliminando…",
       "deleted": "Evento eliminado."
+    },
+    "attendees": {
+      "heading": "Invitados",
+      "placeholder": "invitado@ejemplo.com",
+      "add": "Añadir",
+      "remove": "Quitar a {email}",
+      "full": "Un evento puede tener como máximo {max} invitados.",
+      "empty": "Todavía no hay invitados.",
+      "rsvpLabel": "Tu respuesta",
+      "respond": {
+        "accepted": "Sí",
+        "declined": "No",
+        "tentative": "Quizá"
+      },
+      "responded": {
+        "accepted": "Vas a asistir.",
+        "declined": "Has rechazado la invitación.",
+        "tentative": "Has respondido quizá."
+      },
+      "status": {
+        "needs-action": "Sin respuesta",
+        "accepted": "Asiste",
+        "declined": "No asiste",
+        "tentative": "Quizá"
+      },
+      "role": {
+        "organizer": "Organizador"
+      }
+    },
+    "invites": {
+      "title": "Invitaciones",
+      "description": "Eventos a los que te han invitado, del más próximo al más lejano. Todavía no aparecen en tu cuadrícula mensual.",
+      "empty": "No tienes invitaciones.",
+      "error": "No se han podido cargar tus invitaciones. Inténtalo de nuevo.",
+      "loading": "Cargando…",
+      "loadMore": "Cargar más"
     }
   }
 }

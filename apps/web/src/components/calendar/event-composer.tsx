@@ -23,6 +23,7 @@ import {
 import { toast } from "@repo/ui/components/sonner";
 import { Textarea } from "@repo/ui/components/textarea";
 import {
+  type AttendeeValues,
   CALENDAR_COLORS,
   type CreateEventValues,
   createEventSchema,
@@ -37,6 +38,7 @@ import { useForm } from "react-hook-form";
 import { allDayWallRange, inclusiveEndDate } from "@/lib/calendar/grid";
 import { applyFieldErrors } from "@/lib/forms";
 import { createEvent, deleteEvent, updateEvent } from "@/server/actions/calendar";
+import { AttendeeField } from "./attendee-field";
 import { EditScopeDialog } from "./edit-scope-dialog";
 import { RecurrenceField } from "./recurrence-field";
 import type { CalendarSummary } from "./types";
@@ -72,6 +74,14 @@ export interface EventComposerDefaults {
   readonly startTzid: string;
   readonly endWall: string;
   readonly endTzid: string;
+  /**
+   * The **series master's** guest list, and it must be seeded on an edit.
+   *
+   * The composer posts the whole list on every save and the action diffs it by address,
+   * so opening an existing event with this empty and pressing Save would read as
+   * "remove everyone" — cancelling the meeting for every guest on a title change.
+   */
+  readonly attendees?: readonly AttendeeValues[];
   /**
    * The **series master's** rule — `null` for a one-off.
    *
@@ -130,6 +140,7 @@ export function EventComposer({
       startTzid: defaults.startTzid,
       endWall: defaults.endWall,
       endTzid: defaults.endTzid,
+      attendees: [...(defaults.attendees ?? [])],
       rrule: defaults.rrule ?? null,
     },
   });
@@ -582,6 +593,23 @@ export function EventComposer({
                   onChange={(event) => field.onChange(event.target.value || null)}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="attendees"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("attendeesLabel")}</FormLabel>
+              <AttendeeField value={field.value} onChange={field.onChange} />
+              {/* Only `scope: "all"` (and a plain non-recurring save) applies this list.
+                  A single-occurrence edit inherits the series' guests rather than
+                  carrying its own, and a "this and following" split copies the source's
+                  list verbatim — see docs/context/calendar/attendees.md. */}
+              <FormDescription>{t("attendeesHelp")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}

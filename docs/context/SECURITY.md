@@ -506,6 +506,40 @@ The shipped constraint uses `left(link, 2) <> '/\'`, which compares plain text w
 escape layer. Verified on PG 18: `//evil.com`, `/\evil.com`, `http://evil.com` and
 `javascript:…` all rejected; `/calendar/event/<id>` and `NULL` accepted.
 
+## Calendar invitations: what the guest list does and does not hide
+
+Inviting someone is a write that takes an **arbitrary email address** and tells you
+nothing back. That is deliberate — and the protection it gives is narrower than it looks,
+so it is written down rather than claimed away.
+
+- **An invitation stores the address as typed and the guest list renders exactly that**,
+  never a resolved display name. `user_id` is filled silently when an account matches, so
+  a matched and an unmatched invitee are **visually identical at invite time**. Without
+  that, `POST` an address, read the name back, and the invite form is a 20/min account
+  enumeration oracle.
+- **They are indistinguishable *instantly*, not *eventually*.** A registered invitee's row
+  can move to `accepted` / `declined` / `tentative`; an unregistered one's cannot. So the
+  organizer's own guest list is a **slower** oracle — it needs a human on the other end and
+  it answers in hours, not milliseconds. That is a real reduction in attack rate, not a
+  closed hole, and Phase 4 renders external addresses anyway.
+- **`calendar.byId` hands an attendee an explicit column list**, not `select()`. From
+  Phase 3 an invitee can read that procedure, and the bare select it used to run included
+  the joined `calendars.user_id` — the organizer's internal account id, delivered to
+  everyone they invited.
+- **The claim path requires a *verified* address.** `listInvites` and `respondToEvent`
+  scope on `user_id = :me OR (email = lower(:myEmail) AND :myEmailIsVerified)`. Without
+  the `emailVerified` conjunct, signing up as `victim@example.com` and never verifying
+  would list that person's invitations. Both inputs are read from Postgres, not from the
+  ≤5-minute-stale session cookie, because the snapshot that matters is `(old address,
+  verified)` held briefly after someone moves away from an address another person may now
+  be able to claim.
+- **Attendance never grants write.** `getEventAccess` answers reads and RSVPs only,
+  exposes no role, and the module deliberately exports no `canWriteEvent` — asserted by a
+  test, because a reviewer cannot enforce it. Full argument:
+  [calendar/acl.md](calendar/acl.md).
+- **`MAX_ATTENDEES = 50`**, so one Server Action cannot fan out ten thousand
+  notifications.
+
 ## Admin authorization & impersonation (Tier 4 · Band 4)
 
 The `/admin` operator console and the Better Auth `admin()` plugin (ban + impersonation) form a

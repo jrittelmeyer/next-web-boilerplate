@@ -506,7 +506,7 @@ activity, `/admin/audit` rows) and not just one feature.
   database, and handing a dead one to `Intl` throws, which would take down every
   page that renders a timestamp instead of degrading one preference.
 
-## Calendars and events (migrations 0020, 0021)
+## Calendars and events (migrations 0020, 0021, 0023)
 
 `calendars` + `calendar_events`, plus the `calendar_event_masters` view. The full
 rationale — why civil time is the source of truth, why the derived instants are guarded
@@ -547,6 +547,32 @@ changes three things on `calendar_events`, all measured first:
 - **`calendar_events_id_calendar_id_key`** — the unique that FK requires as its target.
 
 Full rationale in [calendar/recurrence.md](calendar/recurrence.md).
+
+`0023` adds `calendar_event_attendees`. Four things about it are decisions rather than
+shape, and all four are argued in [calendar/attendees.md](calendar/attendees.md):
+
+- **The identity is `email` (NOT NULL), not `user_id`.** `unique(event_id, email)` is the
+  real key; `user_id` is a nullable *resolution* of the address, `ON DELETE SET NULL`, so
+  a deleted user degrades into an external attendee rather than vanishing from a guest
+  list. Keying on `user_id` would have needed `nullsNotDistinct()` and would still have
+  had no answer for someone who has not signed up yet.
+- **Attendees hang off the series master.** Every attendee read and write resolves
+  `recurrence_parent_id ?? id` first; an override carries no rows of its own. `splitSeries`
+  is the one writer that copies, because the master it creates is addressable.
+- **Two CHECKs.** `email = lower(email)` — because Phase 4's ICS import, a seed helper and
+  a support script all write this column without passing through Zod, and
+  `John@Example.com` beside `john@example.com` is two guests for one person that the
+  unique cannot see. And `(responded_at IS NULL) = (status = 'needs-action')`,
+  **bidirectional**, because the one-directional spelling permits `accepted` with a NULL
+  `responded_at` — exactly what a careless copy produces.
+- **The `user_id` index is partial (`WHERE user_id IS NOT NULL`), and that was measured**,
+  not assumed: 248 kB → 216 kB at half-external and 120 kB → 56 kB at 90 % external over
+  10,000 rows. A plain btree **stores its NULL keys** — the assumption that burned `0021`.
+
+`0023` also touches nothing on `notifications`; the five `calendar_*` union members and
+the `link` / `title` columns shipped in `0022`, ahead of the calendar work, because
+extending that union in `@repo/db` alone makes the realtime bus's `safeParse` drop every
+message of the new type with no log, no error and no Sentry event.
 
 ## Admin plugin columns (ban + impersonation)
 

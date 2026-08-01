@@ -13,6 +13,48 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **Calendar, Phase 3 — attendees, internal RSVP and live invite notifications.**
+  Migration `0023` adds `calendar_event_attendees`; `createEvent`/`updateWholeEvent` diff
+  a guest list, `respondToEvent` records an answer, `calendar.listInvites` and
+  `/calendar/invites` list the invitations you hold, and every one of the five
+  `calendar_*` notification types now has a real writer.
+  **Six decisions carry the phase.**
+  (1) **The identity is the email; `user_id` is a nullable resolution of it.** That is
+  what makes Phase 4's external attendee purely additive (they are already a row) and a
+  deleted user degrade into one rather than vanish from a guest list. `CHECK (email =
+  lower(email))`, because Phase 4's ICS import, a seed helper and a support script all
+  write that column without passing through Zod.
+  (2) **Overrides inherit attendees; they never copy.** Every attendee read and write
+  resolves `recurrence_parent_id ?? id` first. The copy model was specced and reversed:
+  the rows would be unreadable in Phase 3, would diverge immediately because RSVP is
+  series-level, would raise `23505` on the second edit of an occurrence, and would destroy
+  the one thing an attendee row on an override is *for* in Phase 6. `splitSeries` is the
+  sole copier, because the master it creates is addressable.
+  (3) **A second authority that exposes no role.** `getEventAccess` answers *event*-scoped
+  questions on top of `getCalendarRole`. There is no `canWriteEvent` and a test asserts
+  the module exports none — *attendance never grants write* has to be structural, not one
+  obvious-looking line away from being wrong. It also preserves the masters view's
+  filters, because a soft-deleted event granting access would let a `calendar_cancelled`
+  notification link straight to one.
+  (4) **RSVP is series-level, and that is a security decision.** Per-occurrence RSVP
+  would need an attendee — who has no write access to the organizer's calendar — to
+  trigger an `INSERT` into `calendar_events` to materialise the override the response
+  hangs off. The parent plan called it free; it is a privilege-escalation shape.
+  (5) **An invitation is claimed by *verified* email, and the first claim stamps
+  `user_id`.** Without the claim path, inviting someone who registers an hour later leaves
+  their list empty forever; without the stamp, an invitation they had already **accepted**
+  silently vanishes the day they change address. The `emailVerified` conjunct is what
+  stops an unverified signup as `victim@example.com` reading that person's invitations.
+  ⚠️ Compare as `attendees.email = lower($param)` — `lower()` on the *column* loses
+  `calendar_event_attendees_email_idx`.
+  (6) ⚠️ **The `user_id` index is partial, and that was measured**: 248 → 216 kB at
+  half-external, 120 → 56 kB at 90 % external over 10,000 rows. Same lesson as `0021` — a
+  plain btree stores its NULL keys.
+  **Stated rather than hidden:** through Phase 3 an invitation is a list at
+  `/calendar/invites` and **does not appear on the invitee's month grid**; a "this and
+  following" split copies the guest list verbatim, so everyone stays `accepted` for a
+  meeting whose time moved (Phase 4 owns re-asking); and `updateOccurrence` and
+  `splitSeries` both discard a submitted guest list silently.
 - **Typed notification payloads, links and one publish path** (calendar Phase 3, part A —
   no calendar coupling, and it closes a bug that exists in the repo today).
   `NOTIFICATION_TYPES` gains five calendar members, extended in `@repo/db` **and**

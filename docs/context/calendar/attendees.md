@@ -5,11 +5,10 @@ calendar: [acl.md](acl.md). Endpoints: [api.md](api.md). Domain model:
 [model.md](model.md). Series, overrides and the three edit scopes:
 [recurrence.md](recurrence.md).
 
-> **Status: Phase 3, schema half.** This file lands with
-> `packages/db/src/schema/calendar-attendees.ts` and documents the table and the rules
-> the writers must honour. The writers themselves — `respondToEvent`, the guest-list
-> diff, `/calendar/invites` — arrive in the same PR's second commit and are documented in
-> [api.md](api.md).
+> **Status: Phase 3, complete.** The table and its constraints, the guest-list diff,
+> `respondToEvent`, `calendar.listInvites` and `/calendar/invites` all ship. Emailed
+> invitations and the public `/rsvp/[token]` page are **Phase 4**; per-occurrence RSVP,
+> guest permissions and invitations on the month grid are **Phase 6**.
 
 ## The identity is the email
 
@@ -132,3 +131,137 @@ read is scoped by event and served by the unique.
 
 The 90 %-external row is the population **Phase 4 creates**, since an external attendee is
 exactly a NULL `user_id`.
+
+## The diff is by address, and an address in both sets is untouched
+
+`apps/web/src/lib/calendar-attendees.ts` holds `diffAttendees` as a **pure function**, so
+the rule that matters most can be proved without a database.
+
+**The composer posts the whole guest list on every save.** So the naive writer — delete
+everything, re-insert — silently returns every guest to `needs-action` on a title edit,
+and so does an upsert that sets `status` in its conflict branch. The diff buckets by
+`email`:
+
+| Bucket | The writer |
+| --- | --- |
+| `added` | inserts the row, then notifies each resolved account |
+| `removed` | deletes the row, then sends each resolved account a cancellation |
+| `unchanged` | **touches nothing** — not updated, not re-inserted, not re-notified |
+
+A **role** change on an otherwise-unchanged address lands in `unchanged` too. Phase 3 has
+no surface that edits a role, and treating a role edit as remove-then-add would reset that
+person's response — the exact bug the diff exists to prevent. Phase 6 gets a role editor
+and can add a third bucket.
+
+A duplicate address inside one submission collapses to a single `added` entry rather than
+reaching `unique(event_id, email)` as a `23505`.
+
+## Which writers apply a submitted guest list, and which discard it
+
+**Only `createEvent` and `updateWholeEvent`** — that is, a plain save and `scope: "all"`.
+The other two recurrence writers ignore `values.attendees`, and neither raises an error
+when one is submitted:
+
+| Writer | What happens to a submitted list |
+| --- | --- |
+| `createEvent` | inserted, invitations published after the commit |
+| `updateWholeEvent` (`scope: "all"`, and every unscoped save) | diffed as above |
+| `updateOccurrence` (`scope: "this"`) | **discarded.** Overrides inherit; an attendee row on one would mean a per-occurrence response, which Phase 3 does not offer |
+| `splitSeries` (`scope: "thisAndFollowing"`) | **discarded.** The new second-half master receives a verbatim `INSERT … SELECT` copy of the *source's* list instead |
+
+Both discards are silent, and that is a stated Phase-3 limitation rather than an
+oversight: the alternative in each case is a per-occurrence attendee model
+(`updateOccurrence`) or applying an edit to one half of a split and not the other
+(`splitSeries`), and both are Phase 6's to decide. The composer's help text says changes
+apply to the whole series. `packages/db/__tests__/integration/calendar-attendees.test.ts`
+asserts `updateOccurrence` creates no attendee rows **positively**, so a future copy-based
+"fix" fails there rather than shipping.
+
+`splitSeries` publishes **no invitations** for its copy — those people are already on the
+series, and telling them they were invited to something would be noise.
+
+## RSVP: `respondToEvent`, and the attendee row is the authorization
+
+`respondToEvent({ eventId, status, comment })` is a plain `UPDATE` of the caller's own row,
+rate-limited at `calendar:event:respond:<userId>` (20/min). **There is no
+`getCalendarRole` call in it and there must not be one:** an invitee is not a member of the
+organizer's calendar, and answering a calendar-scoped question about an event-scoped
+permission is how "attendance grants write" gets built by accident. `getEventAccess`
+([acl.md](acl.md)) answers the narrow question and exposes no role to be tempted by.
+
+A caller who holds no row gets the same `"Event not found"` the rest of the file uses, so
+"not invited" and "does not exist" are indistinguishable.
+
+**Series-level in Phase 3.** The response attaches to the master. Per-occurrence RSVP
+would require an attendee — who by design has no write access to the organizer's calendar
+— to trigger an `INSERT` into `calendar_events` in order to materialise the override the
+response would hang off. That is a privilege-escalation shape, not a free feature.
+
+### The claim, and why it is stamped
+
+An invitation addressed to someone who signs up an hour later is found by
+`user_id = :me OR (email = lower(:myEmail) AND :myEmailIsVerified)`.
+
+- **The `emailVerified` conjunct is not optional.** Without it, signing up as
+  `victim@example.com` and never verifying would expose that person's invitations.
+- **The first successful email-arm claim stamps `user_id`, inside the same transaction.**
+  Without the stamp that arm never becomes durable: someone invited before signing up
+  claims by verified email, accepts, later changes address — and the row still reads
+  `user_id NULL, email = <old address>`, so an **already-accepted** invitation silently
+  disappears from their list. It fails closed, which is exactly why nobody would notice
+  it. Stamping converts that arm from a standing authorization path into a one-time
+  reconciliation, after which the durable `user_id = me` arm answers forever.
+- Both inputs are read **from Postgres, not from the session**. The Better Auth cookie
+  cache is up to five minutes stale and `changeEmail` is configured with
+  `updateEmailWithoutVerification`, so the snapshot that matters is `(old address,
+  verified)` held briefly after someone moves away from an address another person may now
+  be able to claim.
+
+## The five notifications, and the slots they fill
+
+Every calendar notification goes through `createNotifications` **inside** the transaction
+and `publishNotifications` **after it commits** — `notify()` issues `pg_notify` on the
+pooled connection, so a push fired inside the transaction can reach a subscriber before
+the row it describes is visible.
+
+| Type | Recipient | Renders | `link` |
+| --- | --- | --- | --- |
+| `calendar_invite` | each newly added guest | `{body} invited you to {title}` | the event |
+| `calendar_response_accepted` / `_declined` / `_tentative` | the calendar's owner | `{body} accepted/declined/may attend {title}` | the event |
+| `calendar_cancelled` | each dropped guest, and every guest of a deleted event | `{title} was cancelled` | **`null`** |
+
+`body` is the **actor's email** and `title` is the **event title**, in every one of them —
+including `calendar_cancelled`, whose sentence uses only `{title}`. That is not
+redundancy: the contract beside `NOTIFICATION_TYPES` reads *`title IS NULL` ⇒ `body` is
+already a complete sentence*, and the feed applies it literally, so a cancellation
+carrying the title in `body` renders as the bare word "Standup" instead of "Standup was
+cancelled". `body` is NOT NULL, so it needs a real value either way.
+
+`calendar_cancelled` carries `link: null` because its event is soft-deleted or the reader
+is off its guest list — `calendar_event_masters` excludes the first and `getEventAccess`
+refuses the second, so any link would 404 on click.
+
+**Only a resolved account receives an in-app notification.** An external attendee is a
+real row with a real invitation; Phase 4 is what reaches them, by email.
+
+**The response type splits three ways rather than carrying a status field.** A one-slot
+notification cannot express "Alice declined Standup" — two variables *and* a status — and
+`RESPONSE_TYPES` is `satisfies Record<AttendeeResponse, …>`, so a fourth submittable
+answer stops the file compiling instead of silently rendering nothing.
+
+## Where an invitation is visible — and where it is not
+
+**`/calendar/invites`, and nowhere else, through Phase 3.** `calendar.range` scopes the
+month grid to `calendars.user_id = me`; widening it would mean a fourth query on the
+hottest path in the feature, its own recurrence expansion and suppression handling, and a
+share of `MAX_RANGE_ROWS`. Phase 6 is already reworking that query for shares and folds
+the list into the grid then, retiring the route.
+
+The list is its own route rather than a panel beside the grid for a plainer reason:
+"Invitations: Standup" next to a month that does not contain Standup reads as a bug, not
+as a phase boundary.
+
+`calendar.listInvites` is keyset-paginated on `(start_at, id)` ascending, reads through
+`calendar_event_masters` (which excludes soft-deleted events and overrides for free), and
+carries **no time filter** — an invitation is listed in the order it happens, rather than
+having its contents depend on the request clock.

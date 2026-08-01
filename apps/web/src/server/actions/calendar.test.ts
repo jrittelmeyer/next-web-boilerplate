@@ -13,7 +13,9 @@ const {
   dbUpdate,
   dbDelete,
   dbSelect,
+  dbExecute,
   dbTransaction,
+  dbNotify,
   findCalendar,
   findEvent,
   revalidatePath,
@@ -27,7 +29,9 @@ const {
   dbUpdate: vi.fn(),
   dbDelete: vi.fn(),
   dbSelect: vi.fn(),
+  dbExecute: vi.fn(),
   dbTransaction: vi.fn(),
+  dbNotify: vi.fn(),
   findCalendar: vi.fn(),
   findEvent: vi.fn(),
   revalidatePath: vi.fn(),
@@ -37,12 +41,19 @@ const {
 vi.mock("@repo/auth", () => ({ auth: { api: { getSession: getSessionApi } } }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit }));
 vi.mock("@/lib/organization", () => ({ getActiveOrganizationId }));
+// `notify` and the channel come along because the action's notification path is left
+// REAL: `createNotifications` short-circuits on an empty list, so most tests never reach
+// them, and a test that does produce a payload should see a spy rather than a
+// `notify is not a function` from a half-mocked module.
 vi.mock("@repo/db", () => ({
+  NOTIFICATIONS_CHANNEL: "notifications",
+  notify: dbNotify,
   db: {
     insert: dbInsert,
     update: dbUpdate,
     delete: dbDelete,
     select: dbSelect,
+    execute: dbExecute,
     transaction: dbTransaction,
     query: {
       calendars: { findFirst: findCalendar },
@@ -68,6 +79,7 @@ import {
   createEvent,
   deleteCalendar,
   deleteEvent,
+  respondToEvent,
   setRecurrenceDate,
   updateCalendar,
   updateEvent,
@@ -77,7 +89,9 @@ const CAL = "3f1b0a5e-6b0e-4b0f-9a2a-1c2d3e4f5a6b";
 const OTHER_CAL = "9c8d7e6f-5a4b-4c3d-8e2f-1a0b9c8d7e6f";
 const EVENT = "11111111-2222-4333-8444-555555555555";
 const NEW_MASTER = "22222222-3333-4444-8555-666666666666";
-const SESSION = { user: { id: "u1" } };
+// The email is load-bearing from Phase 3: it fills the `body` slot of every calendar
+// notification, so a session without one would write `undefined` into a NOT NULL column.
+const SESSION = { user: { id: "u1", email: "owner@example.com" } };
 
 const calendarInput = {
   name: "Work",
@@ -134,9 +148,25 @@ function updateReturning(rows: unknown[]) {
   return { set: () => ({ where: () => ({ returning: () => Promise.resolve(rows) }) }) };
 }
 
-/** `db.select(...).from(...).where(...)` resolving to `rows` — the recurrence-date read. */
+/**
+ * `db.select(...).from(...).where(...)` resolving to `rows` — the recurrence-date read.
+ *
+ * `where()` is awaitable **and** `.limit()`-able: the recurrence-date read awaits it
+ * directly while the soft delete's title lookup chains `.limit(1)` off it. A bare promise
+ * makes the second one a `TypeError` inside the transaction callback, which the action
+ * then reports as a generic write failure.
+ */
 function selectReturning(rows: unknown[]) {
-  return { from: () => ({ where: () => Promise.resolve(rows) }) };
+  const settled = () =>
+    Object.assign(Promise.resolve(rows), { limit: () => Promise.resolve(rows) });
+  // `innerJoin` returns the same tail, so one fixture serves the recurrence-date read,
+  // the attendee probe inside `getEventAccess`, and the organizer lookup in
+  // `respondToEvent`.
+  const tail: { where: typeof settled; innerJoin: () => typeof tail } = {
+    where: settled,
+    innerJoin: () => tail,
+  };
+  return { from: () => tail };
 }
 
 /**
@@ -151,13 +181,15 @@ interface TxLog {
   inserts: Record<string, unknown>[];
   updates: Record<string, unknown>[];
   deletes: number;
+  /** Raw statements — `splitSeries`'s `INSERT … SELECT` guest-list copy is the only one. */
+  executes: number;
 }
 
 function recordingTransaction(
   rows: unknown[] = [{ id: NEW_MASTER, calendarId: CAL }],
   selectRows: unknown[] = [],
 ): TxLog {
-  const log: TxLog = { inserts: [], updates: [], deletes: 0 };
+  const log: TxLog = { inserts: [], updates: [], deletes: 0, executes: 0 };
   dbTransaction.mockImplementation(async (callback: (tx: unknown) => unknown) =>
     callback({
       insert: () => ({
@@ -187,6 +219,13 @@ function recordingTransaction(
         },
       }),
       select: () => selectReturning(selectRows),
+      // Without this the guest-list copy throws INSIDE the transaction callback and the
+      // action reports "Failed to update the event." — a fixture gap that reads exactly
+      // like a production defect.
+      execute: () => {
+        log.executes += 1;
+        return Promise.resolve();
+      },
     }),
   );
   return log;
@@ -204,14 +243,20 @@ beforeEach(() => {
   dbUpdate.mockReturnValue(updateReturning([{ id: EVENT, calendarId: CAL }]));
   dbDelete.mockReturnValue({ where: () => Promise.resolve() });
   dbSelect.mockReturnValue(selectReturning([]));
-  // The default transaction just runs the callback against a tx that behaves like db.
+  dbExecute.mockResolvedValue(undefined);
+  // The default transaction hands the callback **the same builders `db` exposes**, so a
+  // statement that moved inside a transaction in Phase 3 — `createEvent`,
+  // `updateWholeEvent` and `softDeleteEvent` all did — keeps being asserted through the
+  // mock it was always asserted through. A tx with its own private builders would make
+  // every one of those tests pass vacuously instead.
   dbTransaction.mockImplementation(
     async (callback: (tx: unknown) => unknown) =>
       await callback({
-        insert: () => insertReturning([{ id: CAL, name: "Work" }]),
-        update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
-        delete: () => ({ where: () => Promise.resolve() }),
-        select: () => selectReturning([]),
+        insert: dbInsert,
+        update: dbUpdate,
+        delete: dbDelete,
+        select: dbSelect,
+        execute: dbExecute,
       }),
   );
 });
@@ -248,6 +293,12 @@ describe("the shared gates", () => {
 });
 
 describe("createCalendar", () => {
+  // The shared default insert returns an *event* row, because that is what most of this
+  // file writes. A calendar create returns a calendar.
+  beforeEach(() => {
+    dbInsert.mockReturnValue(insertReturning([{ id: CAL, name: "Work" }]));
+  });
+
   it("creates and revalidates", async () => {
     const result = await createCalendar(calendarInput);
     expect(result).toEqual({ data: { id: CAL, name: "Work" } });
@@ -524,6 +575,69 @@ describe("createEvent", () => {
     expect(result).toEqual({ data: { id: EVENT, calendarId: CAL } });
   });
 
+  it("resolves guests to accounts, stores the list and publishes invitations", async () => {
+    const writes: unknown[] = [];
+    dbSelect.mockReturnValue(selectReturning([{ id: "guest-1", email: "guest@example.com" }]));
+    dbInsert.mockImplementation(() => ({
+      values: (rows: unknown) => {
+        writes.push(rows);
+        // The guest-list insert is awaited without `.returning()`; the event and the
+        // notifications both chain it.
+        return Object.assign(Promise.resolve(), {
+          returning: () =>
+            Promise.resolve(
+              writes.length === 1
+                ? [{ id: EVENT, calendarId: CAL }]
+                : [
+                    {
+                      id: "n1",
+                      userId: "guest-1",
+                      type: "calendar_invite",
+                      body: SESSION.user.email,
+                      title: "Standup",
+                      link: `/calendar/event/${EVENT}`,
+                      read: false,
+                      createdAt: new Date(),
+                    },
+                  ],
+            ),
+        });
+      },
+    }));
+
+    const result = await createEvent({
+      ...eventInput,
+      attendees: [
+        { email: "guest@example.com", role: "required" },
+        { email: "external@example.com", role: "optional" },
+      ],
+    });
+
+    expect(result).toEqual({ data: { id: EVENT, calendarId: CAL } });
+    // One transaction, three statements: the event, the guest list, the invitations. An
+    // event whose guest list failed to insert is an event the organizer believes they
+    // invited people to.
+    expect(writes).toHaveLength(3);
+    expect(writes[1]).toEqual([
+      expect.objectContaining({ email: "guest@example.com", role: "required", userId: "guest-1" }),
+      // An address with no account is still a real row, with `user_id NULL` — Phase 4 is
+      // what reaches it, by email — and it receives no in-app notification.
+      expect.objectContaining({ email: "external@example.com", role: "optional", userId: null }),
+    ]);
+    expect(writes[2]).toEqual([
+      expect.objectContaining({
+        userId: "guest-1",
+        type: "calendar_invite",
+        body: SESSION.user.email,
+        title: "Standup",
+        link: `/calendar/event/${EVENT}`,
+      }),
+    ]);
+    // Strictly after the commit: `notify()` runs `pg_notify` on the POOLED connection, so
+    // a push issued inside the transaction can beat the row it describes.
+    expect(dbNotify).toHaveBeenCalledTimes(1);
+  });
+
   it("maps an insert failure", async () => {
     dbInsert.mockReturnValue({
       values: () => ({ returning: () => Promise.reject(new Error("boom")) }),
@@ -631,6 +745,59 @@ describe("updateEvent", () => {
       error: "Failed to update the event.",
     });
   });
+
+  it("cancels the guests it dropped and leaves the ones it kept alone", async () => {
+    // The rule that most needs a test: the composer posts the WHOLE list on every save,
+    // so a diff that touched an address present in both sets would silently return that
+    // person to `needs-action` on a title edit.
+    let notified: Record<string, unknown>[] = [];
+    dbSelect.mockReturnValue(
+      selectReturning([{ email: "stays@example.com" }, { email: "gone@example.com" }]),
+    );
+    dbDelete.mockReturnValue({
+      where: () => ({ returning: () => Promise.resolve([{ userId: "guest-1" }]) }),
+    });
+    dbInsert.mockReturnValue({
+      values: (rows: Record<string, unknown>[]) => {
+        notified = rows;
+        return {
+          returning: () =>
+            Promise.resolve([
+              {
+                id: "n1",
+                userId: "guest-1",
+                type: "calendar_cancelled",
+                body: SESSION.user.email,
+                title: "Standup",
+                link: null,
+                read: false,
+                createdAt: new Date(),
+              },
+            ]),
+        };
+      },
+    });
+
+    const result = await updateEvent({
+      ...eventInput,
+      ...noScope,
+      id: EVENT,
+      attendees: [{ email: "stays@example.com", role: "required" }],
+    });
+
+    expect(result).toEqual({ data: { id: EVENT, calendarId: CAL } });
+    // Nothing was inserted for `stays@example.com` — an address in both sets is left
+    // strictly alone, not upserted back to the default status.
+    expect(notified).toEqual([
+      expect.objectContaining({
+        userId: "guest-1",
+        type: "calendar_cancelled",
+        title: "Standup",
+        link: null,
+      }),
+    ]);
+    expect(dbNotify).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("deleteEvent", () => {
@@ -648,6 +815,50 @@ describe("deleteEvent", () => {
     // Deletion is ONE fact in ONE column; Phase 4 derives STATUS:CANCELLED from it.
     expect(written.status).toBeUndefined();
     expect(revalidatePath).toHaveBeenCalledWith(`/calendar/event/${EVENT}`);
+  });
+
+  it("tells every guest but the person deleting, and fills the sentence's slots", async () => {
+    // The `calendarCancelled` sentence is "{event} was cancelled", and the feed reads the
+    // contract literally: a NULL `title` means `body` is already a complete sentence. So a
+    // cancellation carrying the title in `body` renders as the bare words "Standup".
+    // `title` is the event and `body` is the actor, the same way round as every other
+    // calendar type.
+    let notified: Record<string, unknown>[] = [];
+    dbSelect.mockReturnValue(selectReturning([{ title: "Standup", userId: "guest-1" }]));
+    dbInsert.mockReturnValue({
+      values: (rows: Record<string, unknown>[]) => {
+        notified = rows;
+        return {
+          returning: () =>
+            Promise.resolve([
+              {
+                id: "n1",
+                userId: "guest-1",
+                type: "calendar_cancelled",
+                body: SESSION.user.email,
+                title: "Standup",
+                link: null,
+                read: false,
+                createdAt: new Date(),
+              },
+            ]),
+        };
+      },
+    });
+
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({ data: { id: EVENT } });
+    expect(notified).toEqual([
+      expect.objectContaining({
+        userId: "guest-1",
+        type: "calendar_cancelled",
+        body: SESSION.user.email,
+        title: "Standup",
+        // The event is soft-deleted, so any link would 404 on click.
+        link: null,
+      }),
+    ]);
+    // Published strictly after the commit — `notify()` runs on the pooled connection.
+    expect(dbNotify).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a non-uuid id as not found", async () => {
@@ -680,6 +891,152 @@ describe("deleteEvent", () => {
 const seriesInput = { ...eventInput, rrule: "FREQ=WEEKLY;BYDAY=MO" } as const;
 /** The third occurrence — two before it, so a split at it is a real split. */
 const THIRD = "2027-03-29 09:00:00";
+
+describe("respondToEvent", () => {
+  const ORGANIZER = "u2";
+  const GUEST_EMAIL = "guest@example.com";
+
+  /** `db.update(...).set(...).where(...).returning(...)`, recording what was set. */
+  function capturingUpdate(written: Record<string, unknown>[], rows: unknown[]) {
+    return {
+      set: (row: Record<string, unknown>) => {
+        written.push(row);
+        return { where: () => ({ returning: () => Promise.resolve(rows) }) };
+      },
+    };
+  }
+
+  beforeEach(() => {
+    // One fixture row serves two different reads: `getEventAccess`'s attendee probe takes
+    // `status`, and the action's own organizer lookup takes `title` and `ownerId`.
+    dbSelect.mockReturnValue(
+      selectReturning([{ status: "needs-action", title: "Standup", ownerId: ORGANIZER }]),
+    );
+    dbUpdate.mockReturnValue(updateReturning([{ email: GUEST_EMAIL }]));
+    dbInsert.mockReturnValue(
+      insertReturning([
+        {
+          id: "n1",
+          userId: ORGANIZER,
+          type: "calendar_response_accepted",
+          body: GUEST_EMAIL,
+          title: "Standup",
+          link: `/calendar/event/${EVENT}`,
+          read: false,
+          createdAt: new Date(),
+        },
+      ]),
+    );
+  });
+
+  it("refuses without a session", async () => {
+    getSessionApi.mockResolvedValue(null);
+    expect(await respondToEvent({ eventId: EVENT, status: "accepted", comment: null })).toEqual({
+      error: "Unauthorized",
+    });
+  });
+
+  it("refuses a rate-limited caller", async () => {
+    rateLimit.mockResolvedValue({ success: false });
+    expect(
+      await respondToEvent({ eventId: EVENT, status: "accepted", comment: null }),
+    ).toMatchObject({ error: expect.stringContaining("Too many requests") });
+  });
+
+  it("returns field errors for a malformed submission", async () => {
+    expect(
+      await respondToEvent({ eventId: "nope", status: "accepted", comment: null }),
+    ).toMatchObject({
+      error: "Please fix the fields below.",
+      fieldErrors: { eventId: expect.any(String) },
+    });
+  });
+
+  it("answers 'Event not found' to someone who was never invited", async () => {
+    // The same message the rest of the file uses, so "not invited" and "does not exist"
+    // are indistinguishable to a caller probing ids.
+    dbSelect.mockReturnValue(selectReturning([]));
+    expect(await respondToEvent({ eventId: EVENT, status: "accepted", comment: null })).toEqual({
+      error: "Event not found",
+    });
+  });
+
+  it("stamps the answer, claims the row, and tells the organizer", async () => {
+    const written: Record<string, unknown>[] = [];
+    dbUpdate.mockReturnValue(capturingUpdate(written, [{ email: GUEST_EMAIL }]));
+
+    const result = await respondToEvent({
+      eventId: EVENT,
+      status: "accepted",
+      comment: "  see you  ",
+    });
+
+    expect(result).toEqual({ data: { id: EVENT, calendarId: CAL } });
+    expect(written[0]).toMatchObject({ status: "accepted", comment: "see you" });
+    // `responded_at` is stamped unconditionally, which is safe only because
+    // ATTENDEE_RESPONSES excludes `needs-action` — the one status that would contradict
+    // `calendar_event_attendees_responded_pair`.
+    expect(written[0]?.respondedAt).toBeDefined();
+    // **The claim, made durable.** Without this stamp an invitation the person had
+    // already ACCEPTED would silently vanish from their list the day they changed
+    // address, because only the verified-email arm could ever have found it.
+    expect(written[0]?.userId).toBe(SESSION.user.id);
+    expect(dbNotify).toHaveBeenCalledTimes(1);
+    expect(revalidatePath).toHaveBeenCalledWith("/calendar/invites");
+    expect(revalidatePath).toHaveBeenCalledWith(`/calendar/event/${EVENT}`);
+  });
+
+  it("splits the notification type by status rather than carrying a status field", async () => {
+    // A one-slot notification cannot express "Alice declined Standup" — two variables and
+    // a status — so the type is what selects the sentence.
+    let notified: Record<string, unknown>[] = [];
+    dbInsert.mockReturnValue({
+      values: (rows: Record<string, unknown>[]) => {
+        notified = rows;
+        return {
+          returning: () =>
+            Promise.resolve([
+              {
+                id: "n1",
+                userId: ORGANIZER,
+                type: "calendar_response_declined",
+                body: GUEST_EMAIL,
+                title: "Standup",
+                link: `/calendar/event/${EVENT}`,
+                read: false,
+                createdAt: new Date(),
+              },
+            ]),
+        };
+      },
+    });
+
+    await respondToEvent({ eventId: EVENT, status: "declined", comment: null });
+    expect(notified[0]).toMatchObject({
+      userId: ORGANIZER,
+      type: "calendar_response_declined",
+      body: GUEST_EMAIL,
+      title: "Standup",
+    });
+  });
+
+  it("notifies nobody when you answer your own event", async () => {
+    dbSelect.mockReturnValue(
+      selectReturning([{ status: "needs-action", title: "Standup", ownerId: SESSION.user.id }]),
+    );
+    await respondToEvent({ eventId: EVENT, status: "tentative", comment: null });
+    expect(dbNotify).not.toHaveBeenCalled();
+  });
+
+  it("maps a write failure without claiming the response was saved", async () => {
+    dbUpdate.mockReturnValue({
+      set: () => ({ where: () => ({ returning: () => Promise.reject(new Error("boom")) }) }),
+    });
+    expect(await respondToEvent({ eventId: EVENT, status: "accepted", comment: null })).toEqual({
+      error: "Failed to save your response.",
+    });
+  });
+});
 
 describe("createEvent with a rule", () => {
   it("stores the CANONICAL rule and a series_end_at", async () => {
@@ -890,7 +1247,10 @@ describe("updateEvent, scope: thisAndFollowing", () => {
       recurrenceId: "2027-03-15 09:00:00",
     });
     expect(result).toEqual({ data: { id: EVENT, calendarId: CAL } });
-    expect(dbTransaction).not.toHaveBeenCalled();
+    // It fell through to `updateWholeEvent`, which never inserts a second master. The
+    // old spelling of this assertion was "no transaction at all"; from Phase 3 every
+    // whole-event write opens one, so the tell is the absence of the split's INSERT.
+    expect(dbInsert).not.toHaveBeenCalled();
   });
 
   it("refuses a date that is not part of the series", async () => {
@@ -940,7 +1300,7 @@ describe("updateEvent, scope: all", () => {
 
   it("keeps them when only the title changed", async () => {
     findEvent.mockResolvedValue(seriesTarget);
-    recordingTransaction();
+    const log = recordingTransaction();
     await updateEvent({
       ...seriesInput,
       title: "Renamed",
@@ -948,8 +1308,13 @@ describe("updateEvent, scope: all", () => {
       scope: "all",
       recurrenceId: THIRD,
     });
-    expect(dbTransaction).not.toHaveBeenCalled();
-    expect(dbUpdate).toHaveBeenCalled();
+    // A rename moves nothing, so every `recurrence_id` still names a real occurrence and
+    // the overrides and skipped dates survive. The transaction itself is no longer the
+    // signal — Phase 3 made every whole-event write transactional, because a title edit
+    // that committed while its guest-list changes did not is the worse failure — so the
+    // assertion is on the writes it did NOT make.
+    expect(log.deletes).toBe(0);
+    expect(log.updates).toHaveLength(1);
   });
 
   it("feeds the surviving RDATEs into series_end_at", async () => {

@@ -2,12 +2,15 @@
 
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
+import type { AttendeeRole, AttendeeStatus } from "@repo/validators/calendar";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { deleteEvent } from "@/server/actions/calendar";
+import { AttendeeList } from "./attendee-list";
 import { RecurrenceDatesField } from "./recurrence-dates-field";
 import { RecurrenceSummary } from "./recurrence-summary";
+import { RsvpControl } from "./rsvp-control";
 
 /**
  * The single-event page body.
@@ -21,7 +24,22 @@ import { RecurrenceSummary } from "./recurrence-summary";
 export function EventDetail({
   event,
   calendarName,
+  attendees,
+  myResponse,
 }: {
+  /** The guest list, addresses only — every attendee sees all of it (decision 7). */
+  attendees: readonly {
+    email: string;
+    role: AttendeeRole;
+    status: AttendeeStatus;
+    comment: string | null;
+  }[];
+  /**
+   * The caller's own stored RSVP, or `null` when they are not a guest — which is also
+   * how "do not show the RSVP control" is said. An organizer who never added themselves
+   * to their own event is `null` here despite owning the calendar.
+   */
+  myResponse: AttendeeStatus | null;
   event: {
     id: string;
     title: string;
@@ -44,6 +62,7 @@ export function EventDetail({
   calendarName: string;
 }) {
   const t = useTranslations("Calendar.detail");
+  const tAttendees = useTranslations("Calendar.attendees");
   const format = useFormatter();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -125,6 +144,16 @@ export function EventDetail({
       {event.description ? (
         <p className="whitespace-pre-wrap text-sm">{event.description}</p>
       ) : null}
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">{tAttendees("heading")}</h2>
+        {myResponse ? (
+          // Series-level: the answer attaches to the master, which is the only thing this
+          // page ever renders.
+          <RsvpControl eventId={event.id} status={myResponse} />
+        ) : null}
+        <AttendeeList attendees={attendees} />
+      </section>
 
       {event.rrule ? (
         <RecurrenceDatesField

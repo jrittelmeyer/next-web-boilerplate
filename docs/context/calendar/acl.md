@@ -1,11 +1,23 @@
 # Calendar — access control
 
 Load when touching who may read or write a calendar. Endpoints:
-[api.md](api.md). Domain model: [model.md](model.md).
+[api.md](api.md). Domain model: [model.md](model.md). The guest list:
+[attendees.md](attendees.md).
 
-One authority: **`getCalendarRole(calendarId, userId)`** in
-`apps/web/src/lib/calendar-acl.ts`. Every calendar read and write in `apps/web` asks it
-and nothing else.
+**Two authorities, in `apps/web/src/lib/calendar-acl.ts`, and the split is the point.**
+
+| Question | Ask | Answers |
+| --- | --- | --- |
+| *calendar*-scoped — may this person write here, rename this, delete this? | `getCalendarRole(calendarId, userId)` | a role, or `null` |
+| *event*-scoped — may this person see this event, and may they RSVP? | `getEventAccess(eventId, userId, target?)` | an opaque `EventAccess` |
+
+Before Phase 3 there was one, and the sentence here read *"every calendar read and write
+in `apps/web` asks it and nothing else"*. That stopped being true the moment attendees
+existed: an attendee is **not** a member of the calendar an event lives on, so "may this
+person see this event" is no longer answerable from a calendar role alone. It is rewritten
+rather than quietly falsified.
+
+Every *calendar*-scoped decision still asks `getCalendarRole` and nothing else.
 
 ## The roles
 
@@ -29,6 +41,54 @@ changes calendar. Scoped writes never take a `calendarId` of their own for the s
 `updateEvent` refuses a calendar change under `scope: "this"` or `"thisAndFollowing"`
 ([api.md](api.md)), because moving the whole series is the operation that is correct
 automatically.
+
+## `getEventAccess` — and it exposes no role
+
+```ts
+interface EventAccess {           // opaque on purpose
+  readonly reads: boolean;
+  readonly responds: boolean;
+  readonly response: AttendeeStatus | null;  // the caller's OWN answer
+  readonly masterId: string | null;
+  readonly calendarId: string | null;
+}
+canReadEvent(access) · canRespondToEvent(access)
+```
+
+**There is no `canWriteEvent`, and `calendar-acl.test.ts` asserts the module exports
+none.** The guarantee this phase rests on — *attendance never grants write* — has to
+survive someone reading the type looking for a way to authorize an edit, so it is
+structural rather than one obvious-looking line away from being wrong. Writes keep asking
+`getCalendarRole` + `canWriteCalendar`, which is a question about a *calendar*.
+
+`role` is not a member for the same reason.
+
+**Composition happens inside `getEventAccess`, never at a call site.** A route that asked
+`getCalendarRole` *or* checked an attendee row itself would be one forgotten `||` away
+from a leak, and the two questions have different answers for the same person. `response`
+is on the answer for the same reason: a route deriving "which of these rows is me" from
+the address alone would get it wrong for someone whose row was stamped with their account
+id and who has since changed address.
+
+**Three behaviours of `calendar_event_masters` are preserved, because the view's predicate
+is part of the authorization answer rather than a projection:**
+
+- **a soft-deleted event grants nothing** — otherwise a `calendar_cancelled` notification
+  could link straight to a deleted event;
+- **an override id resolves to its master**, then the master is answered for (attendees
+  hang off the master — [attendees.md](attendees.md));
+- **no row is no access**, indistinguishable from not-permitted.
+
+**Cost: three queries, not the two an earlier estimate claimed** — the event, the calendar
+role, and the attendee probe. A caller that already holds the event row passes it as
+`target` and pays two; `/calendar/event/[id]` and `calendar.byId` both do, because they
+join the event anyway. Folding the role read into the page's existing `calendars` join
+would need a second exported entry point, and correctness was preferred to the estimate.
+
+**Every attendee sees the full guest list.** That is Google's default and a deliberate
+Phase-3 decision, not an omission: the alternative is the per-guest permission columns
+(may-invite / may-modify / may-see-list) the program assigns to Phase 6, and shipping half
+of that model would mean migrating it twice.
 
 ## Phase 1 grants exactly one thing
 
@@ -79,3 +139,15 @@ calendars the caller owns, so an id they cannot see contributes nothing. That is
 optimisation with a correctness obligation attached: **when Phase 6 widens visibility,
 that scope must move behind `getCalendarRole`**, or shared calendars will authorize on
 the write path and silently return nothing on the read path.
+
+**`/calendar/event/[id]` and `calendar.byId` no longer authorize through their join.**
+Both scoped it to `calendars.user_id = me`, which was exactly right while the only person
+who could see an event was the person whose calendar it sat on — and exactly wrong the
+moment attendees existed, because an invitee would have been handed a `notFound()` on the
+very event they were invited to. Both ask `getEventAccess` now, and a refusal is still the
+same `notFound()` / `null` a missing row returns, so "someone else's" and "does not exist"
+stay indistinguishable.
+
+`calendar.listInvites` is the one read that authorizes on **attendee rows** rather than on
+a calendar: it cannot reuse an owner-scoped join, because that join *is* the
+authorization. Its predicate and the claim path are in [attendees.md](attendees.md).
