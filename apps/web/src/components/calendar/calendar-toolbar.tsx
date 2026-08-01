@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import { useFormatter, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 /**
  * Month navigation and the composer entry point.
@@ -9,6 +10,11 @@ import { useFormatter, useTranslations } from "next-intl";
  * The heading is the grid's accessible title as well as its visible one, and it is
  * built from `format.dateTime(…, "monthYear")` rather than a month-name array — the
  * whole reason the seven named formats exist (I18N.md).
+ *
+ * The invitations link is here rather than as a panel beside the grid because an
+ * invitation is not on the grid: `calendar.range` scopes to the caller's own calendars
+ * until Phase 6, so a list rendered next to the month would be naming events the month
+ * beside it does not contain.
  */
 export function CalendarToolbar({
   year,
@@ -64,9 +70,16 @@ export function CalendarToolbar({
           {label}
         </h2>
       </div>
-      <Button type="button" size="sm" onClick={onNewEvent} disabled={!canCreateEvent}>
-        {t("newEvent")}
-      </Button>
+      <div className="flex items-center gap-2">
+        {/* `asChild` and no `type`: the child is an anchor, and `type="button"` on an
+            `<a>` is meaningless markup. */}
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/calendar/invites">{t("invites")}</Link>
+        </Button>
+        <Button type="button" size="sm" onClick={onNewEvent} disabled={!canCreateEvent}>
+          {t("newEvent")}
+        </Button>
+      </div>
     </div>
   );
 }

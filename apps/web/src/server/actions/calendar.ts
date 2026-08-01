@@ -17,10 +17,18 @@ import {
   seriesEndInstantMs,
   untilInstantMs,
 } from "@repo/calendar";
-import { db } from "@repo/db";
-import { calendarEvents, calendarRecurrenceDates, calendars } from "@repo/db/schema";
+import { type Database, db } from "@repo/db";
+import {
+  calendarEventAttendees,
+  calendarEvents,
+  calendarRecurrenceDates,
+  calendars,
+  user,
+} from "@repo/db/schema";
 import { type ActionResult, type FieldErrors, zodFieldErrors } from "@repo/validators";
 import {
+  type AttendeeInput,
+  type AttendeeResponse,
   type CreateCalendarValues,
   type CreateEventInput,
   type CreateEventValues,
@@ -31,20 +39,34 @@ import {
   deleteEventSchema,
   type RecurrenceDateKind,
   type RecurrenceDateValues,
+  type RespondToEventValues,
   recurrenceDateSchema,
+  respondToEventSchema,
   type UpdateCalendarValues,
   type UpdateEventInput,
   type UpdateEventValues,
   updateCalendarSchema,
   updateEventSchema,
 } from "@repo/validators/calendar";
-import { and, eq, gte, isNull, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { partitionRecurrenceDates } from "@/lib/calendar/recurrence-dates";
-import { canAdministerCalendar, canWriteCalendar, getCalendarRole } from "@/lib/calendar-acl";
+import {
+  canAdministerCalendar,
+  canRespondToEvent,
+  canWriteCalendar,
+  getCalendarRole,
+  getEventAccess,
+} from "@/lib/calendar-acl";
+import { diffAttendees } from "@/lib/calendar-attendees";
 import { getActiveOrganizationId } from "@/lib/organization";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  createNotifications,
+  type NewNotificationInput,
+  publishNotifications,
+} from "@/server/notifications/create";
 
 /**
  * Calendar writes. Reads live in `server/trpc/routers/calendar.ts` — the repo-wide
@@ -443,6 +465,171 @@ function eventColumns(values: CreateEventInput) {
   };
 }
 
+// --- Attendees ---------------------------------------------------------------
+
+/** The transaction handle Drizzle hands a `db.transaction` callback. */
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/**
+ * Who is doing the writing. The **email** fills the `body` slot of every calendar
+ * notification (there is no stored display name and no stored locale — the sentence is
+ * picked in the reader's locale at render time), and the **id** is how the delete path
+ * leaves the person doing the deleting off their own cancellation list. Functions that
+ * need only the address still take a bare `actorEmail`, so each signature says which half
+ * it actually uses.
+ */
+interface Actor {
+  readonly id: string;
+  readonly email: string;
+}
+
+/**
+ * Resolve submitted addresses to account ids, in one query.
+ *
+ * Matched on `user.email` directly rather than `lower(user.email)`: Better Auth
+ * lower-cases on its sign-up path, so the column is lowercase in practice, and putting a
+ * function on it here would seq-scan `user` on every event save. A miss is **benign** —
+ * the row simply keeps `user_id NULL` and behaves as an external attendee, and the claim
+ * path in `getEventAccess` compares `attendees.email = lower(user.email)`, which is the
+ * safe direction and catches anyone this misses.
+ */
+async function resolveAttendeeUserIds(
+  tx: Transaction,
+  emails: readonly string[],
+): Promise<Map<string, string>> {
+  if (emails.length === 0) return new Map();
+  const rows = await tx
+    .select({ id: user.id, email: user.email })
+    .from(user)
+    .where(inArray(user.email, [...emails]));
+  return new Map(rows.map((row) => [row.email.toLowerCase(), row.id]));
+}
+
+/** The invitation notification for one new guest. `body` is the actor, `title` the event. */
+function inviteNotification(
+  userId: string,
+  actorEmail: string,
+  eventTitle: string,
+  eventId: string,
+): NewNotificationInput {
+  return {
+    userId,
+    type: "calendar_invite",
+    body: actorEmail,
+    title: eventTitle,
+    link: `/calendar/event/${eventId}`,
+  };
+}
+
+/**
+ * The cancellation notification. **`link` is null by construction** — the event is either
+ * soft-deleted or the recipient is no longer on its guest list, so `calendar_event_masters`
+ * excludes it or `getEventAccess` refuses it, and any link would 404 on click.
+ *
+ * `title` carries the event and `body` the actor, the same way round as every other
+ * calendar type, even though `calendarCancelled` renders only `{event}`. The contract
+ * beside `NOTIFICATION_TYPES` reads `title IS NULL ⇒ body is already a complete sentence`,
+ * and the feed applies it literally — so putting the title in `body` and leaving `title`
+ * NULL would render the bare words "Standup" rather than "Standup was cancelled". `body`
+ * is NOT NULL, so it needs a real value regardless, and the actor is the honest one.
+ */
+function cancelNotification(
+  userId: string,
+  actorEmail: string,
+  eventTitle: string,
+): NewNotificationInput {
+  return { userId, type: "calendar_cancelled", body: actorEmail, title: eventTitle, link: null };
+}
+
+/**
+ * Insert a guest list and return the invitations to publish **after** the transaction
+ * commits.
+ *
+ * Nothing is published from in here: `notify()` runs `pg_notify` on the pooled
+ * connection, not this transaction's, so a push issued inside the transaction can reach a
+ * subscriber before the row it describes is visible — a live invitation whose link 404s.
+ * `createNotifications`/`publishNotifications` split those legs; the caller owns the
+ * ordering.
+ */
+async function addAttendees(
+  tx: Transaction,
+  eventId: string,
+  eventTitle: string,
+  attendees: readonly AttendeeInput[],
+  actorEmail: string,
+) {
+  if (attendees.length === 0) return [];
+  const resolved = await resolveAttendeeUserIds(
+    tx,
+    attendees.map((a) => a.email),
+  );
+  await tx.insert(calendarEventAttendees).values(
+    attendees.map((attendee) => ({
+      eventId,
+      email: attendee.email,
+      role: attendee.role,
+      userId: resolved.get(attendee.email) ?? null,
+    })),
+  );
+
+  // Only a resolved account can receive an in-app notification. An external attendee is
+  // a real row with a real invitation; Phase 4 is what reaches them, by email.
+  const rows = attendees
+    .map((attendee) => resolved.get(attendee.email))
+    .filter((id): id is string => id !== undefined)
+    .map((id) => inviteNotification(id, actorEmail, eventTitle, eventId));
+  return await createNotifications(tx, rows);
+}
+
+/** Cancellations for guests being dropped from an event that still exists. */
+async function removeAttendees(
+  tx: Transaction,
+  eventId: string,
+  eventTitle: string,
+  emails: readonly string[],
+  actorEmail: string,
+) {
+  if (emails.length === 0) return [];
+  const dropped = await tx
+    .delete(calendarEventAttendees)
+    .where(
+      and(
+        eq(calendarEventAttendees.eventId, eventId),
+        inArray(calendarEventAttendees.email, [...emails]),
+      ),
+    )
+    .returning({ userId: calendarEventAttendees.userId });
+
+  const rows = dropped
+    .map((row) => row.userId)
+    .filter((id): id is string => id !== null)
+    .map((id) => cancelNotification(id, actorEmail, eventTitle));
+  return await createNotifications(tx, rows);
+}
+
+/** What `createNotifications` hands back — payloads awaiting a post-commit publish. */
+type NotificationPayloads = Awaited<ReturnType<typeof createNotifications>>;
+
+/**
+ * The response type splits three ways rather than carrying a status field, because a
+ * one-slot notification cannot express "Alice declined Standup" — two variables and a
+ * status. `satisfies` over the submittable statuses, so a fourth answer stops this file
+ * compiling instead of silently rendering nothing.
+ */
+const RESPONSE_TYPES = {
+  accepted: "calendar_response_accepted",
+  declined: "calendar_response_declined",
+  tentative: "calendar_response_tentative",
+} as const satisfies Record<AttendeeResponse, NewNotificationInput["type"]>;
+
+/** The stored guest list for a series master, which is the only place one lives. */
+async function loadAttendees(tx: Transaction, eventId: string) {
+  return await tx
+    .select({ email: calendarEventAttendees.email })
+    .from(calendarEventAttendees)
+    .where(eq(calendarEventAttendees.eventId, eventId));
+}
+
 // --- Calendars ---------------------------------------------------------------
 
 /**
@@ -651,28 +838,44 @@ export async function createEvent(input: CreateEventValues): Promise<EventResult
   if ("fieldErrors" in rule) return { error: FIELD_ERRORS, fieldErrors: rule.fieldErrors };
 
   let created: { id: string; calendarId: string };
+  let invitations: Awaited<ReturnType<typeof createNotifications>> = [];
   try {
-    const [row] = await db
-      .insert(calendarEvents)
-      .values({
-        calendarId: parsed.data.calendarId,
-        // A bare UUID is a conformant RFC 5545 UID: the spec asks for global
-        // uniqueness, and the domain-qualified form is one way to get it, not a
-        // requirement. Generated on create and never regenerated — Phase 6 feed
-        // subscribers identify an event by this, so changing it reads as
-        // delete-and-recreate in every subscriber's client.
-        uid: crypto.randomUUID(),
-        ...eventColumns(parsed.data),
-        ...derived.data,
-        ...seriesColumns(rule.data, parsed.data, []),
-      })
-      .returning({ id: calendarEvents.id, calendarId: calendarEvents.calendarId });
-    if (!row) throw new Error("event insert returned no row");
-    created = row;
+    // One transaction: an event whose guest list failed to insert is an event the
+    // organizer believes they invited people to.
+    const result = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(calendarEvents)
+        .values({
+          calendarId: parsed.data.calendarId,
+          // A bare UUID is a conformant RFC 5545 UID: the spec asks for global
+          // uniqueness, and the domain-qualified form is one way to get it, not a
+          // requirement. Generated on create and never regenerated — Phase 6 feed
+          // subscribers identify an event by this, so changing it reads as
+          // delete-and-recreate in every subscriber's client.
+          uid: crypto.randomUUID(),
+          ...eventColumns(parsed.data),
+          ...derived.data,
+          ...seriesColumns(rule.data, parsed.data, []),
+        })
+        .returning({ id: calendarEvents.id, calendarId: calendarEvents.calendarId });
+      if (!row) throw new Error("event insert returned no row");
+      const payloads = await addAttendees(
+        tx,
+        row.id,
+        parsed.data.title,
+        parsed.data.attendees,
+        gate.session.user.email,
+      );
+      return { row, payloads };
+    });
+    created = result.row;
+    invitations = result.payloads;
   } catch (error) {
     return mapWriteError(error, "Failed to create the event.");
   }
 
+  // Strictly after the commit — see `addAttendees`.
+  await publishNotifications(invitations);
   revalidatePath("/calendar");
   return { data: created };
 }
@@ -724,15 +927,23 @@ export async function updateEvent(input: UpdateEventValues): Promise<EventResult
   const { scope, recurrenceId } = parsed.data;
   let result: EventResult;
 
+  const actorEmail = gate.session.user.email;
   if ((scope === "this" || scope === "thisAndFollowing") && recurrenceId !== null) {
     if (target.rrule === null) return rejectUnrepeated("scope");
     if (parsed.data.calendarId !== target.calendarId) return rejectCalendarMove();
     result =
       scope === "this"
         ? await updateOccurrence(target, parsed.data, derived.data, recurrenceId)
-        : await splitSeries(target, target.rrule, parsed.data, derived.data, recurrenceId);
+        : await splitSeries(
+            target,
+            target.rrule,
+            parsed.data,
+            derived.data,
+            recurrenceId,
+            actorEmail,
+          );
   } else {
-    result = await updateWholeEvent(target, parsed.data, derived.data);
+    result = await updateWholeEvent(target, parsed.data, derived.data, actorEmail);
   }
 
   if ("error" in result) return result;
@@ -759,6 +970,7 @@ async function updateWholeEvent(
   target: EventTarget,
   values: UpdateEventInput,
   times: DerivedTimes,
+  actorEmail: string,
 ): Promise<EventResult> {
   const rule = parseSubmittedRule(values.rrule);
   if ("fieldErrors" in rule) return { error: FIELD_ERRORS, fieldErrors: rule.fieldErrors };
@@ -790,37 +1002,52 @@ async function updateWholeEvent(
     // re-prompt its attendees.
   };
 
+  // **Always transactional from Phase 3**, where revision 1 had a non-transactional fast
+  // path for the common edit. The guest-list diff is two writes of its own, and a title
+  // edit that committed while its invitations did not is a worse failure than the extra
+  // BEGIN costs.
+  let result: { row: { id: string; calendarId: string }; payloads: NotificationPayloads };
   try {
-    if (!dropModifiers) {
-      const [row] = await db
+    result = await db.transaction(async (tx) => {
+      const [row] = await tx
         .update(calendarEvents)
         .set(columns)
         .where(eq(calendarEvents.id, target.id))
         .returning({ id: calendarEvents.id, calendarId: calendarEvents.calendarId });
       if (!row) throw new Error("event update returned no row");
-      return { data: row };
-    }
 
-    // One transaction: a master whose identity moved while its overrides survived is
-    // the corrupt state, and it is exactly what a failure between the two writes leaves.
-    return {
-      data: await db.transaction(async (tx) => {
-        const [row] = await tx
-          .update(calendarEvents)
-          .set(columns)
-          .where(eq(calendarEvents.id, target.id))
-          .returning({ id: calendarEvents.id, calendarId: calendarEvents.calendarId });
-        if (!row) throw new Error("event update returned no row");
+      if (dropModifiers) {
+        // A master whose identity moved while its overrides survived is the corrupt
+        // state, and it is exactly what a failure between these writes leaves. The
+        // override rows go with them — `ON DELETE CASCADE` takes any attendee row that a
+        // future phase attached to one.
         await tx.delete(calendarEvents).where(eq(calendarEvents.recurrenceParentId, target.id));
         await tx
           .delete(calendarRecurrenceDates)
           .where(eq(calendarRecurrenceDates.eventId, target.id));
-        return row;
-      }),
-    };
+      }
+
+      // Diff by email; an address in both sets is left strictly alone, which is what
+      // keeps a re-save from resetting everyone's RSVP (lib/calendar-attendees.ts).
+      const diff = diffAttendees(await loadAttendees(tx, target.id), values.attendees);
+      const invited = await addAttendees(tx, target.id, values.title, diff.added, actorEmail);
+      const cancelled = await removeAttendees(
+        tx,
+        target.id,
+        values.title,
+        diff.removed,
+        actorEmail,
+      );
+      return { row, payloads: [...invited, ...cancelled] };
+    });
   } catch (error) {
     return mapWriteError(error, "Failed to update the event.");
   }
+
+  // Outside the `try` on purpose: the write has committed, and a publish failure must
+  // not be reported to the user as "Failed to update the event."
+  await publishNotifications(result.payloads);
+  return { data: result.row };
 }
 
 /**
@@ -890,6 +1117,7 @@ async function splitSeries(
   values: UpdateEventInput,
   times: DerivedTimes,
   recurrenceId: LocalDateTime,
+  actorEmail: string,
 ): Promise<EventResult> {
   const source = parseSubmittedRule(seriesRrule);
   if ("fieldErrors" in source || source.data === null) {
@@ -912,7 +1140,7 @@ async function splitSeries(
   if ("fieldErrors" in cut) return { error: FIELD_ERRORS, fieldErrors: cut.fieldErrors };
   // Cutting at the series' own first occurrence is not a split — it is "all". Taking it
   // literally would write `COUNT=0`, a rule `parseRRule` then refuses to read back.
-  if (cut.data.before === 0) return await updateWholeEvent(target, values, times);
+  if (cut.data.before === 0) return await updateWholeEvent(target, values, times, actorEmail);
 
   // Partitioned here rather than re-read inside the transaction: string comparison on
   // `"YYYY-MM-DD HH:MM:SS"` is chronological because every field is zero-padded.
@@ -961,6 +1189,25 @@ async function splitSeries(
           ),
         );
 
+      // **The one place attendees are copied rather than inherited**, because the master
+      // this creates is a real, addressable, RSVP-able event with its own id and its own
+      // URL — so unlike an override, a row on it is observable. Copied VERBATIM: `role`,
+      // `status`, `comment` and `responded_at` all carry over.
+      //
+      // The consequence is recorded rather than hidden (attendees.md): a "this and
+      // following" edit that moves the time leaves everyone still `accepted` for a
+      // meeting whose time changed. Resetting them here would pre-decide Phase 4's
+      // significant-change rules from inside Phase 3 and would re-ask every guest after a
+      // pure title edit. No invitations are published either — these people are already
+      // on this series; telling them they were invited to something would be noise.
+      await tx.execute(sql`
+        INSERT INTO calendar_event_attendees
+          (event_id, user_id, email, role, status, comment, responded_at)
+        SELECT ${row.id}, user_id, email, role, status, comment, responded_at
+          FROM calendar_event_attendees
+         WHERE event_id = ${target.id}
+      `);
+
       // The first half keeps its own civil span, its own uid and its own overrides;
       // only its bound moves. The edit applies from the cut forward, which is what
       // "this and following" means.
@@ -971,6 +1218,105 @@ async function splitSeries(
   } catch (error) {
     return mapWriteError(error, "Failed to update the event.");
   }
+}
+
+/**
+ * RSVP to an event you were invited to.
+ *
+ * **The attendee row is the authorization.** There is no `getCalendarRole` call here and
+ * there must not be one: an invitee is not a member of the organizer's calendar, and
+ * asking a calendar-scoped question about an event-scoped permission is how "attendance
+ * grants write" gets built by accident. `getEventAccess` answers the narrow question and
+ * exposes no role to be tempted by.
+ *
+ * A caller who is not an attendee gets the same `"Event not found"` the rest of this file
+ * uses, so "not invited" and "does not exist" are indistinguishable.
+ *
+ * Series-level in Phase 3: the response attaches to the master. Per-occurrence RSVP would
+ * require an attendee — who by design has no write access to the organizer's calendar —
+ * to trigger an INSERT into `calendar_events` to materialise the override the response
+ * would hang off, which is a privilege-escalation shape rather than a free feature.
+ */
+export async function respondToEvent(input: RespondToEventValues): Promise<EventResult> {
+  const gate = await requireSession();
+  if (!gate) return { error: UNAUTHORIZED };
+
+  const limit = await rateLimit(`calendar:event:respond:${gate.session.user.id}`, {
+    limit: 20,
+    windowSec: 60,
+  });
+  if (!limit.success) return { error: RATE_LIMITED };
+
+  const parsed = respondToEventSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: FIELD_ERRORS, fieldErrors: zodFieldErrors(parsed.error) };
+  }
+
+  const userId = gate.session.user.id;
+  const access = await getEventAccess(parsed.data.eventId, userId);
+  if (!canRespondToEvent(access) || access.masterId === null || access.calendarId === null) {
+    return { error: "Event not found" };
+  }
+  const eventId = access.masterId;
+
+  let payloads: NotificationPayloads;
+  try {
+    payloads = await db.transaction(async (tx) => {
+      // `responded_at` is stamped unconditionally, which is safe because
+      // `ATTENDEE_RESPONSES` excludes `needs-action` — the only status that would
+      // contradict `calendar_event_attendees_responded_pair`.
+      const [row] = await tx
+        .update(calendarEventAttendees)
+        .set({
+          status: parsed.data.status,
+          comment: parsed.data.comment,
+          respondedAt: sql`now()`,
+          // **The claim, made durable.** A row invited before this person had an account
+          // carries `user_id NULL` and is reachable only by the verified-email arm of the
+          // predicate. Stamping it here means that arm answers once: without this, an
+          // invitation they have already ACCEPTED would silently vanish from their list
+          // the day they changed their address.
+          userId,
+        })
+        .where(
+          and(
+            eq(calendarEventAttendees.eventId, eventId),
+            // Re-stating the identity rather than trusting the id: `getEventAccess` said
+            // this person is an attendee, and this narrows the UPDATE to their own row.
+            sql`(${calendarEventAttendees.userId} = ${userId} OR ${calendarEventAttendees.email} = lower((SELECT email FROM "user" WHERE id = ${userId})))`,
+          ),
+        )
+        .returning({ email: calendarEventAttendees.email });
+      if (!row) throw new Error("attendee update returned no row");
+
+      const [event] = await tx
+        .select({ title: calendarEvents.title, ownerId: calendars.userId })
+        .from(calendarEvents)
+        .innerJoin(calendars, eq(calendars.id, calendarEvents.calendarId))
+        .where(eq(calendarEvents.id, eventId))
+        .limit(1);
+      if (!event) throw new Error("event vanished mid-response");
+
+      // The organizer hears about it; responding to your own event notifies nobody.
+      if (event.ownerId === userId) return [];
+      return await createNotifications(tx, [
+        {
+          userId: event.ownerId,
+          type: RESPONSE_TYPES[parsed.data.status],
+          body: row.email,
+          title: event.title,
+          link: `/calendar/event/${eventId}`,
+        },
+      ]);
+    });
+  } catch (error) {
+    return mapWriteError(error, "Failed to save your response.");
+  }
+
+  await publishNotifications(payloads);
+  revalidatePath("/calendar/invites");
+  revalidatePath(`/calendar/event/${eventId}`);
+  return { data: { id: eventId, calendarId: access.calendarId } };
 }
 
 /**
@@ -1007,15 +1353,16 @@ export async function deleteEvent(input: DeleteEventValues): Promise<DeleteResul
 
   const { scope, recurrenceId } = parsed.data;
   let result: DeleteResult;
+  const actor: Actor = { id: gate.session.user.id, email: gate.session.user.email };
 
   if ((scope === "this" || scope === "thisAndFollowing") && recurrenceId !== null) {
     if (target.rrule === null) return rejectUnrepeated("scope");
     result =
       scope === "this"
         ? await skipOccurrence(target, recurrenceId)
-        : await truncateSeries(target, target.rrule, recurrenceId);
+        : await truncateSeries(target, target.rrule, recurrenceId, actor);
   } else {
-    result = await softDeleteEvent(target);
+    result = await softDeleteEvent(target, actor);
   }
 
   if ("error" in result) return result;
@@ -1044,25 +1391,53 @@ export async function deleteEvent(input: DeleteEventValues): Promise<DeleteResul
  * moment they delete — which matters because the Phase-6 ICS upsert resurrects
  * soft-deleted rows (see model.md).
  */
-async function softDeleteEvent(target: EventTarget): Promise<DeleteResult> {
+async function softDeleteEvent(target: EventTarget, actor: Actor): Promise<DeleteResult> {
   const deletedAt = new Date();
+  let payloads: NotificationPayloads;
   try {
-    if (target.rrule === null) {
-      await db.update(calendarEvents).set({ deletedAt }).where(eq(calendarEvents.id, target.id));
-    } else {
-      await db.transaction(async (tx) => {
-        await tx.update(calendarEvents).set({ deletedAt }).where(eq(calendarEvents.id, target.id));
+    payloads = await db.transaction(async (tx) => {
+      await tx.update(calendarEvents).set({ deletedAt }).where(eq(calendarEvents.id, target.id));
+      if (target.rrule !== null) {
         await tx
           .update(calendarEvents)
           .set({ deletedAt })
           .where(
             and(eq(calendarEvents.recurrenceParentId, target.id), isNull(calendarEvents.deletedAt)),
           );
-      });
-    }
+      }
+
+      // Every guest but the person doing the deleting, who does not need telling. The
+      // attendee rows are NOT deleted: `deleted_at` is a soft delete, so the guest list
+      // survives with the event, and Phase 6's ICS upsert can resurrect the row.
+      //
+      // `title` is read here rather than taken from `target` because `EVENT_TARGET_COLUMNS`
+      // deliberately carries only what a scoped write needs to decide, and widening it
+      // for one notification would make every scoped write pay for it.
+      const [event] = await tx
+        .select({ title: calendarEvents.title })
+        .from(calendarEvents)
+        .where(eq(calendarEvents.id, target.id))
+        .limit(1);
+      const guests = await tx
+        .select({ userId: calendarEventAttendees.userId })
+        .from(calendarEventAttendees)
+        .where(
+          and(
+            eq(calendarEventAttendees.eventId, target.id),
+            ne(calendarEventAttendees.userId, actor.id),
+          ),
+        );
+      const rows = guests
+        .map((guest) => guest.userId)
+        .filter((id): id is string => id !== null)
+        .map((id) => cancelNotification(id, actor.email, event?.title ?? ""));
+      return await createNotifications(tx, rows);
+    });
   } catch (error) {
     return mapWriteError(error, "Failed to delete the event.");
   }
+
+  await publishNotifications(payloads);
   return { data: { id: target.id } };
 }
 
@@ -1112,6 +1487,7 @@ async function truncateSeries(
   target: EventTarget,
   seriesRrule: string,
   recurrenceId: LocalDateTime,
+  actor: Actor,
 ): Promise<DeleteResult> {
   const source = parseSubmittedRule(seriesRrule);
   if ("fieldErrors" in source || source.data === null) {
@@ -1121,7 +1497,7 @@ async function truncateSeries(
   const cut = planSeriesCut(target, source.data, recurrenceId);
   if ("fieldErrors" in cut) return { error: FIELD_ERRORS, fieldErrors: cut.fieldErrors };
   // Nothing before the cut means nothing survives — that is a deletion of the series.
-  if (cut.data.before === 0) return await softDeleteEvent(target);
+  if (cut.data.before === 0) return await softDeleteEvent(target, actor);
 
   const dates = await loadRecurrenceDates(target.id);
   const bounded = seriesColumns(

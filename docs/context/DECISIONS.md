@@ -150,6 +150,40 @@ written; the probe results are what changed three of them.
   schema, the ACL module and [acl.md](calendar/acl.md) — because every sibling authority
   module *has* one, so silence would read as an oversight. An admin who can read every
   user's meeting titles is a privacy incident with a UI.
+- **An attendee's identity is their email; `user_id` is a nullable resolution of it.**
+  An invitation names an address, and whether that address has an account here is a
+  separate and changeable fact. This is what makes Phase 4's external attendee purely
+  additive and a deleted user degrade into one rather than vanish from a guest list.
+- **Attendees hang off the series master: overrides inherit, they never copy.** The
+  alternative was considered and reversed. Copies would be unreadable in Phase 3
+  (nothing reads attendees by an override id), would diverge immediately because RSVP is
+  series-level, could not detect first materialisation, and would destroy the one thing an
+  attendee row on an override is *for* in Phase 6 — a deliberate per-occurrence response.
+  `splitSeries` is the sole exception, because the master it creates is addressable.
+- **There is a second authority, and it deliberately exposes no role.**
+  `getEventAccess` answers *event*-scoped questions (may this person read it, may they
+  RSVP) on top of `getCalendarRole`. There is no `canWriteEvent` and a test asserts the
+  module exports none: *attendance never grants write* has to be structural, because a
+  caller holding an event id will reach for the event-shaped function.
+- **RSVP is series-level in Phase 3, and that is a security decision, not a scope cut.**
+  Per-occurrence RSVP would require an attendee — who has no write access to the
+  organizer's calendar — to trigger an `INSERT` into `calendar_events` to materialise the
+  override the response hangs off. The parent program called it free; it is a
+  privilege-escalation shape.
+- **An invitation is claimed by *verified* email, not by a signup hook.** Without the
+  claim path, inviting someone who registers an hour later leaves their invitations list
+  empty forever. The first successful claim stamps `user_id` in the same transaction,
+  so an already-accepted invitation does not silently vanish when they change address.
+- **A notification is two slots, not one:** `type` selects the sentence and
+  (`body`, `title`) fill it, with `title IS NULL` meaning `body` is already complete.
+  One slot cannot express "Alice declined Standup" — two variables *and* a status — and
+  there is no stored user locale, so the sentence has to be picked at render time.
+- **Through Phase 3 an invitation is a list at `/calendar/invites`, never a row on the
+  invitee's month grid.** Putting it on the grid means a fourth `calendar.range` query,
+  its own recurrence expansion and a share of `MAX_RANGE_ROWS` — roughly doubling the
+  phase's risk on its hottest path. Phase 6 is already reworking that query for sharing
+  and folds the list in there. Stated outright in `PROJECT_STATUS.md` and
+  [api.md](calendar/api.md) rather than left as an apparent gap.
 
 ### Auth
 

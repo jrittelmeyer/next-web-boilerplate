@@ -391,12 +391,19 @@ connection and a persistent DB connection — native on the Docker / `next start
 this repo ships, but capped/broken on serverless. See
 [DEPLOYMENT.md](DEPLOYMENT.md#realtime-sse--serverless-caveat-tier-4--a22).
 
-## Calendar (Phase 1)
+## Calendar (Phases 1–3)
 
 The calendar follows this file's split exactly — `calendar.list` / `calendar.range` /
-`calendar.byId` are tRPC reads, the six create/update/delete operations are Server
-Actions — so nothing about it is novel enough to restate here. What *is* worth reading
-before touching it: the six-step order every calendar action runs in and why the order
-matters, the `{ truncated: true }` contract on the capped window query, and the
-documented exception where the range query bypasses the masters view. All three:
-[calendar/api.md](calendar/api.md).
+`calendar.byId` / `calendar.listInvites` are tRPC reads, the create/update/delete
+operations and `respondToEvent` are Server Actions — so nothing about it is novel enough
+to restate here. What *is* worth reading before touching it: the six-step order every
+calendar action runs in and why the order matters, the `{ truncated: true }` contract on
+the capped window query, and the documented exception where the range query bypasses the
+masters view. All three: [calendar/api.md](calendar/api.md).
+
+**One calendar action breaks the six-step shape, and deliberately.** `respondToEvent`
+does not call `getCalendarRole` at step 4 — an invitee is not a member of the organizer's
+calendar, so the attendee row *is* the authorization, answered by `getEventAccess`
+([calendar/acl.md](calendar/acl.md)). It is the only place in the repo where a write
+authorizes on a row rather than on a role, and
+[calendar/attendees.md](calendar/attendees.md) is where that is argued.

@@ -153,6 +153,14 @@ export function CalendarWorkspace({
           startTzid: editing.recurrenceId === null ? loaded.event.startTzid : editing.startTzid,
           endWall: editing.recurrenceId === null ? loaded.event.endWall : editing.endWall,
           endTzid: editing.recurrenceId === null ? loaded.event.endTzid : editing.endTzid,
+          // Always the SERIES' guest list, even when an occurrence was clicked: overrides
+          // inherit attendees rather than carrying their own. Seeding it is not cosmetic
+          // — the composer posts the whole list and the action diffs it, so an empty
+          // seed would read as "remove every guest" on the next save.
+          attendees: loaded.attendees.map((attendee) => ({
+            email: attendee.email,
+            role: attendee.role,
+          })),
           rrule: loaded.seriesRrule,
         }
       : null;

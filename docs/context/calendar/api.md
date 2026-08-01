@@ -2,7 +2,8 @@
 
 Load when adding or changing a calendar endpoint. The domain model (civil vs instant,
 the derived-instant guard, the constraints) is
-[model.md](model.md); who may do what is [acl.md](acl.md).
+[model.md](model.md); who may do what is [acl.md](acl.md); the guest list, the RSVP rules
+and the five notification types are [attendees.md](attendees.md).
 
 Follows the repo-wide split ([API.md](../API.md)): **reads are tRPC procedures**,
 **writes are Server Actions**. Nothing calendar-related is public — `/calendar` is in
@@ -39,8 +40,9 @@ and resolves the override row itself.
 ## Writes — `apps/web/src/server/actions/calendar.ts`
 
 `createCalendar` · `updateCalendar` · `deleteCalendar` · `createEvent` · `updateEvent` ·
-`deleteEvent` · `setRecurrenceDate`. Every one returns `ActionResult<T>` and runs the same
-six steps **in this order**:
+`deleteEvent` · `setRecurrenceDate` · `respondToEvent`. Every one returns
+`ActionResult<T>` and runs the same six steps **in this order** (`respondToEvent` is the
+one exception, and step 4 is where it differs — see below):
 
 1. **Session gate** → `{ error: "Unauthorized" }`.
 2. **`rateLimit`** per user (10/min for calendars, 20/min for events) → the typed
@@ -101,6 +103,26 @@ Four rules behind that table are not obvious:
   deletion, not an edit: doing it as an edit would leave the re-parented overrides
   pointing at a non-recurring parent.
 
+### `respondToEvent`, and the writes that became transactional
+
+`respondToEvent({ eventId, status, comment })` is the one action that **does not** call
+`getCalendarRole`. Step 4 is `getEventAccess` + `canRespondToEvent` instead: the attendee
+row is the authorization, an invitee is not a member of the organizer's calendar, and a
+missing row answers `"Event not found"` like everything else in the file. Rate-limited at
+`calendar:event:respond:<userId>`, 20/min. The rules, the claim path and the notification
+it emits are in [attendees.md](attendees.md).
+
+**`createEvent`, `updateWholeEvent` and `softDeleteEvent` are now always transactional**,
+including the fast paths two of them used to take. An event whose guest list failed to
+insert is an event the organizer believes they invited people to, and a title edit that
+committed while its cancellations did not is worse than the extra `BEGIN` costs. The
+notification rows are built **inside** the transaction and published **after** it commits
+— `notify()` runs `pg_notify` on the pooled connection, so a push issued inside the
+transaction can beat the row it describes.
+
+The publish is deliberately **outside** the `try`: the write has already committed, and a
+publish failure must not be reported to the user as "Failed to update the event."
+
 ### `setRecurrenceDate`
 
 Skip an occurrence (`exdate`) or add one (`rdate`) without editing the series, rate-limited
@@ -132,14 +154,55 @@ a worse state than gone; and nobody subscribes to a calendar that no longer exis
 
 ## Reads — `apps/web/src/server/trpc/routers/calendar.ts`
 
-All three are `userRateLimitedProcedure`: authenticated, but a window query over twenty
-calendars is expensive enough to want a per-account bucket rather than a per-IP one.
+All four are `userRateLimitedProcedure`: authenticated, but a window query over twenty
+calendars is expensive enough to want a per-account bucket rather than a per-IP one. They
+share one 20/min per-user budget, so a spec that drives several of them has to say so.
 
 | Procedure | Reads | Notes |
 | --- | --- | --- |
 | `calendar.list` | `calendars` | Owner-scoped, primary first. Phase 6 widens the scope behind `lib/calendar-acl`. |
 | `calendar.range` | **`calendar_events` directly** (three queries) | The documented exception — see below. |
-| `calendar.byId` | `calendar_event_masters`, plus the override row when `recurrenceId` is given | The rule. The view already excludes soft-deleted rows and overrides. |
+| `calendar.byId` | `calendar_event_masters`, plus the override row when `recurrenceId` is given | The rule. The view already excludes soft-deleted rows and overrides. Authorized by `getEventAccess`, and returns the guest list. |
+| `calendar.listInvites` | `calendar_event_attendees` joined to `calendar_event_masters` | Authorized by the **attendee row**, keyset-paginated on `(start_at, id)`. |
+
+### `calendar.byId` and the two `select()`s
+
+`byId` answers from **two different sources** — the masters view for a series master or a
+one-off, `calendar_events` for a materialised override — and both feed the same consumer
+through `event: override ?? master`. Each has an **explicit column list**, and the two
+lists are key-checked against each other with `satisfies`, so adding a column to one and
+not the other stops the file compiling. Narrowing one alone would hand the same consumer
+two different shapes depending on which occurrence was clicked.
+
+What the narrowing is *for* is `calendars.user_id`. From Phase 3 an attendee can read this
+procedure, and the bare `select()` it used to run would have handed every invitee the
+organizer's internal user id.
+
+The attendee list it returns is **emails only** — a resolved `user_id` changes storage and
+nothing on screen. Storing whatever address was typed and rendering it back keeps a
+matched and an unmatched invitee visually identical at invite time. That protection is
+real but partial, and [SECURITY.md](../SECURITY.md) states the residual limit rather than
+claiming it away.
+
+### `calendar.listInvites` — and where invitations do *not* appear
+
+> **Through Phase 3, an invitation appears as a list at `/calendar/invites` and does not
+> appear as a row on the invitee's month grid.** `calendar.range` scopes to
+> `calendars.user_id = me` (below), and widening it would mean a fourth query on the
+> feature's hottest path, its own recurrence expansion and suppression handling, and a
+> share of `MAX_RANGE_ROWS`. Phase 6 is already reworking that query for sharing and folds
+> the list into the grid there.
+
+It cannot reuse `byId`'s join, because an owner-scoped join *is* an authorization and an
+invitee is not the owner. It scopes on the attendee rows themselves —
+`user_id = :me OR (email = lower(:myEmail) AND :myEmailIsVerified)` — with both inputs read
+from Postgres rather than off the session, and `lower()` on the **parameter** so
+`calendar_event_attendees_email_idx` stays usable. The claim path and the reason
+`emailVerified` is not optional are in [attendees.md](attendees.md).
+
+The cursor's `id` is validated as a `uuid` **at the Zod boundary**: `calendar_events.id` is
+a uuid column, so a hand-crafted cursor would otherwise reach `id > $1` and make Postgres
+throw — a 500 carrying the query text where a 400 is the honest answer.
 
 ### `calendar.range`
 
@@ -191,6 +254,11 @@ Access is enforced by scoping to calendars the caller owns — one `IN` list aga
 indexed `user_id` — rather than by asking the ACL per calendar. An id the caller cannot
 see simply contributes nothing.
 
+**That scope is also why an invitation is not on the grid.** An event on someone else's
+calendar is not in the `IN` list, so through Phase 3 **invitations appear as a list at
+`/calendar/invites` and do not appear as rows on the invitee's month grid** — see
+`calendar.listInvites` above. Phase 6 folds them in alongside sharing.
+
 ## The client boundary
 
 `monthGridWindowMs` in `apps/web/src/lib/calendar/grid.ts` computes the window, padded a
@@ -217,3 +285,10 @@ Editing an **occurrence** needs both halves, and neither alone is enough:
 The grid's view type therefore carries a `key` (`id#recurrenceId`) separate from `id`:
 `id` is not unique in the list **and must not be**, because every occurrence of a series
 answers with its master's id.
+
+**The composer seeds its guest list from `byId` too, and that is not cosmetic.** It posts
+the whole list on every save and the action diffs it, so opening an existing event with an
+empty guest field and pressing Save would read as "remove everyone" — cancelling the
+meeting for every guest on a title change. The list it seeds is always the **series'**,
+even when an occurrence was clicked, because overrides inherit attendees rather than
+carrying their own.

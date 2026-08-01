@@ -5,11 +5,18 @@ The convention every integration doc under [services/](../services/) follows
 generated project doesn't want a calendar at all.
 
 The calendar has **no third-party dependency, no env var and no CSP entry** — it is
-`@repo/calendar` (zero-dependency pure logic), two tables and a slice of `apps/web`.
-That makes it easier to remove than any service integration, with exactly one
-complication, below.
+`@repo/calendar` (zero-dependency pure logic), three tables and a slice of `apps/web`.
+That makes it easier to remove than any service integration, with exactly two
+complications, both below.
 
-## The complication: you cannot delete a migration
+> **Phase 3 added the second complication, and it is the one that is easy to miss.** The
+> calendar is no longer self-contained: `notifications.type` gained five `calendar_*`
+> members, and **`notifications` survives removal** — it is a general-purpose table the
+> realtime example depends on. So removal has to reach into a table it does not delete,
+> in two packages, and clean up rows that already exist. Steps 5 and 9 carry it, and the
+> `DELETE` at the bottom of this page finishes it.
+
+## The first complication: you cannot delete a migration
 
 `packages/db/AGENTS.md` is unambiguous — migrations are **forward-only**. Deleting
 `0020_nostalgic_hitman.sql` would desynchronise `drizzle/migrations/meta/_journal.json`
@@ -18,15 +25,16 @@ environment would fail or, worse, half-apply. So removal means **authoring a
 compensating migration**. Its DDL is at the bottom of this page.
 
 If you are removing the calendar from a **freshly generated project that has never run
-`db:migrate` against a real database**, you may instead delete `0020` outright along
-with its snapshot and journal entry — but only then, and only before the first deploy.
+`db:migrate` against a real database**, you may instead delete the calendar migrations
+outright along with their snapshots and journal entries — but only then, and only before
+the first deploy.
 
 ## Steps
 
 1. **Delete the app slice** (under `apps/web/src/`):
-   - `app/[locale]/(dashboard)/calendar/` (both routes)
+   - `app/[locale]/(dashboard)/calendar/` (all three routes, including `invites/`)
    - `components/calendar/`
-   - `lib/calendar-acl.ts`, `lib/calendar/`
+   - `lib/calendar-acl.ts`, `lib/calendar-attendees.ts`, `lib/calendar/`
    - `server/actions/calendar.ts`, `server/trpc/routers/calendar.ts`
    - the `*.test.ts` siblings of all of the above
 2. **Unhook the router**: remove the `calendar:` line and its import from
@@ -35,34 +43,59 @@ with its snapshot and journal entry — but only then, and only before the first
    `app/[locale]/(dashboard)/layout.tsx` and `"/calendar"` from `PROTECTED_PREFIXES` in
    `src/proxy.ts`.
 4. **Drop the i18n namespace**: delete `Calendar` from `messages/en.json` and
-   `messages/es.json`, plus `Metadata.calendar`, `Metadata.calendarEvent` and
-   `Dashboard.nav.calendar`. `src/lib/i18n-parity.test.ts` fails if you do one locale
-   and not the other, which is the point of it.
-5. **Trim coverage**: remove `src/server/actions/calendar.ts`, `src/lib/calendar-acl.ts`
-   and `src/lib/calendar/grid.ts` from `coverage.include` in `apps/web/vitest.config.ts`
-   — it is an explicit file list, and a stale entry there fails the run.
-6. **Delete the E2E**: `e2e/calendar.spec.ts`, the calendar helpers at the bottom of
-   `e2e/support/db.ts` (`setUserTimeZone`, `seedCalendar`, `seedEvents`,
+   `messages/es.json`, plus `Metadata.calendar`, `Metadata.calendarEvent`,
+   `Metadata.calendarInvites` and `Dashboard.nav.calendar`.
+   `src/lib/i18n-parity.test.ts` fails if you do one locale and not the other, which is
+   the point of it.
+5. **Drop the calendar half of the notifications namespace** — the step that is easy to
+   miss, because `notifications` is not a calendar table and survives. Delete
+   `Notifications.calendarInvite`, `.calendarResponseAccepted`, `.calendarResponseDeclined`,
+   `.calendarResponseTentative` and `.calendarCancelled` from **both** locales, and remove
+   those five members from `SENTENCE_KEYS` in
+   `src/components/notifications/notifications-feed.tsx`. That object is
+   `satisfies Record<Exclude<FeedItem["type"], "test" | "system">, string>`, so it stops
+   compiling until the union in step 9 is trimmed to match — which is the guard working,
+   not a problem.
+6. **Trim coverage**: remove `src/server/actions/calendar.ts`, `src/lib/calendar-acl.ts`,
+   `src/lib/calendar-attendees.ts` and `src/lib/calendar/grid.ts` from `coverage.include`
+   in `apps/web/vitest.config.ts` — it is an explicit file list, and a stale entry there
+   fails the run. Leave `src/server/notifications/create.ts` and
+   `src/server/realtime/notification-bus.ts`; neither is calendar-specific.
+7. **Delete the E2E**: `e2e/calendar.spec.ts`, `e2e/calendar-invites.spec.ts`, the
+   calendar helpers at the bottom of `e2e/support/db.ts` (`setUserTimeZone`,
+   `seedCalendar`, `seedEvents`, `seedAttendee`, `getAttendeeStatus`,
    `deleteCalendarFixtures`), and the calendar block inside `a11y.spec.ts`'s signed-in
    test (it was added **in place** rather than as a new `test()`, so remove the block,
    not the test).
-7. **Drop the validators subpath**: delete `packages/validators/src/calendar.ts` and its
-   test, and remove `"./calendar"` from that package's `exports` map.
-8. **Drop the schema**: delete `packages/db/src/schema/calendars.ts` and
-   `calendar-events.ts`, remove both lines from `schema/index.ts`, delete
-   `packages/db/__tests__/integration/calendar-events.test.ts`, then author the
-   compensating migration below.
-9. **Decide about `@repo/calendar`**: the package is pure, dependency-free and useful on
+8. **Drop the validators subpath**: delete `packages/validators/src/calendar.ts` and its
+   test, and remove `"./calendar"` from that package's `exports` map. Then **edit** —
+   do not delete — `src/lib/union-parity.test.ts`: it guards `NOTIFICATION_TYPES` too,
+   which is not a calendar union. Remove its calendar `describe` and drop the calendar
+   pairs from the table; its per-group length meta-guard moves with them.
+9. **Drop the schema**: delete `packages/db/src/schema/calendars.ts`,
+   `calendar-events.ts` and `calendar-attendees.ts`, remove all three lines from
+   `schema/index.ts`, delete
+   `packages/db/__tests__/integration/calendar-events.test.ts` and
+   `calendar-attendees.test.ts`, revert `NOTIFICATION_TYPES` to `["test", "system"]` in
+   **both** `packages/db/src/schema/notifications.ts` and
+   `packages/validators/src/index.ts` (one commit — extending or trimming one alone makes
+   the bus's `safeParse` drop messages with no log, no error and no Sentry event), then
+   author the compensating migration below.
+   **Keep `notifications.link` and `notifications.title`.** They are generically useful,
+   the two-slot `body` contract beside the union is not calendar-specific, and dropping
+   them would take the realtime example's link rendering with them.
+10. **Decide about `@repo/calendar`**: the package is pure, dependency-free and useful on
    its own (zone-correct civil-time maths). Keeping it costs nothing at runtime. To
    remove it too: delete `packages/calendar/`, drop it from `apps/web`'s dependencies
    and from `packages/db`'s **devDependencies** (the integration suite imports it), and
    delete `docs/context/calendar/`.
-10. **Decide about `user_preferences`** (migration `0019`, Phase 0): it holds
+11. **Decide about `user_preferences`** (migration `0019`, Phase 0): it holds
     `time_zone`, `week_start` and `time_format`, and the `/account` preferences card and
     every timestamp in the app use it. It is **not** calendar-specific — leave it.
-11. **Docs**: remove the calendar row from `AGENTS.md`'s context table, the calendar
+12. **Docs**: remove the calendar row from `AGENTS.md`'s context table, the calendar
     entries in `DECISIONS.md`, and the calendar lines in `FEATURES.md`,
-    `PROJECT_STATUS.md` and `packages/db/AGENTS.md`.
+    `PROJECT_STATUS.md` and `packages/db/AGENTS.md` (including the two attendee
+    imperatives at the bottom of that leaf file).
 
 Then run the full gate. `pnpm knip` is the check that catches a symbol you unhooked but
 forgot to delete, and `pnpm docs:sanity` catches a link left pointing at a deleted doc.
@@ -76,23 +109,41 @@ produces less, the difference is what you forgot to delete from the schema.
 ```sql
 DROP VIEW IF EXISTS "public"."calendar_event_masters";
 --> statement-breakpoint
+DROP TABLE IF EXISTS "calendar_event_attendees";
+--> statement-breakpoint
 DROP TABLE IF EXISTS "calendar_recurrence_dates";
 --> statement-breakpoint
 DROP TABLE IF EXISTS "calendar_events";
 --> statement-breakpoint
 DROP TABLE IF EXISTS "calendars";
+--> statement-breakpoint
+DELETE FROM "notifications" WHERE "type" LIKE 'calendar_%';
 ```
 
-Four statements is all it takes: every index, CHECK, unique constraint and foreign key in
-`0020` and `0021` is attached to one of those three tables, and every foreign key into
-them (`calendar_events.calendar_id`, the composite `recurrence_parent_id, calendar_id`
-self-reference added by `0021`, and `calendar_recurrence_dates.event_id`) goes with the
-table. `calendar_recurrence_dates` is dropped before `calendar_events` because it
-references it. The view is dropped first because Postgres refuses to drop a table a view
-depends on without `CASCADE`, and an explicit `DROP VIEW` says what is happening instead
-of letting `CASCADE` silently take whatever else might have accumulated.
+**The last statement is the one drizzle will not generate for you**, and the reason this
+list is no longer "four DROPs and every constraint goes with a table". `notifications`
+**survives** removal, so its rows survive too — leaving a feed full of *"someone invited
+you to Standup"* messages pointing at events that no longer exist, whose `type` no longer
+parses, and which `notification-bus.ts` therefore drops **silently, with no log and no
+Sentry event**. Author it by hand as part of the same migration.
+
+The four `DROP TABLE`s do still take everything attached to them: every index, CHECK,
+unique constraint and foreign key added by `0020`, `0021` and `0023` hangs off one of
+those tables, and so does every foreign key into them
+(`calendar_events.calendar_id`, the composite `recurrence_parent_id, calendar_id`
+self-reference from `0021`, `calendar_recurrence_dates.event_id`, and
+`calendar_event_attendees.event_id`). **Order matters:**
+`calendar_event_attendees` and `calendar_recurrence_dates` both reference
+`calendar_events`, so they go first. The view is dropped before all of them because
+Postgres refuses to drop a table a view depends on without `CASCADE`, and an explicit
+`DROP VIEW` says what is happening instead of letting `CASCADE` silently take whatever
+else might have accumulated.
+
+`calendar_event_attendees.user_id` points at `user`, which also survives — but that FK is
+`ON DELETE SET NULL` and goes with the table it lives on, so there is nothing to clean up
+on the `user` side.
 
 **This is destructive and there is no soft version of it.** `calendar_events` uses
 `deleted_at` for user-facing deletion; this drops the rows for real, including
-soft-deleted ones a Phase-6 feed subscriber may still be reconciling against. Take a dump
-first if the environment has ever had real data in it.
+soft-deleted ones a Phase-6 feed subscriber may still be reconciling against, and every
+guest list with them. Take a dump first if the environment has ever had real data in it.

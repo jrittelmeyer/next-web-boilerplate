@@ -93,6 +93,22 @@ app's Playwright specs are never picked up by a unit run.
   `server/realtime/notification-bus.ts` `safeParse`s each payload and **fails closed with
   no log, no error and no Sentry breadcrumb**, so extending one side alone makes every
   notification of the new type simply stop arriving with nothing anywhere saying why.
+- **A `db.transaction` test double must hand the callback the *same* builders `db`
+  exposes.** `src/server/actions/calendar.test.ts` is the worked example, and it is here
+  because the failure mode is silent. When Phase 3 moved `createEvent`,
+  `updateWholeEvent` and `softDeleteEvent` inside transactions, the fixture's tx had
+  builders of its own — so `expect(dbInsert).toHaveBeenCalled()` started passing
+  **vacuously** against a mock the action no longer touched, and a captured-`set()`
+  assertion happily inspected an object nobody had written to. Delegating
+  (`insert: dbInsert, update: dbUpdate, …`) keeps every existing assertion meaningful
+  across that move. Two riders: give it an **`execute`** if any writer issues raw SQL (a
+  missing one throws *inside* the callback and the action reports a generic write
+  failure, which reads exactly like a production defect), and make a chained `where()`
+  both awaitable and `.limit()`-able when one caller awaits it and another chains.
+- **Assert an absence when the absence is the guarantee.** `calendar-acl.test.ts` asserts
+  the module exports **no** `canWriteEvent`, because "attendance never grants write" is a
+  property of the module's surface rather than of any one function — and a reviewer
+  cannot enforce it on a file they are not reading.
 - Email template rendering — `@repo/email`'s `src/templates.test.tsx` renders every
   template to HTML **and** the plain-text alternative through the same
   `@react-email/render` calls the send path uses (`render(el)` / `render(el, { plainText:

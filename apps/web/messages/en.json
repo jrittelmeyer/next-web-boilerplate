@@ -23,7 +23,8 @@
     "organization": "Organization",
     "acceptInvitation": "Accept invitation",
     "calendar": "Calendar",
-    "calendarEvent": "Event"
+    "calendarEvent": "Event",
+    "calendarInvites": "Invitations"
   },
   "Auth": {
     "common": {
@@ -686,7 +687,8 @@
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
       "today": "Today",
-      "newEvent": "New event"
+      "newEvent": "New event",
+      "invites": "Invitations"
     },
     "workspace": {
       "truncated": "This month has more events than can be shown. Hide some calendars to see the rest.",
@@ -775,6 +777,8 @@
       },
       "urlLabel": "Link",
       "repeatLabel": "Repeats",
+      "attendeesLabel": "Guests",
+      "attendeesHelp": "Guests are invited by email address and can accept, decline or answer maybe. Changes apply to the whole series.",
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
@@ -864,6 +868,42 @@
       "delete": "Delete event",
       "deleting": "Deleting…",
       "deleted": "Event deleted."
+    },
+    "attendees": {
+      "heading": "Guests",
+      "placeholder": "guest@example.com",
+      "add": "Add",
+      "remove": "Remove {email}",
+      "full": "An event can have at most {max} guests.",
+      "empty": "No guests yet.",
+      "rsvpLabel": "Your response",
+      "respond": {
+        "accepted": "Yes",
+        "declined": "No",
+        "tentative": "Maybe"
+      },
+      "responded": {
+        "accepted": "You are going.",
+        "declined": "You declined.",
+        "tentative": "You answered maybe."
+      },
+      "status": {
+        "needs-action": "No response yet",
+        "accepted": "Going",
+        "declined": "Not going",
+        "tentative": "Maybe"
+      },
+      "role": {
+        "organizer": "Organizer"
+      }
+    },
+    "invites": {
+      "title": "Invitations",
+      "description": "Events other people invited you to, soonest first. They do not appear on your month grid yet.",
+      "empty": "You have no invitations.",
+      "error": "Your invitations could not be loaded. Please try again.",
+      "loading": "Loading…",
+      "loadMore": "Load more"
     }
   }
 }
