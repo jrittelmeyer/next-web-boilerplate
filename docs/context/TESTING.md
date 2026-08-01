@@ -178,6 +178,18 @@ app's Playwright specs are never picked up by a unit run.
   receives the row + unread badge over its open `EventSource` (the NOTIFY → single
   LISTEN client → in-process fan-out path), then "Mark all read" clears the badge
   optimistically.
+- Calendar — `e2e/calendar.spec.ts` (create/edit/delete by scope on the month grid) and
+  `e2e/calendar-invites.spec.ts`: **serial, two accounts, exactly two signups**, invite →
+  live on the guest's feed → accept → live on the organizer's feed → the guest can read
+  the event they were invited to and **not** the other event on the same calendar. Each
+  context gets a **second page parked on `/notifications` and never navigated**, because
+  `NotificationsFeed` mounts in exactly one place — the page that drives the invite has no
+  `EventSource` open, and an earlier draft asserted a live push against a page that was not
+  listening. A second page in the same context is the same session, so it costs no signup.
+  ⚠️ **`/calendar/event/[id]` answers HTTP 200 for a refusal** — it is partially
+  prerendered, so the shell flushes before the dynamic segment reaches `notFound()`
+  (measured, and true for a nonexistent id too). Assert refusals on rendered **content**;
+  `status() === 404` fails for the wrong reason and reads like an ACL hole.
 - The payment flow (Stripe test mode), file upload, search results.
 
 **Don't bother testing:**
@@ -328,6 +340,33 @@ planner still chooses `Index Only Scan` — but reports **563 heap fetches inste
 because the visibility map is unset. Without the `VACUUM` the assertion would pin a node
 type whose defining property is absent, which is worse than not asserting it. Buffer
 counts (1,971 → 15) stay in the comment: a measurement is not an invariant.
+
+### Planting the *writer's* mistakes (`calendar-attendees.test.ts`)
+
+The attendee suite reuses the pattern above and extends it to rules **no CHECK can
+express**, because two of the ones Phase 3 depends on are writer-enforced: overrides
+inherit their master's guest list, and re-submitting an unchanged list must reset nobody.
+For those it asserts the data shape the reads depend on *plus the specific wrong answer
+each careless implementation produces* — delete-and-re-insert and an upsert whose conflict
+branch sets `status` both leave the row at `needs-action` with a NULL `responded_at`, and
+both are legal writes the database will happily accept. The writer-side half lives in
+`apps/web`'s unit suites, which can call `diffAttendees` and the actions directly.
+
+Where a constraint *can* catch the mistake, the planted defect is the constraint's whole
+justification: `splitSeries` copies its guest list with a raw `INSERT … SELECT`, and
+dropping `responded_at` from that column list — the obvious "tidy-up" — is refused by
+`calendar_event_attendees_responded_pair`, which is why that CHECK is bidirectional.
+
+Two more habits worth copying from it:
+
+- **Scope every count to the fixture.** `db.select().from(table)` with no `where` silently
+  asserts the database contains nothing else. True in CI, where the postgres service is
+  ephemeral; false on any dev box that has run a live-verify — and the failure then reads
+  "the masters view returned 6 rows", which looks like the view is broken.
+- **Pin the query spelling when both spellings are correct.** `attendees.email =
+  lower($param)` and `lower(attendees.email) = $param` return the same row, so no
+  correctness test can tell them apart — only an `EXPLAIN` over ~10k rows can, and it is
+  the only assertion that fails when someone moves the `lower()` onto the indexed side.
 
 ### The frozen differential oracle (`packages/calendar`)
 

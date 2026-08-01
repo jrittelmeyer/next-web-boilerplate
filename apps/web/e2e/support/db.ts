@@ -1,9 +1,12 @@
 import { deriveEventInstants } from "@repo/calendar";
 import { db } from "@repo/db";
 import {
+  type AttendeeRole,
+  type AttendeeStatus,
   type AuditAction,
   auditLog,
   type CalendarColor,
+  calendarEventAttendees,
   calendarEvents,
   calendars,
   notifications,
@@ -11,7 +14,7 @@ import {
   user,
   userPreferences,
 } from "@repo/db/schema";
-import { eq, like } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 
 /**
  * Promote a signed-up user to admin by a DIRECT DB write — the sanctioned
@@ -221,11 +224,79 @@ export async function seedEvents(
 }
 
 /**
+ * Invite someone to an event by DIRECT insert — the same sanctioned out-of-band path as
+ * the other seed helpers.
+ *
+ * It exists for the **signup and read budgets**, not for convenience. A second invitation
+ * driven through the composer costs another dialog round-trip and another
+ * `calendar.range` refetch against the 20/min per-user limiter, and the invite spec
+ * deliberately spends its UI on the ONE invitation whose live delivery it is proving.
+ *
+ * **`user_id` is resolved here rather than left NULL, and that is load-bearing.** E2E users
+ * sign up with a password, and with email unconfigured Better Auth leaves them
+ * `email_verified = false` — while decision 14's claim arm requires a *verified* address.
+ * A row with a NULL `user_id` would therefore be invisible to `calendar.listInvites`, and
+ * the spec would fail looking exactly like a product bug. (The claim arm itself is proved
+ * against real Postgres in `@repo/db`'s `calendar-attendees.test.ts`, where a verified
+ * user can be seeded outright.)
+ *
+ * Attendees hang off the **series master**, so `eventId` must be a master's id — which is
+ * what the grid chips carry (`data-event-id`).
+ */
+export async function seedAttendee(
+  eventId: string,
+  email: string,
+  options: { role?: AttendeeRole; status?: AttendeeStatus } = {},
+): Promise<void> {
+  const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
+  const status = options.status ?? "needs-action";
+  await db.insert(calendarEventAttendees).values({
+    eventId,
+    // `calendar_event_attendees_email_lower` rejects anything else, and this helper is
+    // one of the writers that CHECK exists for — it never passes through Zod.
+    email: email.toLowerCase(),
+    userId: u?.id ?? null,
+    role: options.role ?? "required",
+    status,
+    // The pair CHECK is bidirectional: an answered row must carry a timestamp and an
+    // unanswered one must not.
+    respondedAt: status === "needs-action" ? null : new Date(),
+  });
+}
+
+/**
+ * One guest's stored RSVP, or `null` when they hold no row.
+ *
+ * The database-side half of the RSVP assertion. The toast and the pressed button prove the
+ * UI believes the answer landed; this proves Postgres does — and it is the only way to
+ * assert that responding to one invitation left the caller's *other* invitations alone,
+ * which is what narrowing `respondToEvent`'s UPDATE to a single event is for.
+ */
+export async function getAttendeeStatus(
+  eventId: string,
+  email: string,
+): Promise<AttendeeStatus | null> {
+  const [row] = await db
+    .select({ status: calendarEventAttendees.status })
+    .from(calendarEventAttendees)
+    .where(
+      and(
+        eq(calendarEventAttendees.eventId, eventId),
+        eq(calendarEventAttendees.email, email.toLowerCase()),
+      ),
+    );
+  return row?.status ?? null;
+}
+
+/**
  * Delete a user's calendars, and with them their events.
  *
- * One statement: `calendar_events.calendar_id` cascades. Events are SOFT-deleted by
- * the app, so cleaning up by event would leave rows behind; cleaning up by calendar
- * removes them for real, which is what a test database wants.
+ * One statement: `calendar_events.calendar_id` cascades — and from Phase 3 so does
+ * `calendar_event_attendees.event_id`, which is why that FK is `ON DELETE CASCADE` and not
+ * `SET NULL`: a guest list outliving its event is not a thing, and this helper needed no
+ * change to keep working. Events are SOFT-deleted by the app, so cleaning up by event would
+ * leave rows behind; cleaning up by calendar removes them for real, which is what a test
+ * database wants.
  */
 export async function deleteCalendarFixtures(email: string): Promise<void> {
   const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
