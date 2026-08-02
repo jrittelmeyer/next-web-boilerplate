@@ -39,7 +39,7 @@ TanStack Query v5 · RHF + Zod · Vitest + Playwright · Docker deploy.
 - **Cross-platform (Windows-safe).** No bash-only build steps.
 - **Keep docs current, same commit.** Update `docs/PROJECT_STATUS.md` (state) and the relevant
   `docs/context/*` doc as part of the change that alters reality — a stale
-  instruction file is worse than none. `packages/{db,ui,jobs,auth,email}` carry
+  instruction file is worse than none. `packages/{db,ui,jobs,auth,email,calendar}` carry
   leaf `AGENTS.md` files: review the leaf in the same PR that changes that
   package's behavior.
 

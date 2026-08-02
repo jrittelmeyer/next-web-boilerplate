@@ -3,9 +3,11 @@
 Load when working on reminder rules, the delivery sweeper in `@repo/jobs`, or anything
 that asks *"when does this fire, and how do we know it fired once?"*
 
-> **Status:** Phase 5, landing in steps. The schema (`0025`) and its integrity tests exist.
-> The sweeper, the two delivery handlers and the editor are described here as they land;
-> this banner names what is real. Time-model rules underneath all of it live in
+> **Status:** Phase 5 **shipped 2026-08-02** — all of it is live: the schema (`0025`) and its
+> integrity tests, the `*/5` sweeper (`@repo/jobs` → `handlers/calendar-reminder-sweep.ts` +
+> `reminders/{run,sweep,site-url}.ts`), both delivery handlers
+> (`calendar-reminder-{email,notify}`), and the composer editor
+> (`components/calendar/reminder-field.tsx` → `applyReminders`). Time-model rules underneath all of it live in
 > [`model.md`](model.md); the attendee surface reminders deliberately mirror is
 > [`attendees.md`](attendees.md).
 
