@@ -6,6 +6,9 @@ import { render } from "@react-email/render";
 import { isEmailSuppressed } from "@repo/db";
 import type { ReactElement } from "react";
 import { getResend } from "./client";
+import { CalendarEventCancelled } from "./templates/calendar-event-cancelled";
+import { CalendarEventUpdated } from "./templates/calendar-event-updated";
+import { CalendarInvitation } from "./templates/calendar-invitation";
 import { ChangeEmail } from "./templates/change-email";
 import { DeleteAccount } from "./templates/delete-account";
 import { EmailChangedNotice } from "./templates/email-changed-notice";
@@ -35,6 +38,20 @@ import { WelcomeEmail } from "./templates/welcome";
  * unaffected.
  */
 type SendResult = { error: string; suppressed?: true } | { data: { id: string } };
+
+/**
+ * A text attachment (Phase 4 sends exactly one kind: a `.ics` calendar).
+ *
+ * `content` is UTF-8 **text**, not base64 — the encoding happens at the Resend boundary
+ * below. That choice is what lets the E2E capture seam record the body verbatim, so a test
+ * can assert `METHOD:PUBLISH` and the absence of an `ATTENDEE` line by reading the file
+ * rather than by decoding it first.
+ */
+export interface EmailAttachment {
+  readonly filename: string;
+  readonly content: string;
+  readonly contentType: string;
+}
 
 /** True when both Resend env vars are present (so a real send can happen). */
 export function isEmailConfigured(): boolean {
@@ -67,7 +84,13 @@ function logUnconfigured(action: string, to: string, url?: string): void {
  */
 async function captureSend(
   captureDir: string,
-  entry: { action: string; to: string; subject: string; url?: string },
+  entry: {
+    action: string;
+    to: string;
+    subject: string;
+    url?: string;
+    attachments?: readonly EmailAttachment[];
+  },
 ): Promise<SendResult> {
   await mkdir(captureDir, { recursive: true });
   const file = path.join(captureDir, `${Date.now()}-${randomUUID()}.json`);
@@ -80,6 +103,7 @@ async function send(
     to: string;
     subject: string;
     react: ReactElement;
+    attachments?: readonly EmailAttachment[];
   },
   // For the unconfigured-dev log only.
   meta: { action: string; url?: string },
@@ -118,11 +142,15 @@ async function send(
 
   const captureDir = process.env.EMAIL_TEST_CAPTURE_DIR;
   if (captureDir) {
+    // Attachments are recorded here, INSIDE the capture branch and AFTER the suppression
+    // consult above — so a suppressed recipient still produces no file at all, and a test
+    // that reads one is reading exactly what a real send would have carried.
     return captureSend(captureDir, {
       action: meta.action,
       to: options.to,
       subject: options.subject,
       url: meta.url,
+      ...(options.attachments ? { attachments: options.attachments } : {}),
     });
   }
 
@@ -147,6 +175,14 @@ async function send(
     subject: options.subject,
     react: options.react,
     text,
+    // Encoded at the boundary rather than by the caller: a Buffer is unambiguous to the
+    // SDK, where a bare string is interpreted as already-base64 and a UTF-8 `.ics` handed
+    // over that way arrives as garbage.
+    attachments: options.attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      content: Buffer.from(attachment.content, "utf8"),
+      contentType: attachment.contentType,
+    })),
   });
 
   if (error) return { error: error.message };
@@ -323,6 +359,129 @@ export function sendMagicLinkEmail(params: { to: string; url: string }): Promise
       react: <MagicLinkEmail url={params.url} />,
     },
     { action: "magic-link sign-in", url: params.url },
+  );
+}
+
+/**
+ * The `.ics` attachment every calendar send shares.
+ *
+ * `method=PUBLISH` is repeated in the content type because Gmail reads it there as well as
+ * from the body, and the two disagreeing is how a `PUBLISH` calendar still renders reply
+ * buttons. Filename is fixed: a title-derived one leaks the event's subject into the
+ * attachment list of a forwarded message.
+ */
+function icsAttachment(ics: string): EmailAttachment {
+  return {
+    filename: "invite.ics",
+    content: ics,
+    contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+  };
+}
+
+/**
+ * Calendar invitation (Phase 4) — sent to each newly added guest.
+ *
+ * @public — first caller lands in PR B (the `calendar-invitation` job handler).
+ */
+export function sendCalendarInvitationEmail(params: {
+  to: string;
+  organizerEmail: string;
+  eventTitle: string;
+  when: string;
+  location: string | null;
+  rsvpUrl: string;
+  ics: string;
+}): Promise<SendResult> {
+  return send(
+    {
+      to: params.to,
+      subject: `Invitation: ${params.eventTitle}`,
+      react: (
+        <CalendarInvitation
+          eventTitle={params.eventTitle}
+          location={params.location}
+          organizerEmail={params.organizerEmail}
+          rsvpUrl={params.rsvpUrl}
+          when={params.when}
+        />
+      ),
+      attachments: [icsAttachment(params.ics)],
+    },
+    { action: "calendar invitation", url: params.rsvpUrl },
+  );
+}
+
+/**
+ * Calendar update (Phase 4) — sent when a change alters the emitted `.ics` body. `reask`
+ * is true only for a time or recurrence change.
+ *
+ * @public — first caller lands in PR B (the `calendar-invitation` job handler).
+ */
+export function sendCalendarEventUpdatedEmail(params: {
+  to: string;
+  organizerEmail: string;
+  eventTitle: string;
+  when: string;
+  location: string | null;
+  rsvpUrl: string;
+  reask: boolean;
+  ics: string;
+}): Promise<SendResult> {
+  return send(
+    {
+      to: params.to,
+      subject: `Updated: ${params.eventTitle}`,
+      react: (
+        <CalendarEventUpdated
+          eventTitle={params.eventTitle}
+          location={params.location}
+          organizerEmail={params.organizerEmail}
+          reask={params.reask}
+          rsvpUrl={params.rsvpUrl}
+          when={params.when}
+        />
+      ),
+      attachments: [icsAttachment(params.ics)],
+    },
+    { action: "calendar update", url: params.rsvpUrl },
+  );
+}
+
+/**
+ * Calendar cancellation or removal (Phase 4).
+ *
+ * **`ics` is null for a removal and that is the decision, not an omission.** A removed
+ * guest's event is still going ahead for everyone else, so a `STATUS:CANCELLED` attachment
+ * would tell their client to delete a live event. A cancelled *event* gets one.
+ *
+ * @public — first caller lands in PR B (the `calendar-invitation` job handler).
+ */
+export function sendCalendarEventCancelledEmail(params: {
+  to: string;
+  organizerEmail: string;
+  eventTitle: string;
+  when: string;
+  reason: "cancelled" | "removed";
+  ics: string | null;
+}): Promise<SendResult> {
+  return send(
+    {
+      to: params.to,
+      subject:
+        params.reason === "cancelled"
+          ? `Cancelled: ${params.eventTitle}`
+          : `Removed: ${params.eventTitle}`,
+      react: (
+        <CalendarEventCancelled
+          eventTitle={params.eventTitle}
+          organizerEmail={params.organizerEmail}
+          reason={params.reason}
+          when={params.when}
+        />
+      ),
+      ...(params.ics === null ? {} : { attachments: [icsAttachment(params.ics)] }),
+    },
+    { action: "calendar cancellation" },
   );
 }
 

@@ -95,7 +95,7 @@ Full rationale, naming table, and file-structure map:
 | [auth/rbac-admin.md](docs/context/auth/rbac-admin.md) | RBAC, admin plugin, ban/impersonation, audit log |
 | [auth/organizations.md](docs/context/auth/organizations.md) | organizations, invitations, per-org billing |
 | [API.md](docs/context/API.md) | tRPC procedures or Server Actions |
-| [calendar/](docs/context/calendar/) | calendars, events, civil time vs instants, the month grid — model · [recurrence](docs/context/calendar/recurrence.md) · [api](docs/context/calendar/api.md) · [acl](docs/context/calendar/acl.md) · [attendees](docs/context/calendar/attendees.md) · [remove-it](docs/context/calendar/remove-it.md) |
+| [calendar/](docs/context/calendar/) | calendars, events, civil time vs instants, the month grid — model · [recurrence](docs/context/calendar/recurrence.md) · [api](docs/context/calendar/api.md) · [acl](docs/context/calendar/acl.md) · [attendees](docs/context/calendar/attendees.md) · [invitations](docs/context/calendar/invitations.md) · [remove-it](docs/context/calendar/remove-it.md) |
 | [STATE.md](docs/context/STATE.md) | Zustand stores, client vs server state, TanStack Query boundary |
 | [TESTING.md](docs/context/TESTING.md) | writing or running tests |
 | [UI.md](docs/context/UI.md) | components, layouts, Tailwind, shadcn, adopting a brand/token sheet |

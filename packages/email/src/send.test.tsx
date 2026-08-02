@@ -13,6 +13,9 @@ const { isEmailSuppressedMock } = vi.hoisted(() => ({
 vi.mock("@repo/db", () => ({ isEmailSuppressed: isEmailSuppressedMock }));
 
 import {
+  sendCalendarEventCancelledEmail,
+  sendCalendarEventUpdatedEmail,
+  sendCalendarInvitationEmail,
   sendChangeEmailConfirmationEmail,
   sendDeleteAccountVerificationEmail,
   sendEmailChangedNoticeEmail,
@@ -36,6 +39,20 @@ type SendResult = { error: string } | { data: { id: string } };
 
 const TO = "recipient@example.com";
 const URL = "https://app.test/action?token=abc123";
+const ORGANIZER = "organizer@example.com";
+const EVENT_TITLE = "Standup";
+const WHEN = "Monday, 10 August 2026 at 09:00";
+const RSVP_URL = "https://app.test/rsvp/AAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaa";
+const ICS = [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "METHOD:PUBLISH",
+  "BEGIN:VEVENT",
+  "UID:3f1c6a2e-0b4d-4f8a-9c11-7e2d5a8b1234",
+  "END:VEVENT",
+  "END:VCALENDAR",
+  "",
+].join("\r\n");
 
 const helpers: Array<{ label: string; call: () => Promise<SendResult> }> = [
   {
@@ -81,6 +98,45 @@ const helpers: Array<{ label: string; call: () => Promise<SendResult> }> = [
   },
   { label: "sendWelcomeEmail", call: () => sendWelcomeEmail({ to: TO, name: "Ada" }) },
   { label: "sendMagicLinkEmail", call: () => sendMagicLinkEmail({ to: TO, url: URL }) },
+  {
+    label: "sendCalendarInvitationEmail",
+    call: () =>
+      sendCalendarInvitationEmail({
+        to: TO,
+        organizerEmail: ORGANIZER,
+        eventTitle: EVENT_TITLE,
+        when: WHEN,
+        location: null,
+        rsvpUrl: RSVP_URL,
+        ics: ICS,
+      }),
+  },
+  {
+    label: "sendCalendarEventUpdatedEmail",
+    call: () =>
+      sendCalendarEventUpdatedEmail({
+        to: TO,
+        organizerEmail: ORGANIZER,
+        eventTitle: EVENT_TITLE,
+        when: WHEN,
+        location: "Room 2",
+        rsvpUrl: RSVP_URL,
+        reask: true,
+        ics: ICS,
+      }),
+  },
+  {
+    label: "sendCalendarEventCancelledEmail",
+    call: () =>
+      sendCalendarEventCancelledEmail({
+        to: TO,
+        organizerEmail: ORGANIZER,
+        eventTitle: EVENT_TITLE,
+        when: WHEN,
+        reason: "cancelled",
+        ics: ICS,
+      }),
+  },
 ];
 
 describe("send helpers — graceful degradation (email unconfigured)", () => {
@@ -99,7 +155,7 @@ describe("send helpers — graceful degradation (email unconfigured)", () => {
   });
 
   it("covers every send helper", () => {
-    expect(helpers).toHaveLength(9);
+    expect(helpers).toHaveLength(12);
   });
 
   it.each(helpers)("$label resolves to a typed error instead of throwing", async ({ call }) => {
@@ -141,6 +197,77 @@ describe("send helpers — EMAIL_TEST_CAPTURE_DIR seam (path-to-100 #6)", () => 
       subject: "Your sign-in link",
       url: URL,
     });
+  });
+
+  it("records a calendar attachment verbatim, as text rather than base64", async () => {
+    const result = await sendCalendarInvitationEmail({
+      to: TO,
+      organizerEmail: ORGANIZER,
+      eventTitle: EVENT_TITLE,
+      when: WHEN,
+      location: null,
+      rsvpUrl: RSVP_URL,
+      ics: ICS,
+    });
+    expect(result).toHaveProperty("data");
+
+    const files = await readdir(captureDir);
+    // biome-ignore lint/style/noNonNullAssertion: exactly one send happened above.
+    const entry = JSON.parse(await readFile(path.join(captureDir, files[0]!), "utf8"));
+    expect(entry.action).toBe("calendar invitation");
+    expect(entry.url).toBe(RSVP_URL);
+    expect(entry.attachments).toEqual([
+      {
+        filename: "invite.ics",
+        content: ICS,
+        contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+      },
+    ]);
+    // The two properties the whole iTIP decision rests on, asserted where a test can see
+    // them: PUBLISH renders "Add to calendar" without the reply buttons, and an ATTENDEE
+    // line is what would bring those buttons back.
+    expect(entry.attachments[0].content).toContain("METHOD:PUBLISH");
+    expect(entry.attachments[0].content).not.toContain("ATTENDEE");
+  });
+
+  it("omits the attachments key entirely for a send that carries none", async () => {
+    await sendMagicLinkEmail({ to: TO, url: URL });
+    const files = await readdir(captureDir);
+    // biome-ignore lint/style/noNonNullAssertion: exactly one send happened above.
+    const entry = JSON.parse(await readFile(path.join(captureDir, files[0]!), "utf8"));
+    expect(entry).not.toHaveProperty("attachments");
+  });
+
+  it("sends a removal with no attachment — the event still exists for everyone else", async () => {
+    await sendCalendarEventCancelledEmail({
+      to: TO,
+      organizerEmail: ORGANIZER,
+      eventTitle: EVENT_TITLE,
+      when: WHEN,
+      reason: "removed",
+      ics: null,
+    });
+    const files = await readdir(captureDir);
+    // biome-ignore lint/style/noNonNullAssertion: exactly one send happened above.
+    const entry = JSON.parse(await readFile(path.join(captureDir, files[0]!), "utf8"));
+    expect(entry.subject).toBe(`Removed: ${EVENT_TITLE}`);
+    expect(entry).not.toHaveProperty("attachments");
+  });
+
+  it("sends a cancellation WITH an attachment — a guest who added it can have it removed", async () => {
+    await sendCalendarEventCancelledEmail({
+      to: TO,
+      organizerEmail: ORGANIZER,
+      eventTitle: EVENT_TITLE,
+      when: WHEN,
+      reason: "cancelled",
+      ics: ICS,
+    });
+    const files = await readdir(captureDir);
+    // biome-ignore lint/style/noNonNullAssertion: exactly one send happened above.
+    const entry = JSON.parse(await readFile(path.join(captureDir, files[0]!), "utf8"));
+    expect(entry.subject).toBe(`Cancelled: ${EVENT_TITLE}`);
+    expect(entry.attachments).toHaveLength(1);
   });
 
   it("stays unconfigured-graceful when only the capture dir is set (no creds)", async () => {

@@ -16,8 +16,19 @@ export const EMAIL_CAPTURE_DIR = path.join(
   ".email-capture",
 );
 
-/** The shape @repo/email's capture seam writes (see packages/email/src/send.tsx). */
-export type CapturedEmail = { action: string; to: string; subject: string; url?: string };
+/**
+ * The shape @repo/email's capture seam writes (see packages/email/src/send.tsx).
+ *
+ * `attachments` carries the body as **text**, not base64, so a spec can assert on a `.ics`
+ * without decoding it. The key is absent entirely for a send that has none.
+ */
+export type CapturedEmail = {
+  action: string;
+  to: string;
+  subject: string;
+  url?: string;
+  attachments?: { filename: string; content: string; contentType: string }[];
+};
 
 /** Clear captures from earlier runs so a poll only ever sees this run's sends. */
 export async function resetEmailCapture(): Promise<void> {

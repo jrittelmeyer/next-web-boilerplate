@@ -3,7 +3,11 @@
 export type { WebhookEventPayload } from "resend";
 export { getResend } from "./client";
 export {
+  type EmailAttachment,
   isEmailConfigured,
+  sendCalendarEventCancelledEmail,
+  sendCalendarEventUpdatedEmail,
+  sendCalendarInvitationEmail,
   sendChangeEmailConfirmationEmail,
   sendDeleteAccountVerificationEmail,
   sendEmailChangedNoticeEmail,
