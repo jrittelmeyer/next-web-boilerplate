@@ -191,8 +191,12 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   discussion). The `tsc` CLI itself is clean and **~3.6× faster** (monorepo
   type-check 20.5s → 5.7s, cache-bypassed), so the win is real. Mechanics learned:
   pnpm's age gate re-validates the whole lockfile on every `pnpm run`/frozen
-  install, not just `pnpm install` — any early adoption needs a
-  `minimumReleaseAgeExclude`.
+  install, not just `pnpm install`. That cost a `minimumReleaseAgeExclude` in July;
+  **it no longer would** — `7.0.2` and all **20** `@typescript/typescript-<os>-<arch>`
+  platform optional deps published 2026-07-08, ~25 days clear of the 7-day gate as of
+  2026-08-02. ⚠️ But the gate binds what a range **resolves to**, not the version you
+  had in mind, and the TS train publishes daily (`dist-tags.next` was
+  `7.1.0-dev.20260802.1`), so a cutover should pin **exactly**, not `^7.x`.
 
   **⇒ THE NEXT-SIDE RE-GATE LIFTED 2026-08-02 — met by its literal terms, at three
   named costs.** The condition as written was *"TS7 support reaching a stable Next
@@ -206,29 +210,74 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     automatically"* — TS7 installed without the flag makes `next build` exit with
     instructions. The gate's disjunction is satisfied by `useTypeScriptCli`; the
     auto-detect successor this file expected before stable **did not** arrive.
-  - **It widens what gets type-checked.** *"The complete project selected by the
+  - **It widens what gets type-checked** — *"The complete project selected by the
     configured `tsconfig` is checked, including test files"*, and
-    `--debug-build-paths` **cannot** narrow it. This repo co-locates `*.test.ts(x)`
-    with source by hard rule ([CONVENTIONS.md](context/CONVENTIONS.md)), so a cutover
-    newly puts the whole test tree inside `next build`. Expect test-only type errors
-    the JS-API path never surfaced.
+    `--debug-build-paths` **cannot** narrow it. ⚠️ **This was overstated here until
+    2026-08-02:** it is not new exposure for *this* repo. `apps/web` already runs
+    `tsc --noEmit` over a tsconfig that includes `**/*.ts(x)`, so the 47 co-located
+    tests and 29 `e2e/*.spec.ts` are checked **today**. The scope is unchanged; only
+    the checker would be. The one genuinely-new surface is `.next/types/**/*.ts`,
+    which `pnpm type-check` cannot see (turbo scopes it to `dependsOn: ["^build"]`,
+    upstream builds only) — so `next build`, not `type-check`, is what would test it.
   - **Diagnostics degrade.** Next-specific code frames and error rewriting are not
     applied; `typescript.ignoreBuildErrors` skips the CLI checker too.
 
-  **What still blocks the cutover is one named in-tree dependency, not "the
-  toolchain":** `react-docgen-typescript@2.4.0` (required peer `typescript >= 4.3.x`,
-  resolved against `6.0.3`) calls the classic program API, reached via
-  `@storybook/react-vite` from `packages/ui/.storybook/main.ts`. **It gates the
-  visual-regression lane, not `next build`.** Method, stated so the next reader can
-  weigh it: that came from enumerating every package declaring `typescript` as a
-  dependency or required peer — which cannot see a bare `require("typescript")` under
-  an *optional* or undeclared peer, so treat it as the floor, not the ceiling.
-  Cleared by the same enumeration: knip (oxc), drizzle-kit/vitest (esbuild), biome
-  (Rust), zero `typescript-eslint` anywhere; `@trpc/*`'s `typescript >=5.7.2` peer is
-  types-only inference, not an API consumer.
-  **Re-gate, restated: on a cutover TRIAL, not a dependency count.** A branch that
-  sets the flag and runs the full gate falsifies the `react-docgen-typescript` claim
-  and the test-tree exposure at once, which no further enumeration can.
+  **⇒ BUT THE BINDING CONSTRAINT IS NOT THE ONE THIS ENTRY TRACKED. Re-gated
+  2026-08-02 on a fact no cutover trial could have surfaced:** ⚠️ **TS 7 ships no
+  `tsserver`.** Verified at the registry — `typescript@6.0.3` declares
+  `bin: { tsc, tsserver }`; `typescript@7.0.2` declares `bin: { tsc }`. The 20
+  platform packages are compiler binaries. So bumping the workspace `typescript`
+  leaves the editor's "Use Workspace Version" with no server, and the **`next`
+  tsserver plugin** (`tooling/typescript/nextjs.json` → `plugins: [{ name: "next" }]`,
+  the one `knip.jsonc` carries a dedicated ignore for) with no host. Either the editor
+  falls back to its own bundled TypeScript — **a different checker from the build**,
+  the classic green-in-editor / red-in-CI split, on the daily loop — or `"use client"`
+  boundary violations and invalid metadata exports stop surfacing while typing.
+  **No lane in `ci.yml` runs an editor**, which is exactly why the previous "run a
+  trial" re-gate was the wrong instrument: a fully green trial would not have licensed
+  the cutover.
+
+  **Two further costs, both landing on the template surface** (`scripts/init-app.mjs`
+  ships this tree verbatim into every generated project): TS 7 is a native Go binary
+  published for **20 platform tuples with no musl variant**, while the repo's own
+  builder is `node:24-alpine` (`docker/Dockerfile`) — TS 6 is pure JS and runs
+  anywhere Node does, so a cutover trades away a portability guarantee an adopter
+  currently has. And `next.config.ts` would need care: `experimental` exists **only**
+  in nonce mode there (`...(cspMode === "nonce" ? { experimental: { useCache: true } }
+  : {})`), so adding `useTypeScriptCli` as a *sibling* key silently drops one side —
+  before the spread the flag is lost (TS7 without it makes `next build` exit ⇒ the
+  CSP-nonce e2e lane goes red), after it `useCache` is lost (`"use cache"` stops
+  caching). It must be **merged into one object**, not stacked.
+
+  **The dependency blocker, restated from inspection rather than enumeration:**
+  `react-docgen-typescript@2.4.0` is real — `lib/parser.js:22` does
+  `require("typescript")` and then uses `ts.SyntaxKind` (16×), `ts.displayPartsToString`
+  (6×), `ts.SymbolFlags` (6×), `ts.TypeFlags`, `ts.isIdentifier` … i.e. deep classic
+  Compiler API, while TS 7's module exposes only `version`. Reached via
+  `@storybook/react-vite` from `packages/ui/.storybook/main.ts`; **it gates the
+  visual-regression lane, not `next build`.** ⚠️ Its peer is `>= 4.3.x`, which TS 7
+  *satisfies* — so `pnpm install` would neither fail nor warn; the break is at
+  Storybook build time. Escape hatch if ever needed: `typescript: { reactDocgen:
+  "react-docgen" }` (AST-based, no Compiler API) or `false`. That costs autodocs
+  prop-table fidelity but **no visual baselines** — `packages/ui/tests/visual.spec.ts`
+  filters `entry.type === "story"` and autodocs pages index as `type: "docs"`, so none
+  is screenshotted.
+  The enumeration that found it (packages declaring `typescript` as a dependency or
+  required peer) still cannot see a bare `require("typescript")` under an *optional* or
+  undeclared peer — treat it as the floor. **A worked example of that blind spot, and
+  of its inverse:** `next-intl@4.13.1` also resolves against `(typescript@6.0.3)` in
+  the lockfile and looks like a second blocker. It is not — `typescript` is an
+  **optional peer with no version range** there (only `next`/`react` are in
+  `peerDependencies`) and `next-intl/dist` imports `typescript` nowhere. Cleared by the
+  same sweep: knip (oxc), drizzle-kit/vitest (esbuild), biome (Rust), zero
+  `typescript-eslint` anywhere; `@trpc/*`'s `typescript >=5.7.2` peer is types-only
+  inference, not an API consumer.
+
+  ***Removal condition (replaces "run a cutover trial"):*** `typescript@7.1.x` stable
+  **and** it ships a language service (or the `next` tsserver plugin has a documented
+  TS 7 story) **and** `react-docgen-typescript` resolves against it. Each is checkable
+  without building anything. Until then **hold Renovate's `typescript` v7 major** — now
+  for a recorded reason rather than a pending experiment. Costs no audit points.
 - **Maintenance-only (Tier 3 G) — the standing state** — the honest "we're done"
   option: let Renovate drive deps, keep docs current, add steps as real needs surface.
   Standing 2026-07-12 → 2026-07-15; superseded 2026-07-15 by the path-to-100 program

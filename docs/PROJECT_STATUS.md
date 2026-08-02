@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-02 (doc audit 4/4: showcase currency — 26 stale claims across the guide, deck and FEATURES)._
+_Last updated: 2026-08-02 (TS7 re-gated on 7.1 — TS 7 ships no `tsserver`, which no cutover trial could have surfaced)._
 
 ## Where we are
 
@@ -62,9 +62,11 @@ _Last updated: 2026-08-02 (doc audit 4/4: showcase currency — 26 stale claims 
   ([per-row analysis](archive/PATH_TO_100_2026-07-15.md) ·
   [the verifying pass](archive/PROJECT_AUDIT_2026-07-17.md)). **Maintenance-only is the
   standing state again** — 100 is a state to maintain, and later passes re-run the
-  currency checks. The TS7 cutover stays outside it — **its Next-side gate lifted
-  2026-08-02** (`useTypeScriptCli` in stable `next@16.2.12`); it is now a cutover trial
-  blocked on one named dep, not a wait
+  currency checks. The TS7 cutover stays outside it — its Next-side gate lifted
+  2026-08-02 (`useTypeScriptCli` in stable `next@16.2.12`), but **TS 7 ships no
+  `tsserver`**, so it was **re-gated the same day on TS 7.1** rather than on the
+  cutover trial that gate had called for — a trial runs no editor, so it could never
+  have licensed the change
   ([MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
   standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.7.1,
@@ -116,6 +118,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Doc audit — 2026-08-02 (2/4) | 1 | remove-it's 9 stale counts; calendar routes in ARCHITECTURE; DATABASE 0024/0025; 2 leaves; both doc indexes | [remove-it](context/calendar/remove-it.md) |
 | Doc audit — 2026-08-02 (3/4) | 1 | Reminders' three accepted limits + the i18n `now` deferral filed in Watch; row cap 200 → 250; boundary narrative archived, not deleted | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-08-02 (4/4) | 1 | Showcase: 26 stale claims across guide, deck and FEATURES (99.65→99.9 over 12 passes, migrations 18→26, a11y 7→8); deck chart gained a 12th point; FEATURES stamped | [guide](plain-english-guide/README.md) |
+| TS7 re-gate — 2026-08-02 | 1 | TS 7 ships no `tsserver`, so a cutover trial could never license it; re-gated on 7.1. Also 10 specifiers not 9, next-intl a false positive | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
