@@ -1902,3 +1902,34 @@ One-day program (signed off in-session; 8 boilerplate commits b62b702..9d129f7 +
 - **settings.local.json hygiene** — 121 dead entries removed incl. 17
   credential-bearing (session cookie, BetterStack/Upstash tokens, one-time JWTs);
   10 read-only gh-run wildcard generalizations; backup retained in scratchpad.
+## Calendar boundary narrative — archived from PROJECT_STATUS.md (2026-08-02, doc audit 2c)
+
+Moved verbatim out of the resume file once **Calendar Phase 6** became a real row in
+`../BACKLOG.md` (filed 2026-08-02). Until then this prose was the only place on the resume
+path that said the calendar was unfinished, so it could not be culled; the backlog row now
+carries that duty and the reasoning lives here. `PROJECT_STATUS.md` keeps a pointer.
+
+**An external guest — no account, ever — is now a first-class case:** they are emailed a
+`METHOD:PUBLISH` `.ics` plus a token link, and answer at `/rsvp` signed out. What is
+deliberately *not* there: inbound iTIP `REPLY` ingestion, `VTIMEZONE` synthesis (a bare
+`TZID` ships, non-conformance stated in
+[../context/calendar/invitations.md](../context/calendar/invitations.md)), and per-occurrence
+RSVP — all Phase 6 or later.
+
+**Calendar invitations appear as a list at `/calendar/invites`; they do not appear as rows
+on the invitee's month grid until Phase 6.** That is a deliberate cut, not a gap. The month
+query scopes to the caller's own calendars, and widening it means a fourth query on the
+feature's hottest path, its own recurrence expansion and a share of the row cap — roughly
+doubling the phase's risk on the one query carrying `EXPLAIN` assertions. Phase 6 is already
+reworking that query for calendar sharing and folds the list in there.
+[../context/calendar/attendees.md](../context/calendar/attendees.md) carries the rest of the
+Phase-3 boundaries: emailed invitations and the public `/rsvp/[token]` page are Phase 4,
+per-occurrence RSVP and guest permissions are Phase 6.
+
+**Calendar Phase 4's last open verification CLOSED 2026-08-02 — and it passed.** A real
+invitation was sent from a `:3105` prod build through the real worker and real Resend
+(`calendar-invitation` job → message id logged); the owner's Gmail screenshot shows the
+event card with **"Add to Calendar"** and **no Yes/No/Maybe buttons**, at the correct civil
+time. That is the direct falsification of the `METHOD:PUBLISH` decision — the only part of
+it not asserted in code — and it holds. Detail:
+[../context/calendar/invitations.md](../context/calendar/invitations.md).
