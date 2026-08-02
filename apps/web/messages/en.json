@@ -24,7 +24,8 @@
     "acceptInvitation": "Accept invitation",
     "calendar": "Calendar",
     "calendarEvent": "Event",
-    "calendarInvites": "Invitations"
+    "calendarInvites": "Invitations",
+    "rsvp": "Invitation"
   },
   "Auth": {
     "common": {
@@ -895,7 +896,10 @@
       },
       "role": {
         "organizer": "Organizer"
-      }
+      },
+      "stale": "answered for an earlier version",
+      "rsvpLinkHint": "Email is not configured — send this link to the guest so they can respond:",
+      "rsvpLinkLabel": "RSVP link for {email}"
     },
     "invites": {
       "title": "Invitations",
@@ -905,5 +909,24 @@
       "loading": "Loading…",
       "loadMore": "Load more"
     }
+  },
+  "Rsvp": {
+    "invalidTitle": "This invitation link is no longer valid",
+    "invalidBody": "It may have expired, or the event may have been cancelled or the invitation withdrawn. Ask the organizer to send you a new one.",
+    "invitedBy": "{organizer} invited you to",
+    "stale": "The time changed after you answered, so your earlier answer no longer applies.",
+    "answeringAs": "Answering as {email}",
+    "legend": "Your response",
+    "respond": {
+      "accepted": "Yes",
+      "declined": "No",
+      "tentative": "Maybe"
+    },
+    "responded": {
+      "accepted": "You are going.",
+      "declined": "You declined.",
+      "tentative": "You answered maybe."
+    },
+    "staleBadge": "Answered for an earlier version"
   }
 }

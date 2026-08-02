@@ -1,5 +1,6 @@
 import "./load-env";
 import { createBoss } from "./boss";
+import { handleCalendarInvitation } from "./handlers/calendar-invitation";
 import { handleCancelStripeSubscriptions } from "./handlers/cancel-stripe-subscriptions";
 import { handleCleanupExpiredVerifications } from "./handlers/cleanup-expired-verifications";
 import { handleDeadLetteredJob } from "./handlers/dead-letter";
@@ -61,6 +62,9 @@ async function main(): Promise<void> {
   });
   await boss.work(JOBS.cleanupExpiredVerifications, async (jobs) => {
     for (const job of jobs) await handleCleanupExpiredVerifications(job.data);
+  });
+  await boss.work(JOBS.calendarInvitation, async (jobs) => {
+    for (const job of jobs) await handleCalendarInvitation(job.data);
   });
   // Watch the DLQ itself: log + env-gated Sentry capture per exhausted job.
   // includeMetadata exposes `output` (the final failure) alongside the payload.

@@ -123,6 +123,26 @@ transaction can beat the row it describes.
 The publish is deliberately **outside** the `try`: the write has already committed, and a
 publish failure must not be reported to the user as "Failed to update the event."
 
+**The email fan-out sits beside the publish, and outside the transaction for the same
+reason** (Phase 4): `enqueue()` is graceful by construction, so a down worker delays an
+invitation rather than failing a save, and an invitation whose event is not yet visible is a
+link that 404s. Which writer owes which email — and why `updateOccurrence`, `skipOccurrence`
+and `setRecurrenceDate` all bump the master's `SEQUENCE` — is in
+[invitations.md](invitations.md).
+
+### `respondByToken` — the one action with no session gate
+
+`respondByToken({ handle, status, comment })` lives in its **own file**,
+`server/actions/calendar-rsvp.ts`, because every export in `calendar.ts` opens with
+`requireSession()` and the one function that must not would read as an oversight beside
+them. Its authorization is the RSVP token, read from an httpOnly cookie the `/rsvp/[token]`
+route handler exchanged it into — the caller sends only a non-secret handle.
+
+It never stamps `user_id`: a session proves who the caller is, a token proves only that
+whoever holds the link was sent it. Rate-limited at `calendar:rsvp:respond:<clientKey>`,
+20/min — abuse dampening, not the defence. Every refusal is one sentence at HTTP 200; see
+[invitations.md](invitations.md) for why the route must not be an oracle.
+
 ### `setRecurrenceDate`
 
 Skip an occurrence (`exdate`) or add one (`rdate`) without editing the series, rate-limited

@@ -53,6 +53,11 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { partitionRecurrenceDates } from "@/lib/calendar/recurrence-dates";
 import {
+  classifyEventChange,
+  type EventChange,
+  RECURRENCE_DATES_CHANGED,
+} from "@/lib/calendar/significant-change";
+import {
   canAdministerCalendar,
   canRespondToEvent,
   canWriteCalendar,
@@ -62,6 +67,11 @@ import {
 import { diffAttendees } from "@/lib/calendar-attendees";
 import { getActiveOrganizationId } from "@/lib/organization";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  enqueueCancellations,
+  enqueueInvitations,
+  enqueueSeriesUpdate,
+} from "@/server/calendar/invitations";
 import {
   createNotifications,
   type NewNotificationInput,
@@ -288,6 +298,30 @@ async function loadRecurrenceDates(eventId: string) {
   }
   return partitioned;
 }
+
+/**
+ * The columns `classifyEventChange` reads, selected only by the whole-event writer.
+ *
+ * Kept out of `EVENT_TARGET_COLUMNS` on purpose: that set is loaded by every scoped write,
+ * and none of the others needs a colour or a description to decide what it owes.
+ */
+const CHANGE_COLUMNS = {
+  title: calendarEvents.title,
+  description: calendarEvents.description,
+  location: calendarEvents.location,
+  url: calendarEvents.url,
+  color: calendarEvents.color,
+  status: calendarEvents.status,
+  visibility: calendarEvents.visibility,
+  transparency: calendarEvents.transparency,
+  allDay: calendarEvents.allDay,
+  startWall: calendarEvents.startWall,
+  startTzid: calendarEvents.startTzid,
+  endWall: calendarEvents.endWall,
+  endTzid: calendarEvents.endTzid,
+  rrule: calendarEvents.rrule,
+  calendarId: calendarEvents.calendarId,
+} as const;
 
 /** Everything a scoped write needs to know about its target before it touches it. */
 const EVENT_TARGET_COLUMNS = {
@@ -557,20 +591,28 @@ async function addAttendees(
   eventTitle: string,
   attendees: readonly AttendeeInput[],
   actorEmail: string,
+  // Filled with the inserted rows so the caller can enqueue their emails AFTER the commit.
+  // The ids have to come back from the INSERT: an RSVP token is minted from the attendee
+  // row id, and re-reading for it after the transaction would race a concurrent edit.
+  invited: { attendeeId: string; email: string }[],
 ) {
   if (attendees.length === 0) return [];
   const resolved = await resolveAttendeeUserIds(
     tx,
     attendees.map((a) => a.email),
   );
-  await tx.insert(calendarEventAttendees).values(
-    attendees.map((attendee) => ({
-      eventId,
-      email: attendee.email,
-      role: attendee.role,
-      userId: resolved.get(attendee.email) ?? null,
-    })),
-  );
+  const inserted = await tx
+    .insert(calendarEventAttendees)
+    .values(
+      attendees.map((attendee) => ({
+        eventId,
+        email: attendee.email,
+        role: attendee.role,
+        userId: resolved.get(attendee.email) ?? null,
+      })),
+    )
+    .returning({ attendeeId: calendarEventAttendees.id, email: calendarEventAttendees.email });
+  invited.push(...inserted);
 
   // Only a resolved account can receive an in-app notification. An external attendee is
   // a real row with a real invitation; Phase 4 is what reaches them, by email.
@@ -581,16 +623,27 @@ async function addAttendees(
   return await createNotifications(tx, rows);
 }
 
-/** Cancellations for guests being dropped from an event that still exists. */
+/**
+ * Cancellations for guests being dropped from an event that still exists.
+ *
+ * **The deleted addresses are returned to the caller, and that is load-bearing.** This is a
+ * hard `DELETE` inside the write transaction, and the cancellation email is enqueued after
+ * the commit — so by the time the job exists there is no row left to read, not even a race
+ * window. A job payload carrying only ids would find nothing and complete silently, telling
+ * the dropped guest nothing at all.
+ */
 async function removeAttendees(
   tx: Transaction,
   eventId: string,
   eventTitle: string,
   emails: readonly string[],
   actorEmail: string,
+  // Filled with the addresses actually removed (not the requested ones) — the DELETE is the
+  // authority on which rows existed.
+  dropped: string[],
 ) {
   if (emails.length === 0) return [];
-  const dropped = await tx
+  const removed = await tx
     .delete(calendarEventAttendees)
     .where(
       and(
@@ -598,9 +651,10 @@ async function removeAttendees(
         inArray(calendarEventAttendees.email, [...emails]),
       ),
     )
-    .returning({ userId: calendarEventAttendees.userId });
+    .returning({ userId: calendarEventAttendees.userId, email: calendarEventAttendees.email });
+  dropped.push(...removed.map((row) => row.email));
 
-  const rows = dropped
+  const rows = removed
     .map((row) => row.userId)
     .filter((id): id is string => id !== null)
     .map((id) => cancelNotification(id, actorEmail, eventTitle));
@@ -839,6 +893,7 @@ export async function createEvent(input: CreateEventValues): Promise<EventResult
 
   let created: { id: string; calendarId: string };
   let invitations: Awaited<ReturnType<typeof createNotifications>> = [];
+  const invited: { attendeeId: string; email: string }[] = [];
   try {
     // One transaction: an event whose guest list failed to insert is an event the
     // organizer believes they invited people to.
@@ -865,6 +920,7 @@ export async function createEvent(input: CreateEventValues): Promise<EventResult
         parsed.data.title,
         parsed.data.attendees,
         gate.session.user.email,
+        invited,
       );
       return { row, payloads };
     });
@@ -874,8 +930,10 @@ export async function createEvent(input: CreateEventValues): Promise<EventResult
     return mapWriteError(error, "Failed to create the event.");
   }
 
-  // Strictly after the commit — see `addAttendees`.
+  // Strictly after the commit — see `addAttendees`. The emails go the same way and for the
+  // same reason: an invitation whose event is not yet visible is a link that 404s.
   await publishNotifications(invitations);
+  await enqueueInvitations(created.id, invited);
   revalidatePath("/calendar");
   return { data: created };
 }
@@ -991,27 +1049,77 @@ async function updateWholeEvent(
     dropModifiers || dates === null ? [] : dates.rdates,
   );
 
+  // `uid` stays absent — it is immutable, and changing it reads as delete-and-recreate in
+  // every subscriber's client. `sequence` and `reask_at` are decided per edit below.
   const columns = {
     calendarId: values.calendarId,
     ...eventColumns(values),
     ...times,
     ...series,
-    // `uid` and `sequence` are deliberately absent. The UID is immutable, and SEQUENCE
-    // is bumped only on a *significant* change (Phase 4 decides which edits qualify) —
-    // bumping it on every description tweak would make every subscriber's client
-    // re-prompt its attendees.
   };
 
   // **Always transactional from Phase 3**, where revision 1 had a non-transactional fast
   // path for the common edit. The guest-list diff is two writes of its own, and a title
   // edit that committed while its invitations did not is a worse failure than the extra
   // BEGIN costs.
-  let result: { row: { id: string; calendarId: string }; payloads: NotificationPayloads };
+  let result: {
+    row: { id: string; calendarId: string };
+    payloads: NotificationPayloads;
+    change: EventChange;
+    invited: { attendeeId: string; email: string }[];
+    dropped: string[];
+  };
   try {
     result = await db.transaction(async (tx) => {
+      // Read before writing: the classifier compares the stored row against the values
+      // going in, and this is the last moment the old ones exist. Scoped to this writer
+      // rather than widened into EVENT_TARGET_COLUMNS, which would make every scoped write
+      // pay for columns only the whole-event path reads.
+      const [before] = await tx
+        .select(CHANGE_COLUMNS)
+        .from(calendarEvents)
+        .where(eq(calendarEvents.id, target.id))
+        .limit(1);
+      if (!before) throw new Error("event vanished before update");
+
+      const change = classifyEventChange(before, {
+        title: values.title,
+        description: values.description,
+        location: values.location,
+        url: values.url,
+        color: values.color,
+        status: values.status,
+        visibility: values.visibility,
+        transparency: values.transparency,
+        allDay: values.allDay,
+        startWall: values.startWall,
+        startTzid: values.startTzid,
+        endWall: values.endWall,
+        endTzid: values.endTzid,
+        rrule: canonical,
+        calendarId: values.calendarId,
+      });
+
       const [row] = await tx
         .update(calendarEvents)
-        .set(columns)
+        .set({
+          ...columns,
+          // A client IGNORES a re-import whose UID matches and whose SEQUENCE has not
+          // risen, so an update that does not bump ships an attachment nobody applies.
+          ...(change.bumpsSequence ? { sequence: sql`${calendarEvents.sequence} + 1` } : {}),
+          // Re-asking stamps a timestamp instead of overwriting the guest list: a stored
+          // "declined, clashes with my flight" survives, and staleness is derived as
+          // `responded_at < reask_at`. See calendar-events.ts.
+          //
+          // **`now()`, not `new Date()`, and that is not a style choice.** The other half
+          // of that comparison — `responded_at` — is written by Postgres, so stamping this
+          // one from the Node process compares two clocks. Caught by the e2e on a machine
+          // whose Docker Postgres ran 4.5 s ahead of the host: the guest answered, the
+          // organizer then moved the event, and the answer still read as newer than the
+          // move. Any deployment with the app and the database on separate hosts has the
+          // same skew permanently.
+          ...(change.reasks ? { reaskAt: sql`now()` } : {}),
+        })
         .where(eq(calendarEvents.id, target.id))
         .returning({ id: calendarEvents.id, calendarId: calendarEvents.calendarId });
       if (!row) throw new Error("event update returned no row");
@@ -1030,15 +1138,25 @@ async function updateWholeEvent(
       // Diff by email; an address in both sets is left strictly alone, which is what
       // keeps a re-save from resetting everyone's RSVP (lib/calendar-attendees.ts).
       const diff = diffAttendees(await loadAttendees(tx, target.id), values.attendees);
-      const invited = await addAttendees(tx, target.id, values.title, diff.added, actorEmail);
+      const invited: { attendeeId: string; email: string }[] = [];
+      const dropped: string[] = [];
+      const added = await addAttendees(
+        tx,
+        target.id,
+        values.title,
+        diff.added,
+        actorEmail,
+        invited,
+      );
       const cancelled = await removeAttendees(
         tx,
         target.id,
         values.title,
         diff.removed,
         actorEmail,
+        dropped,
       );
-      return { row, payloads: [...invited, ...cancelled] };
+      return { row, payloads: [...added, ...cancelled], change, invited, dropped };
     });
   } catch (error) {
     return mapWriteError(error, "Failed to update the event.");
@@ -1047,7 +1165,32 @@ async function updateWholeEvent(
   // Outside the `try` on purpose: the write has committed, and a publish failure must
   // not be reported to the user as "Failed to update the event."
   await publishNotifications(result.payloads);
+  await emitSeriesEmails(target.id, result.change, result.invited, result.dropped);
   return { data: result.row };
+}
+
+/**
+ * The three emails a whole-event save can owe, in the one order that reads correctly.
+ *
+ * A guest added by this save gets a full invitation and is **excluded** from the update
+ * fan-out — otherwise they receive "this event changed" about an event they have not been
+ * told about yet.
+ */
+async function emitSeriesEmails(
+  masterId: string,
+  change: EventChange,
+  invited: readonly { attendeeId: string; email: string }[],
+  dropped: readonly string[],
+): Promise<void> {
+  await enqueueInvitations(masterId, invited);
+  await enqueueCancellations(masterId, dropped, "removed");
+  if (change.resends) {
+    await enqueueSeriesUpdate(
+      masterId,
+      change.reasks,
+      invited.map((row) => row.attendeeId),
+    );
+  }
 }
 
 /**
@@ -1073,28 +1216,45 @@ async function updateOccurrence(
 ): Promise<EventResult> {
   const columns = { ...eventColumns(values), ...times };
   try {
-    await db
-      .insert(calendarEvents)
-      .values({
-        calendarId: target.calendarId,
-        uid: target.uid,
-        recurrenceParentId: target.id,
-        recurrenceId,
-        rrule: null,
-        seriesEndAt: null,
-        ...columns,
-      })
-      .onConflictDoUpdate({
-        target: [calendarEvents.calendarId, calendarEvents.uid, calendarEvents.recurrenceId],
-        // `deleted_at` is cleared because an occurrence being edited is an occurrence
-        // that exists. Nothing else can reach this row: an override is never
-        // soft-deleted while its master is live, and a soft-deleted master is already
-        // "Event not found" two frames up.
-        set: { ...columns, deletedAt: null },
-      });
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(calendarEvents)
+        .values({
+          calendarId: target.calendarId,
+          uid: target.uid,
+          recurrenceParentId: target.id,
+          recurrenceId,
+          rrule: null,
+          seriesEndAt: null,
+          ...columns,
+        })
+        .onConflictDoUpdate({
+          target: [calendarEvents.calendarId, calendarEvents.uid, calendarEvents.recurrenceId],
+          // `deleted_at` is cleared because an occurrence being edited is an occurrence
+          // that exists. Nothing else can reach this row: an override is never
+          // soft-deleted while its master is live, and a soft-deleted master is already
+          // "Event not found" two frames up.
+          set: { ...columns, deletedAt: null },
+        });
+
+      // The MASTER's sequence, not the override's. The `.ics` is one calendar: the override
+      // rides in it as a `RECURRENCE-ID` sibling, and a client decides whether to apply the
+      // whole thing from the master's `SEQUENCE`. Bump the override's instead and the
+      // sibling arrives inside a calendar the client has already decided to ignore.
+      await tx
+        .update(calendarEvents)
+        .set({ sequence: sql`${calendarEvents.sequence} + 1` })
+        .where(eq(calendarEvents.id, target.id));
+    });
   } catch (error) {
     return mapWriteError(error, "Failed to update the event.");
   }
+
+  // Resends, never re-asks. RSVP is series-level through Phase 4 — a "yes" is to the series,
+  // so one occurrence moving does not invalidate it, and marking fifty people stale because
+  // next Tuesday shifted is the noise the three-way classifier exists to avoid.
+  // Per-occurrence re-asking arrives with per-occurrence RSVP, in Phase 6.
+  await enqueueSeriesUpdate(target.id, RECURRENCE_DATES_CHANGED.reasks);
   return { data: { id: target.id, calendarId: target.calendarId } };
 }
 
@@ -1156,8 +1316,39 @@ async function splitSeries(
   );
   const uid = crypto.randomUUID();
 
+  let reasks = false;
   try {
     const created = await db.transaction(async (tx) => {
+      // **Where the Phase-3 debt gets paid** (attendees.md): the copy below carries
+      // `status` and `responded_at` verbatim, so a cut that moved the time would otherwise
+      // leave everyone still `accepted` for a meeting that changed. Classifying the source
+      // against the second half answers whether that happened, without re-asking after a
+      // pure title edit — the failure the debt note warned a naive reset would cause.
+      const [before] = await tx
+        .select(CHANGE_COLUMNS)
+        .from(calendarEvents)
+        .where(eq(calendarEvents.id, target.id))
+        .limit(1);
+      if (!before) throw new Error("event vanished before split");
+      reasks = classifyEventChange(before, {
+        title: values.title,
+        description: values.description,
+        location: values.location,
+        url: values.url,
+        color: values.color,
+        status: values.status,
+        visibility: values.visibility,
+        transparency: values.transparency,
+        allDay: values.allDay,
+        startWall: values.startWall,
+        startTzid: values.startTzid,
+        endWall: values.endWall,
+        endTzid: values.endTzid,
+        rrule: secondHalf.rrule,
+        // The insert below uses the target's calendar, not the submitted one.
+        calendarId: target.calendarId,
+      }).reasks;
+
       const [row] = await tx
         .insert(calendarEvents)
         .values({
@@ -1166,6 +1357,11 @@ async function splitSeries(
           ...eventColumns(values),
           ...times,
           ...secondHalf,
+          // Stamped at insert so the copied `responded_at` values — all of which predate
+          // this moment — read as stale the instant the row exists. `now()` for the same
+          // reason as `updateWholeEvent`: the timestamps being compared must come from one
+          // clock, and `responded_at` is Postgres's.
+          ...(reasks ? { reaskAt: sql`now()` } : {}),
         })
         .returning({ id: calendarEvents.id, calendarId: calendarEvents.calendarId });
       if (!row) throw new Error("series split insert returned no row");
@@ -1210,10 +1406,22 @@ async function splitSeries(
 
       // The first half keeps its own civil span, its own uid and its own overrides;
       // only its bound moves. The edit applies from the cut forward, which is what
-      // "this and following" means.
-      await tx.update(calendarEvents).set(firstHalf).where(eq(calendarEvents.id, target.id));
+      // "this and following" means. Its `SEQUENCE` bumps because that bound is in the
+      // emitted `.ics`: without it a guest's client keeps expanding the old rule and shows
+      // occurrences past the cut, at the old time, forever.
+      await tx
+        .update(calendarEvents)
+        .set({ ...firstHalf, sequence: sql`${calendarEvents.sequence} + 1` })
+        .where(eq(calendarEvents.id, target.id));
       return row;
     });
+
+    // **Two emails, one per UID, and that is not noise.** The guest's client holds the
+    // original series; it needs the first half's new bound *and* the second half, which is
+    // a different event with a different UID. Sending only one leaves the other half wrong
+    // in their calendar.
+    await enqueueSeriesUpdate(created.id, reasks);
+    await enqueueSeriesUpdate(target.id, false);
     return { data: created };
   } catch (error) {
     return mapWriteError(error, "Failed to update the event.");
@@ -1394,9 +1602,18 @@ export async function deleteEvent(input: DeleteEventValues): Promise<DeleteResul
 async function softDeleteEvent(target: EventTarget, actor: Actor): Promise<DeleteResult> {
   const deletedAt = new Date();
   let payloads: NotificationPayloads;
+  // Collected inside the transaction because the guest list is what the cancellation email
+  // needs and this is the last place it is known to be current.
+  const guestEmails: string[] = [];
   try {
     payloads = await db.transaction(async (tx) => {
-      await tx.update(calendarEvents).set({ deletedAt }).where(eq(calendarEvents.id, target.id));
+      await tx
+        .update(calendarEvents)
+        // `STATUS:CANCELLED` in the emitted `.ics` is derived from `deleted_at` rather than
+        // written to `status` (see below), but the SEQUENCE still has to rise or the
+        // cancellation attachment is one a conforming client ignores.
+        .set({ deletedAt, sequence: sql`${calendarEvents.sequence} + 1` })
+        .where(eq(calendarEvents.id, target.id));
       if (target.rrule !== null) {
         await tx
           .update(calendarEvents)
@@ -1419,7 +1636,10 @@ async function softDeleteEvent(target: EventTarget, actor: Actor): Promise<Delet
         .where(eq(calendarEvents.id, target.id))
         .limit(1);
       const guests = await tx
-        .select({ userId: calendarEventAttendees.userId })
+        .select({
+          userId: calendarEventAttendees.userId,
+          email: calendarEventAttendees.email,
+        })
         .from(calendarEventAttendees)
         .where(
           and(
@@ -1427,6 +1647,9 @@ async function softDeleteEvent(target: EventTarget, actor: Actor): Promise<Delet
             ne(calendarEventAttendees.userId, actor.id),
           ),
         );
+      // The addresses go out with the job, not an id to re-read: the event is soft-deleted
+      // by the time the worker runs, and only a `cancelled` load is allowed to see it.
+      guestEmails.push(...guests.map((guest) => guest.email));
       const rows = guests
         .map((guest) => guest.userId)
         .filter((id): id is string => id !== null)
@@ -1438,6 +1661,10 @@ async function softDeleteEvent(target: EventTarget, actor: Actor): Promise<Delet
   }
 
   await publishNotifications(payloads);
+  // `cancelled`, so the attachment carries STATUS:CANCELLED and a guest who added the event
+  // can have their client remove it. A *removed guest* gets no attachment — different case,
+  // handled by `emitSeriesEmails`.
+  await enqueueCancellations(target.id, guestEmails, "cancelled");
   return { data: { id: target.id } };
 }
 
@@ -1475,10 +1702,19 @@ async function skipOccurrence(
             eq(calendarEvents.recurrenceId, recurrenceId),
           ),
         );
+      // An EXDATE is IN the emitted `.ics`, so this changes what a guest's client should
+      // render while touching none of the columns the field classifier reads. Bump, or the
+      // update ships an attachment every conforming client ignores and the guest keeps a
+      // meeting that was cancelled.
+      await tx
+        .update(calendarEvents)
+        .set({ sequence: sql`${calendarEvents.sequence} + 1` })
+        .where(eq(calendarEvents.id, target.id));
     });
   } catch (error) {
     return mapWriteError(error, "Failed to delete the event.");
   }
+  await enqueueSeriesUpdate(target.id, RECURRENCE_DATES_CHANGED.reasks);
   return { data: { id: target.id } };
 }
 
@@ -1508,7 +1744,13 @@ async function truncateSeries(
 
   try {
     await db.transaction(async (tx) => {
-      await tx.update(calendarEvents).set(bounded).where(eq(calendarEvents.id, target.id));
+      // The new bound is in the emitted RRULE, so the SEQUENCE has to rise with it —
+      // otherwise a guest's client keeps expanding the old rule and shows occurrences the
+      // organizer has deleted.
+      await tx
+        .update(calendarEvents)
+        .set({ ...bounded, sequence: sql`${calendarEvents.sequence} + 1` })
+        .where(eq(calendarEvents.id, target.id));
       // Hard, and correct: these occurrences no longer exist, so there is nothing left
       // for a soft delete to announce that bounding the series has not already said.
       await tx
@@ -1531,6 +1773,7 @@ async function truncateSeries(
   } catch (error) {
     return mapWriteError(error, "Failed to delete the event.");
   }
+  await enqueueSeriesUpdate(target.id, RECURRENCE_DATES_CHANGED.reasks);
   return { data: { id: target.id } };
 }
 
@@ -1584,6 +1827,12 @@ export async function setRecurrenceDate(
         .insert(calendarRecurrenceDates)
         .values({ eventId, kind, dateWall })
         .onConflictDoNothing();
+      // Both kinds are emitted in the `.ics`, so both bump — an EXDATE that does not is an
+      // occurrence the guest's client keeps showing.
+      await tx
+        .update(calendarEvents)
+        .set({ sequence: sql`${calendarEvents.sequence} + 1` })
+        .where(eq(calendarEvents.id, eventId));
       if (kind !== "rdate") return;
 
       // Read back inside the transaction, so the row just inserted is included and a
@@ -1608,6 +1857,7 @@ export async function setRecurrenceDate(
     return mapWriteError(error, "Failed to update the repeating event.");
   }
 
+  await enqueueSeriesUpdate(target.id, RECURRENCE_DATES_CHANGED.reasks);
   revalidatePath("/calendar");
   revalidatePath(`/calendar/event/${target.id}`);
   return { data: { eventId, kind } };

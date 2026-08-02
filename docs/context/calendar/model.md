@@ -230,6 +230,21 @@ buys nothing measurable and `calendar_events_parent_same_calendar` makes it redu
 partial index still serves the FK cascade, verified: a strict `= $1` implies `IS NOT NULL`,
 which Postgres can prove against the predicate.
 
+### The three ICS columns, and who writes them (Phase 4)
+
+`uid`, `sequence` and `reask_at` are all written by the invitation machinery and by nothing
+else — `eventColumns()` deliberately omits every one of them, so no ordinary save can touch
+them by accident.
+
+| Column | Written by | Why it exists |
+| --- | --- | --- |
+| `uid` | once, at insert (`crypto.randomUUID()`) — and by `splitSeries`, explicitly, for the new master | Immutable. Changing it reads as delete-and-recreate in every subscriber's client, which is also why it shipped in Phase 1 rather than being backfilled |
+| `sequence` | every writer whose edit changes the emitted `.ics` | A conforming client **ignores** a re-import whose `UID` matches and whose `SEQUENCE` has not risen, so an update that does not bump ships an inert attachment |
+| `reask_at` | a time-or-recurrence change, and a `splitSeries` cut that moved the time | Lets "re-ask the guests" be a *derived* comparison (`responded_at < reask_at`) instead of a write that overwrites their stored answer and comment |
+
+Full rules, including which of the six writers owes which email:
+[invitations.md](invitations.md).
+
 ### Override integrity — one rule of three is enforced by the database
 
 | Rule | Enforced by |

@@ -66,6 +66,9 @@ importers:
       '@repo/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@repo/jobs':
+        specifier: workspace:*
+        version: link:../../packages/jobs
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui

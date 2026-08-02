@@ -33,6 +33,8 @@ export function EventDetail({
     role: AttendeeRole;
     status: AttendeeStatus;
     comment: string | null;
+    stale: boolean;
+    rsvpUrl: string | null;
   }[];
   /**
    * The caller's own stored RSVP, or `null` when they are not a guest — which is also

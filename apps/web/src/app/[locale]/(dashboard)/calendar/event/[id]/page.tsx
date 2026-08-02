@@ -1,6 +1,7 @@
 import { auth } from "@repo/auth";
 import { db } from "@repo/db";
 import { calendarEventAttendees, calendarEventMasters, calendars } from "@repo/db/schema";
+import { isEmailConfigured } from "@repo/email";
 import { asc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -9,8 +10,16 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { EventDetail } from "@/components/calendar/event-detail";
 import { type Locale, routing } from "@/i18n/routing";
-import { canReadEvent, canRespondToEvent, getEventAccess } from "@/lib/calendar-acl";
+import {
+  canReadEvent,
+  canRespondToEvent,
+  canWriteCalendar,
+  getCalendarRole,
+  getEventAccess,
+} from "@/lib/calendar-acl";
 import { resolveUserPreferences } from "@/lib/user-preferences";
+import { rsvpUrlFor } from "@/server/calendar/invitations";
+import { isStaleResponse } from "@/server/calendar/rsvp";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -82,16 +91,38 @@ export default async function CalendarEventPage({
   // The guest list every reader gets (decision 7), addresses only (decision 11). Read off
   // the master, which for this route is the row itself — the view has already excluded
   // overrides, and attendees hang off the series in any case.
-  const attendees = await db
+  const attendeeRows = await db
     .select({
+      id: calendarEventAttendees.id,
       email: calendarEventAttendees.email,
       role: calendarEventAttendees.role,
       status: calendarEventAttendees.status,
       comment: calendarEventAttendees.comment,
+      respondedAt: calendarEventAttendees.respondedAt,
     })
     .from(calendarEventAttendees)
     .where(eq(calendarEventAttendees.eventId, row.calendar_event_masters.id))
     .orderBy(asc(calendarEventAttendees.email));
+
+  // **The Phase-4 fallback, and only for someone who may write the calendar.** With email
+  // unconfigured no invitation is delivered, so the organizer gets a copyable RSVP link per
+  // guest instead — the same posture the org-members UI takes for an unsendable invitation
+  // (`sendOrganizationInvitationEmail`). It is gated on write access because the link IS the
+  // capability: handing it to a reader hands them the power to answer for someone else.
+  const canShareLinks =
+    !isEmailConfigured() &&
+    canWriteCalendar(await getCalendarRole(row.calendar_event_masters.calendarId, session.user.id));
+
+  const attendees = attendeeRows.map((attendee) => ({
+    email: attendee.email,
+    role: attendee.role,
+    status: attendee.status,
+    comment: attendee.comment,
+    // Derived, never stored: re-asking stamps the EVENT and leaves the answer intact, so
+    // "accepted — for an earlier version" is renderable instead of lost.
+    stale: isStaleResponse(attendee.respondedAt, row.calendar_event_masters.reaskAt),
+    rsvpUrl: canShareLinks ? rsvpUrlFor(attendee.id, row.calendar_event_masters.seriesEndAt) : null,
+  }));
 
   const activeLocale = hasLocale(routing.locales, locale) ? locale : routing.defaultLocale;
   const preferences = await resolveUserPreferences(session.user.id, activeLocale);

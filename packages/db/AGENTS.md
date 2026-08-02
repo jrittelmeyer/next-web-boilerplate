@@ -41,3 +41,8 @@ One imperative per line; mechanics + rationale live in
 - Compare `calendar_event_attendees.email` to `user.email` as
   `attendees.email = lower($param)` — `user.email` has no lowercase CHECK, and
   `lower()` on the column side loses the index.
+- `uid`, `sequence` and `reask_at` are written **only** by the invitation machinery —
+  `eventColumns()` omits all three
+  ([invitations.md](../../docs/context/calendar/invitations.md)).
+- "Re-ask the guests" is a `reask_at` stamp on the EVENT and a derived
+  `responded_at < reask_at`, never a write over the attendee rows.

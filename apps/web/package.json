@@ -24,6 +24,7 @@
     "@repo/calendar": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/email": "workspace:*",
+    "@repo/jobs": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/validators": "workspace:*",
     "@sentry/nextjs": "10.59.0",

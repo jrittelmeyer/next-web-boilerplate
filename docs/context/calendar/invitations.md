@@ -4,8 +4,9 @@ Load when touching the invitation email, the calendar attachment, or the public 
 Guest list and internal RSVP: [attendees.md](attendees.md). Domain model:
 [model.md](model.md). Endpoints: [api.md](api.md).
 
-> **Status: Phase 4, in progress.** The serializer and the send seam ship first; delivery,
-> the `/rsvp/[token]` page and the re-ask rules follow in the same phase.
+> **Status: Phase 4, complete.** The serializer, the send seam, delivery, the public
+> `/rsvp` page and the re-ask rules all ship. Per-occurrence RSVP, guest permissions and
+> `VTIMEZONE` synthesis are Phase 6.
 
 ## `METHOD:PUBLISH`, and never an `ATTENDEE` line
 
@@ -122,3 +123,186 @@ title-derived one leaks the subject into the attachment list of a forwarded mess
 | a **guest** was removed | **none** | the event is still going ahead for everyone else, and a client applying `STATUS:CANCELLED` would delete a live event. "You specifically are uninvited" is `METHOD:CANCEL` vocabulary, which the decision above declined |
 
 The removal email says so in words instead: if you added this to your calendar, remove it.
+
+## The RSVP token
+
+```
+payload = attendeeId (16 bytes) || expSeconds (6 bytes BE, 0 = never)       // 22 bytes
+token   = base64url(payload) || base64url(HMAC-SHA256(key, payload))        // 30 + 43 chars
+key     = HMAC-SHA256(BETTER_AUTH_SECRET, "calendar-rsvp-token-v1")
+```
+
+**Stateless, with no stored column**, which keeps [attendees.md](attendees.md)'s claim true:
+Phase 4 is purely additive and the attendee table is unchanged. The row already *is* the
+capability. A stored token would buy per-invitation rotation that no surface offers, and
+cost a column, an index, a backfill for the rows that already exist, and a second fact that
+can disagree with the row.
+
+**No `.` in the alphabet, and that is load-bearing rather than cosmetic.** `proxy.ts`'s
+matcher is `/((?!api|_next|_vercel|.*\..*).*)` — a path containing a dot never enters the
+proxy — and `routing.ts` uses `localePrefix: "as-needed"`, so the default-locale URL
+`/rsvp/<token>` exists **only** via next-intl's rewrite into `[locale]`. A dotted separator
+would therefore 404 every invitation in production while a hand-written fixture without one
+passed every test. `calendar-invitations.spec.ts` resolves a **real minted** token through
+the proxy for exactly this reason.
+
+The key is a purpose-scoped derivation rather than `BETTER_AUTH_SECRET` itself, so an RSVP
+token can never be substituted for a session artifact. Bumping the label invalidates every
+outstanding link without touching the secret.
+
+### Expiry and revocation, stated precisely
+
+`exp = series_end_at + 30 days`, and `0` (never) when `series_end_at IS NULL`.
+`series_end_at` is a stored, deliberately over-estimating bound ([model.md](model.md)), so
+the error direction is the safe one.
+
+| Event | Effect on the link |
+| --- | --- |
+| the guest is removed | `removeAttendees` hard-deletes the row → the token resolves to nothing |
+| the event is soft-deleted | the read filters `deleted_at` → nothing resolves |
+| `splitSeries` | the copy gets new attendee ids, so the second half has its own links |
+| `BETTER_AUTH_SECRET` rotates | **every** outstanding link dies — same blast radius as session rotation |
+
+Three residuals, documented rather than papered over:
+
+1. **Rotating one guest's link means remove-then-add**, which fires a cancellation *and* an
+   invitation to the same person.
+2. **An account deletion leaves a working token.** `user_id` is `ON DELETE SET NULL`, so the
+   row survives — and that is correct, not a gap: the invitation is to the *address*, which
+   is the whole Phase-3 identity model.
+3. **A forwarded link is a read grant** on the event's title, time and location to whoever
+   receives it, bounded by `exp` only for a finite series.
+
+## The public page: verify, drop the token, then render
+
+`/rsvp/[token]` is a **route handler**, not a page, because only a route handler may set a
+cookie. It verifies the token, moves it into an httpOnly `SameSite=Lax` cookie scoped to the
+locale-prefixed `/rsvp` path, and redirects to `/rsvp/s/<handle>`, where the handle is a
+short non-secret derivation. Two invitations can therefore sit open in two tabs without one
+clobbering the other.
+
+**Why redirect at all:** a capability token left in the address bar reaches PostHog's
+`$current_url` autocapture (its provider is mounted in the `[locale]` layout), Sentry's
+`request.url`, the `Referer` of any outbound link, and browser history. One redirect removes
+it from all four, and the client component never sees the token — `respondByToken` takes the
+handle and reads the cookie itself.
+
+**Both outcomes redirect to a handle-shaped URL.** An invalid token yields
+`rsvpHandle(token)`: a well-formed handle with no cookie behind it. Destination, status and
+rendered page are identical whether the token was real, forged, expired or revoked — so the
+route is not an oracle for which invitations exist. **Unknown, malformed, revoked, expired
+and event-deleted all render the same page at HTTP 200.** There is no `notFound()`: a 404
+answers "does this invitation exist?" for anyone who asks.
+
+The email's Yes/No/Maybe buttons carry `?intent=`, which only **preselects**. A link that
+recorded the answer on GET would be answered by every corporate mail scanner that follows
+URLs in an inbound message — the same class of lie as the Gmail reply buttons this design
+removed, with a different actor. The guest still presses a button, and the write is a POST.
+
+`respondByToken` lives in its own file, `server/actions/calendar-rsvp.ts`, because every
+export in the 1,600-line `server/actions/calendar.ts` opens with `requireSession()`; the one
+function that must not would read as an oversight beside them. It deliberately does **not**
+stamp `user_id`: a session proves who the caller is, a token proves only that whoever holds
+the link was sent it, and those are not the same fact.
+
+Its rate limits (60/min read, 20/min write, keyed by `clientKeyFromHeaders`) are **abuse
+dampening, not the defence**. The limiter is in-memory per instance without Upstash and
+fails open, and IP-less requests share one bucket; what makes forgery infeasible is the HMAC.
+A multi-instance deploy that wants a real limit should set the Upstash pair.
+
+## What an edit owes: three independent booleans
+
+`lib/calendar/significant-change.ts` returns `{ bumpsSequence, resends, reasks }`. They do
+not co-vary, and collapsing them into one "significant" flag is wrong in both directions.
+
+| Changed field | bumps | resends | re-asks |
+| --- | :-: | :-: | :-: |
+| `startWall` · `endWall` · `startTzid` · `endTzid` · `allDay` · `rrule` | ✓ | ✓ | ✓ |
+| `location` · `status` · `title` · `calendarId` (changes `ORGANIZER`) | ✓ | ✓ | ✗ |
+| `transparency` | ✓ | ✗ | ✗ |
+| `description` · `url` · `visibility` · `color` | ✗ | ✗ | ✗ |
+
+`transparency` is the row that proves the split: it changes the `.ics` body, so Phase 6's
+feed needs the bump, but nobody needs an email about a free/busy marker. `reasks` is narrowed
+to time and recurrence, matching every major calendar — a venue change resends without
+re-asking, because re-asking on every edit is how people learn to ignore the question.
+
+**The attendee set is not a change to the event.** The guest diff already emails the person
+added and the person removed; re-asking the other forty-eight because a colleague joined is
+noise.
+
+### Re-asking never destroys an answer
+
+A `reasks` change stamps **`calendar_events.reask_at`**. Staleness is then derived:
+
+```sql
+attendee.responded_at IS NOT NULL AND attendee.responded_at < event.reask_at
+```
+
+So "declined — clashes with my flight" survives a reschedule, and the guest list renders
+*"accepted — answered for an earlier version"*. `respondToEvent` needed no change at all: it
+already stamps `responded_at = now()`, which clears staleness for free. A `splitSeries` copy
+gets it automatically, since the copied timestamps predate the new master's stamp.
+
+Not `sequence`: that bumps on a title edit too, so comparing against it would mark every
+guest stale for a typo fix — the exact noise the three booleans exist to avoid.
+
+## Every writer emits, or the attachment goes stale
+
+| Writer | bumps | resends | re-asks |
+| --- | :-: | :-: | :-: |
+| `updateWholeEvent` | per the table above | | |
+| `updateOccurrence` | ✓ on the **master** | ✓ | ✗ |
+| `splitSeries` | new master at 0; first half +1 | ✓ **both halves** | ✓ new master, if the cut moved the time |
+| `truncateSeries` · `skipOccurrence` · `setRecurrenceDate` | ✓ | ✓ | ✗ |
+| `softDeleteEvent` | ✓ | cancellation | — |
+
+`skipOccurrence` and `setRecurrenceDate` are the easy ones to miss: they change `EXDATE`/
+`RDATE` — which **are** in the emitted `.ics` — while touching none of the columns the field
+classifier reads. Leave them out and the update ships an attachment every conforming client
+ignores, which is the inert-`SEQUENCE:0` failure in yet another costume.
+
+`updateOccurrence` bumps the **master's** sequence, not the override's: the `.ics` is one
+calendar, the override rides in it as a `RECURRENCE-ID` sibling, and the client decides
+whether to apply the whole thing from the master's `SEQUENCE`.
+
+`splitSeries` sends **two** emails per guest, one per UID, and that is not noise: their
+client holds the original series and needs both the first half's new bound and the second
+half, which is a different event.
+
+## Delivery is a job, and the payload is self-contained
+
+`JOBS.calendarInvitation`, **one job per recipient** so one hard-bounced address cannot force
+forty-nine re-sends on a retry. Enqueued after the commit, beside `publishNotifications`.
+
+The payload carries `to`, `organizerEmail`, `eventTitle`, a pre-formatted `when`, the `.ics`
+and the already-minted `rsvpUrl` — never ids to re-read. The rule, and it is not a style
+preference: **ids where the row survives, denormalised where the row is the thing being
+destroyed.** `removeAttendees` hard-deletes inside the write transaction, so a cancellation
+job handed only ids would find nothing and complete silently. (`welcomeEmailPayload` already
+denormalises `to` for the same reason.)
+
+Minting also has to happen here: `@repo/jobs` depends on `@repo/db` and `@repo/email` only,
+cannot reach the token module, and `BETTER_AUTH_SECRET` is validated in `apps/web`'s env
+schema alone — a worker holding a different secret would sign a **wrong** link rather than
+fail to boot. Signing stays in one process. The minted URL does land in `pgboss.job.data`;
+anyone who can read that table can already `UPDATE` the RSVP directly, so it grants nothing
+new.
+
+`when` is pre-formatted in the **event's own zone with the zone named**, because an external
+guest has no stored locale and no stored zone, and "09:00" is meaningless three zones away.
+
+## Graceful degradation, and how the E2E uses it
+
+With email unconfigured no invitation is delivered, so the event page surfaces a **copyable
+RSVP link per guest** — the `sendOrganizationInvitationEmail` posture. Only for a caller with
+`canWriteCalendar`: the link *is* the capability, and handing it to a reader hands them the
+power to answer for someone else.
+
+`calendar-invitations.spec.ts` runs on the email-unconfigured lane and takes its token from
+exactly that control, so the fallback and the RSVP flow are proven by the same steps. **The
+`.ics` is asserted from `pgboss.job`, not from a captured email**: the Playwright `webServer`
+array runs two Next servers and nothing that drains the queue, so a capture-file assertion
+behind a job would hang for its timeout and throw. The queue row proves the writer assembled
+the right calendar for the right person; live-verify covers the delivery step against a real
+inbox.

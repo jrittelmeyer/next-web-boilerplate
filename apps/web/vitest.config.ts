@@ -50,6 +50,7 @@ export default defineConfig({
       include: [
         "src/server/actions/avatar.ts",
         "src/server/actions/calendar.ts",
+        "src/server/actions/calendar-rsvp.ts",
         "src/server/actions/post.ts",
         "src/server/actions/admin.ts",
         "src/server/actions/billing.ts",
@@ -66,9 +67,13 @@ export default defineConfig({
         // move when it lands — so add the file in the same commit as the module.
         "src/lib/calendar-acl.ts",
         "src/lib/calendar-attendees.ts",
+        "src/lib/calendar-tokens.ts",
         "src/lib/calendar/grid.ts",
         "src/lib/calendar/recurrence-dates.ts",
         "src/lib/calendar/recurrence-prose.ts",
+        "src/lib/calendar/significant-change.ts",
+        "src/server/calendar/invitations.ts",
+        "src/server/calendar/rsvp.ts",
         "src/lib/consent.ts",
         "src/lib/data-export.ts",
         "src/lib/env-schema.ts",

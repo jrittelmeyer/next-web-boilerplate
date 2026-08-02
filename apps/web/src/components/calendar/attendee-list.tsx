@@ -26,6 +26,13 @@ export function AttendeeList({
     role: AttendeeRole;
     status: AttendeeStatus;
     comment: string | null;
+    /** Answered before the event last moved (Phase 4) — the answer itself is still theirs. */
+    stale: boolean;
+    /**
+     * The Phase-4 fallback: present only when email is unconfigured **and** the reader may
+     * write this calendar, because the link is the capability to answer as that guest.
+     */
+    rsvpUrl: string | null;
   }[];
 }) {
   const t = useTranslations("Calendar.attendees");
@@ -40,11 +47,32 @@ export function AttendeeList({
         <li key={attendee.email} className="flex flex-wrap items-baseline gap-x-2 text-sm">
           <span>{attendee.email}</span>
           <span className="text-muted-foreground">{t(`status.${attendee.status}`)}</span>
+          {/* Not "no response": they DID answer, and their answer is still on the row —
+              it just predates the reschedule. Saying otherwise would erase it on screen
+              the way a reset would have erased it in the database. */}
+          {attendee.stale ? (
+            <span className="text-muted-foreground" data-testid="attendee-stale">
+              {t("stale")}
+            </span>
+          ) : null}
           {attendee.role === "organizer" ? (
             <span className="text-muted-foreground">{t("role.organizer")}</span>
           ) : null}
           {attendee.comment ? (
             <span className="w-full text-muted-foreground">{attendee.comment}</span>
+          ) : null}
+          {attendee.rsvpUrl ? (
+            <span className="flex w-full flex-col gap-1">
+              <span className="text-muted-foreground text-xs">{t("rsvpLinkHint")}</span>
+              <input
+                readOnly
+                aria-label={t("rsvpLinkLabel", { email: attendee.email })}
+                data-testid={`rsvp-link-${attendee.email}`}
+                className="w-full rounded border bg-muted px-2 py-1 font-mono text-xs"
+                value={attendee.rsvpUrl}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+            </span>
           ) : null}
         </li>
       ))}

@@ -140,6 +140,31 @@ export const calendarEvents = pgTable(
      */
     seriesEndAt: timestamp("series_end_at", { withTimezone: true }),
 
+    /**
+     * When the guests were last asked again, because the event moved in time (Phase 4).
+     *
+     * **This column exists so that re-asking never destroys an answer.** The obvious
+     * implementation of "reset everyone to needs-action" writes
+     * `status='needs-action', responded_at=NULL` over the guest list — which annihilates
+     * *"declined, clashes with my flight"* with no audit trail and no recovery. Instead,
+     * staleness is derived:
+     *
+     * ```
+     * attendee.responded_at IS NOT NULL AND attendee.responded_at < event.reask_at
+     * ```
+     *
+     * so the answer and its comment survive and the guest list can render "accepted — for
+     * an earlier version". `respondToEvent` needs no change at all: it already stamps
+     * `responded_at = now()`, which clears staleness for free. A `splitSeries` copy gets it
+     * automatically, since the copied `responded_at` values predate the new master's stamp.
+     *
+     * **Not `sequence`.** `sequence` bumps on any change that alters the emitted `.ics`,
+     * including a title edit — comparing against it would mark every guest stale for a
+     * typo fix, which is the exact noise the three-way change classifier exists to avoid.
+     * See docs/context/calendar/invitations.md.
+     */
+    reaskAt: timestamp("reask_at", { withTimezone: true }),
+
     /** Soft delete, so Phase 6 feed subscribers can learn a deletion happened. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
