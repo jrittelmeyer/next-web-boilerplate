@@ -184,8 +184,15 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     await occurrenceChip(page, "2027-03-07").click();
     const reminderEditor = page.getByRole("dialog").first();
     await reminderEditor.getByTestId("event-reminder-add").click();
+    await expect(reminderEditor.getByTestId("event-reminder-list")).toContainText("15 minutes");
     await reminderEditor.getByTestId("event-save").click();
     await chooseScope(page, "all");
+    // **Wait for the COMPOSER to close, not just the scope dialog.** `chooseScope` returns
+    // as soon as the scope dialog hides, which is the confirm click — the Server Action has
+    // not committed yet. Every other step here happens to wait by asserting on the refetched
+    // grid; this one reads the database directly, so it has to wait explicitly. Without it
+    // the read races the write and returns an empty list, which is exactly what CI caught.
+    await expect(reminderEditor).toBeHidden();
 
     const afterFirstSave = await getEventReminders(user.email, "Standup (moved)");
     expect(afterFirstSave).toHaveLength(1);
@@ -208,6 +215,7 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     await expect(resaveEditor.getByTestId("event-reminder-list")).toContainText("15 minutes");
     await resaveEditor.getByTestId("event-save").click();
     await chooseScope(page, "all");
+    await expect(resaveEditor).toBeHidden();
 
     const afterResave = await getEventReminders(user.email, "Standup (moved)");
     expect(afterResave).toHaveLength(1);
