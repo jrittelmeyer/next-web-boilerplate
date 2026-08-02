@@ -34,6 +34,21 @@ no `ATTENDEE` there is nobody for a client to reply *as*.
 than a comment because the line is one helpful commit away from coming back, and the
 failure it would cause is silent.
 
+**Verified against a real inbox 2026-08-02 — the decision holds.** The test above proves what
+we *emit*; it cannot prove what Gmail *renders*, and that was the whole claim. So a real
+invitation went from a `:3105` production build through the real pg-boss worker and real
+Resend (`[jobs] calendar-invitation (invite) sent to … (id: d7c948c0-…)`), carrying
+`METHOD:PUBLISH`, no `ATTENDEE`, and `DTSTART;TZID=America/New_York`. The owner's Gmail
+Android screenshot shows the parsed event card with **"Add to Calendar"** and **no
+Yes/No/Maybe buttons**, at the correct civil time. Paired with the 2026-07-30 screenshot of
+the `METHOD:REQUEST` alternative *showing* those buttons, both sides of the decision are now
+observed rather than reasoned — which is why this was worth doing rather than asserting.
+
+⚠️ Two gotchas that cost real time and will recur: `pnpm start` is `dotenv -e ../../.env`-wrapped,
+so the send path is live whenever the root `.env` has `RESEND_API_KEY` — and an **orphaned
+worker from an earlier session** will happily claim the job and log the send where nobody is
+reading, making delivery unprovable. Confirm exactly one worker is running first.
+
 The two rejected options, for the record: (b) keep `REQUEST` and build inbound iTIP `REPLY`
 ingestion — a real feature (inbound provider, MIME + iTIP parsing, sender-vs-`ATTENDEE`
 authorization, `SEQUENCE` ordering, spoofing defences) and a hard external dependency in a

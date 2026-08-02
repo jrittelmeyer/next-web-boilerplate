@@ -14,7 +14,7 @@
 > docs/archive/PHASE_HISTORY.md in the same commit. Never re-expand rows — this is
 > the seventh compaction; the append-log must not regrow.**
 
-_Last updated: 2026-08-02 (calendar Phase 5 — reminders)._
+_Last updated: 2026-08-02 (next 16.2.12; calendar Phase 4 inbox check closed)._
 
 ## Where we are
 
@@ -105,6 +105,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Calendar — Phases 0–3 | 5 | `@repo/calendar` time core + `user_preferences` (0019) · calendars/events (0020) with a stored-offset derived-instant CHECK, split read surface, `/calendar` month grid, ACL, docs · **recurrence (0021)**: `RRULE` engine at 100/100/100/100 against a frozen 528-rule `rrule` oracle, per-occurrence overrides behind a composite self-FK, a 131×-faster PARTIAL suppression index, the three edit scopes, and a locale-safe recurrence builder · **3A typed notifications (0022)**: the union extended in `@repo/db` + `@repo/validators` in ONE commit (the bus's `safeParse` fails closed and silent otherwise) behind a parity test, a two-slot `body`/`title` contract rendered on both feed paths, a same-origin `link` CHECK spelled with `left()` — `NOT LIKE '/\%'` accepts `/\evil.com` — and one persist-then-publish path · **3B attendees + RSVP (0023)**: email-as-identity with a `lower()` CHECK and a measured PARTIAL `user_id` index, overrides *inherit* attendees, `getEventAccess` as a second authority that exposes no role and no `canWriteEvent`, series-level `respondToEvent` authorized by the attendee row, and invitations claimed by **verified** email with `user_id` stamped on the first claim | [context/calendar/](context/calendar/model.md) · [recurrence](context/calendar/recurrence.md) · [attendees](context/calendar/attendees.md) |
 | Calendar — Phase 4 | 1 | **Emailed invitations, `.ics` and external RSVP.** `METHOD:PUBLISH` with **no `ATTENDEE`** (owner call 2026-08-01; also RFC 5546 §3.2.1's MUST NOT) — Gmail's native Yes/No/Maybe emit a `METHOD:REPLY` nothing here reads, so the token link is the only path · serializer in `@repo/calendar` at 100/100/100/100 (75-**octet** folding over code points, `RECURRENCE-ID` siblings + `EXDATE`s for deleted overrides, bare `TZID` with the non-conformance stated, `DTSTAMP` a parameter) · a **stateless HMAC token with no `.`** — `proxy.ts` excludes dotted paths, so a separator would have 404'd every invitation — exchanged for an httpOnly cookie so it never reaches PostHog/Sentry/`Referer`/history · **`reask_at` (0024)**: re-asking is a derived `responded_at < reask_at`, so a guest's answer and comment survive a reschedule · a three-boolean change classifier (bump / resend / re-ask) wired through **all six** writers · one self-contained pg-boss job per recipient | [context/calendar/invitations.md](context/calendar/invitations.md) |
 | Calendar — Phase 5 | 1 | **Reminders** (`0025`): a `*/5` sweeper over live rows, deduped by occurrence **instant**; claim-then-compensate; `start` anchor only. Decisions: DECISIONS.md | [context/calendar/reminders.md](context/calendar/reminders.md) |
+| Maintenance — 2026-08-02 | 1 | next + eslint-plugin 16.2.12; `@/*` verified prod + dev; Phase 4 inbox check CLOSED | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **An external guest — no account, ever — is now a first-class case:** they are emailed a
@@ -130,14 +131,18 @@ Date-gated watch (full detail:
 zero `renovate/*` branches ever opened · `next`/`@next/*` age-exclude **removed
 2026-07-28** · `brace-expansion` → 5.0.8 + `ignoreGhsas` re-emptied and
 `better-auth`/`@better-auth/passkey` → 1.6.25 both **DONE 2026-07-30** (allowlist empty;
-no schema change, no migration) · `next` 16.2.12 **cleared the 7-day gate 2026-08-01 and is
-admissible but NOT taken** — `apps/web` declares `^16.2.11`, which the lockfile already
-satisfies, so nothing resolves until a `pnpm add` or a Renovate PR.
+no schema change, no migration) · `next` 16.2.12 **TAKEN 2026-08-02**, with
+`@next/eslint-plugin-next` in lockstep (it needs its own `pnpm add` — different package,
+and `manypkg` can't see the drift). Both `postcss` and `sharp` overrides stay: 16.2.12's
+manifest still pins them below the removal conditions.
 
-**Calendar Phase 4 carries one open verification:** the real-inbox check that the emailed
-`.ics` renders in Gmail **with** "Add to calendar" and **without** Yes/No/Maybe — the direct
-falsification of the `METHOD:PUBLISH` decision, and the only part of it not asserted in
-code. Deferred by the owner on 2026-08-02; recipe in the agent-memory resume prompt.
+**Calendar Phase 4's last open verification CLOSED 2026-08-02 — and it passed.** A real
+invitation was sent from a `:3105` prod build through the real worker and real Resend
+(`calendar-invitation` job → message id logged); the owner's Gmail screenshot shows the
+event card with **"Add to Calendar"** and **no Yes/No/Maybe buttons**, at the correct civil
+time. That is the direct falsification of the `METHOD:PUBLISH` decision — the only part of
+it not asserted in code — and it holds. Detail:
+[context/calendar/invitations.md](context/calendar/invitations.md).
 
 ## Fresh project on-ramp (clone → build a real app)
 
