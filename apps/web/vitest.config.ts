@@ -67,6 +67,7 @@ export default defineConfig({
         // move when it lands — so add the file in the same commit as the module.
         "src/lib/calendar-acl.ts",
         "src/lib/calendar-attendees.ts",
+        "src/lib/calendar-reminders.ts",
         "src/lib/calendar-tokens.ts",
         "src/lib/calendar/grid.ts",
         "src/lib/calendar/recurrence-dates.ts",

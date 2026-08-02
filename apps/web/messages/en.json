@@ -781,6 +781,8 @@
       "repeatLabel": "Repeats",
       "attendeesLabel": "Guests",
       "attendeesHelp": "Guests are invited by email address and can accept, decline or answer maybe. Changes apply to the whole series.",
+      "remindersLabel": "Reminders",
+      "remindersHelp": "Only you see these. Reminders are checked every five minutes, so delivery is approximate. Changes apply to the whole series.",
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
@@ -870,6 +872,18 @@
       "delete": "Delete event",
       "deleting": "Deleting…",
       "deleted": "Event deleted."
+    },
+    "reminders": {
+      "add": "Add",
+      "remove": "Remove reminder: {reminder}",
+      "removeShort": "Remove",
+      "channelInApp": "In-app",
+      "channelEmail": "Email",
+      "beforeStart": "{time} before",
+      "minutes": "{count, plural, one {# minute} other {# minutes}}",
+      "hours": "{count, plural, one {# hour} other {# hours}}",
+      "days": "{count, plural, one {# day} other {# days}}",
+      "weeks": "{count, plural, one {# week} other {# weeks}}"
     },
     "attendees": {
       "heading": "Guests",

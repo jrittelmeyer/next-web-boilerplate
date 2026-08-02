@@ -31,6 +31,7 @@ import {
   EVENT_STATUSES,
   EVENT_TRANSPARENCIES,
   EVENT_VISIBILITIES,
+  type ReminderValues,
 } from "@repo/validators/calendar";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -41,6 +42,7 @@ import { createEvent, deleteEvent, updateEvent } from "@/server/actions/calendar
 import { AttendeeField } from "./attendee-field";
 import { EditScopeDialog } from "./edit-scope-dialog";
 import { RecurrenceField } from "./recurrence-field";
+import { ReminderField } from "./reminder-field";
 import type { CalendarSummary } from "./types";
 
 /** The storage form, `"YYYY-MM-DD HH:MM:SS"`, from a `datetime-local` value. */
@@ -82,6 +84,13 @@ export interface EventComposerDefaults {
    * "remove everyone" — cancelling the meeting for every guest on a title change.
    */
   readonly attendees?: readonly AttendeeValues[];
+  /**
+   * The viewer's OWN reminders on this event, seeded for exactly the reason `attendees`
+   * above is: the composer posts the whole list on every save and the action diffs it, so
+   * opening an existing event with this empty and pressing Save would delete every reminder
+   * the user had set — and with them the delivery ledger that stops a re-send.
+   */
+  readonly reminders?: readonly ReminderValues[];
   /**
    * The **series master's** rule — `null` for a one-off.
    *
@@ -141,6 +150,7 @@ export function EventComposer({
       endWall: defaults.endWall,
       endTzid: defaults.endTzid,
       attendees: [...(defaults.attendees ?? [])],
+      reminders: [...(defaults.reminders ?? [])],
       rrule: defaults.rrule ?? null,
     },
   });
@@ -610,6 +620,22 @@ export function EventComposer({
                   carrying its own, and a "this and following" split copies the source's
                   list verbatim — see docs/context/calendar/attendees.md. */}
               <FormDescription>{t("attendeesHelp")}</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="reminders"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("remindersLabel")}</FormLabel>
+              <ReminderField value={field.value} onChange={field.onChange} />
+              {/* Private to the viewer, and attached to the SERIES — an occurrence edit
+                  adjusts the whole series' reminders rather than creating a second set
+                  nothing would reconcile. See docs/context/calendar/reminders.md. */}
+              <FormDescription>{t("remindersHelp")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}

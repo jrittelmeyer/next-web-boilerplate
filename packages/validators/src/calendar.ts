@@ -370,6 +370,15 @@ const eventFields = {
    * unattended event is a list of length zero.
    */
   attendees: z.array(attendeeInputSchema).max(MAX_ATTENDEES).default([]),
+  /**
+   * The caller's own reminders on this event — the whole list every time, like `attendees`
+   * above and diffed the same way, because deleting and re-inserting an unchanged reminder
+   * would cascade away its delivery ledger and re-send everything the user already received.
+   *
+   * `.default([])` for the same reason: "no reminders" and "don't touch the reminders" are
+   * not two intents a writer should have to tell apart.
+   */
+  reminders: z.array(reminderInputSchema).max(MAX_REMINDERS_PER_EVENT).default([]),
 } as const;
 
 /**
