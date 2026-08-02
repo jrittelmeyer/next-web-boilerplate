@@ -364,12 +364,18 @@ importers:
 
   packages/jobs:
     dependencies:
+      '@repo/calendar':
+        specifier: workspace:*
+        version: link:../calendar
       '@repo/db':
         specifier: workspace:*
         version: link:../db
       '@repo/email':
         specifier: workspace:*
         version: link:../email
+      '@repo/validators':
+        specifier: workspace:*
+        version: link:../validators
       '@sentry/node':
         specifier: 10.59.0
         version: 10.59.0(@opentelemetry/exporter-trace-otlp-http@0.220.0(@opentelemetry/api@1.9.1))(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))

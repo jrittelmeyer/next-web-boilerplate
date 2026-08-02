@@ -20,7 +20,11 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       all: true,
-      include: ["src/handlers/**/*.ts", "src/queues.ts"],
+      // `reminders/sweep.ts` is named explicitly, not globbed as `reminders/**`: its
+      // siblings `run.ts` and `site-url.ts` are I/O bootstrap in the same sense as
+      // boss/enqueue above — proven by the DB-backed integration suite, and measuring them
+      // here would only pressure someone into mocking a database to satisfy a number.
+      include: ["src/handlers/**/*.ts", "src/queues.ts", "src/reminders/sweep.ts"],
       exclude: ["src/**/*.test.ts"],
       reporter: ["text", "json", "lcov"],
       thresholds: { lines: 90, functions: 90, branches: 80, statements: 90 },

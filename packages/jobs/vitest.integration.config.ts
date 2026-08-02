@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // DB-backed integration tests — they hit a REAL Postgres (no mocks), so they run
@@ -7,6 +8,17 @@ import { defineConfig } from "vitest/config";
 // Postgres. There is deliberately no `test` overlap: `pnpm test` / the verify lane
 // stay DB-free. See TESTING.md.
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Same neutralization the unit config applies, and needed here from Phase 5: the
+      // reminder sweeper reaches @repo/email for `formatEventWhen`, whose module graph
+      // includes `send.tsx` and its `import "server-only"`. The real marker THROWS outside a
+      // React Server bundler, so without this the suite fails at import with an error that
+      // names a Client Component and explains nothing about jobs. The worker itself is
+      // unaffected — tsconfig `paths` and build.mjs's alias already map it there.
+      "server-only": fileURLToPath(new URL("./src/server-only.ts", import.meta.url)),
+    },
+  },
   test: {
     environment: "node",
     include: ["__tests__/integration/**/*.test.ts"],

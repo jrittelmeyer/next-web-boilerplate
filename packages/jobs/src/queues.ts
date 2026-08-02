@@ -26,6 +26,16 @@ export const JOBS = {
   cancelStripeSubscriptions: "cancel-stripe-subscriptions",
   /** Email one calendar guest an invitation, an update or a cancellation (Phase 4). */
   calendarInvitation: "calendar-invitation",
+  /**
+   * Find every reminder due in this tick and hand each one to a delivery queue (Phase 5).
+   * SCHEDULED, like {@link cleanupExpiredVerifications} — the worker registers it on a
+   * five-minute cron at boot. It is the only handler in this package that ENQUEUES.
+   */
+  calendarReminderSweep: "calendar-reminder-sweep",
+  /** Email one due reminder to its owner (Phase 5). Enqueued by the sweeper. */
+  calendarReminderEmail: "calendar-reminder-email",
+  /** Deliver one due reminder to the in-app feed (Phase 5). Enqueued by the sweeper. */
+  calendarReminderNotify: "calendar-reminder-notify",
 } as const;
 
 /** Every queue name, so the worker can create + register them in one loop. */
@@ -108,8 +118,11 @@ export type CancelStripeSubscriptionsPayload = z.infer<typeof cancelStripeSubscr
  * different secret would sign a **wrong** RSVP link rather than fail to boot. Minting at
  * enqueue time keeps the signing key in one process.
  *
- * `when` is pre-formatted: the reader's locale and time zone live in `apps/web` (next-intl +
- * `user_preferences`), and neither this package nor `@repo/email` may format a date.
+ * `when` is pre-formatted, by `formatEventWhen` — which lives in `@repo/email` as of Phase 5,
+ * because the reminder sweeper is a second caller that cannot reach `apps/web`. The rule it
+ * obeys is narrower than "no dates here": `@repo/email` renders **event-zone** time (the
+ * event's own time, in its own zone, named); **reader-relative** rendering stays in
+ * `apps/web`, where next-intl and `user_preferences` are, and is unimplemented for email.
  */
 const calendarRecipient = {
   to: z.email(),
@@ -149,3 +162,69 @@ export const calendarInvitationPayload = z.discriminatedUnion("kind", [
 ]);
 /** @public — the inferred payload type, exported for producers/handlers in consuming code. */
 export type CalendarInvitationPayload = z.infer<typeof calendarInvitationPayload>;
+
+/**
+ * Payload for the {@link JOBS.calendarReminderSweep} job (Phase 5). Takes NO input — the
+ * sweeper reads its window from Postgres's own clock — so this is the empty object the
+ * scheduler enqueues, kept for contract symmetry and to reject a stray payload. Same shape
+ * and same reason as {@link cleanupExpiredVerificationsPayload}.
+ */
+export const calendarReminderSweepPayload = z.object({}).strict();
+/** @public — the inferred payload type, exported for producers/handlers in consuming code. */
+export type CalendarReminderSweepPayload = z.infer<typeof calendarReminderSweepPayload>;
+
+/**
+ * Shared by both delivery payloads below.
+ *
+ * **Self-contained, for a different reason than Phase 4's.** `calendarInvitationPayload` is
+ * denormalised because the attendee row is already deleted when a cancellation runs. Here
+ * the row still exists — but the SWEEPER holds the expansion result, and no later reader can
+ * reconstruct which occurrence this delivery was for without redoing the expansion against
+ * rows that may have moved in between. Re-reading would quietly deliver a reminder for the
+ * wrong occurrence.
+ *
+ * `deliveryId` is the claimed `calendar_reminder_deliveries` row. It rides along for log
+ * lines only and is deliberately NOT re-read: the claim already happened, and a handler that
+ * re-checked it would be asking a question whose answer cannot change the outcome.
+ *
+ * `startsInMinutes` is computed by the sweeper from the Postgres clock and **rounded to the
+ * nearest 5** — delivery is ±5–6 minutes and the copy must not imply precision it lacks.
+ */
+const reminderDelivery = {
+  deliveryId: z.uuid(),
+  eventTitle: z.string().min(1),
+  startsInMinutes: z.number().int(),
+};
+
+export const calendarReminderEmailPayload = z.object({
+  ...reminderDelivery,
+  to: z.email(),
+  /** Pre-formatted by `formatEventWhen` in `@repo/email` — event zone, zone named. */
+  when: z.string().min(1),
+  location: z.string().nullable(),
+  /**
+   * Absolute, or `null` when the worker has no `SITE_URL`/`BETTER_AUTH_URL`. Nullable
+   * rather than optional on purpose: the alternative to omitting the button is putting the
+   * literal string "undefined/calendar/event/…" into a real person's inbox.
+   */
+  eventUrl: z.url().nullable(),
+});
+/** @public — the inferred payload type, exported for producers/handlers in consuming code. */
+export type CalendarReminderEmailPayload = z.infer<typeof calendarReminderEmailPayload>;
+
+export const calendarReminderNotifyPayload = z.object({
+  ...reminderDelivery,
+  userId: z.string().min(1),
+  /**
+   * A **relative** path, and the schema enforces it because the database does too.
+   * `notifications_link_same_origin` CHECKs `left(link,1) = '/'`, so an absolute URL here
+   * would be rejected by Postgres, throw inside the handler, and retry to exhaustion into
+   * the DLQ — every reminder, silently, until someone read the dead-letter log. Refusing it
+   * at the payload boundary turns that into a validation error at enqueue time instead.
+   */
+  // Same expression as `notificationLinkSchema` in `@repo/validators`: `//evil.com` and
+  // `/\evil.com` both begin with `/` and are both protocol-relative to a browser.
+  eventPath: z.string().regex(/^\/(?![/\\])[^\s]*$/, "Must be a same-origin path"),
+});
+/** @public — the inferred payload type, exported for producers/handlers in consuming code. */
+export type CalendarReminderNotifyPayload = z.infer<typeof calendarReminderNotifyPayload>;
