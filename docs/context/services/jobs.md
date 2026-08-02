@@ -111,9 +111,16 @@ the exhausted-job → DLQ round trip on real Postgres. To **reprocess** a dead-l
 **Remove it** (drop the package + unhook the producers):
 1. Delete `packages/jobs/` and remove the `@repo/jobs` dependency from **both**
    `apps/web/package.json` and `packages/auth/package.json`.
-2. Unhook the producers in `packages/auth/src/auth.ts`: the `enqueue(JOBS.welcomeEmail, …)` in
-   `afterEmailVerification` (revert to an inline `sendWelcomeEmail`, or drop it) and the
-   `enqueue(JOBS.deleteUploads, …)` in the `deleteUser.afterDelete` hook.
+2. Unhook the producers. **There are two of them, in two packages** — deleting `packages/jobs/`
+   while `apps/web` still imports it is a hard build break, not a graceful degrade:
+   - `packages/auth/src/auth.ts`: the `enqueue(JOBS.welcomeEmail, …)` in
+     `afterEmailVerification` (revert to an inline `sendWelcomeEmail`, or drop it), the
+     `enqueue(JOBS.deleteUploads, …)` in the `deleteUser.afterDelete` hook, and the
+     `enqueue(JOBS.cancelStripeSubscriptions, …)` calls.
+   - `apps/web/src/server/calendar/invitations.ts`: the calendar invitation fan-out. If you
+     are keeping the calendar, that whole file has to go inline or go away — see
+     [calendar/remove-it.md](../calendar/remove-it.md) step 7b, which removes the job and its
+     three email helpers together.
 3. Remove the CI step `pnpm --filter @repo/jobs test:integration` from `.github/workflows/ci.yml`
    (e2e lane).
 4. Remove the `worker` service (+ its heartbeat env) from `docker/docker-compose.prod.yml`.
