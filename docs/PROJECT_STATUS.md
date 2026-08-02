@@ -14,7 +14,7 @@
 > docs/archive/PHASE_HISTORY.md in the same commit. Never re-expand rows — this is
 > the seventh compaction; the append-log must not regrow.**
 
-_Last updated: 2026-07-31._
+_Last updated: 2026-08-02._
 
 ## Where we are
 
@@ -129,7 +129,14 @@ Date-gated watch (full detail:
 zero `renovate/*` branches ever opened · `next`/`@next/*` age-exclude **removed
 2026-07-28** · `brace-expansion` → 5.0.8 + `ignoreGhsas` re-emptied and
 `better-auth`/`@better-auth/passkey` → 1.6.25 both **DONE 2026-07-30** (allowlist empty;
-no schema change, no migration) · `next` 16.2.12 clears the 7-day gate **2026-08-01**.
+no schema change, no migration) · `next` 16.2.12 **cleared the 7-day gate 2026-08-01 and is
+admissible but NOT taken** — `apps/web` declares `^16.2.11`, which the lockfile already
+satisfies, so nothing resolves until a `pnpm add` or a Renovate PR.
+
+**Calendar Phase 4 carries one open verification:** the real-inbox check that the emailed
+`.ics` renders in Gmail **with** "Add to calendar" and **without** Yes/No/Maybe — the direct
+falsification of the `METHOD:PUBLISH` decision, and the only part of it not asserted in
+code. Deferred by the owner on 2026-08-02; recipe in the agent-memory resume prompt.
 
 ## Fresh project on-ramp (clone → build a real app)
 
