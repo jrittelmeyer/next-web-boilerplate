@@ -199,6 +199,12 @@ recorded the answer on GET would be answered by every corporate mail scanner tha
 URLs in an inbound message — the same class of lie as the Gmail reply buttons this design
 removed, with a different actor. The guest still presses a button, and the write is a POST.
 
+The redirect has to carry `intent` onward or the preselect never happens — and it forwards
+it **allow-listed against the three known answers**, not verbatim: the value arrives from an
+emailed URL and is reflected into the page, so anything else is dropped rather than echoed.
+The e2e asserts both halves: the button comes up pressed, and the stored status is still
+`needs-action`.
+
 `respondByToken` lives in its own file, `server/actions/calendar-rsvp.ts`, because every
 export in the 1,600-line `server/actions/calendar.ts` opens with `requireSession()`; the one
 function that must not would read as an oversight beside them. It deliberately does **not**
