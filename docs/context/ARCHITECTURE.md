@@ -110,8 +110,11 @@ React Email templates plus the (lazy) Resend client and the send helpers. Import
 pg-boss background jobs. Two halves: the app imports only the thin `enqueue()`
 (server-only, gracefully no-ops when the DB is unreachable); the worker is a separate
 long-lived process (`pnpm --filter @repo/jobs start`) that runs the handlers. Imports
-`@repo/email` (the welcome-email handler); consumed by `@repo/auth`
-(`afterEmailVerification` enqueues). Full walk-through in [services/jobs.md](services/jobs.md).
+`@repo/email` (the welcome-email and calendar-invitation handlers); consumed by
+`@repo/auth` (`afterEmailVerification` and the delete hooks) **and by `apps/web`**
+(`server/calendar/invitations.ts` fans out invitation emails — the producer side this
+package's own index calls "the WEB app"). Full walk-through in
+[services/jobs.md](services/jobs.md).
 
 ### `packages/observability` → `@repo/observability`
 BetterStack dashboards-as-code: typed monitor/heartbeat config + `check`/`sync`
@@ -237,7 +240,7 @@ Convention: Vitest owns `*.test.*`, Playwright owns `*.spec.*`. See
 - `packages/db` → no other `@repo/*` imports (pure Drizzle + Postgres)
 - `packages/auth` → may import from `@repo/db` (needs DB adapter), `@repo/email` (sends verification / reset emails from Better Auth callbacks), and `@repo/jobs` (enqueues the welcome email). One-directional: `@repo/email`/`@repo/jobs` never import `@repo/auth`, so there's no cycle.
 - `packages/email` → may import from `@repo/validators` (email data schemas) and `@repo/db` (the `email_suppressions` consult; acyclic — `@repo/db` imports no `@repo/*` package)
-- `packages/jobs` → may import `@repo/email` (job handlers send email); exposes only `enqueue()` to the app
+- `packages/jobs` → may import `@repo/email` (job handlers send email); exposes only `enqueue()` + the job contract to the app. **Both `apps/web` and `@repo/auth` are producers** — the app one is the intended shape (the package's index names it), and it is one-directional, so still no cycle. It reaches `@repo/db`/`@repo/email` and nothing in `apps/web`, which is why anything needing the app's env (an RSVP signing key) is computed at **enqueue** time and travels in the payload
 - `packages/observability` → no `@repo/*` imports; never imported by anything (standalone scripts)
 - `tooling/*` → no runtime imports; config files only
 
