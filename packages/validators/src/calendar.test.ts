@@ -18,7 +18,11 @@ import {
   MAX_RANGE_CALENDARS,
   MAX_RANGE_DAYS,
   MAX_RANGE_ROWS,
+  REMINDER_ANCHORS,
+  REMINDER_CHANNELS,
+  REMINDER_SUBMITTABLE_ANCHORS,
   recurrenceDateSchema,
+  reminderInputSchema,
   respondToEventSchema,
   rruleSchema,
   timeZoneSchema,
@@ -603,6 +607,64 @@ describe("recurrenceDateSchema", () => {
         kind: "exdate",
         dateWall: "2027-03-14 09:30:00",
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe("reminderInputSchema", () => {
+  it("defaults the anchor, so a surface offering only 'before start' may omit it", () => {
+    const parsed = reminderInputSchema.parse({ channel: "email", offsetMinutes: -15 });
+    expect(parsed.anchor).toBe("start");
+  });
+
+  it("accepts both channels", () => {
+    for (const channel of REMINDER_CHANNELS) {
+      expect(reminderInputSchema.safeParse({ channel, offsetMinutes: -15 }).success).toBe(true);
+    }
+  });
+
+  it("refuses the end anchor, which the column CHECK also refuses", () => {
+    // Not pedantry: `calendar_event_reminders_anchor_supported` rejects it, so a submitted
+    // 'end' would raise 23514 and surface as the generic write error. The CHECK exists
+    // because `expandSeries` windows on an occurrence's START instant — an end-anchored
+    // reminder on a recurring series would silently never fire. Narrowing here turns a
+    // database error into a field error.
+    expect(
+      reminderInputSchema.safeParse({ channel: "email", anchor: "end", offsetMinutes: -15 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("covers every column anchor between the two lists, exhaustively", () => {
+    // Phase 6 widening the column forces a decision here rather than silently leaving a
+    // member unsubmittable with no note saying why.
+    expect([...REMINDER_SUBMITTABLE_ANCHORS, "end"].sort()).toEqual([...REMINDER_ANCHORS].sort());
+  });
+
+  it("takes both signs — negative is before, positive is after", () => {
+    expect(
+      reminderInputSchema.parse({ channel: "email", offsetMinutes: -1440 }).offsetMinutes,
+    ).toBe(-1440);
+    expect(reminderInputSchema.parse({ channel: "in-app", offsetMinutes: 10 }).offsetMinutes).toBe(
+      10,
+    );
+  });
+
+  it("refuses a fractional offset rather than letting the driver truncate it", () => {
+    expect(reminderInputSchema.safeParse({ channel: "email", offsetMinutes: -15.5 }).success).toBe(
+      false,
+    );
+  });
+
+  it("mirrors the column's ±366-day bound", () => {
+    expect(
+      reminderInputSchema.safeParse({ channel: "email", offsetMinutes: -527_040 }).success,
+    ).toBe(true);
+    expect(
+      reminderInputSchema.safeParse({ channel: "email", offsetMinutes: -527_041 }).success,
+    ).toBe(false);
+    expect(
+      reminderInputSchema.safeParse({ channel: "email", offsetMinutes: 527_041 }).success,
     ).toBe(false);
   });
 });

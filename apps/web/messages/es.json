@@ -175,7 +175,8 @@
     "calendarResponseAccepted": "{actor} aceptó {event}",
     "calendarResponseDeclined": "{actor} rechazó {event}",
     "calendarResponseTentative": "{actor} quizá asista a {event}",
-    "calendarCancelled": "{event} se canceló"
+    "calendarCancelled": "{event} se canceló",
+    "calendarReminder": "{event} empieza pronto"
   },
   "Account": {
     "page": {

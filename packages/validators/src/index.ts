@@ -332,6 +332,7 @@ export const NOTIFICATION_TYPES = [
   "calendar_response_declined",
   "calendar_response_tentative",
   "calendar_cancelled",
+  "calendar_reminder",
 ] as const;
 
 /**

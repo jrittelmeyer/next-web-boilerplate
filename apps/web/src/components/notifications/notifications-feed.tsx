@@ -50,6 +50,12 @@ const SENTENCE_KEYS = {
   calendar_response_declined: "calendarResponseDeclined",
   calendar_response_tentative: "calendarResponseTentative",
   calendar_cancelled: "calendarCancelled",
+  // Its sentence interpolates `{event}` only, like `calendarCancelled` — a reminder has no
+  // actor. `body` still carries the minutes as a MACHINE value rather than a phrase,
+  // because a body written at NOTIFY time cannot be localized (see the DB union's contract)
+  // and the number does not survive a sentence anyway: "1 minutes" is wrong and a day-before
+  // reminder would read "in about 1440 minutes". The exact time is in the email.
+  calendar_reminder: "calendarReminder",
 } as const satisfies Record<Exclude<FeedItem["type"], "test" | "system">, string>;
 
 const isSentenceType = (type: FeedItem["type"]): type is keyof typeof SENTENCE_KEYS =>
