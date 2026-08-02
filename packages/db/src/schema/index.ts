@@ -3,6 +3,7 @@ export * from "./auth";
 export * from "./calendar-attendees";
 export * from "./calendar-events";
 export * from "./calendar-recurrence-dates";
+export * from "./calendar-reminders";
 export * from "./calendars";
 export * from "./email-suppressions";
 export * from "./notifications";

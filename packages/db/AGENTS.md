@@ -46,3 +46,14 @@ One imperative per line; mechanics + rationale live in
   ([invitations.md](../../docs/context/calendar/invitations.md)).
 - "Re-ask the guests" is a `reask_at` stamp on the EVENT and a derived
   `responded_at < reask_at`, never a write over the attendee rows.
+- Reminders hang off the **series master** too — resolve `recurrence_parent_id ?? id`
+  before any reminder read; an override inherits, it never carries copies
+  ([reminders.md](../../docs/context/calendar/reminders.md)).
+- Claim a reminder delivery **only** with `INSERT … ON CONFLICT DO NOTHING RETURNING id`
+  against `calendar_reminder_deliveries`. A returned row is the claim; that unique is the
+  entire defence against two workers sending the same reminder twice.
+- Key a delivery on the occurrence's **instant**, never its `recurrence_id` —
+  `recurrence_id` is NULL on every non-override row, so a unique over it is
+  all-NULLs-distinct and re-sends on every tick.
+- `calendar_event_reminders.anchor` is CHECK-gated to `'start'`; Phase 6 drops that CHECK
+  when end-anchored expansion exists (`expandSeries` windows on the START instant).

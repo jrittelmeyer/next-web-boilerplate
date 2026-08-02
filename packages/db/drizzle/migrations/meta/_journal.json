@@ -176,6 +176,13 @@
       "when": 1785642946668,
       "tag": "0024_worthless_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1785656824870,
+      "tag": "0025_wooden_pandemic",
+      "breakpoints": true
     }
   ]
 }
