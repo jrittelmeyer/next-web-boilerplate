@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-02 (doc audit 3/4: untracked reminder limits filed; row cap 200 → 250; boundary narrative archived)._
+_Last updated: 2026-08-02 (doc audit 4/4: showcase currency — 26 stale claims across the guide, deck and FEATURES)._
 
 ## Where we are
 
@@ -115,6 +115,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Doc audit — 2026-08-02 (1/4) | 1 | TS7 gate LIFTED (now a trial); docs:sanity guards init-app anchors; Phase 6 filed | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-08-02 (2/4) | 1 | remove-it's 9 stale counts; calendar routes in ARCHITECTURE; DATABASE 0024/0025; 2 leaves; both doc indexes | [remove-it](context/calendar/remove-it.md) |
 | Doc audit — 2026-08-02 (3/4) | 1 | Reminders' three accepted limits + the i18n `now` deferral filed in Watch; row cap 200 → 250; boundary narrative archived, not deleted | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Doc audit — 2026-08-02 (4/4) | 1 | Showcase: 26 stale claims across guide, deck and FEATURES (99.65→99.9 over 12 passes, migrations 18→26, a11y 7→8); deck chart gained a 12th point; FEATURES stamped | [guide](plain-english-guide/README.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·

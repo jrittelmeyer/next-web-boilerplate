@@ -5,6 +5,9 @@ choice. Treat it as two things at once: a pitch (what you get by starting here i
 of `create-next-app`) and a decision record (why each piece is the right default in
 2026, so you can re-evaluate honestly as the ecosystem moves).
 
+_Current as of 2026-08-02. Numeric claims here (audit score, surface and doc counts) are
+re-checked by the `/doc-audit` pass; if this stamp is old, trust the code._
+
 Every claim below is backed by a deeper doc — each section links to the
 [`docs/context/`](context/) file that holds the implementation detail, and
 [`VERIFICATION.md`](VERIFICATION.md) holds the dated, hands-on proof that each feature
@@ -23,9 +26,9 @@ works end-to-end.
 - **Every architectural decision is written down** — including the ones that were
   evaluated and *rejected* (see [What's deliberately not included](#whats-deliberately-not-included)).
   When you disagree with a choice, you'll find its rationale, not a shrug.
-- **It's built for agent-assisted development**: [`AGENTS.md`](../AGENTS.md) plus 14
-  focused context docs give a coding agent (or a new human teammate) exactly the
-  context it needs per task, without loading everything at once.
+- **It's built for agent-assisted development**: [`AGENTS.md`](../AGENTS.md) plus a
+  load-when routing table into 36 focused context docs gives a coding agent (or a new
+  human teammate) exactly the context it needs per task, without loading everything at once.
 
 ## See it
 
@@ -222,6 +225,12 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
   guest's calendar expands the rule and shows the original time forever.
 - **With no email provider configured it still works:** the organizer's event page hands
   them a copyable RSVP link per guest, the same way an unsendable org invitation does.
+- **Reminders that fire exactly once, even with two workers racing.** A `*/5` sweeper
+  claims each delivery with `INSERT … ON CONFLICT DO NOTHING RETURNING id` — the returned
+  row *is* the claim — and keys it on the occurrence's **instant**, never its recurrence
+  id, because that column is NULL on every non-override row and a unique over it would be
+  all-NULLs-distinct and re-send on every tick. Claim-then-compensate, so a failed enqueue
+  releases the claim instead of silently eating the reminder.
 - **Accessible by construction:** one tab stop for the whole grid (roving `tabindex`,
   arrow-key navigation, `Enter` for a focus-trapped day view), scanned by axe in CI with
   events on it.
@@ -322,8 +331,8 @@ builds and runs with the worker never started.
 
 - **Vitest 4** unit/component suites across every package (jsdom for UI, coverage
   thresholds enforced), **Playwright** E2E including auth lifecycles, security-header
-  assertions, i18n, and **axe accessibility scans over seven surfaces** (four public,
-  three signed-in), plus DB integration tests.
+  assertions, i18n, and **axe accessibility scans over eight surfaces** (four public,
+  four signed-in), plus DB integration tests.
 - The entire unit/coverage suite runs **with zero keys and no database**; integration
   + E2E need only the local Docker Postgres.
 - CI lanes: `verify` (lint, type-check, manypkg pin-consistency, **knip** dead-code
@@ -386,7 +395,9 @@ building and running, not by assuming**:
   deploy with managed Postgres serving a healthy `/api/health`.
 - CI runs the same gates on every push; four independent audit passes scored the repo
   against a best-available-boilerplate bar before launch (reports in
-  [`archive/`](archive/)).
+  [`archive/`](archive/)). **Twelve** passes have now run in total — the score peaked at
+  **100.0/100** and stands at **99.9**, with the one open deduction sitting in an external
+  service rather than in this code.
 
 If you want the guided tour from `git clone` to your first deployed feature, start
 with [`GETTING_STARTED.md`](GETTING_STARTED.md).

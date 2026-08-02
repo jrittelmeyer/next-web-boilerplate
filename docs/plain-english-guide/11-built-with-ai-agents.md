@@ -165,8 +165,8 @@ become:
 
 ## The audit loop: AI checking AI, with receipts
 
-The quality scores from [Chapter 1](01-the-big-picture.md) (eleven passes,
-93 → 100 → 99.65, against a "best imaginable starter kit" bar) come from the audit
+The quality scores from [Chapter 1](01-the-big-picture.md) (twelve passes,
+93 → 100 → 99.9, against a "best imaginable starter kit" bar) come from the audit
 skill above: a full sweep that re-verifies documentation claims against actual
 code, scores every feature area, and emits a prioritized backlog — which was
 then worked to completion through the same plan → sign-off → build loop, and
@@ -181,8 +181,10 @@ must re-earn, not a finish line. That caveat then proved its worth: a ninth pass
 held 100 days later, but the tenth and eleventh (later that month) settled to
 99.65 — not from any regressed code (the product was byte-for-byte identical) but
 because the moving bar caught up with four maintenance gaps, all closed the same
-week. The score tracks reality rather than flattering it — which is the whole
-point. Yes, it's the same AI
+week. The twelfth pass verified three of them shut and recovered the score to
+**99.9**, leaving one open deduction that is a fault in an outside service rather
+than in the code. The score tracks reality rather than flattering it — which is
+the whole point. Yes, it's the same AI
 tooling grading its own homework — [Chapter 1](01-the-big-picture.md) flags
 that honestly — but each pass is *evidence-based* (claims checked against
 code, not vibes), the bar was designed to be harsh, and the

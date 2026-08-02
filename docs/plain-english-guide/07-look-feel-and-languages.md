@@ -81,8 +81,8 @@ European Accessibility Act as of 2025), a hard requirement in government and
 enterprise purchasing, and lawsuits over inaccessible websites are now routine.
 
 This project doesn't just claim accessibility — it **enforces it in the automated
-test suite**: `axe` (the industry-standard accessibility checker) scans seven
-representative surfaces of the app — four public pages and three signed-in ones —
+test suite**: `axe` (the industry-standard accessibility checker) scans eight
+representative surfaces of the app — four public pages and four signed-in ones —
 on every change, and violations fail the build. The choice of Radix-based
 components means keyboard and screen-reader behavior is engineered-in at the
 component level, and the visual tests run in both themes, so contrast issues in
