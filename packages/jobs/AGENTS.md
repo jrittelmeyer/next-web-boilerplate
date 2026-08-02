@@ -30,4 +30,6 @@ One imperative per line; mechanics + rationale live in
 - The worker needs a **direct/session-mode DB connection** — transaction poolers
   break LISTEN/NOTIFY + advisory locks
   ([DATABASE.md](../../docs/context/DATABASE.md)).
-- New handlers join the coverage include (`handlers/**` + `queues.ts`).
+- New handlers join the coverage include (`handlers/**` + `queues.ts` + `reminders/sweep.ts`
+— the sweeper is named explicitly, not globbed: its `run.ts`/`site-url.ts` siblings are
+I/O bootstrap and stay out).

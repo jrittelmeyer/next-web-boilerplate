@@ -506,7 +506,7 @@ activity, `/admin/audit` rows) and not just one feature.
   database, and handing a dead one to `Intl` throws, which would take down every
   page that renders a timestamp instead of degrading one preference.
 
-## Calendars and events (migrations 0020, 0021, 0023)
+## Calendars and events (migrations 0020, 0021, 0023, 0024, 0025)
 
 `calendars` + `calendar_events`, plus the `calendar_event_masters` view. The full
 rationale — why civil time is the source of truth, why the derived instants are guarded
@@ -569,10 +569,33 @@ shape, and all four are argued in [calendar/attendees.md](calendar/attendees.md)
   not assumed: 248 kB → 216 kB at half-external and 120 kB → 56 kB at 90 % external over
   10,000 rows. A plain btree **stores its NULL keys** — the assumption that burned `0021`.
 
-`0023` also touches nothing on `notifications`; the five `calendar_*` union members and
-the `link` / `title` columns shipped in `0022`, ahead of the calendar work, because
+`0023` also touches nothing on `notifications`; the first five `calendar_*` union members
+and the `link` / `title` columns shipped in `0022`, ahead of the calendar work, because
 extending that union in `@repo/db` alone makes the realtime bus's `safeParse` drop every
-message of the new type with no log, no error and no Sentry event.
+message of the new type with no log, no error and no Sentry event. `calendar_reminder`
+joined them in Phase 5 — **no DDL**, because `notifications.type` is `text`; the union
+still had to move in `@repo/db` and `@repo/validators` in one commit, for that same reason.
+
+### Invitations and reminders (`0024`, `0025`)
+
+`0024` adds `calendar_events.reask_at` and rebuilds the `calendar_event_masters` view;
+re-asking guests is a derived `responded_at < reask_at`, never a write over attendee rows,
+so an answer and its comment survive a reschedule.
+
+`0025` adds `calendar_event_reminders` and `calendar_reminder_deliveries`. Two rules the
+schema enforces and one it deliberately does not — the full argument is in
+[calendar/reminders.md](calendar/reminders.md), and the imperatives an agent needs while
+editing are in [`packages/db/AGENTS.md`](../../packages/db/AGENTS.md):
+
+- A delivery is claimed **only** with `INSERT … ON CONFLICT DO NOTHING RETURNING id`; the
+  returned row *is* the claim, and that unique is the entire defence against two workers
+  sending the same reminder twice.
+- A delivery is keyed on the occurrence's **instant**, never its `recurrence_id` —
+  `recurrence_id` is NULL on every non-override row, so a unique over it is
+  all-NULLs-distinct and re-sends on every tick.
+- `anchor` is CHECK-gated to `'start'`. Dropping that CHECK is **half** the change: the
+  sweeper windows on the occurrence's start instant, so an end-anchored reminder would
+  silently never fire (tracked on the Calendar Phase 6 row in [BACKLOG.md](../BACKLOG.md)).
 
 ## Admin plugin columns (ban + impersonation)
 

@@ -5,12 +5,12 @@ The convention every integration doc under [services/](../services/) follows
 generated project doesn't want a calendar at all.
 
 The calendar has **no third-party dependency, no env var and no CSP entry** — it is
-`@repo/calendar` (zero-dependency pure logic), three tables and a slice of `apps/web`.
+`@repo/calendar` (zero-dependency pure logic), six tables + a view and a slice of `apps/web`.
 That makes it easier to remove than any service integration, with exactly two
 complications, both below.
 
 > **Phase 3 added the second complication, and it is the one that is easy to miss.** The
-> calendar is no longer self-contained: `notifications.type` gained five `calendar_*`
+> calendar is no longer self-contained: `notifications.type` gained a family of `calendar_*`
 > members, and **`notifications` survives removal** — it is a general-purpose table the
 > realtime example depends on. So removal has to reach into a table it does not delete,
 > in two packages, and clean up rows that already exist. Steps 5 and 9 carry it, and the
@@ -53,8 +53,8 @@ the first deploy.
 5. **Drop the calendar half of the notifications namespace** — the step that is easy to
    miss, because `notifications` is not a calendar table and survives. Delete
    `Notifications.calendarInvite`, `.calendarResponseAccepted`, `.calendarResponseDeclined`,
-   `.calendarResponseTentative` and `.calendarCancelled` from **both** locales, and remove
-   those five members from `SENTENCE_KEYS` in
+   `.calendarResponseTentative`, `.calendarCancelled` and **`.calendarReminder`** (Phase 5)
+   from **both** locales, and remove **every `calendar_*` member** from `SENTENCE_KEYS` in
    `src/components/notifications/notifications-feed.tsx`. That object is
    `satisfies Record<Exclude<FeedItem["type"], "test" | "system">, string>`, so it stops
    compiling until the union in step 9 is trimmed to match — which is the guard working,
@@ -65,15 +65,18 @@ the first deploy.
    `src/lib/calendar-attendees.ts`, `src/lib/calendar-tokens.ts`,
    `src/lib/calendar/grid.ts`, `src/lib/calendar/recurrence-dates.ts`,
    `src/lib/calendar/recurrence-prose.ts`, `src/lib/calendar/significant-change.ts`,
-   `src/server/calendar/invitations.ts` and `src/server/calendar/rsvp.ts`. It is an explicit
-   file list, and a stale entry there fails the run. Leave
+   `src/lib/calendar-reminders.ts`, `src/server/calendar/invitations.ts` and
+   `src/server/calendar/rsvp.ts`. It is an explicit
+   file list, and a stale entry there fails the run — so grep the block for `calendar`
+   rather than trusting this enumeration, which every phase has extended. Leave
    `src/server/notifications/create.ts` and `src/server/realtime/notification-bus.ts`;
    neither is calendar-specific.
 7. **Delete the E2E**: `e2e/calendar.spec.ts`, `e2e/calendar-invites.spec.ts`,
    **`e2e/calendar-invitations.spec.ts`**, the calendar helpers at the bottom of
    `e2e/support/db.ts` (`setUserTimeZone`, `seedCalendar`, `seedEvents`, `seedAttendee`,
    `getAttendeeStatus`, **`getEventIdByTitle`**, **`getInvitationJobs`**,
-   **`deleteInvitationJobs`**, `deleteCalendarFixtures`), and the calendar block inside
+   **`deleteInvitationJobs`**, **`getEventReminders`** (Phase 5),
+   `deleteCalendarFixtures`), and the calendar block inside
    `a11y.spec.ts`'s signed-in test (it was added **in place** rather than as a new `test()`,
    so remove the block, not the test).
 7b. **Unhook the job** (Phase 4): remove `calendarInvitation` from `JOBS` and
@@ -130,10 +133,12 @@ the first deploy.
    which is not a calendar union. Remove its calendar `describe` and drop the calendar
    pairs from the table; its per-group length meta-guard moves with them.
 9. **Drop the schema**: delete `packages/db/src/schema/calendars.ts`,
-   `calendar-events.ts`, `calendar-attendees.ts` and `calendar-reminders.ts`, remove all
-   four lines from `schema/index.ts`, delete
-   `packages/db/__tests__/integration/calendar-events.test.ts` and
-   `calendar-attendees.test.ts`, revert `NOTIFICATION_TYPES` to `["test", "system"]` in
+   `calendar-events.ts`, **`calendar-recurrence-dates.ts`**, `calendar-attendees.ts` and
+   `calendar-reminders.ts`, then remove **every `./calendar*` export** from
+   `schema/index.ts` (grep it — miss one and you ship a module exporting a dropped
+   table). Delete all four calendar integration tests under
+   `packages/db/__tests__/integration/` — `calendar-events`, `calendar-attendees`,
+   `calendar-recurrence` and `calendar-reminders`. Revert `NOTIFICATION_TYPES` to `["test", "system"]` in
    **both** `packages/db/src/schema/notifications.ts` and
    `packages/validators/src/index.ts` (one commit — extending or trimming one alone makes
    the bus's `safeParse` drop messages with no log, no error and no Sentry event), then
@@ -149,10 +154,12 @@ the first deploy.
 11. **Decide about `user_preferences`** (migration `0019`, Phase 0): it holds
     `time_zone`, `week_start` and `time_format`, and the `/account` preferences card and
     every timestamp in the app use it. It is **not** calendar-specific — leave it.
-12. **Docs**: remove the calendar row from `AGENTS.md`'s context table, the calendar
-    entries in `DECISIONS.md`, and the calendar lines in `FEATURES.md`,
-    `PROJECT_STATUS.md` and `packages/db/AGENTS.md` (including the two attendee
-    imperatives at the bottom of that leaf file).
+12. **Docs**: remove the calendar row from `AGENTS.md`'s context table, the
+    `context/calendar/` entry in **`docs/README.md`**'s reference section, the calendar
+    entries in `DECISIONS.md`, the Calendar Phase 6 row and Watch line in
+    **`BACKLOG.md`**, and the calendar lines in `FEATURES.md`, `PROJECT_STATUS.md` and
+    `packages/db/AGENTS.md` (**every calendar imperative in that leaf** — attendees,
+    invitations *and* reminders; the list grew with each phase, so grep it).
 
 Then run the full gate. `pnpm knip` is the check that catches a symbol you unhooked but
 forgot to delete, and `pnpm docs:sanity` catches a link left pointing at a deleted doc.
@@ -187,7 +194,7 @@ DELETE FROM "notifications" WHERE "type" LIKE 'calendar_%';
 
 `calendar_reminder_deliveries` goes **before** `calendar_event_reminders` (it references
 it), and both before `calendar_events`. The `LIKE 'calendar_%'` delete already covers
-`calendar_reminder` rows along with the other six types.
+`calendar_reminder` rows along with every other `calendar_*` type.
 
 **The last statement is the one drizzle will not generate for you**, and the reason this
 list is no longer "four DROPs and every constraint goes with a table". `notifications`
@@ -196,8 +203,9 @@ you to Standup"* messages pointing at events that no longer exist, whose `type` 
 parses, and which `notification-bus.ts` therefore drops **silently, with no log and no
 Sentry event**. Author it by hand as part of the same migration.
 
-The four `DROP TABLE`s do still take everything attached to them: every index, CHECK,
-unique constraint and foreign key added by `0020`, `0021` and `0023` hangs off one of
+The `DROP TABLE`s do still take everything attached to them: every index, CHECK,
+unique constraint and foreign key added by `0020`, `0021`, `0023`, `0024` and `0025`
+hangs off one of
 those tables, and so does every foreign key into them
 (`calendar_events.calendar_id`, the composite `recurrence_parent_id, calendar_id`
 self-reference from `0021`, `calendar_recurrence_dates.event_id`, and
