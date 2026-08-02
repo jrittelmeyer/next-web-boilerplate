@@ -99,6 +99,40 @@ for. An instant moves when the occurrence moves.
 **Accepted consequence:** editing a reminder's *offset* after delivery does not re-fire for
 that same occurrence. That is correct — you were already reminded about it.
 
+## The in-app notification's shape
+
+`calendar_reminder` joins `NOTIFICATION_TYPES` in **`@repo/db` and `@repo/validators`, in
+one commit**. Extending one alone makes `notification-bus.ts`'s `safeParse` drop every
+reminder with no log, no error and no Sentry event; `lib/union-parity.test.ts` is what
+refuses to let those be two commits.
+
+The feed renders through exactly two slots — `notifications-feed.tsx` passes
+`{ actor: body, event: title }` — so:
+
+| Column | Carries |
+| --- | --- |
+| `title` | the event title (fills `{event}`) |
+| `body` | the minutes until start, as a **number in a string** |
+| `link` | `/calendar/event/<id>` — a **relative path** |
+
+**`body` holds a machine value, never a phrase.** The DB union's own contract says it:
+there is no stored user locale, so a body written at NOTIFY time cannot be localized. Write
+`"starts in about 15 minutes"` into it and a Spanish reader gets that English clause
+interpolated into a Spanish sentence — while `i18n-parity.test.ts` and `union-parity.test.ts`
+both stay green, because they check key presence, not slot semantics.
+
+**The sentence interpolates `{event}` only** — "{event} starts soon" — like
+`calendarCancelled`. Putting the number in the sentence looked obvious and does not survive
+contact: `{actor} minutes` renders "1 minutes", and a day-before reminder would read "in
+about 1440 minutes". The precision is ±5–6 minutes anyway; the exact time is in the email.
+`body` still carries the number because it is the one durable fact a future sentence (or a
+support query) would want, and storing it costs nothing.
+
+⚠️ **`link` must be relative.** `notifications_link_same_origin` CHECKs
+`left(link,1) = '/'`, so handing it an absolute URL means Postgres rejects the insert, the
+handler throws, and every reminder retries to exhaustion into the DLQ. The worker builds the
+path with no base URL at all — which is also why it can do this without any `apps/web` env.
+
 ## Two accepted inaccuracies, stated rather than discovered
 
 **Signed minutes is exact-elapsed arithmetic.** `make_interval(mins => …)` on a

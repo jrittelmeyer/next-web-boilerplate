@@ -7,6 +7,8 @@ import {
   EVENT_VISIBILITIES as DB_EVENT_VISIBILITIES,
   NOTIFICATION_TYPES as DB_NOTIFICATION_TYPES,
   RECURRENCE_DATE_KINDS as DB_RECURRENCE_DATE_KINDS,
+  REMINDER_ANCHORS as DB_REMINDER_ANCHORS,
+  REMINDER_CHANNELS as DB_REMINDER_CHANNELS,
 } from "@repo/db/schema";
 import { NOTIFICATION_TYPES } from "@repo/validators";
 import {
@@ -19,6 +21,9 @@ import {
   EVENT_TRANSPARENCIES,
   EVENT_VISIBILITIES,
   RECURRENCE_DATE_KINDS,
+  REMINDER_ANCHORS,
+  REMINDER_CHANNELS,
+  REMINDER_SUBMITTABLE_ANCHORS,
 } from "@repo/validators/calendar";
 import { describe, expect, it } from "vitest";
 
@@ -50,6 +55,8 @@ describe("union parity between @repo/db and @repo/validators", () => {
       ["RECURRENCE_DATE_KINDS", RECURRENCE_DATE_KINDS, DB_RECURRENCE_DATE_KINDS],
       ["ATTENDEE_ROLES", ATTENDEE_ROLES, DB_ATTENDEE_ROLES],
       ["ATTENDEE_STATUSES", ATTENDEE_STATUSES, DB_ATTENDEE_STATUSES],
+      ["REMINDER_CHANNELS", REMINDER_CHANNELS, DB_REMINDER_CHANNELS],
+      ["REMINDER_ANCHORS", REMINDER_ANCHORS, DB_REMINDER_ANCHORS],
     ] as const satisfies ReadonlyArray<readonly [string, readonly string[], readonly string[]]>;
 
     it.each(pairs)("%s is member-for-member identical, in order", (_name, validators, db) => {
@@ -59,7 +66,19 @@ describe("union parity between @repo/db and @repo/validators", () => {
     it("covers every union the calendar schema declares", () => {
       // A union added to either package without a row above would otherwise be unguarded
       // — the whole class of bug this file exists for.
-      expect(pairs).toHaveLength(7);
+      expect(pairs).toHaveLength(9);
+    });
+
+    it("does not guard REMINDER_SUBMITTABLE_ANCHORS, which is a submittable SUBSET", () => {
+      // The ATTENDEE_RESPONSES rule again, with a sharper edge: `end` is not merely
+      // unoffered, it is refused by `calendar_event_reminders_anchor_supported`, because
+      // `expandSeries` windows on an occurrence's START instant and an end-anchored
+      // reminder on a recurring series would silently never fire. The column declares
+      // both; only `start` may be submitted until Phase 6 widens the expansion.
+      expect(REMINDER_SUBMITTABLE_ANCHORS).toEqual(["start"]);
+      expect(pairs.map(([name]) => name)).not.toContain("REMINDER_SUBMITTABLE_ANCHORS");
+      expect(DB_REMINDER_ANCHORS).toContain("end");
+      expect(REMINDER_SUBMITTABLE_ANCHORS as readonly string[]).not.toContain("end");
     });
 
     it("does not guard ATTENDEE_RESPONSES, which is a submittable SUBSET", () => {
@@ -123,10 +142,13 @@ describe("union parity between @repo/db and @repo/validators", () => {
 
     it("keeps the two pre-calendar members first, in order", () => {
       // `test` and `system` predate Phase 3 and are the two whose bodies are complete
-      // sentences (title IS NULL). The five calendar members carry a title and are
+      // sentences (title IS NULL). The six calendar members carry a title and are
       // rendered through it, so the boundary between the two halves is load-bearing.
       expect(DB_NOTIFICATION_TYPES.slice(0, 2)).toEqual(["test", "system"]);
-      expect(DB_NOTIFICATION_TYPES).toHaveLength(7);
+      // 7 → 8 with `calendar_reminder` (Phase 5). Bumping this number is the deliberate
+      // act the guard exists to force: `SENTENCE_KEYS` and both locale files owe the new
+      // member a sentence, and none of that fails on its own.
+      expect(DB_NOTIFICATION_TYPES).toHaveLength(8);
     });
   });
 });

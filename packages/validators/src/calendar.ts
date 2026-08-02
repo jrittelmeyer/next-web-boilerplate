@@ -51,6 +51,18 @@ export type AttendeeRole = (typeof ATTENDEE_ROLES)[number];
 export const ATTENDEE_STATUSES = ["needs-action", "accepted", "declined", "tentative"] as const;
 export type AttendeeStatus = (typeof ATTENDEE_STATUSES)[number];
 
+/** Mirrors `REMINDER_CHANNELS` in `@repo/db/schema/calendar-reminders.ts`. */
+export const REMINDER_CHANNELS = ["email", "in-app"] as const;
+export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
+
+/**
+ * Mirrors `REMINDER_ANCHORS`. Both members are declared, and only `start` is
+ * **submittable** — see `REMINDER_SUBMITTABLE_ANCHORS` below. The parity row guards this
+ * pair; the narrowing is a separate assertion, exactly as with the attendee statuses.
+ */
+export const REMINDER_ANCHORS = ["start", "end"] as const;
+export type ReminderAnchor = (typeof REMINDER_ANCHORS)[number];
+
 // --- Action-only unions (no DB column, so no parity row) ----------------------
 
 /**
@@ -178,6 +190,46 @@ export const attendeeInputSchema = z.object({
 
 export type AttendeeInput = z.infer<typeof attendeeInputSchema>;
 export type AttendeeValues = z.input<typeof attendeeInputSchema>;
+
+/**
+ * How many reminders one event may carry. Ten is generous for a human and is the bound
+ * that keeps the sweeper's per-event work constant: every reminder on a recurring master
+ * costs its own expansion window, because each offset shifts that window differently.
+ */
+export const MAX_REMINDERS_PER_EVENT = 10;
+
+/**
+ * The anchors a surface may actually submit — the `ATTENDEE_RESPONSES` pattern, and for a
+ * harder reason than "no control offers it".
+ *
+ * `calendar_event_reminders_anchor_supported` rejects `'end'` outright, so submitting one
+ * would raise a 23514 and surface as the generic write error. The CHECK is there because
+ * `expandSeries` windows on an occurrence's START instant: an end-anchored reminder on a
+ * recurring series would silently never fire. Narrowing here turns that into a field error
+ * instead of a database error, and `calendar.test.ts` asserts the two lists stay exhaustive
+ * together so Phase 6 cannot widen the column without answering here.
+ */
+export const REMINDER_SUBMITTABLE_ANCHORS = ["start"] as const;
+export type ReminderSubmittableAnchor = (typeof REMINDER_SUBMITTABLE_ANCHORS)[number];
+
+export const reminderInputSchema = z.object({
+  channel: z.enum(REMINDER_CHANNELS),
+  /** Matches the column default, so a surface that offers only "before start" may omit it. */
+  anchor: z.enum(REMINDER_SUBMITTABLE_ANCHORS).default("start"),
+  /**
+   * Signed minutes, negative = before. `.int()` is load-bearing: the column is `integer`,
+   * and a fractional offset would be silently truncated by the driver rather than refused.
+   * The bound mirrors `calendar_event_reminders_offset_bounded` (±366 days).
+   */
+  offsetMinutes: z
+    .number()
+    .int("Choose a whole number of minutes")
+    .min(-527_040, "That is more than a year before the event")
+    .max(527_040, "That is more than a year after the event"),
+});
+
+export type ReminderInput = z.infer<typeof reminderInputSchema>;
+export type ReminderValues = z.input<typeof reminderInputSchema>;
 
 /**
  * The three statuses an RSVP can *submit*, as opposed to the four the column can hold.
