@@ -300,6 +300,32 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   `^16.2.11`, which the lockfile already satisfies, so a lockfile-driven install never
   consults the registry; the gate re-arms at the next *resolution* (Renovate, `pnpm add`).
   16.2.12 becomes admissible 2026-08-01.
+- ~~**`next` 16.2.12 admissible but not taken**~~ — **TAKEN 2026-08-02**, with
+  `@next/eslint-plugin-next` in lockstep. Registry-verified at the time: `dist-tags.latest`,
+  published 2026-07-25T20:45:53Z (8 days, past the 7-day gate), **no 16.2.13**. Contents are a
+  docs backport plus the TypeScript-7 cherry-picks (vercel/next.js#95831 → #92277, #95639,
+  #95692, #95753).
+  - **Neither override retires.** 16.2.12 still pins `dependencies.postcss` exactly `8.4.31`
+    (below the 8.5.18 key floor) and `optionalDependencies.sharp` `^0.34.5` (below the 0.35.0
+    condition). Read off the published manifest, not inferred — `pnpm-workspace.yaml` is
+    byte-unchanged.
+  - **`@next/eslint-plugin-next` needs its own `pnpm add`.** It lives in `tooling/eslint`, so
+    `pnpm --filter web add next@…` does not move it, and `manypkg` cannot flag the drift
+    because its old `^16.0.0` range diverged from nothing. That is exactly why it sat three
+    patches behind the framework it lints. Declared range is now `^16.2.12`.
+  - **The verification that mattered was the alias path.** #92277 rewrites `load-jsconfig.ts`
+    (+58/−20) to compute an effective base URL for `paths` declared **without** `baseUrl` —
+    this repo's hard rule, and what `apps/web/tsconfig.json` does (`@/*` → `./src/*`). Only
+    the Next app root's tsconfig is exposed (`packages/jobs` is a standalone worker Next never
+    builds; `packages/ui` reaches the app via `transpilePackages`). Proven both ways: `next
+    build` re-ran for 71 s — **not** a `FULL TURBO` replay, which on a lockfile change would
+    have meant the graph never rebuilt — and `/calendar` rendered real DB rows on a `:3100`
+    prod build; **and** `next dev --turbopack` first-compiled clean on `:3106`. The dev check
+    is not ceremony: `load-jsconfig` feeds `next dev` too, and the gate never starts a dev
+    server, so a dev-only alias regression would reach every consumer unobserved.
+  - ⚠️ **This bump makes the TypeScript-7 re-gate above stale** — `experimental.useTypeScriptCli`
+    is now in a *stable* release. Corrected in a separate pass with its own evidence rather
+    than inherited here.
 - The **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is
   intermittently flaky (absorbed by `retries: 2`, but it twice burned 2 of 3 CI
   attempts). **Not a code bug** — a fragile signup+redirect timing flow on modest

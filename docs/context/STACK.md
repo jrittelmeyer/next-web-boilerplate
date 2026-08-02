@@ -21,13 +21,13 @@ ceiling.
 | Package | Version | Notes |
 | --- | --- | --- |
 | node | 24 (Krypton) | Active LTS as of mid-2026; 22 is in Maintenance |
-| next | ^16.2.11 | App Router only; Pages Router is legacy. 16.2.11 patched the 2026-07-22 advisory batch (9 GHSAs) |
+| next | ^16.2.12 | App Router only; Pages Router is legacy. 16.2.11 patched the 2026-07-22 advisory batch (9 GHSAs); 16.2.12 backports TS7 handling (see the `typescript` row) |
 | react / react-dom | ^19.2.7 | Required peer of Next.js 16 |
 | babel-plugin-react-compiler | 1.0.0 | verified 2026-06-25; enables `reactCompiler: true` in `next.config.ts`. Exact-pinned (compiler iterates fast); React Compiler **1.0 stable**, targets React 19 natively so **no `react-compiler-runtime`** (that's only for React 17/18). Next gates the Babel pass behind an SWC analysis → Turbopack-compatible. See [DECISIONS.md](DECISIONS.md) |
 | typescript | ^6.0.3 | **Stay on TS 6.** TS 7 GA'd (`7.0.2`, 2026-07-08) as the native Go compiler but **dropped the JS Compiler API** (`ts.createProgram`/`readConfigFile` etc.) — so stable `next build` and every library-API consumer can't use it until that API returns in **TS 7.1 (~Q4 2026)**. The `tsc` CLI works and is ~3.6× faster; a 2026-07-13 cutover attempt was reverted. **Movement:** Next canary ships experimental TS7 support since 2026-07-10 (`experimental.useTypeScriptCli`, vercel/next.js#95639) — **re-gate on that reaching a stable Next release**, not TS GA. See [BACKLOG.md](../BACKLOG.md) |
 | @biomejs/biome | ^2.5.0 | **v2 config differs from v1**: `assist.actions.source.organizeImports` (not top-level `organizeImports`); `files.includes` with negated globs (not `files.ignore`) |
 | eslint | ^10.5.0 | Flat config only (eslintrc removed). Used solely for @next/eslint-plugin-next |
-| @next/eslint-plugin-next | ^16.0.0 | Tracks Next.js major |
+| @next/eslint-plugin-next | ^16.2.12 | Tracks Next.js major; kept on the same patch train as `next` (it publishes in lockstep, so a stale lockfile pin is invisible drift — `manypkg` can't see it) |
 | turbo | ^2.9.18 | Remote cache is **opt-in/unwired** (local FS cache by default) — see [DEPLOYMENT.md](DEPLOYMENT.md#remote-caching-turborepo-opt-in) |
 | pnpm | 11.7.0 | Pinned in packageManager field |
 | tailwindcss | ^4.3.1 | v4: config in CSS, no tailwind.config.js |
