@@ -7,6 +7,7 @@ import {
   auditLog,
   type CalendarColor,
   calendarEventAttendees,
+  calendarEventReminders,
   calendarEvents,
   calendars,
   notifications,
@@ -359,4 +360,30 @@ export async function deleteCalendarFixtures(email: string): Promise<void> {
   const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
   if (!u) return;
   await db.delete(calendars).where(eq(calendars.userId, u.id));
+}
+
+/**
+ * One user's reminders on an event, by the event's title (Phase 5).
+ *
+ * Reads the row rather than re-reading the UI, for the same reason `getAttendeeStatus`
+ * does: the assertion that matters is what was persisted, and the composer is what put it
+ * there. Scoped to the owner because a reminder is private to one user.
+ */
+export async function getEventReminders(
+  ownerEmail: string,
+  title: string,
+): Promise<{ id: string; channel: string; anchor: string; offsetMinutes: number }[]> {
+  return await db
+    .select({
+      id: calendarEventReminders.id,
+      channel: calendarEventReminders.channel,
+      anchor: calendarEventReminders.anchor,
+      offsetMinutes: calendarEventReminders.offsetMinutes,
+    })
+    .from(calendarEventReminders)
+    .innerJoin(calendarEvents, eq(calendarEvents.id, calendarEventReminders.eventId))
+    .innerJoin(calendars, eq(calendars.id, calendarEvents.calendarId))
+    .innerJoin(user, eq(user.id, calendars.userId))
+    .where(and(eq(user.email, ownerEmail), eq(calendarEvents.title, title)))
+    .orderBy(calendarEventReminders.offsetMinutes);
 }

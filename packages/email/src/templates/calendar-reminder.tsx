@@ -45,16 +45,24 @@ export function CalendarReminder({
   eventUrl = "https://example.com/calendar/event/example",
   startsInMinutes = 15,
 }: CalendarReminderProps) {
+  // **Zero is a reachable value, not a defensive branch** — found by live-verify, not by
+  // reasoning: the sweeper clamps `startsInMinutes` at 0, and a reminder caught by the
+  // 60-minute grace window (a worker that was down, a missed tick) is dispatched *after*
+  // its fire time. Without this the email reads "starts in about 0 minutes", which is both
+  // wrong and the exact case a late reminder is most likely to be.
+  const lede =
+    startsInMinutes > 0 ? `starts in about ${startsInMinutes} minutes` : "is starting now";
+
   return (
     <Html>
       <Head />
       {/* Preview children are typed as string, not ReactNode — interpolate, don't nest. */}
-      <Preview>{`${eventTitle} starts in about ${startsInMinutes} minutes.`}</Preview>
+      <Preview>{`${eventTitle} ${lede}.`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={heading}>Reminder</Heading>
           <Text style={paragraph}>
-            <strong>{eventTitle}</strong> starts in about {startsInMinutes} minutes.
+            <strong>{eventTitle}</strong> {lede}.
           </Text>
           <Text style={detail}>{when}</Text>
           {location ? <Text style={detail}>{location}</Text> : null}

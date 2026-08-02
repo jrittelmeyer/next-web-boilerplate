@@ -223,3 +223,19 @@ describe("email template render smoke tests", () => {
     expect(text.length).toBeGreaterThan(0);
   });
 });
+
+describe("calendar-reminder — the overdue case", () => {
+  it("says 'is starting now' rather than 'in about 0 minutes'", async () => {
+    // Found by live-verify, not by reasoning: the sweeper clamps `startsInMinutes` at 0,
+    // and a reminder caught by the grace window is dispatched after its fire time — which
+    // is precisely when a late reminder is most likely to be sent.
+    const html = await render(<CalendarReminder eventTitle="Standup" startsInMinutes={0} />);
+    expect(html).toContain("is starting now");
+    expect(html).not.toContain("0 minutes");
+  });
+
+  it("still counts down when the reminder is on time", async () => {
+    const html = await render(<CalendarReminder eventTitle="Standup" startsInMinutes={15} />);
+    expect(html).toContain("starts in about 15 minutes");
+  });
+});

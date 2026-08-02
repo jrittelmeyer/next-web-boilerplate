@@ -184,6 +184,35 @@ written; the probe results are what changed three of them.
   phase's risk on its hottest path. Phase 6 is already reworking that query for sharing
   and folds the list in there. Stated outright in `PROJECT_STATUS.md` and
   [api.md](calendar/api.md) rather than left as an apparent gap.
+- **A reminder delivery is deduped by the occurrence's INSTANT, never its `recurrence_id`
+  (Phase 5).** The alternative is not merely lossy, it does not function:
+  `calendar_events.recurrence_id` is NULL on every non-override row, so a unique over it
+  would be all-NULLs-distinct for ordinary events and every tick inside the grace window
+  would re-send. It fails a second way where it is non-NULL — a `recurrence_id` survives a
+  reschedule, so moving a meeting after its reminder fired would send nothing at the new
+  time. An instant moves when the occurrence moves. Accepted cost: changing a reminder's
+  *offset* after delivery does not re-fire for that occurrence. See
+  [reminders.md](calendar/reminders.md).
+- **The reminder sweeper's schedule registers unconditionally, and its clock is Postgres's
+  (Phase 5).** "Register only when reminders exist" has no mechanism behind it — the single
+  `boss.schedule` call runs once at boot with no re-registration path, so the first reminder
+  a deployment ever created would never fire until a worker restart, silently. An `EXISTS`
+  early-exit buys the same "costs nothing when unused" without the hole; the ~288
+  `pgboss.job` rows/day are accepted, not avoided. One `SELECT now()` per tick supplies every
+  bound so multiple workers agree and no host/container clock skew can shift the window.
+- **`@repo/email` renders EVENT-ZONE time; reader-relative rendering is unimplemented for
+  email (Phase 5).** `formatEventWhen` moved out of `apps/web` when the reminder sweeper
+  became a second caller that cannot reach it. The rule narrows rather than relaxes: the
+  event's own time, in its own zone, named — never a reader's locale, which this package
+  cannot know. **Every email is therefore en-GB, including a reminder to an account holder
+  whose zone `user_preferences` does store.** That is a knowing cut, not an oversight;
+  reader-relative email rendering is a Phase-6 item.
+- **A reminder offset is signed minutes, and that is exact-elapsed arithmetic (Phase 5).**
+  `make_interval(mins => …)` on a `timestamptz` measures elapsed time, so a day-before
+  reminder spanning a DST transition fires an hour early or late in local terms. The single
+  column is what makes all-day semantics and the ICS `TRIGGER` mapping free, so the drift is
+  accepted and written down — `expand.ts` names instants-based arithmetic as this repo's
+  canonical silent bug, and it does not get to be silent here.
 
 ### Auth
 
