@@ -1,5 +1,11 @@
 # Calendar — attendees and RSVP
 
+> **Reminders share this file's inheritance rule and nothing else about it.** They hang off
+> the series master exactly as attendees do (resolve `recurrence_parent_id ?? id`), but they
+> are **private to one user** rather than visible to every reader, and Phase 5 writes them
+> only for the calendar's owner — a guest gets none until Phase 6. See
+> [reminders.md](reminders.md).
+
 Load when touching the guest list, invitations or responses. Who may read or write a
 calendar: [acl.md](acl.md). Endpoints: [api.md](api.md). Domain model:
 [model.md](model.md). Series, overrides and the three edit scopes:

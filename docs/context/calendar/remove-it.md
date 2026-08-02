@@ -88,14 +88,50 @@ the first deploy.
    ⚠️ **This job is *enqueued*, not scheduled**, so unlike the Phase-5 reminder sweeper it
    leaves **no `pgboss.schedule` row** and needs no `boss.unschedule` call. Undrained jobs
    in `pgboss.job` simply expire. Nothing to clean up beyond the code.
+7c. **Unschedule the reminder sweeper BEFORE removing its code** (Phase 5) — the step that
+   has no equivalent above, and the one that silently keeps working if you skip it.
+   `boss.schedule` persists into `pgboss.schedule` **keyed by queue name**, so the row
+   outlives the code that created it: delete the handler alone and pg-boss keeps enqueueing
+   `calendar-reminder-sweep` jobs into a queue nobody watches, forever, on every deployment
+   that ever ran the worker. Run this against each such environment first:
+
+   ```js
+   // node, with DATABASE_URL set — or add it temporarily to worker.ts and boot once.
+   await boss.unschedule("calendar-reminder-sweep");
+   ```
+
+   Confirm with `SELECT * FROM pgboss.schedule;` (it should list only
+   `cleanup-expired-verifications`). Then remove `calendarReminderSweep`,
+   `calendarReminderEmail` and `calendarReminderNotify` from `JOBS` and their payload
+   schemas in `packages/jobs/src/queues.ts`; the three `boss.work` lines, the
+   `boss.schedule` call, `REMINDER_SWEEP_CRON` and the imports in `worker.ts`;
+   `handlers/calendar-reminder-{sweep,email,notify}.ts` and their tests;
+   `src/reminders/` entirely; `__tests__/integration/calendar-reminders.test.ts`; and the
+   `src/reminders/sweep.ts` entry from `coverage.include` in `vitest.config.ts`. Drop
+   `sendCalendarReminderEmail` and `templates/calendar-reminder.tsx` from `@repo/email`
+   with their fixtures — but **keep `formatEventWhen`** (`src/format.ts`), which the
+   Phase-4 invitation path also uses, unless you are removing that too. **The 90-day
+   delivery retention needs no step**: it lives inside the sweeper precisely so it cannot
+   be forgotten here.
+   Finally drop `@repo/calendar` and `@repo/validators` from `packages/jobs/package.json`
+   if nothing else there uses them, and revert the four reminder imperatives in
+   `packages/jobs/AGENTS.md`.
+7d. **Delete the reminder app slice** (Phase 5): `src/components/calendar/reminder-field.tsx`,
+   `src/lib/calendar-reminders.ts` + its test, `applyReminders` and the `diffReminders`
+   import in `server/actions/calendar.ts` (plus the `actorUserId` parameter threaded through
+   `updateWholeEvent`/`splitSeries` for it), the `reminders` select in
+   `trpc/routers/calendar.ts`'s `byId`, the `reminders` field on `EventComposerDefaults` and
+   its `FormField`, the seed in `calendar-workspace.tsx`, and `Calendar.reminders` +
+   `Calendar.composer.remindersLabel`/`remindersHelp` from **both** locales. Remove
+   `src/lib/calendar-reminders.ts` from `coverage.include` in `apps/web/vitest.config.ts`.
 8. **Drop the validators subpath**: delete `packages/validators/src/calendar.ts` and its
    test, and remove `"./calendar"` from that package's `exports` map. Then **edit** —
    do not delete — `src/lib/union-parity.test.ts`: it guards `NOTIFICATION_TYPES` too,
    which is not a calendar union. Remove its calendar `describe` and drop the calendar
    pairs from the table; its per-group length meta-guard moves with them.
 9. **Drop the schema**: delete `packages/db/src/schema/calendars.ts`,
-   `calendar-events.ts` and `calendar-attendees.ts`, remove all three lines from
-   `schema/index.ts`, delete
+   `calendar-events.ts`, `calendar-attendees.ts` and `calendar-reminders.ts`, remove all
+   four lines from `schema/index.ts`, delete
    `packages/db/__tests__/integration/calendar-events.test.ts` and
    `calendar-attendees.test.ts`, revert `NOTIFICATION_TYPES` to `["test", "system"]` in
    **both** `packages/db/src/schema/notifications.ts` and
@@ -134,6 +170,10 @@ shape drizzle produces whenever a column joins a table a view selects from.
 ```sql
 DROP VIEW IF EXISTS "public"."calendar_event_masters";
 --> statement-breakpoint
+DROP TABLE IF EXISTS "calendar_reminder_deliveries";
+--> statement-breakpoint
+DROP TABLE IF EXISTS "calendar_event_reminders";
+--> statement-breakpoint
 DROP TABLE IF EXISTS "calendar_event_attendees";
 --> statement-breakpoint
 DROP TABLE IF EXISTS "calendar_recurrence_dates";
@@ -144,6 +184,10 @@ DROP TABLE IF EXISTS "calendars";
 --> statement-breakpoint
 DELETE FROM "notifications" WHERE "type" LIKE 'calendar_%';
 ```
+
+`calendar_reminder_deliveries` goes **before** `calendar_event_reminders` (it references
+it), and both before `calendar_events`. The `LIKE 'calendar_%'` delete already covers
+`calendar_reminder` rows along with the other six types.
 
 **The last statement is the one drizzle will not generate for you**, and the reason this
 list is no longer "four DROPs and every constraint goes with a table". `notifications`

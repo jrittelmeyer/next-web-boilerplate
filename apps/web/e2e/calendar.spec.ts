@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { makeTestUser, signUp } from "./support/auth";
-import { deleteCalendarFixtures, seedCalendar, seedEvents, setUserTimeZone } from "./support/db";
+import {
+  deleteCalendarFixtures,
+  getEventReminders,
+  seedCalendar,
+  seedEvents,
+  setUserTimeZone,
+} from "./support/db";
 
 /**
  * Calendar Phase 1 end-to-end: create a calendar, create / edit / soft-delete an
@@ -171,6 +177,41 @@ test("create a calendar, then create, edit and delete an event through the UI", 
     const before = await chipText(page, "2027-03-07");
     const after = await chipText(page, "2027-03-21");
     expect(after).toBe(before);
+
+    // --- Reminders round-trip, and a re-save leaves them ALONE ---------------
+    // Added in place (Phase 5) rather than as a new `test()`: another block costs another
+    // signup against Better Auth's 5-per-60s limiter.
+    await occurrenceChip(page, "2027-03-07").click();
+    const reminderEditor = page.getByRole("dialog").first();
+    await reminderEditor.getByTestId("event-reminder-add").click();
+    await reminderEditor.getByTestId("event-save").click();
+    await chooseScope(page, "all");
+
+    const afterFirstSave = await getEventReminders(user.email, "Standup (moved)");
+    expect(afterFirstSave).toHaveLength(1);
+    // The composer's defaults: 15 minutes before, in-app. Negative because the column is
+    // signed and "before" is the only direction Phase 5 offers.
+    expect(afterFirstSave[0]).toMatchObject({
+      channel: "in-app",
+      anchor: "start",
+      offsetMinutes: -15,
+    });
+
+    // **The assertion this step exists for.** Re-open, change nothing about the reminders,
+    // save again — the row's ID must be UNCHANGED. A delete-and-reinsert would mint a new
+    // id, and `calendar_reminder_deliveries` cascades on it, so the ledger that stops a
+    // re-send would vanish and the next sweep would re-deliver every occurrence still
+    // inside the grace window. A title edit would spam the user, and nothing else here
+    // would notice.
+    await occurrenceChip(page, "2027-03-07").click();
+    const resaveEditor = page.getByRole("dialog").first();
+    await expect(resaveEditor.getByTestId("event-reminder-list")).toContainText("15 minutes");
+    await resaveEditor.getByTestId("event-save").click();
+    await chooseScope(page, "all");
+
+    const afterResave = await getEventReminders(user.email, "Standup (moved)");
+    expect(afterResave).toHaveLength(1);
+    expect(afterResave[0]?.id).toBe(afterFirstSave[0]?.id);
 
     // --- Edit ONE occurrence -------------------------------------------------
     await openOccurrence(page, "2027-03-21");
