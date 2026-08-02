@@ -8,6 +8,7 @@ import {
   calendars,
   user,
 } from "@repo/db/schema";
+import { formatEventWhen } from "@repo/email";
 import { enqueue, JOBS } from "@repo/jobs";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { partitionRecurrenceDates } from "@/lib/calendar/recurrence-dates";
@@ -37,35 +38,6 @@ const PRODUCT_ID = "-//next-web-boilerplate//calendar//EN";
 interface Recipient {
   readonly attendeeId: string;
   readonly email: string;
-}
-
-/**
- * The event's own time, in the event's own zone, with the zone named.
- *
- * Deliberately **not** the reader's locale: an external guest has no account, so no stored
- * locale and no stored zone. Naming the zone is what keeps "09:00" unambiguous for someone
- * three time zones away, and it is the honest thing a calendar can say about a meeting whose
- * organizer picked a wall-clock time.
- */
-export function formatEventWhen(event: {
-  startWall: string;
-  startTzid: string;
-  allDay: boolean;
-}): string {
-  const [datePart = "", timePart = ""] = event.startWall.split(" ");
-  const [year, month, day] = datePart.split("-").map(Number);
-  const formatted = new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-    // Formatting the civil reading as if it were UTC is what keeps the wall clock intact:
-    // the zone is stated separately below, never applied twice.
-  }).format(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1));
-
-  if (event.allDay) return `${formatted} (all day)`;
-  return `${formatted} at ${timePart.slice(0, 5)} (${event.startTzid})`;
 }
 
 /** The public link for one attendee row. */

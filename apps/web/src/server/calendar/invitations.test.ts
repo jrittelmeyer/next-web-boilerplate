@@ -8,7 +8,6 @@ import {
   enqueueCancellations,
   enqueueInvitations,
   enqueueSeriesUpdate,
-  formatEventWhen,
   rsvpUrlFor,
 } from "./invitations";
 
@@ -60,25 +59,9 @@ beforeEach(() => {
   enqueue.mockResolvedValue(undefined);
 });
 
-describe("formatEventWhen", () => {
-  it("keeps the wall clock intact and names the zone", () => {
-    // The civil reading is formatted AS IF UTC and the zone stated separately — applying
-    // the zone here as well would shift the time the organizer typed.
-    expect(
-      formatEventWhen({
-        startWall: "2026-08-10 09:00:00",
-        startTzid: "Asia/Kolkata",
-        allDay: false,
-      }),
-    ).toBe("Monday, 10 August 2026 at 09:00 (Asia/Kolkata)");
-  });
-
-  it("omits the time and the zone for an all-day event, which floats", () => {
-    expect(
-      formatEventWhen({ startWall: "2026-08-10 00:00:00", startTzid: "UTC", allDay: true }),
-    ).toBe("Monday, 10 August 2026 (all day)");
-  });
-});
+// `formatEventWhen` moved to `@repo/email` in Phase 5, with its tests
+// (`packages/email/src/format.test.ts`) — the reminder sweeper in `@repo/jobs` became a
+// second caller and cannot reach `apps/web`.
 
 describe("rsvpUrlFor", () => {
   it("builds a dot-free link under /rsvp", () => {

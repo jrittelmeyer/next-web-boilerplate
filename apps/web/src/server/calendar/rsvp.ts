@@ -2,9 +2,9 @@ import "server-only";
 import { db } from "@repo/db";
 import type { AttendeeStatus } from "@repo/db/schema";
 import { calendarEventAttendees, calendarEvents, calendars, user } from "@repo/db/schema";
+import { formatEventWhen } from "@repo/email";
 import { and, eq, isNull } from "drizzle-orm";
 import { verifyRsvpToken } from "@/lib/calendar-tokens";
-import { formatEventWhen } from "@/server/calendar/invitations";
 
 /**
  * Resolving an RSVP token into something the public page can render.

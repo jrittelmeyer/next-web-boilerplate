@@ -12,6 +12,9 @@ One imperative per line; mechanics + rationale live in
   consult) — never `getResend()` directly.
 - Attachment `content` is UTF-8 **text**; the Buffer encoding happens at the Resend
   boundary (a bare string is read there as already-base64).
-- **Never format a date here** — a pre-formatted string comes in from `apps/web`, where
-  next-intl and `user_preferences` live.
+- **Event-zone rendering only** (`formatEventWhen`) — the event's own time, in the event's
+  own zone, named. **Reader-relative formatting stays in `apps/web`**, where next-intl and
+  `user_preferences` live; this package can never know a reader's locale. It lives here
+  because the `@repo/jobs` reminder sweeper is a second caller that cannot reach `apps/web`.
+  Emails are en-GB for every recipient — accepted, in DECISIONS.md, not a bug to fix here.
 - This package imports only `@repo/validators` + `@repo/db`.
