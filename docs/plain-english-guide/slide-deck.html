@@ -161,7 +161,7 @@
   </div>
   <footer class="deckfoot">Every slide links to deeper reading: plain pills open the
   zero-jargon guide beside this file; pills marked ↗ open the project’s own technical
-  docs on GitHub. · Current as of 2026-07-29 (repo commit 87c24c2)</footer>
+  docs on GitHub. · Current as of 2026-08-02</footer>
 </section>
 
 <!-- 2 · THE PROBLEM -->
@@ -217,9 +217,9 @@
   <div class="tiles">
     <div class="tile"><div class="t-label">Settings needed to boot</div><div class="t-value">2</div><div class="t-sub">everything else is optional &amp; degrades gracefully</div></div>
     <div class="tile"><div class="t-label">Optional integrations wired</div><div class="t-value">~12</div><div class="t-sub">payments, email, search, monitoring, more</div></div>
-    <div class="tile"><div class="t-label">Latest audit score</div><div class="t-value">99.65<span style="font-size:.5em;color:var(--muted)">/100</span></div><div class="t-sub">vs. a “best imaginable kit” bar; peaked at 100, 11 passes</div></div>
+    <div class="tile"><div class="t-label">Latest audit score</div><div class="t-value">99.9<span style="font-size:.5em;color:var(--muted)">/100</span></div><div class="t-sub">vs. a “best imaginable kit” bar; peaked at 100, 12 passes</div></div>
     <div class="tile"><div class="t-label">Agent &amp; human context docs</div><div class="t-value">14</div><div class="t-sub">one per domain, loaded per task</div></div>
-    <div class="tile"><div class="t-label">Accessibility-scanned surfaces</div><div class="t-value">7</div><div class="t-sub">machine-checked on every change</div></div>
+    <div class="tile"><div class="t-label">Accessibility-scanned surfaces</div><div class="t-value">8</div><div class="t-sub">machine-checked on every change</div></div>
     <div class="tile"><div class="t-label">Cost per user for sign-in</div><div class="t-value">$0</div><div class="t-sub">identity is owned, not rented</div></div>
   </div>
   <p class="lead">Each of these is unpacked on the slides that follow — with a link
@@ -272,7 +272,7 @@
       <span><a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/FEATURES.md">FEATURES.md</a> (inventory &amp; why) ·
       <a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/VERIFICATION.md">VERIFICATION.md</a> (dated proof) ·
       <a class="inline" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DECISIONS.md">DECISIONS.md</a> (choices &amp; rejections) ·
-      14 per-domain context docs — the complete map is on the
+      36 per-domain context docs — the complete map is on the
       <a class="inline" href="#s22">feature-to-docs slide</a>.</span></div>
   </div>
   <p class="lead" style="font-size:.95em"><strong>Note:</strong> plain link pills open the
@@ -497,7 +497,7 @@
     <li><strong>Dates, numbers and currency format themselves per region</strong> <span class="why">—
       the small details that make software feel foreign when wrong.</span></li>
     <li><strong>Accessibility is machine-enforced, not aspirational.</strong> <span class="why">The
-      industry-standard checker scans seven app surfaces on every change and fails the build on
+      industry-standard checker scans eight app surfaces on every change and fails the build on
       violations; components are built on a foundation engineered for keyboard and screen-reader
       correctness.</span></li>
     <li><strong>Why that’s defensibility, not polish:</strong> <span class="why">accessibility is now
@@ -700,17 +700,17 @@
 <section class="slide" id="s23">
   <div class="kicker">The receipts</div>
   <h2>Measured against a “best imaginable kit” bar — <span class="thin">gaps found, then closed</span></h2>
-  <div class="chart-wrap" role="img" aria-label="Line chart: project audit scores across eleven passes rising from 93 on July 8, 2026 to 100 by July 17, holding 100 on a ninth pass July 18, then settling to 99.65 at the tenth and eleventh passes on July 22 as the moving bar reclaimed points on maintenance currency.">
+  <div class="chart-wrap" role="img" aria-label="Line chart: project audit scores across twelve passes rising from 93 on July 8, 2026 to 100 by July 17, holding 100 on a ninth pass July 18, settling to 99.65 at the tenth and eleventh passes on July 22 as the moving bar reclaimed points on maintenance currency, then recovering to 99.9 at the twelfth pass on July 29.">
     <div class="chart-title">Project audit score, out of 100</div>
-    <div class="chart-sub">Eleven passes, 2026-07-08 → 2026-07-22 · scale shown 90–100</div>
-    <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
-      <title>Audit score by pass: 93, then 97.5, 98.2, 99.3 held across three passes, 99.35, reaching 100 and holding it for two passes, then settling to 99.65 across the tenth and eleventh passes as the moving bar reclaimed points on maintenance currency</title>
+    <div class="chart-sub">Twelve passes, 2026-07-08 → 2026-07-29 · scale shown 90–100</div>
+    <svg viewBox="0 0 780 250" xmlns="http://www.w3.org/2000/svg">
+      <title>Audit score by pass: 93, then 97.5, 98.2, 99.3 held across three passes, 99.35, reaching 100 and holding it for two passes, settling to 99.65 across the tenth and eleventh passes as the moving bar reclaimed points on maintenance currency, then recovering to 99.9 at the twelfth</title>
       <!-- gridlines: 90 / 95 / 100 -->
       <g stroke="#e1e0d9" stroke-width="1">
-        <line x1="56" y1="30"  x2="700" y2="30"/>
-        <line x1="56" y1="115" x2="700" y2="115"/>
+        <line x1="56" y1="30"  x2="760" y2="30"/>
+        <line x1="56" y1="115" x2="760" y2="115"/>
       </g>
-      <line x1="56" y1="200" x2="700" y2="200" stroke="#c3c2b7" stroke-width="1"/>
+      <line x1="56" y1="200" x2="760" y2="200" stroke="#c3c2b7" stroke-width="1"/>
       <!-- y tick labels -->
       <g font-size="12" fill="#898781">
         <text x="46" y="34"  text-anchor="end">100</text>
@@ -730,9 +730,10 @@
         <text x="570" y="228">Jul 18</text>
         <text x="630" y="228">Jul 22</text>
         <text x="690" y="228">Jul 22</text>
+        <text x="750" y="228">Jul 29</text>
       </g>
       <!-- data line: y = 200 - (score-90)*17 -->
-      <polyline points="90,149 150,72.5 210,60.6 270,41.9 330,41.9 390,41.9 450,41.05 510,30 570,30 630,35.95 690,35.95"
+      <polyline points="90,149 150,72.5 210,60.6 270,41.9 330,41.9 390,41.9 450,41.05 510,30 570,30 630,35.95 690,35.95 750,31.7"
         fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       <!-- markers: 8px dots (r=4) with 2px surface ring (stroke) -->
       <g fill="#2a78d6" stroke="#fcfcfb" stroke-width="2">
@@ -747,26 +748,27 @@
         <circle cx="570" cy="30" r="5"><title>Pass 9 · 2026-07-18 · 100.0 — held through the first maintenance-mode window</title></circle>
         <circle cx="630" cy="35.95" r="5"><title>Pass 10 · 2026-07-22 · 99.65 — moving bar reclaimed 0.35 on maintenance gaps; no code regressed</title></circle>
         <circle cx="690" cy="35.95" r="5"><title>Pass 11 · 2026-07-22 · 99.65 — same-day re-check; the flagged gaps were closed the same week</title></circle>
+        <circle cx="750" cy="31.7" r="5"><title>Pass 12 · 2026-07-29 · 99.9 — three of the four gaps verified closed; the one left is an outside service, not this code</title></circle>
       </g>
       <!-- selective direct labels: first · peak · latest -->
       <g font-size="13" fill="#0b0b0b" font-weight="600">
         <text x="90" y="172" text-anchor="middle">93</text>
         <text x="510" y="19"  text-anchor="middle">100</text>
-        <text x="690" y="26"  text-anchor="middle">99.65</text>
+        <text x="750" y="22"  text-anchor="middle">99.9</text>
       </g>
     </svg>
   </div>
   <details class="data">
     <summary>View the data</summary>
     <table>
-      <tr><th>Pass</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr>
+      <tr><th>Pass</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td></tr>
       <tr><th>Date (2026)</th><td>Jul 8</td><td>Jul 12</td><td>Jul 12</td><td>Jul 14</td><td>Jul 14</td><td>Jul 15</td><td>Jul 15</td><td>Jul 17</td><td>Jul 18</td><td>Jul 22</td><td>Jul 22</td></tr>
-      <tr><th>Score /100</th><td>93.0</td><td>97.5</td><td>98.2</td><td>99.3</td><td>99.3</td><td>99.3</td><td>99.35</td><td>100.0</td><td>100.0</td><td>99.65</td><td>99.65</td></tr>
+      <tr><th>Score /100</th><td>93.0</td><td>97.5</td><td>98.2</td><td>99.3</td><td>99.3</td><td>99.3</td><td>99.35</td><td>100.0</td><td>100.0</td><td>99.65</td><td>99.65</td><td>99.9</td></tr>
     </table>
   </details>
   <ul class="points">
     <li><strong>Each gap found became a to-do item and was worked to completion</strong> <span class="why">— the reports are preserved in the repository’s archive. The last points sat behind the audits’ own “won’t fix” rulings; in July 2026 every ruling was re-argued, all fell, and an eleven-item closing program shipped — the eighth audit re-verified each item in the code and scored 100.</span></li>
-    <li><strong>The score tracks reality, not the trophy day:</strong> <span class="why">a ninth pass held 100 under real upkeep days later — then the tenth and eleventh (July 22) settled to 99.65. No code regressed (the product was byte-for-byte identical); the moving bar simply caught four maintenance gaps, all closed the same week.</span></li>
+    <li><strong>The score tracks reality, not the trophy day:</strong> <span class="why">a ninth pass held 100 under real upkeep days later — then the tenth and eleventh (July 22) settled to 99.65. No code regressed (the product was byte-for-byte identical); the moving bar simply caught four maintenance gaps, all closed the same week — and the twelfth pass (July 29) verified three of them shut and recovered the score to 99.9. The one still open is a fault in an outside service, not in this code.</span></li>
     <li><strong>Stated honestly:</strong> <span class="why">the audits are evidence-based (claims re-checked against code) but run by the same AI tooling that built the project — not an external certification. And 100 is treated as a state to maintain, not a trophy: every future audit re-checks it against the moving “best available today” bar and can — as passes 10–11 show — take points back.</span></li>
   </ul>
   <div class="links">
@@ -793,7 +795,7 @@
       <tr><td class="feat"><b>Core platform</b> <span>— Next.js 16 + React 19, TypeScript 6 strict, Node 24, Turborepo + pnpm monorepo; instant-page rendering (Cache Components/PPR) and the React Compiler on by default</span></td>
         <td><a href="03-the-foundation.md">Ch. 3</a></td>
         <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/STACK.md">STACK</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/ARCHITECTURE.md">ARCHITECTURE</a></td></tr>
-      <tr><td class="feat"><b>Database &amp; data safety</b> <span>— PostgreSQL + Drizzle, 16 versioned migrations, indexes, transactions, seed data, backup/restore + rehearsed DR drill, pooling knob, copy-me example entity</span></td>
+      <tr><td class="feat"><b>Database &amp; data safety</b> <span>— PostgreSQL + Drizzle, 26 versioned migrations, indexes, transactions, seed data, backup/restore + rehearsed DR drill, pooling knob, copy-me example entity</span></td>
         <td><a href="04-the-database.md">Ch. 4</a></td>
         <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DATABASE.md">DATABASE</a></td></tr>
       <tr><td class="feat"><b>Identity &amp; access</b> <span>— email/password + verification + reset, breach-checked passwords, Google/GitHub login, 2FA + backup codes, passkeys, organizations/teams + invitations, instant-effect roles (RBAC), admin ban + impersonation, audit log + viewer, sessions list/revoke, safe email change, account deletion, CAPTCHA, throttling</span></td>
@@ -829,13 +831,13 @@
       <tr><td class="feat"><b>Security posture</b> <span>— full security-header set + CSP (verified nonce upgrade as documented recipe), COOP, security.txt, violation reporting, rate limiting (+ Upstash option, hardened IP detection), 7-day dependency quarantine, SHA-pinned CI, pnpm audit, Trivy, SBOM, SLSA provenance, CodeQL, secret scanning</span></td>
         <td><a href="09-quality-and-trust.md">Ch. 9</a> · <a href="10-shipping-and-running.md">10</a></td>
         <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/SECURITY.md">SECURITY</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT</a></td></tr>
-      <tr><td class="feat"><b>Testing &amp; CI</b> <span>— Vitest unit/component suites with coverage gates, Playwright browser journeys (auth lifecycles, headers, i18n, a11y via axe on 7 surfaces, passkeys), DB integration tests, visual lane, dead-code gate (knip), git hooks, container build-and-smoke lane</span></td>
+      <tr><td class="feat"><b>Testing &amp; CI</b> <span>— Vitest unit/component suites with coverage gates, Playwright browser journeys (auth lifecycles, headers, i18n, a11y via axe on 8 surfaces, passkeys), DB integration tests, visual lane, dead-code gate (knip), git hooks, container build-and-smoke lane</span></td>
         <td><a href="09-quality-and-trust.md">Ch. 9</a></td>
         <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/TESTING.md">TESTING</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT</a></td></tr>
       <tr><td class="feat"><b>Deployment</b> <span>— multi-stage Docker (web + slim worker), dev/prod compose, proven Fly.io runbook + documented alternatives, env validation, Renovate updates, performance budgets + bundle analysis</span></td>
         <td><a href="10-shipping-and-running.md">Ch. 10</a></td>
         <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DEPLOYMENT.md">DEPLOYMENT</a></td></tr>
-      <tr><td class="feat"><b>Agent-readiness</b> <span>— AGENTS.md working agreements, 14 on-demand context docs, committed skills (checkpoint / project-audit / doc-audit / tidy), permissions allowlist, decision log incl. rejected options, doc-drift audits, maintenance regimen</span></td>
+      <tr><td class="feat"><b>Agent-readiness</b> <span>— AGENTS.md working agreements, 36 on-demand context docs, committed skills (checkpoint / project-audit / doc-audit / tidy), permissions allowlist, decision log incl. rejected options, doc-drift audits, maintenance regimen</span></td>
         <td><a href="11-built-with-ai-agents.md">Ch. 11</a></td>
         <td><a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/AGENTS.md">AGENTS</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/context/DECISIONS.md">DECISIONS</a> · <a class="gh" href="https://github.com/jrittelmeyer/next-web-boilerplate/blob/main/docs/MAINTENANCE.md">MAINTENANCE</a></td></tr>
     </tbody>

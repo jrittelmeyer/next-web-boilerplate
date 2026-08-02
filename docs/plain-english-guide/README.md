@@ -92,26 +92,41 @@ in any browser.
 > the whole repository is structured so that AI coding assistants can work on it as
 > effectively as human engineers — which is also how it was built, under human
 > direction and review, to a quality score that peaked at a perfect 100 out of 100
-> (passes 8–9) and holds 99.65 across eleven increasingly demanding audits, the
+> (passes 8–9) and stands at 99.9 across twelve increasingly demanding audits, the
 > small dip coming not from any regressed code but from the moving "best-available"
 > bar reclaiming points on maintenance currency — exactly the way the project says
 > its own audits are allowed to.
 
 ---
 
-*Current as of 2026-07-29 (repo commit `87c24c2`). The audit score stands at
-99.65 — it peaked at a perfect 100 across eleven passes, and the small dip was
-maintenance currency, not regressed code. Since the last stamp: a high-severity
-sign-in vulnerability (an account-takeover path in the authentication library)
-was fixed the day the daily security watch surfaced it, and that watchdog itself
-was hardened so it can no longer report "all clear" on a day it failed to
-actually run its check — a failure it had exhibited exactly once, caught and
-closed; the project's instruction files were reorganized so an AI assistant
-loads 70–80% less material per task; and a standing devil's-advocate AI
-reviewer joined the workflow and immediately caught real documentation errors,
-including in its own setup ([Chapter 11](11-built-with-ai-agents.md)). Earlier:
-the July 2026 Next.js advisory batch (9 CVEs) remediated the day after
-disclosure, the daily advisory-watch pipeline, image-optimization test coverage,
-a second "inception door" (`/project-adopt`), the first tagged releases
-(`v1.0.0`, `v1.1.0`), and the project's public face — a hosted Storybook
-component gallery and a screenshot tour in the README.*
+*Current as of 2026-08-02. The audit score stands at 99.9 — it peaked at a
+perfect 100 across twelve passes, and the small dip was maintenance currency,
+not regressed code.*
+
+*Since the last stamp, the big one is a **calendar**: the project grew a full
+scheduling feature, built and shipped in six planned stages. It handles the
+genuinely hard parts rather than the easy ones — repeating events ("every second
+Tuesday"), the difference between a wall-clock time and an actual instant so a
+meeting doesn't drift when the clocks change, guests who are invited by email and
+have no account at all, the calendar file your email program recognises so an
+invitation becomes an entry with one click, and reminders that fire once and only
+once even if two servers try to send them at the same moment. That last guarantee
+is the sort of thing this project takes seriously and most starters leave to
+chance. The chapters that follow don't cover the calendar yet — they're being
+rewritten for it — so treat it as the newest room in the house rather than one
+you've been shown around.*
+
+*Also since the last stamp: the framework was updated twice, and a documentation
+review found — and fixed — a set of instructions that had quietly fallen out of
+step with the code, including a removal guide that would have left broken pieces
+behind. Earlier: a high-severity sign-in vulnerability (an account-takeover path
+in the authentication library) fixed the day the daily security watch surfaced
+it, and that watchdog hardened so it can no longer report "all clear" on a day it
+failed to actually run its check; the instruction files reorganized so an AI
+assistant loads 70–80% less material per task; a standing devil's-advocate AI
+reviewer that immediately caught real documentation errors, including in its own
+setup ([Chapter 11](11-built-with-ai-agents.md)); the July 2026 Next.js advisory
+batch (9 CVEs) remediated the day after disclosure; a second "inception door"
+(`/project-adopt`); the first tagged releases (`v1.0.0`, `v1.1.0`); and the
+project's public face — a hosted Storybook component gallery and a screenshot
+tour in the README.*

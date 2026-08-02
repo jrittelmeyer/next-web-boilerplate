@@ -117,13 +117,13 @@ new-employee onboarding a project can have. The same pages serve both.
 
 ## How good is it, really? (The audit trail)
 
-Quality claims are cheap, so this project measures itself. Eleven separate audit
+Quality claims are cheap, so this project measures itself. Twelve separate audit
 passes were run against a deliberately harsh standard — "how does this compare to
 the best available starter kit imaginable?" — scoring every feature area out of
 100. The scores across the audits ran **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 →
-99.35 → 100 → 100 → 99.65 → 99.65**, with each gap found feeding a to-do list that
-was then worked to completion. The audit reports themselves are preserved in the
-repository.
+99.35 → 100 → 100 → 99.65 → 99.65 → 99.9**, with each gap found feeding a to-do
+list that was then worked to completion. The audit reports themselves are
+preserved in the repository.
 
 Two honest footnotes, because credibility matters more than a round number:
 
@@ -144,13 +144,19 @@ Two honest footnotes, because credibility matters more than a round number:
   July 2026) settled to **99.65**, the first dip since the program. Not because any
   code regressed (the product was byte-for-byte identical) but because the moving
   bar found four *maintenance* gaps — chiefly an automated dependency-update lane
-  that hadn't yet delivered a change — and all four were closed the same week. That
-  is the caveat working exactly as advertised: the number tracks reality, and
-  reality includes upkeep.
+  that hadn't yet delivered a change — and all four were closed the same week. The
+  twelfth pass (29 July) verified three of them shut and recovered the score to
+  **99.9**; the one still open is that same dependency-update lane, which is a
+  fault in an outside service rather than in the code. That is the caveat working
+  exactly as advertised: the number tracks reality, and reality includes upkeep.
 
-The project is **feature-complete**: the "path to 100" effort is finished and
-verified, nothing more is being added without a demonstrated need, and the
-discipline for any change remains
+The project is **feature-complete as a starting point**: the "path to 100" effort
+is finished and verified, and nothing is added to the *foundation* without a
+demonstrated need. That is not the same as finished. Since then it has grown one
+substantial thing on purpose — a full calendar and scheduling feature, built in
+six planned stages — because a starter kit that has never been used to build
+anything hard is an untested claim. Consumption finds what audits cannot. The
+discipline for any change, foundation or feature, remains
 *plan first → get human sign-off → build → verify*.
 
 ## Who would use it, and what is it worth?
