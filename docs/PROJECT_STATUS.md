@@ -10,11 +10,18 @@
 >   Working agreements → [../AGENTS.md](../AGENTS.md) ·
 >   Backlog → [BACKLOG.md](BACKLOG.md)
 >
-> **New shipped work: one ≤200-char row in the summary here; full prose goes to
+> **New shipped work: one ≤250-char row in the summary here; full prose goes to
 > docs/archive/PHASE_HISTORY.md in the same commit. Never re-expand rows — this is
 > the seventh compaction; the append-log must not regrow.**
+>
+> The cap is **prospective — it binds new rows only, and never licenses rewriting a
+> historical one.** Raised 200 → 250 on 2026-08-02: 200 was set before a one-row
+> phase summary had to carry a migration number, a decision and its falsifier, and
+> every row actually written under it needed a trim that cost real detail. 250 is the
+> observed honest cost of one such row; anything longer is prose that belongs in the
+> archive.
 
-_Last updated: 2026-08-02 (doc audit 2/4: the remaining code↔doc drift — remove-it, ARCHITECTURE, DATABASE, leaves, indexes)._
+_Last updated: 2026-08-02 (doc audit 3/4: untracked reminder limits filed; row cap 200 → 250; boundary narrative archived)._
 
 ## Where we are
 
@@ -48,19 +55,16 @@ _Last updated: 2026-08-02 (doc audit 2/4: the remaining code↔doc drift — rem
   lane is live since A28). **CodeQL is live** — `ENABLE_CODEQL` is set on the public
   repo (code scanning is free once public); the variable gate stays so private forks
   don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
-- **The path-to-100 program (owner decision, 2026-07-15) is BUILD-COMPLETE — all 11
-  rows #1–#11 shipped 2026-07-16 → 17, and the last remainder, #4b (the one-time live
-  Uploadthing tunnel proof), closed 2026-07-17** (owner-approved cloudflared tunnel;
-  see [VERIFICATION.md](VERIFICATION.md) → Uploadthing). Seven audit passes plateaued
-  at 99.35 because the last 13 points sat behind won't-fix/deferred classifications;
-  each was re-litigated and **all 13 proved recoverable**
-  ([archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md) holds the
-  per-row analysis). **VERIFIED 2026-07-17 — the eighth `/project-audit` pass graded
-  100.0/100** ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md));
-  **maintenance-only is the standing state again** (100 is a state to maintain — future
-  passes re-run the currency checks). The TS7 cutover stays outside it — **its
-  Next-side gate lifted 2026-08-02** (`useTypeScriptCli` in stable `next@16.2.12`);
-  it is now a cutover trial blocked on one named dep, not a wait
+- **The path-to-100 program (owner decision, 2026-07-15) is BUILD-COMPLETE and VERIFIED
+  at 100.0/100** by the eighth audit pass — all 11 rows plus the #4b live Uploadthing
+  tunnel proof, closed 2026-07-17. The 13 points behind the 99.35 plateau were all
+  won't-fix/deferred classifications, re-litigated and all recoverable
+  ([per-row analysis](archive/PATH_TO_100_2026-07-15.md) ·
+  [the verifying pass](archive/PROJECT_AUDIT_2026-07-17.md)). **Maintenance-only is the
+  standing state again** — 100 is a state to maintain, and later passes re-run the
+  currency checks. The TS7 cutover stays outside it — **its Next-side gate lifted
+  2026-08-02** (`useTypeScriptCli` in stable `next@16.2.12`); it is now a cutover trial
+  blocked on one named dep, not a wait
   ([MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
   standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.7.1,
@@ -110,43 +114,24 @@ Per-program summary (Rows = archived row count; full rows →
 | Maintenance — 2026-08-02 | 1 | next + eslint-plugin 16.2.12; `@/*` verified prod + dev; Phase 4 inbox check CLOSED | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-08-02 (1/4) | 1 | TS7 gate LIFTED (now a trial); docs:sanity guards init-app anchors; Phase 6 filed | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-08-02 (2/4) | 1 | remove-it's 9 stale counts; calendar routes in ARCHITECTURE; DATABASE 0024/0025; 2 leaves; both doc indexes | [remove-it](context/calendar/remove-it.md) |
+| Doc audit — 2026-08-02 (3/4) | 1 | Reminders' three accepted limits + the i18n `now` deferral filed in Watch; row cap 200 → 250; boundary narrative archived, not deleted | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
-**An external guest — no account, ever — is now a first-class case:** they are emailed a
-`METHOD:PUBLISH` `.ics` plus a token link, and answer at `/rsvp` signed out. What is
-deliberately *not* there: inbound iTIP `REPLY` ingestion, `VTIMEZONE` synthesis (a bare
-`TZID` ships, non-conformance stated in
-[context/calendar/invitations.md](context/calendar/invitations.md)), and per-occurrence
-RSVP — all Phase 6 or later.
+**The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
+ICS feed/import · per-occurrence RSVP · guest permissions · inbound iTIP · `VTIMEZONE`)
+is a live row in [BACKLOG.md](BACKLOG.md).** An external guest with no account is already
+a first-class case — emailed a `METHOD:PUBLISH` `.ics` plus a token link, answering at
+`/rsvp` signed out; Phase 4's real-inbox verification closed and passed 2026-08-02. The
+deliberate cuts and *why* each was cut — including why invitations are a list at
+`/calendar/invites` rather than rows on the invitee's month grid — are preserved in
+[archive/PHASE_HISTORY.md → Calendar boundary narrative](archive/PHASE_HISTORY.md#calendar-boundary-narrative--archived-from-project_statusmd-2026-08-02-doc-audit-2c).
+Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
-**Calendar invitations appear as a list at `/calendar/invites`; they do not appear as rows
-on the invitee's month grid until Phase 6.** That is a deliberate cut, not a gap. The month
-query scopes to the caller's own calendars, and widening it means a fourth query on the
-feature's hottest path, its own recurrence expansion and a share of the row cap — roughly
-doubling the phase's risk on the one query carrying `EXPLAIN` assertions. Phase 6 is already
-reworking that query for calendar sharing and folds the list in there.
-[context/calendar/attendees.md](context/calendar/attendees.md) carries the rest of the
-Phase-3 boundaries: emailed invitations and the public `/rsvp/[token]` page are Phase 4,
-per-occurrence RSVP and guest permissions are Phase 6.
-
-Date-gated watch (full detail:
-[MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)):
-**Renovate PR-delivery proof FAILED** — the 2026-07-27 Monday window passed with still
-zero `renovate/*` branches ever opened · `next`/`@next/*` age-exclude **removed
-2026-07-28** · `brace-expansion` → 5.0.8 + `ignoreGhsas` re-emptied and
-`better-auth`/`@better-auth/passkey` → 1.6.25 both **DONE 2026-07-30** (allowlist empty;
-no schema change, no migration) · `next` 16.2.12 **TAKEN 2026-08-02**, with
-`@next/eslint-plugin-next` in lockstep (it needs its own `pnpm add` — different package,
-and `manypkg` can't see the drift). Both `postcss` and `sharp` overrides stay: 16.2.12's
-manifest still pins them below the removal conditions.
-
-**Calendar Phase 4's last open verification CLOSED 2026-08-02 — and it passed.** A real
-invitation was sent from a `:3105` prod build through the real worker and real Resend
-(`calendar-invitation` job → message id logged); the owner's Gmail screenshot shows the
-event card with **"Add to Calendar"** and **no Yes/No/Maybe buttons**, at the correct civil
-time. That is the direct falsification of the `METHOD:PUBLISH` decision — the only part of
-it not asserted in code — and it holds. Detail:
-[context/calendar/invitations.md](context/calendar/invitations.md).
+**Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
+is canonical; the only item still open is **Renovate PR delivery FAILED** (the 2026-07-27
+window passed with zero `renovate/*` branches ever opened — a Mend-side diagnosis job,
+tracked as B1). Everything else that was pending here has closed: the `next`/`@next/*`
+age-exclude, `brace-expansion` → 5.0.8, `better-auth` → 1.6.25, and `next` 16.2.12.
 
 ## Fresh project on-ramp (clone → build a real app)
 
@@ -188,17 +173,10 @@ status,conclusion` — `watch --exit-status` alone has reported success on faile
   (verified via `email export`); the warning is cosmetic.
 - Toolchain gotchas (pnpm `allowBuilds`, TS 6, Biome 2.5 config, drizzle
   `import.meta.dirname`) are documented in STACK.md / CONVENTIONS.md / UI.md.
-- The committed `.claude/` directory holds three layers with different owners: the
-  ai-dev-kit install output (`skills/`, `hooks/ai-dev-kit/` — edit a clone of
-  [the kit repo](https://github.com/jrittelmeyer/ai-dev-kit) and re-install, never
-  the copies); **repo-owned** `agents/` and top-level `hooks/*.mjs` (hand-maintained,
-  edit directly — the `contrarian` review subagent and its sign-off nudge, added
-  2026-07-27, evaluated and corrected 2026-07-28); and `settings.json`, which is
-  user-owned and merged rather than regenerated by the installer. `settings.local.json`
-  stays untracked (gitignored). Every hook command anchors its handler path on
-  `"${CLAUDE_PROJECT_DIR}/…"` (kit 0.7.2, 2026-07-29) — hooks run in the *session* cwd, so
-  the previous repo-relative paths silently died from any subdirectory; gated now by
-  `docs:sanity`. Ownership rules, the anchored-command contract and why not exec form, why
-  the repo-owned handler sits outside the kit directory, and **why a valid agent file may
-  still not register** (it is surface-dependent, not fixed by reloading):
-  [context/CONVENTIONS.md → Agent tooling](context/CONVENTIONS.md#agent-tooling-claude).
+- The committed `.claude/` directory holds **three layers with different owners** — kit
+  install output (never edit the copies), repo-owned `agents/` + top-level `hooks/*.mjs`
+  (edit directly), and a user-owned `settings.json` that is merged, not regenerated.
+  Getting this wrong deletes hook wiring, so the rules are canonical in one place:
+  [context/CONVENTIONS.md → Agent tooling](context/CONVENTIONS.md#agent-tooling-claude)
+  — ownership, the `"${CLAUDE_PROJECT_DIR}/…"` anchored-command contract, and **why a
+  valid agent file may still not register** (surface-dependent; reloading does not fix it).

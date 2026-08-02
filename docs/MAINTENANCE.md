@@ -140,6 +140,39 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   exercised against a large tenant. *Removal condition:* a live run with a
   many-series calendar confirms both caps, or moves them.
 
+- **Calendar reminders — three accepted limits, all writer-enforced, none schema-enforced.**
+  Filed 2026-08-02 by the doc audit: each was recorded in a context doc or a source comment
+  and tracked nowhere, which is how *"the schema permits it"* turns into a shipped bug.
+  All three belong to the **Calendar Phase 6** row in [`BACKLOG.md`](BACKLOG.md).
+  - **`anchor` is CHECK-gated to `'start'`, and dropping that CHECK is half the change.**
+    `packages/db/AGENTS.md` says *"Phase 6 drops that CHECK"* — do not do only that. The
+    sweeper windows on the occurrence's **start** instant, so an end-anchored reminder would
+    fall outside the window and **silently never fire**: no log, no throw, no dead-letter.
+    *Removal condition:* `expandSeries` widens by the master's nominal span and re-filters on
+    the end instant — **then** the CHECK goes.
+  - **Guest reminders are prevented by the writer, not the schema.**
+    [`calendar/reminders.md`](context/calendar/reminders.md) states the trap outright: a
+    reader who checks only the DDL would conclude they were already sanctioned. An external
+    guest has no `user_id` (so no in-app channel) and no consent record. *Removal condition:*
+    a consent + unsubscribe surface — not a widened write path.
+  - **Reminder emails are en-GB in the event's zone, even for an account holder whose zone
+    `user_preferences` stores.** Forced for a Phase-4 guest (no account ⇒ no stored locale or
+    zone); *not* forced for a Phase-5 reminder. `packages/email/src/format.ts` warns against
+    "fixing" it locally, since that package cannot know a locale. *Removal condition:* the
+    caller passes locale + `user_preferences.timeZone` into the template.
+  - Recorded here too, since it is a **deployment** knob rather than a build row: the sweeper
+    looks back a **fixed 60 minutes**, so a worker outage longer than that silently drops what
+    it slept through. Deliberate — a persisted cursor is one stuck row away from replaying
+    everything or skipping a day, and the dedupe unique already makes an overlapping window a
+    no-op. *Action if a deployment cannot tolerate a >60 min gap:* raise the one constant.
+    (Its sibling — a day-before reminder crossing a DST transition fires an hour off in local
+    terms — is argued in [`context/DECISIONS.md`](context/DECISIONS.md) and stays accepted.)
+
+- **A global `now` for relative-time formatting is deferred** (noted in
+  [`context/I18N.md`](context/I18N.md)) — self-gating, because **no route server-renders a
+  `relativeTime` yet**. *Removal condition:* add it alongside the first route that does, or
+  the server and client will disagree on "5 minutes ago" across a hydration boundary.
+
 - **TypeScript 7 cutover** — **GA'd as `typescript@7.0.2` (2026-07-08)** but not yet
   adoptable here (proven by a 2026-07-13 cutover attempt — owner-approved age-gate
   override; repo undeployed → no prod risk): TS 7's package IS the native **Go**
