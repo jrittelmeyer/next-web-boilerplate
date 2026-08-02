@@ -36,6 +36,13 @@ export {
   expandRRule,
 } from "./expand";
 export {
+  type IcsEvent,
+  type IcsOverride,
+  type IcsSeries,
+  type SerializeIcsInput,
+  serializeIcs,
+} from "./ics";
+export {
   type ExpandSeriesResult,
   expandSeries,
   type MaterialisedOccurrence,

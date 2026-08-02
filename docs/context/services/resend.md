@@ -53,7 +53,19 @@ text-only clients). Best-effort: if the plain-text render throws, the send proce
 HTML-only with a logged warning. Preview the text output with the same export CLI:
 add `--plainText` to the `email export` command below.
 
-**Render tests:** `src/templates.test.tsx` renders all 9 templates to both HTML
+**Attachments (Phase 4):** `send()` takes an optional `attachments: EmailAttachment[]`,
+where `content` is UTF-8 **text** and the Buffer encoding happens at the Resend boundary —
+a bare string is read by the SDK as already-base64, so a `.ics` handed over that way
+arrives as garbage. Text rather than base64 is also what lets the capture seam record the
+body verbatim, so a test asserts `METHOD:PUBLISH` and the absence of an `ATTENDEE` line by
+reading the file rather than decoding it. The three calendar helpers
+(`sendCalendarInvitationEmail` / `…EventUpdatedEmail` / `…EventCancelledEmail`) are the
+only callers; a **removal** deliberately passes `ics: null`
+([../calendar/invitations.md](../calendar/invitations.md)). The attachment is added
+**inside** the capture branch and **after** the suppression consult, so a suppressed
+recipient still produces no file at all.
+
+**Render tests:** `src/templates.test.tsx` renders all 12 templates to both HTML
 and plain-text — the same `@react-email/render` calls used above — asserting non-empty
 output with the dynamic content (name, links); `src/send.test.tsx` locks the
 unconfigured → `{ error }` degradation contract across every helper plus the

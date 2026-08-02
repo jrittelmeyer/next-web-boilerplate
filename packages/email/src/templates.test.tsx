@@ -1,6 +1,9 @@
 import { render } from "@react-email/render";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
+import { CalendarEventCancelled } from "./templates/calendar-event-cancelled";
+import { CalendarEventUpdated } from "./templates/calendar-event-updated";
+import { CalendarInvitation } from "./templates/calendar-invitation";
 import { ChangeEmail } from "./templates/change-email";
 import { DeleteAccount } from "./templates/delete-account";
 import { EmailChangedNotice } from "./templates/email-changed-notice";
@@ -29,6 +32,10 @@ const NEW_EMAIL = "new.address@example.com";
 const ORG = "Acme Analytics";
 const INVITER = "Grace Hopper";
 const ROLE = "admin";
+const ORGANIZER = "organizer@example.com";
+const EVENT_TITLE = "Weekly standup";
+const WHEN = "Monday 10 August 2026 at 09:00";
+const LOCATION = "Room 2";
 
 interface Fixture {
   label: string;
@@ -112,12 +119,57 @@ const fixtures: Fixture[] = [
     htmlIncludes: [URL],
     textIncludes: [URL],
   },
+  {
+    label: "calendar-invitation",
+    element: (
+      <CalendarInvitation
+        eventTitle={EVENT_TITLE}
+        location={LOCATION}
+        organizerEmail={ORGANIZER}
+        rsvpUrl={URL}
+        when={WHEN}
+      />
+    ),
+    defaults: <CalendarInvitation />,
+    htmlIncludes: [ORGANIZER, EVENT_TITLE, WHEN, LOCATION, URL],
+    textIncludes: [ORGANIZER, EVENT_TITLE, WHEN, URL],
+  },
+  {
+    label: "calendar-event-updated",
+    element: (
+      <CalendarEventUpdated
+        eventTitle={EVENT_TITLE}
+        location={LOCATION}
+        organizerEmail={ORGANIZER}
+        reask
+        rsvpUrl={URL}
+        when={WHEN}
+      />
+    ),
+    defaults: <CalendarEventUpdated />,
+    htmlIncludes: [ORGANIZER, EVENT_TITLE, WHEN, LOCATION, URL],
+    textIncludes: [ORGANIZER, EVENT_TITLE, WHEN, URL],
+  },
+  {
+    label: "calendar-event-cancelled",
+    element: (
+      <CalendarEventCancelled
+        eventTitle={EVENT_TITLE}
+        organizerEmail={ORGANIZER}
+        reason="cancelled"
+        when={WHEN}
+      />
+    ),
+    defaults: <CalendarEventCancelled />,
+    htmlIncludes: [ORGANIZER, EVENT_TITLE, WHEN],
+    textIncludes: [ORGANIZER, EVENT_TITLE, WHEN],
+  },
 ];
 
 describe("email template render smoke tests", () => {
   // Guard: if a template is added or removed, this fixture list must keep pace.
   it("covers every template", () => {
-    expect(fixtures).toHaveLength(9);
+    expect(fixtures).toHaveLength(12);
   });
 
   it.each(fixtures)("$label renders non-empty HTML with its dynamic content", async ({
