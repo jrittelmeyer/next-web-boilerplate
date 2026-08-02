@@ -136,6 +136,16 @@ test("an external guest is invited, answers signed-out, and is re-asked when the
     expect(guestPage.url()).not.toContain(token);
 
     await expect(guestPage.getByRole("heading", { name: "Standup" })).toBeVisible();
+
+    // The email's Yes/No/Maybe carry `?intent=`, which must survive the token-for-cookie
+    // redirect or the preselect the templates promise silently never happens. It only
+    // PRESELECTS — a mail scanner following the link must not record an answer — so the
+    // stored status is still untouched here.
+    const preselected = await guestPage.goto(`${guestPage.url()}?intent=accepted`);
+    expect(preselected?.status()).toBe(200);
+    await expect(guestPage.getByTestId("rsvp-accepted")).toHaveAttribute("aria-pressed", "true");
+    expect(await getAttendeeStatus(eventId as string, guest)).toBe("needs-action");
+
     await guestPage.getByTestId("rsvp-declined").click();
     await expect(guestPage.getByText("You declined.").first()).toBeVisible();
     expect(await getAttendeeStatus(eventId as string, guest)).toBe("declined");

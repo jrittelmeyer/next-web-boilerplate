@@ -40,7 +40,18 @@ export async function GET(
   // `localePrefix: "as-needed"` leaves the default locale unprefixed, so re-prefixing it
   // here would produce `/en/rsvp/...` — a URL next-intl redirects straight back off.
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-  const response = NextResponse.redirect(new URL(`${prefix}/rsvp/s/${handle}`, request.url));
+  const target = new URL(`${prefix}/rsvp/s/${handle}`, request.url);
+
+  // The email's Yes/No/Maybe buttons carry `?intent=`, and the redirect has to carry it
+  // onward or the preselect the templates promise never happens. **Allow-listed, not
+  // forwarded verbatim**: this value is reflected into the page from an emailed URL, so
+  // anything but one of the three known answers is dropped rather than echoed.
+  const intent = request.nextUrl.searchParams.get("intent");
+  if (intent === "accepted" || intent === "declined" || intent === "tentative") {
+    target.searchParams.set("intent", intent);
+  }
+
+  const response = NextResponse.redirect(target);
 
   if (attendeeId !== null) {
     response.cookies.set(rsvpCookieName(handle), token, {
