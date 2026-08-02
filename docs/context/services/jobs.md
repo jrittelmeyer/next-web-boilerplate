@@ -41,6 +41,32 @@ worker is down runs late, and the delete is idempotent so a retry is safe. To fi
 (no waiting for 03:00), `send` the queue directly: `boss.send(JOBS.cleanupExpiredVerifications,
 {})` — the running worker picks it up.
 
+**The second scheduled job — `calendar-reminder-sweep` (Phase 5).** Registered on
+`"*/5 * * * *"`, and it differs from the housekeeping example above in three ways worth
+knowing before you copy either as a pattern:
+
+- **It is the only handler that ENQUEUES**, so `worker.ts` hands it the live `boss` and it
+  calls `boss.send`. It must **not** use `enqueue()` — that builds a second pg-boss instance
+  inside a process that already has one, and swallows every error by design. Swallowing is
+  correct for a web request that must not fail the user's flow, and catastrophic here: the
+  sweeper commits its dedupe claim *before* enqueueing, so a swallowed failure would leave
+  the ledger permanently saying "delivered" for a reminder nobody received. It compensates
+  instead — delete the claim, rethrow, let the next tick retry.
+- **It is registered unconditionally**, even on a deployment with no calendar rows. The
+  tempting alternative ("schedule it only when reminders exist") has a silent hole:
+  `boss.schedule` runs once at boot with no re-registration path, so the *first* reminder a
+  deployment ever created would never fire until someone restarted the worker. The sweep's
+  first statement is an `EXISTS` check that returns immediately, so an unused install pays a
+  trivial query per tick — ~288 `pgboss.job` rows/day, which pg-boss archives.
+- **Its clock is Postgres's.** One `SELECT now()` per tick supplies every bound, so multiple
+  workers agree and a host/container clock skew cannot shift the window.
+
+⚠️ **Removing a scheduled job means `boss.unschedule(<queue>)` FIRST.** The row lives in
+`pgboss.schedule` keyed by queue name and outlives its code — delete the handler alone and the
+schedule keeps enqueueing into a queue nobody watches, forever. Full removal steps:
+[../calendar/remove-it.md](../calendar/remove-it.md); the feature's own design:
+[../calendar/reminders.md](../calendar/reminders.md).
+
 **Run it / see it work (deterministic, no email needed):**
 ```bash
 docker compose -f docker/docker-compose.yml up -d        # Postgres

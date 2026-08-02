@@ -17,8 +17,10 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@repo/calendar": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/email": "workspace:*",
+    "@repo/validators": "workspace:*",
     "@sentry/node": "10.59.0",
     "drizzle-orm": "^0.45.2",
     "pg-boss": "12.20.0",
