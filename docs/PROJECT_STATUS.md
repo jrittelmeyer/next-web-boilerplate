@@ -14,7 +14,7 @@
 > docs/archive/PHASE_HISTORY.md in the same commit. Never re-expand rows — this is
 > the seventh compaction; the append-log must not regrow.**
 
-_Last updated: 2026-08-02 (next 16.2.12; calendar Phase 4 inbox check closed)._
+_Last updated: 2026-08-02 (doc audit 1/4: TS7 gate lifted; init-app anchor guard; Calendar Phase 6 filed)._
 
 ## Where we are
 
@@ -58,8 +58,10 @@ _Last updated: 2026-08-02 (next 16.2.12; calendar Phase 4 inbox check closed)._
   per-row analysis). **VERIFIED 2026-07-17 — the eighth `/project-audit` pass graded
   100.0/100** ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md));
   **maintenance-only is the standing state again** (100 is a state to maintain — future
-  passes re-run the currency checks). The TS7 cutover stays outside it (externally
-  gated — stable-Next TS7 support; experimental in canary since 2026-07-10).
+  passes re-run the currency checks). The TS7 cutover stays outside it — **its
+  Next-side gate lifted 2026-08-02** (`useTypeScriptCli` in stable `next@16.2.12`);
+  it is now a cutover trial blocked on one named dep, not a wait
+  ([MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
   standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.7.1,
   the 2026-07-23 context-engineering release); this repo consumes the installed
@@ -106,6 +108,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Calendar — Phase 4 | 1 | **Emailed invitations, `.ics` and external RSVP.** `METHOD:PUBLISH` with **no `ATTENDEE`** (owner call 2026-08-01; also RFC 5546 §3.2.1's MUST NOT) — Gmail's native Yes/No/Maybe emit a `METHOD:REPLY` nothing here reads, so the token link is the only path · serializer in `@repo/calendar` at 100/100/100/100 (75-**octet** folding over code points, `RECURRENCE-ID` siblings + `EXDATE`s for deleted overrides, bare `TZID` with the non-conformance stated, `DTSTAMP` a parameter) · a **stateless HMAC token with no `.`** — `proxy.ts` excludes dotted paths, so a separator would have 404'd every invitation — exchanged for an httpOnly cookie so it never reaches PostHog/Sentry/`Referer`/history · **`reask_at` (0024)**: re-asking is a derived `responded_at < reask_at`, so a guest's answer and comment survive a reschedule · a three-boolean change classifier (bump / resend / re-ask) wired through **all six** writers · one self-contained pg-boss job per recipient | [context/calendar/invitations.md](context/calendar/invitations.md) |
 | Calendar — Phase 5 | 1 | **Reminders** (`0025`): a `*/5` sweeper over live rows, deduped by occurrence **instant**; claim-then-compensate; `start` anchor only. Decisions: DECISIONS.md | [context/calendar/reminders.md](context/calendar/reminders.md) |
 | Maintenance — 2026-08-02 | 1 | next + eslint-plugin 16.2.12; `@/*` verified prod + dev; Phase 4 inbox check CLOSED | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Doc audit — 2026-08-02 (1/4) | 1 | TS7 gate LIFTED (now a trial); docs:sanity guards init-app anchors; Phase 6 filed | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **An external guest — no account, ever — is now a first-class case:** they are emailed a

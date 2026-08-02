@@ -150,18 +150,52 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   library-API consumer (Next, webpack loaders, Vue/Svelte/Astro/MDX/Angular) stays on
   TS 6 until the stable programmatic API returns in **TS 7.1 (~Q4 2026)**. Upstream
   moved 2026-07-10: Next merged **experimental TS7 support into canary**
-  ([#95639](https://github.com/vercel/next.js/pull/95639) — detects TS7 and offers
-  `experimental.useTypeScriptCli`, shelling out to the CLI instead of the JS API;
-  auto-detect planned before stable), closing tracking issue
+  ([#95639](https://github.com/vercel/next.js/pull/95639) — offers
+  `experimental.useTypeScriptCli`, shelling out to the CLI instead of the JS API),
+  closing tracking issue
   [#95490](https://github.com/vercel/next.js/issues/95490)
   ([#95633](https://github.com/vercel/next.js/discussions/95633) remains the
-  discussion) — not in any stable 16.2.x (as of 2026-07-15; still absent at 16.2.11).
-  The `tsc` CLI itself is clean and **~3.6× faster** (monorepo type-check 20.5s →
-  5.7s, cache-bypassed), so the win is real. **Re-gate: on TS7 support reaching a
-  *stable* Next release** (`useTypeScriptCli` or its auto-detect successor — check
-  `pnpm view next dist-tags`). Mechanics learned: pnpm's age gate re-validates the
-  whole lockfile on every `pnpm run`/frozen install, not just `pnpm install` — any
-  early adoption needs a `minimumReleaseAgeExclude`.
+  discussion). The `tsc` CLI itself is clean and **~3.6× faster** (monorepo
+  type-check 20.5s → 5.7s, cache-bypassed), so the win is real. Mechanics learned:
+  pnpm's age gate re-validates the whole lockfile on every `pnpm run`/frozen
+  install, not just `pnpm install` — any early adoption needs a
+  `minimumReleaseAgeExclude`.
+
+  **⇒ THE NEXT-SIDE RE-GATE LIFTED 2026-08-02 — met by its literal terms, at three
+  named costs.** The condition as written was *"TS7 support reaching a stable Next
+  release (`useTypeScriptCli` or its auto-detect successor)"*. Verified **in the
+  installed artifact**, not from a changelog: `apps/web` resolves `next@16.2.12`
+  (`dist-tags.latest`), which carries `useTypeScriptCli` across 40 files including
+  `dist/build/type-check.js`, `dist/build/load-jsconfig.js` and its own shipped docs
+  page. Read that page (`dist/docs/…/useTypeScriptCli.md`) before planning a cutover —
+  it is the primary source and it names what the flag costs:
+  - **It is opt-in, not auto-detected.** *"Next.js does not select the CLI checker
+    automatically"* — TS7 installed without the flag makes `next build` exit with
+    instructions. The gate's disjunction is satisfied by `useTypeScriptCli`; the
+    auto-detect successor this file expected before stable **did not** arrive.
+  - **It widens what gets type-checked.** *"The complete project selected by the
+    configured `tsconfig` is checked, including test files"*, and
+    `--debug-build-paths` **cannot** narrow it. This repo co-locates `*.test.ts(x)`
+    with source by hard rule ([CONVENTIONS.md](context/CONVENTIONS.md)), so a cutover
+    newly puts the whole test tree inside `next build`. Expect test-only type errors
+    the JS-API path never surfaced.
+  - **Diagnostics degrade.** Next-specific code frames and error rewriting are not
+    applied; `typescript.ignoreBuildErrors` skips the CLI checker too.
+
+  **What still blocks the cutover is one named in-tree dependency, not "the
+  toolchain":** `react-docgen-typescript@2.4.0` (required peer `typescript >= 4.3.x`,
+  resolved against `6.0.3`) calls the classic program API, reached via
+  `@storybook/react-vite` from `packages/ui/.storybook/main.ts`. **It gates the
+  visual-regression lane, not `next build`.** Method, stated so the next reader can
+  weigh it: that came from enumerating every package declaring `typescript` as a
+  dependency or required peer — which cannot see a bare `require("typescript")` under
+  an *optional* or undeclared peer, so treat it as the floor, not the ceiling.
+  Cleared by the same enumeration: knip (oxc), drizzle-kit/vitest (esbuild), biome
+  (Rust), zero `typescript-eslint` anywhere; `@trpc/*`'s `typescript >=5.7.2` peer is
+  types-only inference, not an API consumer.
+  **Re-gate, restated: on a cutover TRIAL, not a dependency count.** A branch that
+  sets the flag and runs the full gate falsifies the `react-docgen-typescript` claim
+  and the test-tree exposure at once, which no further enumeration can.
 - **Maintenance-only (Tier 3 G) — the standing state** — the honest "we're done"
   option: let Renovate drive deps, keep docs current, add steps as real needs surface.
   Standing 2026-07-12 → 2026-07-15; superseded 2026-07-15 by the path-to-100 program
@@ -323,9 +357,10 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     prod build; **and** `next dev --turbopack` first-compiled clean on `:3106`. The dev check
     is not ceremony: `load-jsconfig` feeds `next dev` too, and the gate never starts a dev
     server, so a dev-only alias regression would reach every consumer unobserved.
-  - ⚠️ **This bump makes the TypeScript-7 re-gate above stale** — `experimental.useTypeScriptCli`
-    is now in a *stable* release. Corrected in a separate pass with its own evidence rather
-    than inherited here.
+  - **This bump lifted the TypeScript-7 re-gate above** — `experimental.useTypeScriptCli` is now
+    in a *stable* release. **Corrected 2026-08-02** in its own pass with its own evidence (the
+    installed artifact + the flag's shipped docs page), deliberately not inherited from this
+    entry: see the TS7 Watch item above for what the flag costs and what still blocks a cutover.
 - The **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is
   intermittently flaky (absorbed by `retries: 2`, but it twice burned 2 of 3 CI
   attempts). **Not a code bug** — a fragile signup+redirect timing flow on modest
