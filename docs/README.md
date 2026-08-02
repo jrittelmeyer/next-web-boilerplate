@@ -26,9 +26,11 @@ level up.
 
 Per-area deep dives (`STACK` · `ARCHITECTURE` · `CONVENTIONS` · `DATABASE` · `API` ·
 `STATE` · `UI` · `I18N` · `TESTING` · `SECURITY` · `DEPLOYMENT` · `DECISIONS`), plus
-two topic dirs split for per-task loading (2026-07-23): [`context/auth/`](context/auth/)
-(core · account-page · factors · rbac-admin · organizations; index `AUTH.md`) and
-[`context/services/`](context/services/) (one file per service; index `SERVICES.md`).
+three topic dirs split for per-task loading: [`context/auth/`](context/auth/)
+(core · account-page · factors · rbac-admin · organizations; index `AUTH.md`),
+[`context/services/`](context/services/) (one file per service; index `SERVICES.md`), and
+[`context/calendar/`](context/calendar/model.md) (model · recurrence · api · acl ·
+attendees · invitations · reminders · remove-it — no index file; start at `model.md`).
 The per-task index — *which file to read for which kind of change* — is the table in
 [`AGENTS.md`](../AGENTS.md).
 

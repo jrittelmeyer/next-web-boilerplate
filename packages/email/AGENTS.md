@@ -17,4 +17,4 @@ One imperative per line; mechanics + rationale live in
   `user_preferences` live; this package can never know a reader's locale. It lives here
   because the `@repo/jobs` reminder sweeper is a second caller that cannot reach `apps/web`.
   Emails are en-GB for every recipient — accepted, in DECISIONS.md, not a bug to fix here.
-- This package imports only `@repo/validators` + `@repo/db`.
+- This package imports only `@repo/db` (plus `@react-email/*`, `resend`, `server-only`).

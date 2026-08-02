@@ -14,7 +14,7 @@
 > docs/archive/PHASE_HISTORY.md in the same commit. Never re-expand rows — this is
 > the seventh compaction; the append-log must not regrow.**
 
-_Last updated: 2026-08-02 (doc audit 1/4: TS7 gate lifted; init-app anchor guard; Calendar Phase 6 filed)._
+_Last updated: 2026-08-02 (doc audit 2/4: the remaining code↔doc drift — remove-it, ARCHITECTURE, DATABASE, leaves, indexes)._
 
 ## Where we are
 
@@ -109,6 +109,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Calendar — Phase 5 | 1 | **Reminders** (`0025`): a `*/5` sweeper over live rows, deduped by occurrence **instant**; claim-then-compensate; `start` anchor only. Decisions: DECISIONS.md | [context/calendar/reminders.md](context/calendar/reminders.md) |
 | Maintenance — 2026-08-02 | 1 | next + eslint-plugin 16.2.12; `@/*` verified prod + dev; Phase 4 inbox check CLOSED | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-08-02 (1/4) | 1 | TS7 gate LIFTED (now a trial); docs:sanity guards init-app anchors; Phase 6 filed | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Doc audit — 2026-08-02 (2/4) | 1 | remove-it's 9 stale counts; calendar routes in ARCHITECTURE; DATABASE 0024/0025; 2 leaves; both doc indexes | [remove-it](context/calendar/remove-it.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **An external guest — no account, ever — is now a first-class case:** they are emailed a

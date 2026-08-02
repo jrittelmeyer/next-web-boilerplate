@@ -41,12 +41,17 @@ worker is down runs late, and the delete is idempotent so a retry is safe. To fi
 (no waiting for 03:00), `send` the queue directly: `boss.send(JOBS.cleanupExpiredVerifications,
 {})` — the running worker picks it up.
 
+**The calendar queues.** Four, none of them obvious from the two examples above:
+`calendar-invitation` (Phase 4 — event-driven, one job per recipient, enqueued by
+`apps/web/src/server/calendar/invitations.ts`), plus the Phase 5 trio below.
+
 **The second scheduled job — `calendar-reminder-sweep` (Phase 5).** Registered on
 `"*/5 * * * *"`, and it differs from the housekeeping example above in three ways worth
 knowing before you copy either as a pattern:
 
-- **It is the only handler that ENQUEUES**, so `worker.ts` hands it the live `boss` and it
-  calls `boss.send`. It must **not** use `enqueue()` — that builds a second pg-boss instance
+- **It is the only handler that ENQUEUES** — into `calendar-reminder-email` and
+  `calendar-reminder-notify`, one job per recipient per channel — so `worker.ts` hands it
+  the live `boss` and it calls `boss.send`. It must **not** use `enqueue()` — that builds a second pg-boss instance
   inside a process that already has one, and swallows every error by design. Swallowing is
   correct for a web request that must not fail the user's flow, and catastrophic here: the
   sweeper commits its dedupe claim *before* enqueueing, so a swallowed failure would leave

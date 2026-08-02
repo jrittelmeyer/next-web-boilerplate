@@ -221,6 +221,28 @@ surface: it must work signed-out, so it is deliberately **not** under the `(dash
 or the proxy matcher. Both are driven by Better Auth's reactive org hooks; full walk-through
 in [auth/organizations.md](auth/organizations.md).
 
+**The calendar is real, not scaffold** — the largest worked feature in the tree, and the
+model to copy for a multi-table domain. Five routes, only three of them under the
+`(dashboard)` gate:
+
+| Route | File | Gate |
+| --- | --- | --- |
+| `/calendar` | `[locale]/(dashboard)/calendar/page.tsx` | dashboard + proxy |
+| `/calendar/invites` | `[locale]/(dashboard)/calendar/invites/page.tsx` | dashboard + proxy |
+| `/calendar/event/[id]` | `[locale]/(dashboard)/calendar/event/[id]/page.tsx` | dashboard + proxy |
+| `/rsvp/[token]` | `[locale]/rsvp/[token]/route.ts` | **public** — a route *handler*, not a page |
+| `/rsvp/s/[handle]` | `[locale]/rsvp/s/[handle]/page.tsx` | **public** |
+
+`/rsvp/[token]` is the repo's only **public, token-authenticated** surface: an external
+guest with no account ever answers there signed out. The handler exchanges the stateless
+HMAC token for an httpOnly cookie and redirects, so the token never reaches PostHog,
+Sentry, `Referer` or history — and it must stay outside the proxy matcher and the
+`(dashboard)` gate. Full model, ACL and API:
+[calendar/](calendar/model.md) · [acl](calendar/acl.md) · [invitations](calendar/invitations.md).
+
+**`/admin` and `/admin/audit`** (`[locale]/(dashboard)/admin/…`) are the RBAC surfaces —
+role-gated on top of the dashboard gate; see [auth/rbac-admin.md](auth/rbac-admin.md).
+
 ## Where Tests Live
 
 Unit/component tests are **co-located** with source as `*.test.ts(x)` and run by

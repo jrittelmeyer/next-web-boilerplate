@@ -50,12 +50,15 @@ app/
                       import); the real document shell lives in [locale]/layout.tsx
   [locale]/         — the WHOLE page tree (i18n path routing — see I18N.md);
                       [locale]/layout.tsx owns <html lang>, providers, Toaster
-    (auth)/         — auth pages: login, signup, forgot-password, reset-password
+    (auth)/         — auth pages: login, signup, forgot-password, reset-password,
+                      goodbye, accept-invitation/[id]
                       (shared centered-card layout; render at /login, /signup, …)
     (dashboard)/    — protected app shell (nav + user menu + sign-out); the layout
                       runs the authoritative session check, redirects to /login if none
     page.tsx        — the landing page (renders at /)
-  api/              — route handlers (auth, trpc, stripe, uploadthing, health)
+  api/              — route handlers (auth, trpc, stripe/webhook, resend/webhook,
+                      uploadthing, notifications/stream, health). Two more sit
+                      OUTSIDE api/: [locale]/rsvp/[token] and .well-known/security.txt
 i18n/               — next-intl plumbing: routing.ts, request.ts, navigation.ts
 components/
   [feature]/        — co-locate component with its types and hooks
