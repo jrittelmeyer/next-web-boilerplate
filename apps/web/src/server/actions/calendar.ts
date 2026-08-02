@@ -20,6 +20,7 @@ import {
 import { type Database, db } from "@repo/db";
 import {
   calendarEventAttendees,
+  calendarEventReminders,
   calendarEvents,
   calendarRecurrenceDates,
   calendars,
@@ -39,6 +40,7 @@ import {
   deleteEventSchema,
   type RecurrenceDateKind,
   type RecurrenceDateValues,
+  type ReminderInput,
   type RespondToEventValues,
   recurrenceDateSchema,
   respondToEventSchema,
@@ -65,6 +67,7 @@ import {
   getEventAccess,
 } from "@/lib/calendar-acl";
 import { diffAttendees } from "@/lib/calendar-attendees";
+import { diffReminders } from "@/lib/calendar-reminders";
 import { getActiveOrganizationId } from "@/lib/organization";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -624,6 +627,60 @@ async function addAttendees(
 }
 
 /**
+ * The caller's own reminders on an event.
+ *
+ * **Reminders hang off the SERIES MASTER**, exactly as attendees do — every caller resolves
+ * `recurrence_parent_id ?? id` before arriving here, so an override inherits its master's
+ * reminders rather than carrying copies. The sweeper reads them the same way.
+ *
+ * Phase 5 writes reminders only for the acting user, which is the calendar's owner: the
+ * schema would accept any `user_id`, and Phase 6 widens this deliberately when shared
+ * calendars arrive. Nothing here is notified or emailed — a reminder is a future delivery,
+ * and the sweeper is what makes it happen.
+ */
+async function applyReminders(
+  tx: Transaction,
+  eventId: string,
+  userId: string,
+  submitted: readonly ReminderInput[],
+) {
+  const existing = await tx
+    .select({
+      id: calendarEventReminders.id,
+      channel: calendarEventReminders.channel,
+      anchor: calendarEventReminders.anchor,
+      offsetMinutes: calendarEventReminders.offsetMinutes,
+    })
+    .from(calendarEventReminders)
+    .where(
+      and(eq(calendarEventReminders.eventId, eventId), eq(calendarEventReminders.userId, userId)),
+    );
+
+  const diff = diffReminders(existing, submitted);
+
+  // `unchanged` is untouched on purpose: re-inserting would mint a new row id, and
+  // `calendar_reminder_deliveries` cascades on it — the ledger that stops a re-send would
+  // go with it, and the next sweep would re-deliver every occurrence still inside the
+  // grace window. See lib/calendar-reminders.ts.
+  if (diff.removed.length > 0) {
+    await tx
+      .delete(calendarEventReminders)
+      .where(inArray(calendarEventReminders.id, [...diff.removed]));
+  }
+  if (diff.added.length > 0) {
+    await tx.insert(calendarEventReminders).values(
+      diff.added.map((reminder) => ({
+        eventId,
+        userId,
+        channel: reminder.channel,
+        anchor: reminder.anchor,
+        offsetMinutes: reminder.offsetMinutes,
+      })),
+    );
+  }
+}
+
+/**
  * Cancellations for guests being dropped from an event that still exists.
  *
  * **The deleted addresses are returned to the caller, and that is load-bearing.** This is a
@@ -922,6 +979,7 @@ export async function createEvent(input: CreateEventValues): Promise<EventResult
         gate.session.user.email,
         invited,
       );
+      await applyReminders(tx, row.id, gate.session.user.id, parsed.data.reminders);
       return { row, payloads };
     });
     created = result.row;
@@ -999,9 +1057,10 @@ export async function updateEvent(input: UpdateEventValues): Promise<EventResult
             derived.data,
             recurrenceId,
             actorEmail,
+            userId,
           );
   } else {
-    result = await updateWholeEvent(target, parsed.data, derived.data, actorEmail);
+    result = await updateWholeEvent(target, parsed.data, derived.data, actorEmail, userId);
   }
 
   if ("error" in result) return result;
@@ -1029,6 +1088,9 @@ async function updateWholeEvent(
   values: UpdateEventInput,
   times: DerivedTimes,
   actorEmail: string,
+  // Separate from `actorEmail` because reminders are keyed by user id, not address. Threaded
+  // in rather than re-read: this is the same session the ACL gate already resolved.
+  actorUserId: string,
 ): Promise<EventResult> {
   const rule = parseSubmittedRule(values.rrule);
   if ("fieldErrors" in rule) return { error: FIELD_ERRORS, fieldErrors: rule.fieldErrors };
@@ -1156,6 +1218,10 @@ async function updateWholeEvent(
         actorEmail,
         dropped,
       );
+      // `target.id` is already the series master (every caller resolves
+      // `recurrence_parent_id ?? id`), so an override edit adjusts the series' reminders
+      // rather than creating a second set nothing would ever reconcile.
+      await applyReminders(tx, target.id, actorUserId, values.reminders);
       return { row, payloads: [...added, ...cancelled], change, invited, dropped };
     });
   } catch (error) {
@@ -1278,6 +1344,7 @@ async function splitSeries(
   times: DerivedTimes,
   recurrenceId: LocalDateTime,
   actorEmail: string,
+  actorUserId: string,
 ): Promise<EventResult> {
   const source = parseSubmittedRule(seriesRrule);
   if ("fieldErrors" in source || source.data === null) {
@@ -1300,7 +1367,8 @@ async function splitSeries(
   if ("fieldErrors" in cut) return { error: FIELD_ERRORS, fieldErrors: cut.fieldErrors };
   // Cutting at the series' own first occurrence is not a split — it is "all". Taking it
   // literally would write `COUNT=0`, a rule `parseRRule` then refuses to read back.
-  if (cut.data.before === 0) return await updateWholeEvent(target, values, times, actorEmail);
+  if (cut.data.before === 0)
+    return await updateWholeEvent(target, values, times, actorEmail, actorUserId);
 
   // Partitioned here rather than re-read inside the transaction: string comparison on
   // `"YYYY-MM-DD HH:MM:SS"` is chronological because every field is zero-padded.

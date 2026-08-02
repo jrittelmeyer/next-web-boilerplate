@@ -161,6 +161,24 @@ export function CalendarWorkspace({
             email: attendee.email,
             role: attendee.role,
           })),
+          // The viewer's OWN reminders, and the series', for both of the reasons above:
+          // overrides inherit them, and an empty seed would read as "delete every reminder"
+          // on the next save — taking the delivery ledger that prevents a re-send with it.
+          //
+          // The filter is unreachable today and is not decoration: the column declares
+          // `'start' | 'end'` while `calendar_event_reminders_anchor_supported` refuses
+          // `'end'`, so no row can carry one. It is here because the day Phase 6 drops that
+          // CHECK, this composer would silently omit every end-anchored reminder from its
+          // seed and the next save would DELETE them. Widen the composer in the same change
+          // that widens the CHECK — the type error you get by removing this line is the
+          // reminder to.
+          reminders: loaded.reminders
+            .filter((reminder) => reminder.anchor === "start")
+            .map((reminder) => ({
+              channel: reminder.channel,
+              anchor: "start" as const,
+              offsetMinutes: reminder.offsetMinutes,
+            })),
           rrule: loaded.seriesRrule,
         }
       : null;

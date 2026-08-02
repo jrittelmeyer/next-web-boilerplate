@@ -9,6 +9,7 @@ import {
 import {
   calendarEventAttendees,
   calendarEventMasters,
+  calendarEventReminders,
   calendarEvents,
   calendarRecurrenceDates,
   calendars,
@@ -560,9 +561,35 @@ export const calendarRouter = createTRPCRouter({
         .where(eq(calendarEventAttendees.eventId, master.id))
         .orderBy(asc(calendarEventAttendees.email));
 
+      // **The caller's OWN reminders, never anyone else's** — unlike `attendees` above,
+      // which every reader sees in full. A reminder is a private arrangement between one
+      // person and one event ("your reminders are not everyone's reminders"), so the scope
+      // is the composite of event and viewer. They hang off the master, like attendees, so
+      // an occurrence's editor seeds from the series or a save would drop them all.
+      const reminders = await ctx.db
+        .select({
+          channel: calendarEventReminders.channel,
+          anchor: calendarEventReminders.anchor,
+          offsetMinutes: calendarEventReminders.offsetMinutes,
+        })
+        .from(calendarEventReminders)
+        .where(
+          and(
+            eq(calendarEventReminders.eventId, master.id),
+            eq(calendarEventReminders.userId, ctx.session.user.id),
+          ),
+        )
+        .orderBy(asc(calendarEventReminders.offsetMinutes));
+
       const recurrenceId = input.recurrenceId ?? null;
       if (recurrenceId === null) {
-        return { event: master, calendar: row.calendar, seriesRrule: master.rrule, attendees };
+        return {
+          event: master,
+          calendar: row.calendar,
+          seriesRrule: master.rrule,
+          attendees,
+          reminders,
+        };
       }
 
       const [override] = await ctx.db
@@ -585,6 +612,7 @@ export const calendarRouter = createTRPCRouter({
         calendar: row.calendar,
         seriesRrule: master.rrule,
         attendees,
+        reminders,
       };
     }),
 
