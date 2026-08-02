@@ -20,6 +20,9 @@
  * 5. Subagents in .claude/agents/ and the policy in CLAUDE.md must reference each
  *    other. Existence only — actual registration is surface-dependent and not
  *    observable from CI (see CONVENTIONS.md → Agent tooling).
+ * 6. Every scripts/init-app.mjs MENTION_PATCHES anchor still matches its target doc
+ *    exactly once — that patcher is fail-soft by design, so a doc edit that breaks an
+ *    anchor is invisible until it reaches a generated project.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -163,6 +166,55 @@ for (const mandated of claudeMd.matchAll(/`([a-z][a-z0-9-]*)` is standing-author
     failures.push(
       `CLAUDE.md says \`${mandated[1]}\` is standing-authorized but no .claude/agents/*.md defines it`,
     );
+  }
+}
+
+// 6. Every `MENTION_PATCHES` anchor in scripts/init-app.mjs must still match its target
+//    doc, exactly once. init-app rewrites these passages by LITERAL string match when a
+//    project is generated, and is deliberately fail-soft ("a passage that has drifted
+//    simply no-ops") — so an anchor broken by an ordinary doc edit is invisible by
+//    construction. Nothing else can see it: link-checking passes because in THIS repo the
+//    target still exists; the breakage only surfaces in a generated project, where the
+//    doc now points at a file `--slim` deleted. Costs one string compare per anchor.
+//    A missing init-app.mjs is not a failure (a generated project may drop it), but a
+//    PRESENT one that parses to ZERO anchors is — that means the array's shape changed
+//    and this check went blind, which is the exact defect it exists to prevent.
+const initApp = join(root, "scripts", "init-app.mjs");
+if (existsSync(initApp)) {
+  const src = readFileSync(initApp, "utf8");
+  const start = src.indexOf("const MENTION_PATCHES");
+  const block = start === -1 ? "" : src.slice(start, src.indexOf("\n];", start));
+  const anchors = [...block.matchAll(/file:\s*"([^"]+)",\s*\n\s*from:\s*("(?:[^"\\]|\\.)*")/g)];
+
+  if (anchors.length === 0) {
+    failures.push(
+      "scripts/init-app.mjs: could not parse any MENTION_PATCHES anchors — the array's shape changed and this check is no longer verifying anything. Update the parser in docs-sanity.mjs.",
+    );
+  }
+
+  for (const [, target, rawFrom] of anchors) {
+    let from;
+    try {
+      from = JSON.parse(rawFrom);
+    } catch {
+      failures.push(`scripts/init-app.mjs: unparseable MENTION_PATCHES \`from\` for ${target}`);
+      continue;
+    }
+    const full = join(root, target);
+    if (!existsSync(full)) {
+      failures.push(`scripts/init-app.mjs patches ${target} — no such file`);
+      continue;
+    }
+    const hits = readFileSync(full, "utf8").split(from).length - 1;
+    if (hits !== 1) {
+      failures.push(
+        `scripts/init-app.mjs: its ${target} anchor matches ${hits} times (expected exactly 1) — ${
+          hits === 0
+            ? "an edit to that doc broke the anchor, so init-app will silently skip the rewrite and generated projects ship a stale pointer. Restore the phrase verbatim, or update the `from:` string in the same commit"
+            : "the phrase is now ambiguous; make the anchor unique"
+        }. Anchor: ${JSON.stringify(from.length > 60 ? `${from.slice(0, 60)}…` : from)}`,
+      );
+    }
   }
 }
 
