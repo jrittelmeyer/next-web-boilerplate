@@ -24,7 +24,10 @@ export default defineConfig({
       // Scope to the pure, fully render-covered templates. send.tsx/client.ts wrap
       // the Resend SDK + `server-only` (the email equivalent of @repo/jobs' boss.ts
       // bootstrap) — smoke-tested for degradation but kept out of the floor.
-      include: ["src/templates/**/*.tsx"],
+      // `format.ts` joins the templates rather than the excluded bootstrap: it is pure,
+      // has no I/O, and is now shared by two packages, so a regression in it renders the
+      // wrong time in two different emails.
+      include: ["src/templates/**/*.tsx", "src/format.ts"],
       exclude: ["src/**/*.test.{ts,tsx}"],
       reporter: ["text", "json", "lcov"],
       thresholds: { lines: 95, functions: 95, branches: 90, statements: 95 },

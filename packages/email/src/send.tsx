@@ -9,6 +9,7 @@ import { getResend } from "./client";
 import { CalendarEventCancelled } from "./templates/calendar-event-cancelled";
 import { CalendarEventUpdated } from "./templates/calendar-event-updated";
 import { CalendarInvitation } from "./templates/calendar-invitation";
+import { CalendarReminder } from "./templates/calendar-reminder";
 import { ChangeEmail } from "./templates/change-email";
 import { DeleteAccount } from "./templates/delete-account";
 import { EmailChangedNotice } from "./templates/email-changed-notice";
@@ -444,6 +445,48 @@ export function sendCalendarEventUpdatedEmail(params: {
       attachments: [icsAttachment(params.ics)],
     },
     { action: "calendar update", url: params.rsvpUrl },
+  );
+}
+
+/**
+ * Calendar reminder (Phase 5) — sent by the sweeper in `@repo/jobs`, not by `apps/web`.
+ *
+ * **No attachment.** A reminder does not change the event, so an `.ics` would carry an
+ * unchanged `SEQUENCE` that a conforming client ignores — and a client that honoured it
+ * would re-add an event the reader already has.
+ *
+ * `eventUrl` is nullable rather than optional: the worker's `SITE_URL` is optional, and the
+ * alternative to omitting the button is putting "undefined/calendar/event/…" in a real
+ * inbox. The reminder still says what and when without it.
+ *
+ * @public — called by the `calendar-reminder-email` job handler.
+ */
+export function sendCalendarReminderEmail(params: {
+  to: string;
+  eventTitle: string;
+  when: string;
+  location: string | null;
+  eventUrl: string | null;
+  startsInMinutes: number;
+}): Promise<SendResult> {
+  return send(
+    {
+      to: params.to,
+      subject: `Reminder: ${params.eventTitle}`,
+      react: (
+        <CalendarReminder
+          eventTitle={params.eventTitle}
+          eventUrl={params.eventUrl}
+          location={params.location}
+          startsInMinutes={params.startsInMinutes}
+          when={params.when}
+        />
+      ),
+    },
+    // `url` feeds the non-production console fallback that prints an action link when email
+    // is unconfigured; `undefined` simply prints none, which is the honest thing when the
+    // deployment has no base URL to build one from.
+    { action: "calendar reminder", url: params.eventUrl ?? undefined },
   );
 }
 

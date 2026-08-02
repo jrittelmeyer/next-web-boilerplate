@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CalendarEventCancelled } from "./templates/calendar-event-cancelled";
 import { CalendarEventUpdated } from "./templates/calendar-event-updated";
 import { CalendarInvitation } from "./templates/calendar-invitation";
+import { CalendarReminder } from "./templates/calendar-reminder";
 import { ChangeEmail } from "./templates/change-email";
 import { DeleteAccount } from "./templates/delete-account";
 import { EmailChangedNotice } from "./templates/email-changed-notice";
@@ -164,12 +165,29 @@ const fixtures: Fixture[] = [
     htmlIncludes: [ORGANIZER, EVENT_TITLE, WHEN],
     textIncludes: [ORGANIZER, EVENT_TITLE, WHEN],
   },
+  {
+    // No ORGANIZER: a reminder is addressed to you about your own event, so there is no
+    // actor to name — the same reason its notification sentence interpolates `{event}` only.
+    label: "calendar-reminder",
+    element: (
+      <CalendarReminder
+        eventTitle={EVENT_TITLE}
+        eventUrl={URL}
+        location={LOCATION}
+        startsInMinutes={15}
+        when={WHEN}
+      />
+    ),
+    defaults: <CalendarReminder />,
+    htmlIncludes: [EVENT_TITLE, WHEN, LOCATION, URL],
+    textIncludes: [EVENT_TITLE, WHEN, URL],
+  },
 ];
 
 describe("email template render smoke tests", () => {
   // Guard: if a template is added or removed, this fixture list must keep pace.
   it("covers every template", () => {
-    expect(fixtures).toHaveLength(12);
+    expect(fixtures).toHaveLength(13);
   });
 
   it.each(fixtures)("$label renders non-empty HTML with its dynamic content", async ({
