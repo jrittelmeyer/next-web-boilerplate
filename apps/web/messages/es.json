@@ -24,7 +24,8 @@
     "acceptInvitation": "Aceptar invitación",
     "calendar": "Calendario",
     "calendarEvent": "Evento",
-    "calendarInvites": "Invitaciones"
+    "calendarInvites": "Invitaciones",
+    "rsvp": "Invitación"
   },
   "Auth": {
     "common": {
@@ -895,7 +896,10 @@
       },
       "role": {
         "organizer": "Organizador"
-      }
+      },
+      "stale": "respondió a una versión anterior",
+      "rsvpLinkHint": "El correo no está configurado: envía este enlace al invitado para que pueda responder:",
+      "rsvpLinkLabel": "Enlace de respuesta para {email}"
     },
     "invites": {
       "title": "Invitaciones",
@@ -905,5 +909,24 @@
       "loading": "Cargando…",
       "loadMore": "Cargar más"
     }
+  },
+  "Rsvp": {
+    "invalidTitle": "Este enlace de invitación ya no es válido",
+    "invalidBody": "Puede haber caducado, o el evento puede haberse cancelado o la invitación retirada. Pide al organizador que te envíe uno nuevo.",
+    "invitedBy": "{organizer} te invitó a",
+    "stale": "La hora cambió después de tu respuesta, así que tu respuesta anterior ya no se aplica.",
+    "answeringAs": "Respondiendo como {email}",
+    "legend": "Tu respuesta",
+    "respond": {
+      "accepted": "Sí",
+      "declined": "No",
+      "tentative": "Quizá"
+    },
+    "responded": {
+      "accepted": "Vas a asistir.",
+      "declined": "Has rechazado la invitación.",
+      "tentative": "Has respondido quizá."
+    },
+    "staleBadge": "Respondido para una versión anterior"
   }
 }

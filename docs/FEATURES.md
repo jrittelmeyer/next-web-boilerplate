@@ -204,6 +204,24 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
 - **Being invited to an event is not permission to edit it.** Attendance answers exactly
   two questions — may you see it, may you RSVP — through a separate authority that exposes
   no role at all, and a test asserts the module has no write predicate to reach for.
+- **Guests with no account at all get a real invitation email**, carrying a calendar
+  attachment they can add and a private link they answer at — signed out, no signup.
+- **The email refuses to show a button that does nothing.** Gmail renders native
+  Yes / No / Maybe on a `METHOD:REQUEST` invitation, and clicking one sends a reply email
+  to the organizer's address; with no inbound mail pipeline it reaches nothing, and the
+  guest is told nothing. So the attachment is `METHOD:PUBLISH` with no `ATTENDEE` line —
+  which keeps "Add to calendar", removes the dead buttons, and happens to be what RFC 5546
+  required all along.
+- **Rescheduling asks people again without erasing what they said.** The event gets a
+  timestamp and staleness is derived from it, so *"declined — clashes with my flight"*
+  survives the change and shows as "answered for an earlier version" rather than
+  disappearing. A title fix asks nobody: three separate decisions (bump the revision,
+  re-send, re-ask) instead of one blunt "significant change" flag.
+- **A moved occurrence is emitted, not silently wrong.** An exception rides in the
+  attachment as its own `RECURRENCE-ID`, and a deleted one as an `EXDATE` — otherwise a
+  guest's calendar expands the rule and shows the original time forever.
+- **With no email provider configured it still works:** the organizer's event page hands
+  them a copyable RSVP link per guest, the same way an unsendable org invitation does.
 - **Accessible by construction:** one tab stop for the whole grid (roving `tabindex`,
   arrow-key navigation, `Enter` for a focus-trapped day view), scanned by axe in CI with
   events on it.
@@ -215,6 +233,7 @@ a +13:45 offset, and an 1885 local-mean-time reading — each one breaks a *diff
 plausible implementation. Delete it in twelve steps if you don't want it:
 → [`context/calendar/`](context/calendar/model.md) ·
 [attendees](context/calendar/attendees.md) ·
+[invitations](context/calendar/invitations.md) ·
 [remove-it](context/calendar/remove-it.md)
 
 ## Payments

@@ -33,18 +33,21 @@ the first deploy.
 
 1. **Delete the app slice** (under `apps/web/src/`):
    - `app/[locale]/(dashboard)/calendar/` (all three routes, including `invites/`)
+   - **`app/[locale]/rsvp/`** (Phase 4 — the public `[token]/route.ts` and `s/[handle]/page.tsx`)
    - `components/calendar/`
-   - `lib/calendar-acl.ts`, `lib/calendar-attendees.ts`, `lib/calendar/`
-   - `server/actions/calendar.ts`, `server/trpc/routers/calendar.ts`
+   - `lib/calendar-acl.ts`, `lib/calendar-attendees.ts`, **`lib/calendar-tokens.ts`**,
+     `lib/calendar/`
+   - `server/actions/calendar.ts`, **`server/actions/calendar-rsvp.ts`**,
+     **`server/calendar/`**, `server/trpc/routers/calendar.ts`
    - the `*.test.ts` siblings of all of the above
 2. **Unhook the router**: remove the `calendar:` line and its import from
    `server/trpc/root.ts`.
 3. **Unhook the nav and the gate**: remove the `/calendar` `<Link>` from
    `app/[locale]/(dashboard)/layout.tsx` and `"/calendar"` from `PROTECTED_PREFIXES` in
    `src/proxy.ts`.
-4. **Drop the i18n namespace**: delete `Calendar` from `messages/en.json` and
-   `messages/es.json`, plus `Metadata.calendar`, `Metadata.calendarEvent`,
-   `Metadata.calendarInvites` and `Dashboard.nav.calendar`.
+4. **Drop the i18n namespaces**: delete `Calendar` **and `Rsvp`** from `messages/en.json`
+   and `messages/es.json`, plus `Metadata.calendar`, `Metadata.calendarEvent`,
+   `Metadata.calendarInvites`, **`Metadata.rsvp`** and `Dashboard.nav.calendar`.
    `src/lib/i18n-parity.test.ts` fails if you do one locale and not the other, which is
    the point of it.
 5. **Drop the calendar half of the notifications namespace** — the step that is easy to
@@ -56,17 +59,35 @@ the first deploy.
    `satisfies Record<Exclude<FeedItem["type"], "test" | "system">, string>`, so it stops
    compiling until the union in step 9 is trimmed to match — which is the guard working,
    not a problem.
-6. **Trim coverage**: remove `src/server/actions/calendar.ts`, `src/lib/calendar-acl.ts`,
-   `src/lib/calendar-attendees.ts` and `src/lib/calendar/grid.ts` from `coverage.include`
-   in `apps/web/vitest.config.ts` — it is an explicit file list, and a stale entry there
-   fails the run. Leave `src/server/notifications/create.ts` and
-   `src/server/realtime/notification-bus.ts`; neither is calendar-specific.
-7. **Delete the E2E**: `e2e/calendar.spec.ts`, `e2e/calendar-invites.spec.ts`, the
-   calendar helpers at the bottom of `e2e/support/db.ts` (`setUserTimeZone`,
-   `seedCalendar`, `seedEvents`, `seedAttendee`, `getAttendeeStatus`,
-   `deleteCalendarFixtures`), and the calendar block inside `a11y.spec.ts`'s signed-in
-   test (it was added **in place** rather than as a new `test()`, so remove the block,
-   not the test).
+6. **Trim coverage**: remove every calendar entry from `coverage.include` in
+   `apps/web/vitest.config.ts` — `src/server/actions/calendar.ts`,
+   `src/server/actions/calendar-rsvp.ts`, `src/lib/calendar-acl.ts`,
+   `src/lib/calendar-attendees.ts`, `src/lib/calendar-tokens.ts`,
+   `src/lib/calendar/grid.ts`, `src/lib/calendar/recurrence-dates.ts`,
+   `src/lib/calendar/recurrence-prose.ts`, `src/lib/calendar/significant-change.ts`,
+   `src/server/calendar/invitations.ts` and `src/server/calendar/rsvp.ts`. It is an explicit
+   file list, and a stale entry there fails the run. Leave
+   `src/server/notifications/create.ts` and `src/server/realtime/notification-bus.ts`;
+   neither is calendar-specific.
+7. **Delete the E2E**: `e2e/calendar.spec.ts`, `e2e/calendar-invites.spec.ts`,
+   **`e2e/calendar-invitations.spec.ts`**, the calendar helpers at the bottom of
+   `e2e/support/db.ts` (`setUserTimeZone`, `seedCalendar`, `seedEvents`, `seedAttendee`,
+   `getAttendeeStatus`, **`getEventIdByTitle`**, **`getInvitationJobs`**,
+   **`deleteInvitationJobs`**, `deleteCalendarFixtures`), and the calendar block inside
+   `a11y.spec.ts`'s signed-in test (it was added **in place** rather than as a new `test()`,
+   so remove the block, not the test).
+7b. **Unhook the job** (Phase 4): remove `calendarInvitation` from `JOBS` and
+   `calendarInvitationPayload` in `packages/jobs/src/queues.ts`, its `boss.work` line and
+   import in `worker.ts`, and `handlers/calendar-invitation.ts` + its test. Then remove the
+   three calendar helpers and templates from `@repo/email` (`sendCalendarInvitationEmail`,
+   `…EventUpdatedEmail`, `…EventCancelledEmail`, their `templates/calendar-*.tsx`, their
+   fixtures in `templates.test.tsx` and `send.test.tsx`, and the export lines in
+   `src/index.ts`) — but **keep `send()`'s `attachments` parameter and `EmailAttachment`**,
+   which are generic. Finally drop `@repo/jobs` from `apps/web`'s dependencies if nothing
+   else there enqueues.
+   ⚠️ **This job is *enqueued*, not scheduled**, so unlike the Phase-5 reminder sweeper it
+   leaves **no `pgboss.schedule` row** and needs no `boss.unschedule` call. Undrained jobs
+   in `pgboss.job` simply expire. Nothing to clean up beyond the code.
 8. **Drop the validators subpath**: delete `packages/validators/src/calendar.ts` and its
    test, and remove `"./calendar"` from that package's `exports` map. Then **edit** —
    do not delete — `src/lib/union-parity.test.ts`: it guards `NOTIFICATION_TYPES` too,
@@ -105,6 +126,10 @@ forgot to delete, and `pnpm docs:sanity` catches a link left pointing at a delet
 Author it the normal way — edit the schema first, then `pnpm --filter @repo/db db:generate`,
 then **review the SQL**. Drizzle should produce something equivalent to this; if it
 produces less, the difference is what you forgot to delete from the schema.
+
+Note the view must be dropped **first** and is not recreated: `0024` added
+`calendar_events.reask_at` and had to drop-and-recreate the view to widen it, which is the
+shape drizzle produces whenever a column joins a table a view selects from.
 
 ```sql
 DROP VIEW IF EXISTS "public"."calendar_event_masters";

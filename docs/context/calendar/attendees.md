@@ -5,10 +5,11 @@ calendar: [acl.md](acl.md). Endpoints: [api.md](api.md). Domain model:
 [model.md](model.md). Series, overrides and the three edit scopes:
 [recurrence.md](recurrence.md).
 
-> **Status: Phase 3, complete.** The table and its constraints, the guest-list diff,
-> `respondToEvent`, `calendar.listInvites` and `/calendar/invites` all ship. Emailed
-> invitations and the public `/rsvp/[token]` page are **Phase 4**; per-occurrence RSVP,
-> guest permissions and invitations on the month grid are **Phase 6**.
+> **Status: Phase 4, complete.** The table and its constraints, the guest-list diff,
+> `respondToEvent`, `calendar.listInvites` and `/calendar/invites` shipped in Phase 3;
+> emailed invitations and the public `/rsvp` page in Phase 4
+> ([invitations.md](invitations.md)). Per-occurrence RSVP, guest permissions and invitations
+> on the month grid are **Phase 6**.
 
 ## The identity is the email
 
@@ -68,11 +69,12 @@ creates is a real, addressable, RSVP-able event with its own id and its own URL,
 copy is observable and correct. `role`, `status`, `comment` and `responded_at` all carry
 over.
 
-> **The debt that creates, stated rather than hidden:** a "this and following" edit that
-> moves the time leaves everyone still `accepted` for a meeting whose time changed.
-> Resetting them instead would pre-decide Phase 4's significant-change rules from inside
-> Phase 3, and would also re-ask every guest after a pure title edit. **Phase 4 owns
-> re-asking.**
+> **That debt is PAID (Phase 4), and not by the reset it warned against.** `splitSeries`
+> still copies `status` and `responded_at` verbatim; what changed is that the new master now
+> carries a **`reask_at`** stamp when the cut moved the time, and staleness is *derived* as
+> `responded_at < reask_at`. So the guest's answer and their comment survive, the guest list
+> renders "accepted — answered for an earlier version", and a pure title edit still re-asks
+> nobody. [invitations.md](invitations.md) has the three-boolean classifier.
 
 ## Roles and statuses
 
@@ -241,8 +243,10 @@ cancelled". `body` is NOT NULL, so it needs a real value either way.
 is off its guest list — `calendar_event_masters` excludes the first and `getEventAccess`
 refuses the second, so any link would 404 on click.
 
-**Only a resolved account receives an in-app notification.** An external attendee is a
-real row with a real invitation; Phase 4 is what reaches them, by email.
+**Only a resolved account receives an in-app notification.** An external attendee is a real
+row with a real invitation, and Phase 4 reaches them by email
+([invitations.md](invitations.md)) — the in-app feed and the email fan-out are separate
+paths, published and enqueued respectively, both strictly after the commit.
 
 **The response type splits three ways rather than carrying a status field.** A one-slot
 notification cannot express "Alice declined Standup" — two variables *and* a status — and

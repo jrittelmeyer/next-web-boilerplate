@@ -169,6 +169,13 @@
       "when": 1785616623175,
       "tag": "0023_yummy_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785642946668,
+      "tag": "0024_worthless_pixie",
+      "breakpoints": true
     }
   ]
 }

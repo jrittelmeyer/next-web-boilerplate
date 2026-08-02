@@ -7,6 +7,12 @@ One imperative per line; mechanics + rationale live in
   register in `worker.ts`.
 - Handlers **throw only on real errors** — throw = pg-boss retry (→ DLQ);
   unconfigured/no-op paths return normally.
+- Payloads carry **ids where the row survives, denormalised data where the row is the
+  thing being destroyed** — `calendarInvitation`'s cancel kind has no row left to read
+  ([invitations.md](../../docs/context/calendar/invitations.md)).
+- This package reaches **`@repo/db` + `@repo/email` only** — it cannot mint anything
+  needing `apps/web`'s env (a worker without the signing secret signs *wrongly*, it does
+  not fail to boot).
 - `DEAD_LETTER_QUEUE` is deliberately NOT in `ALL_QUEUES`; `createQueue` is
   create-if-absent, so `updateQueue` stamps `deadLetter` onto existing queues.
 - `enqueue()` stays a graceful no-op when unconfigured (with its server-only

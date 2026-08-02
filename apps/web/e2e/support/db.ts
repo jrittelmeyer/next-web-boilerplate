@@ -14,7 +14,7 @@ import {
   user,
   userPreferences,
 } from "@repo/db/schema";
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 
 /**
  * Promote a signed-up user to admin by a DIRECT DB write — the sanctioned
@@ -286,6 +286,63 @@ export async function getAttendeeStatus(
       ),
     );
   return row?.status ?? null;
+}
+
+/**
+ * The id of a series master by title, for a spec that created its event through the UI and
+ * needs the `/calendar/event/[id]` route (clicking a chip opens the editor, not the detail
+ * page). Scoped to the owner so parallel workers cannot read each other's fixtures.
+ */
+export async function getEventIdByTitle(ownerEmail: string, title: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: calendarEvents.id })
+    .from(calendarEvents)
+    .innerJoin(calendars, eq(calendars.id, calendarEvents.calendarId))
+    .innerJoin(user, eq(user.id, calendars.userId))
+    .where(and(eq(user.email, ownerEmail), eq(calendarEvents.title, title)));
+  return row?.id ?? null;
+}
+
+/**
+ * The `calendar-invitation` jobs enqueued for one address, newest first.
+ *
+ * **This is how the `.ics` gets asserted without running a worker.** The Playwright
+ * `webServer` array runs two Next servers and nothing that drains `pgboss.job`, so an
+ * assertion waiting on a captured email would simply hang. Reading the queue row instead
+ * proves the thing that actually matters — that the writer assembled the right calendar and
+ * addressed it to the right person — one step before delivery, which the live-verify pass
+ * covers against a real inbox.
+ *
+ * Raw SQL because pg-boss owns its schema and `packages/db/AGENTS.md` forbids modelling it
+ * in Drizzle.
+ */
+export async function getInvitationJobs(email: string): Promise<
+  {
+    kind: string;
+    to: string;
+    ics: string | null;
+    rsvpUrl?: string;
+    reask?: boolean;
+    reason?: string;
+    eventTitle: string;
+    when: string;
+  }[]
+> {
+  const rows = await db.execute<{ data: Record<string, unknown> }>(sql`
+    SELECT data FROM pgboss.job
+     WHERE name = 'calendar-invitation'
+       AND data->>'to' = ${email.toLowerCase()}
+     ORDER BY created_on DESC
+  `);
+  return rows.rows.map((row) => row.data as never);
+}
+
+/** Clear the queue so one spec's assertions cannot read another's jobs. */
+export async function deleteInvitationJobs(email: string): Promise<void> {
+  await db.execute(sql`
+    DELETE FROM pgboss.job
+     WHERE name = 'calendar-invitation' AND data->>'to' = ${email.toLowerCase()}
+  `);
 }
 
 /**

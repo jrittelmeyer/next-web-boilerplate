@@ -1,0 +1,3 @@
+DROP VIEW "public"."calendar_event_masters";--> statement-breakpoint
+ALTER TABLE "calendar_events" ADD COLUMN "reask_at" timestamp with time zone;--> statement-breakpoint
+CREATE VIEW "public"."calendar_event_masters" AS (select "id", "calendar_id", "uid", "sequence", "title", "description", "location", "url", "color", "status", "visibility", "transparency", "all_day", "start_wall", "start_tzid", "end_wall", "end_tzid", "start_offset_minutes", "end_offset_minutes", "start_at", "end_at", "recurrence_parent_id", "recurrence_id", "rrule", "series_end_at", "reask_at", "deleted_at", "created_at", "updated_at" from "calendar_events" where ("calendar_events"."recurrence_parent_id" is null and "calendar_events"."deleted_at" is null));

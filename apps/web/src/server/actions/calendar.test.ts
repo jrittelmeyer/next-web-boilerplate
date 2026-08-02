@@ -20,7 +20,13 @@ const {
   findEvent,
   revalidatePath,
   logError,
+  enqueueInvitations,
+  enqueueSeriesUpdate,
+  enqueueCancellations,
 } = vi.hoisted(() => ({
+  enqueueInvitations: vi.fn(),
+  enqueueSeriesUpdate: vi.fn(),
+  enqueueCancellations: vi.fn(),
   getSessionApi: vi.fn(),
   rateLimit: vi.fn(),
   getCalendarRole: vi.fn(),
@@ -60,6 +66,15 @@ vi.mock("@repo/db", () => ({
       calendarEvents: { findFirst: findEvent },
     },
   },
+}));
+// The email fan-out is mocked as three spies rather than exercised: what these tests own is
+// **which writer owes which email**, and the `.ics` those helpers assemble is asserted where
+// it is real — `calendar-invitations.spec.ts` reads the enqueued `pgboss.job` payload and
+// checks the actual serialized calendar.
+vi.mock("@/server/calendar/invitations", () => ({
+  enqueueInvitations,
+  enqueueSeriesUpdate,
+  enqueueCancellations,
 }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/headers", () => ({ headers: vi.fn(async () => new Headers()) }));
@@ -139,6 +154,37 @@ const eventTarget = {
 /** …and the same row once it is a weekly series. */
 const seriesTarget = { ...eventTarget, rrule: "FREQ=WEEKLY;BYDAY=MO" };
 
+/**
+ * The stored row `classifyEventChange` reads before a whole-event write.
+ *
+ * Everything the field classifier looks at that is NOT already on `eventTarget`; the two are
+ * merged at read time (see `storedChangeRow`), so a test that swaps `findEvent` to
+ * `seriesTarget` automatically gets a change row carrying that series' rule — rather than
+ * one that says the rule just appeared out of nowhere.
+ */
+const CHANGE_ROW_DEFAULTS = {
+  title: "Standup",
+  description: null,
+  location: null,
+  url: null,
+  color: null,
+  status: "confirmed",
+  visibility: "default",
+  transparency: "opaque",
+  allDay: false,
+} as const;
+
+/** True when a `select()` is asking for the change classifier's column set. */
+function isChangeSelect(columns: unknown): boolean {
+  return typeof columns === "object" && columns !== null && "transparency" in columns;
+}
+
+async function storedChangeRow(): Promise<Record<string, unknown>> {
+  const last = findEvent.mock.results.at(-1);
+  const target = last === undefined ? null : await last.value;
+  return { ...CHANGE_ROW_DEFAULTS, ...(target ?? {}) };
+}
+
 /** `db.insert(...).values(...).returning(...)` resolving to `rows`. */
 function insertReturning(rows: unknown[]) {
   return { values: () => ({ returning: () => Promise.resolve(rows) }) };
@@ -162,6 +208,24 @@ function selectReturning(rows: unknown[]) {
   // `innerJoin` returns the same tail, so one fixture serves the recurrence-date read,
   // the attendee probe inside `getEventAccess`, and the organizer lookup in
   // `respondToEvent`.
+  const tail: { where: typeof settled; innerJoin: () => typeof tail } = {
+    where: settled,
+    innerJoin: () => tail,
+  };
+  return { from: () => tail };
+}
+
+/**
+ * Column-aware `select`: the change classifier's read gets the stored row, everything else
+ * gets the fixture the test supplied. Without the branch one array would have to be a valid
+ * recurrence-date row, a valid attendee row AND a valid event row at once.
+ */
+function selectFor(columns: unknown, rows: unknown[]) {
+  if (!isChangeSelect(columns)) return selectReturning(rows);
+  const settled = () => {
+    const resolved = storedChangeRow().then((row) => [row]);
+    return Object.assign(resolved, { limit: () => resolved });
+  };
   const tail: { where: typeof settled; innerJoin: () => typeof tail } = {
     where: settled,
     innerJoin: () => tail,
@@ -198,6 +262,10 @@ function recordingTransaction(
           return {
             returning: () => Promise.resolve(rows),
             onConflictDoNothing: () => Promise.resolve(),
+            // `updateOccurrence` became transactional in Phase 4 (it now bumps the
+            // master's SEQUENCE alongside the override upsert), so the recording tx has to
+            // offer the same builder `db.insert` does or the action reports a write failure.
+            onConflictDoUpdate: () => Promise.resolve(),
           };
         },
       }),
@@ -215,10 +283,12 @@ function recordingTransaction(
       delete: () => ({
         where: () => {
           log.deletes += 1;
-          return Promise.resolve();
+          // Awaitable AND `.returning()`-able: `removeAttendees` reads back the addresses
+          // it deleted, because the cancellation email needs them and the row is gone.
+          return Object.assign(Promise.resolve(), { returning: () => Promise.resolve([]) });
         },
       }),
-      select: () => selectReturning(selectRows),
+      select: (columns: unknown) => selectFor(columns, selectRows),
       // Without this the guest-list copy throws INSIDE the transaction callback and the
       // action reports "Failed to update the event." — a fixture gap that reads exactly
       // like a production defect.
@@ -241,9 +311,14 @@ beforeEach(() => {
   findEvent.mockResolvedValue(eventTarget);
   dbInsert.mockReturnValue(insertReturning([{ id: EVENT, calendarId: CAL }]));
   dbUpdate.mockReturnValue(updateReturning([{ id: EVENT, calendarId: CAL }]));
-  dbDelete.mockReturnValue({ where: () => Promise.resolve() });
-  dbSelect.mockReturnValue(selectReturning([]));
+  dbDelete.mockReturnValue({
+    where: () => Object.assign(Promise.resolve(), { returning: () => Promise.resolve([]) }),
+  });
+  dbSelect.mockImplementation((columns: unknown) => selectFor(columns, []));
   dbExecute.mockResolvedValue(undefined);
+  enqueueInvitations.mockResolvedValue(undefined);
+  enqueueSeriesUpdate.mockResolvedValue(undefined);
+  enqueueCancellations.mockResolvedValue(undefined);
   // The default transaction hands the callback **the same builders `db` exposes**, so a
   // statement that moved inside a transaction in Phase 3 — `createEvent`,
   // `updateWholeEvent` and `softDeleteEvent` all did — keeps being asserted through the
@@ -797,6 +872,182 @@ describe("updateEvent", () => {
       }),
     ]);
     expect(dbNotify).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("which writer owes which email", () => {
+  /** `dbUpdate` recording the row it was handed, so the SEQUENCE/reask stamps are visible. */
+  function recordingUpdate(): Record<string, unknown>[] {
+    const written: Record<string, unknown>[] = [];
+    dbUpdate.mockReturnValue({
+      set: (row: Record<string, unknown>) => {
+        written.push(row);
+        return {
+          where: () =>
+            Object.assign(Promise.resolve(), {
+              returning: () => Promise.resolve([{ id: EVENT, calendarId: CAL }]),
+            }),
+        };
+      },
+    });
+    return written;
+  }
+
+  it("invites the guests a create added, and nobody else", async () => {
+    dbInsert.mockReturnValue({
+      values: () => ({
+        returning: () =>
+          Promise.resolve([
+            { id: EVENT, calendarId: CAL, attendeeId: "a1", email: "guest@example.com" },
+          ]),
+        onConflictDoNothing: () => Promise.resolve(),
+      }),
+    });
+
+    await createEvent({
+      ...eventInput,
+      attendees: [{ email: "guest@example.com", role: "required" }],
+    });
+
+    expect(enqueueInvitations).toHaveBeenCalledWith(EVENT, [
+      expect.objectContaining({ attendeeId: "a1", email: "guest@example.com" }),
+    ]);
+    expect(enqueueSeriesUpdate).not.toHaveBeenCalled();
+  });
+
+  it("a description-only edit sends nothing and bumps nothing", async () => {
+    // The whole reason the classifier is three booleans rather than one: a typo fix must
+    // not reach fifty inboxes, and must not bump a SEQUENCE that would re-prompt clients.
+    const written = recordingUpdate();
+    await updateEvent({ ...eventInput, ...noScope, id: EVENT, description: "typo fixed" });
+
+    expect(enqueueSeriesUpdate).not.toHaveBeenCalled();
+    expect(written[0]).not.toHaveProperty("sequence");
+    expect(written[0]).not.toHaveProperty("reaskAt");
+  });
+
+  it("a title edit resends and bumps, but does NOT mark anyone stale", async () => {
+    const written = recordingUpdate();
+    await updateEvent({ ...eventInput, ...noScope, id: EVENT, title: "Stand-up" });
+
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(EVENT, false, []);
+    expect(written[0]).toHaveProperty("sequence");
+    expect(written[0]?.reaskAt).toBeUndefined();
+  });
+
+  it("a move in time stamps reask_at instead of overwriting anyone's answer", async () => {
+    const written = recordingUpdate();
+    await updateEvent({
+      ...eventInput,
+      ...noScope,
+      id: EVENT,
+      startWall: "2027-03-15 14:00:00",
+      endWall: "2027-03-15 14:30:00",
+    });
+
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(EVENT, true, []);
+    // A timestamp on the EVENT is the whole mechanism. Nothing on the attendee table is
+    // written, so a stored "declined, clashes with my flight" survives a reschedule and
+    // staleness is derived as `responded_at < reask_at`.
+    expect(written[0]?.reaskAt).toBeDefined();
+    // **Postgres's clock, not Node's.** The other half of that comparison is written by
+    // `now()`, and mixing the two silently inverts the answer under any clock skew — which
+    // the e2e hit for real on a Docker Postgres running 4.5 s ahead of its host.
+    expect(written[0]?.reaskAt).not.toBeInstanceOf(Date);
+    expect(dbDelete).not.toHaveBeenCalled();
+  });
+
+  it("excludes a just-invited guest from the update fan-out", async () => {
+    // Otherwise they get "this event changed" about an event they have not been told of.
+    dbSelect.mockImplementation((columns: unknown) => selectFor(columns, []));
+    dbInsert.mockReturnValue({
+      values: () => ({
+        returning: () => Promise.resolve([{ attendeeId: "a9", email: "new@example.com" }]),
+        onConflictDoNothing: () => Promise.resolve(),
+      }),
+    });
+    recordingUpdate();
+
+    await updateEvent({
+      ...eventInput,
+      ...noScope,
+      id: EVENT,
+      title: "Renamed",
+      attendees: [{ email: "new@example.com", role: "required" }],
+    });
+
+    expect(enqueueInvitations).toHaveBeenCalledWith(EVENT, [
+      { attendeeId: "a9", email: "new@example.com" },
+    ]);
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(EVENT, false, ["a9"]);
+  });
+
+  it("sends a dropped guest a REMOVAL, which carries no attachment", async () => {
+    dbSelect.mockImplementation((columns: unknown) =>
+      selectFor(columns, [{ email: "gone@example.com" }]),
+    );
+    dbDelete.mockReturnValue({
+      where: () =>
+        Object.assign(Promise.resolve(), {
+          returning: () => Promise.resolve([{ userId: null, email: "gone@example.com" }]),
+        }),
+    });
+    recordingUpdate();
+
+    await updateEvent({ ...eventInput, ...noScope, id: EVENT, attendees: [] });
+
+    expect(enqueueCancellations).toHaveBeenCalledWith(EVENT, ["gone@example.com"], "removed");
+  });
+
+  it("sends a deleted event's guests a CANCELLATION, which does", async () => {
+    dbSelect.mockImplementation((columns: unknown) =>
+      selectFor(columns, [{ userId: null, email: "guest@example.com", title: "Standup" }]),
+    );
+    recordingUpdate();
+
+    await deleteEvent({ id: EVENT, ...noScope });
+
+    expect(enqueueCancellations).toHaveBeenCalledWith(EVENT, ["guest@example.com"], "cancelled");
+  });
+
+  it("emails the series when ONE occurrence moves, without re-asking", async () => {
+    // RSVP is series-level through Phase 4, so a "yes" is to the series: one occurrence
+    // shifting does not invalidate it, and marking everyone stale would be noise.
+    findEvent.mockResolvedValue(seriesTarget);
+    recordingTransaction();
+
+    await updateEvent({
+      ...eventInput,
+      id: EVENT,
+      scope: "this",
+      recurrenceId: "2027-03-22 09:00:00",
+      // A single occurrence carries no rule of its own — the series keeps it.
+      rrule: null,
+      startWall: "2027-03-22 14:00:00",
+      endWall: "2027-03-22 14:30:00",
+    });
+
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(EVENT, false);
+  });
+
+  it("a split emails BOTH halves — two UIDs, two calendars to fix", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    recordingTransaction();
+
+    await updateEvent({
+      ...eventInput,
+      id: EVENT,
+      scope: "thisAndFollowing",
+      recurrenceId: "2027-03-29 09:00:00",
+      rrule: "FREQ=WEEKLY;BYDAY=MO",
+      startWall: "2027-03-29 14:00:00",
+      endWall: "2027-03-29 14:30:00",
+    });
+
+    // The new master, re-asked because the cut moved the time — the Phase-3 debt paid.
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(NEW_MASTER, true);
+    // And the first half, whose rule gained a bound its guests' clients need.
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(EVENT, false);
   });
 });
 
@@ -1376,8 +1627,14 @@ describe("deleteEvent, scoped", () => {
     // HARD: the EXDATE is the durable record of the skip, so a soft-deleted override
     // beside it is redundant state that can disagree with it.
     expect(log.deletes).toBe(1);
-    // An EXDATE never recomputes series_end_at — that column is blind to exclusions.
-    expect(log.updates).toEqual([]);
+    // An EXDATE never recomputes series_end_at — that column is blind to exclusions. The
+    // one update is the SEQUENCE bump: the EXDATE *is* in the emitted `.ics`, so without it
+    // the update email ships an attachment every conforming client ignores and the guest
+    // keeps a meeting that was cancelled.
+    expect(log.updates).toHaveLength(1);
+    expect(log.updates[0]).toHaveProperty("sequence");
+    expect(log.updates[0]).not.toHaveProperty("seriesEndAt");
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(EVENT, false);
   });
 
   it("bounds the series and drops everything at or after the cut", async () => {
@@ -1454,7 +1711,11 @@ describe("setRecurrenceDate", () => {
     const log = recordingTransaction();
     expect(await setRecurrenceDate(skip)).toEqual({ data: { eventId: EVENT, kind: "exdate" } });
     expect(log.inserts[0]).toEqual(skip);
-    expect(log.updates).toEqual([]);
+    // The only update is the SEQUENCE bump — `series_end_at` stays untouched, because that
+    // column is blind to exclusions by design and must remain a permanent over-estimate.
+    expect(log.updates).toHaveLength(1);
+    expect(log.updates[0]).toHaveProperty("sequence");
+    expect(log.updates[0]).not.toHaveProperty("seriesEndAt");
   });
 
   it("recomputes series_end_at for an RDATE, reading the rows back inside the write", async () => {
@@ -1463,7 +1724,18 @@ describe("setRecurrenceDate", () => {
       { kind: "rdate", dateWall: "2029-01-01 09:00:00" },
     ]);
     await setRecurrenceDate({ ...skip, kind: "rdate", dateWall: "2029-01-01 09:00:00" });
-    expect((log.updates[0]?.seriesEndAt as Date).getUTCFullYear()).toBe(2029);
+    // [0] is the SEQUENCE bump both kinds do; [1] is the RDATE-only recompute.
+    expect(log.updates[0]).toHaveProperty("sequence");
+    expect((log.updates[1]?.seriesEndAt as Date).getUTCFullYear()).toBe(2029);
+  });
+
+  it("emails the guests either way — both kinds change the emitted .ics", async () => {
+    findEvent.mockResolvedValue(seriesTarget);
+    recordingTransaction();
+    await setRecurrenceDate(skip);
+    // Resends, never re-asks: the occurrences that remain are at the times their guests
+    // already agreed to.
+    expect(enqueueSeriesUpdate).toHaveBeenCalledWith(EVENT, false);
   });
 
   it("maps a failed write", async () => {
@@ -1485,7 +1757,8 @@ describe("setRecurrenceDate", () => {
     findEvent.mockResolvedValue(seriesTarget);
     const log = recordingTransaction(undefined, [{ kind: "exrule", dateWall: THIRD }]);
     await setRecurrenceDate({ ...skip, kind: "rdate" });
-    expect(log.updates).toHaveLength(1);
+    // The SEQUENCE bump plus the recompute.
+    expect(log.updates).toHaveLength(2);
     expect(logError).toHaveBeenCalledWith(
       "calendar.recurrence-date kind not recognised",
       expect.objectContaining({ kinds: ["exrule"] }),

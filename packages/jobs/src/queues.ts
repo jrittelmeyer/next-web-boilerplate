@@ -24,6 +24,8 @@ export const JOBS = {
   cleanupExpiredVerifications: "cleanup-expired-verifications",
   /** Cancel a removed account's Stripe subscriptions (A13). */
   cancelStripeSubscriptions: "cancel-stripe-subscriptions",
+  /** Email one calendar guest an invitation, an update or a cancellation (Phase 4). */
+  calendarInvitation: "calendar-invitation",
 } as const;
 
 /** Every queue name, so the worker can create + register them in one loop. */
@@ -86,3 +88,64 @@ export const cancelStripeSubscriptionsPayload = z.object({
 });
 /** @public — the inferred payload type, exported for producers/handlers in consuming code. */
 export type CancelStripeSubscriptionsPayload = z.infer<typeof cancelStripeSubscriptionsPayload>;
+
+/**
+ * Payload for the {@link JOBS.calendarInvitation} job (Phase 4) — **self-contained, not a
+ * pair of ids to re-read.** One job per recipient, so one hard-bounced address cannot force
+ * forty-nine re-sends on a retry.
+ *
+ * The general rule, and the reason this payload looks different from
+ * {@link deleteUploadsPayload}'s: **ids where the row survives, denormalised where the row
+ * is the thing being destroyed.** `removeAttendees` in `apps/web` is a hard `DELETE` inside
+ * the write transaction, and enqueueing happens after that commits — so for `kind: "cancel"`
+ * there is no attendee row left to read, not even a race window. An id-only payload would
+ * hit the handler's "the row is gone, complete normally" branch and silently tell nobody.
+ * `welcomeEmailPayload` above already carries `to` for the same reason.
+ *
+ * It also has to be self-contained for a boundary reason: `@repo/jobs` depends on
+ * `@repo/db` and `@repo/email` only. It cannot reach `apps/web`'s token module, and
+ * `BETTER_AUTH_SECRET` is validated in the app's env schema alone — a worker holding a
+ * different secret would sign a **wrong** RSVP link rather than fail to boot. Minting at
+ * enqueue time keeps the signing key in one process.
+ *
+ * `when` is pre-formatted: the reader's locale and time zone live in `apps/web` (next-intl +
+ * `user_preferences`), and neither this package nor `@repo/email` may format a date.
+ */
+const calendarRecipient = {
+  to: z.email(),
+  organizerEmail: z.email(),
+  eventTitle: z.string().min(1),
+  when: z.string().min(1),
+};
+
+export const calendarInvitationPayload = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("invite"),
+    ...calendarRecipient,
+    location: z.string().nullable(),
+    rsvpUrl: z.string().min(1),
+    ics: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal("update"),
+    ...calendarRecipient,
+    location: z.string().nullable(),
+    rsvpUrl: z.string().min(1),
+    ics: z.string().min(1),
+    /** True only when the event moved in time; a venue or title edit does not re-ask. */
+    reask: z.boolean(),
+  }),
+  z.object({
+    kind: z.literal("cancel"),
+    ...calendarRecipient,
+    reason: z.enum(["cancelled", "removed"]),
+    /**
+     * `null` for a **removal**, and that is the decision rather than an omission: the event
+     * is still going ahead for everyone else, so a `STATUS:CANCELLED` attachment would tell
+     * the client to delete a live event. A cancelled event carries one.
+     */
+    ics: z.string().min(1).nullable(),
+  }),
+]);
+/** @public — the inferred payload type, exported for producers/handlers in consuming code. */
+export type CalendarInvitationPayload = z.infer<typeof calendarInvitationPayload>;
