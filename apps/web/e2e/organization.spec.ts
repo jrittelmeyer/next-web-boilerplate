@@ -39,10 +39,16 @@ let acceptPath = "";
 // round-trip (and its refreshed session cookie) to land before the caller navigates.
 async function switchWorkspace(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name: "Switch workspace" }).click();
-  await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/organization/set-active") && r.ok()),
+  // The status is asserted AFTER the wait, never as `&& r.ok()` inside the predicate: a
+  // non-2xx set-active (a Better Auth 429 is the plausible one — `workers: 1`, and this
+  // spec is serial behind many auth calls) simply would not MATCH, so the wait hung to
+  // the test timeout carrying no clue about the status it saw. This turned a red lane on
+  // 2026-08-03 into an unreadable "waitForResponse timed out". Fail loudly instead.
+  const [response] = await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/organization/set-active")),
     page.getByRole("menuitem", { name, exact: true }).click(),
   ]);
+  expect(response.ok(), `set-active responded ${response.status()}`).toBe(true);
 }
 
 test.beforeAll(async ({ browser }) => {

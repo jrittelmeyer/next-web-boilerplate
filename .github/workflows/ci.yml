@@ -252,6 +252,11 @@ jobs:
       # webServer boots it on :3000.
       - run: pnpm test:e2e
 
+      # `if-no-files-found: error` is the regression guard, and it is the point: this step
+      # silently uploaded NOTHING for its whole life because the CI reporter wrote no
+      # report directory, and the default (`warn`) put that in an annotation nobody read.
+      # The html reporter writes on green runs too, so `error` is safe here and turns any
+      # future re-break permanently red instead of quietly restoring the blind spot.
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -259,6 +264,19 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report/
           retention-days: 7
+          if-no-files-found: error
+
+      # Traces land in `test-results/`, NOT in the report directory, so the report alone
+      # cannot answer "what did the browser do on the attempt that died?". Legitimately
+      # empty on a green run under `retain-on-failure` — hence `ignore`, not `error`.
+      - name: Upload Playwright traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-traces
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
   csp-nonce:
     name: E2E (CSP nonce mode)
@@ -326,6 +344,16 @@ jobs:
           name: playwright-report-csp-nonce
           path: apps/web/playwright-report/
           retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Playwright traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-traces-csp-nonce
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
   docker-image:
     name: Docker image (build · smoke · scan · SBOM)
@@ -534,7 +562,10 @@ jobs:
       # No `playwright install` step: the image ships the browsers matching this
       # @playwright/test version (PLAYWRIGHT_BROWSERS_PATH is baked in).
       # Boots Storybook (the config's webServer) and diffs each story against the
-      # committed Linux baselines; the report (with pixel diffs) uploads on failure.
+      # committed Linux baselines. The report (with pixel diffs) uploads below — which
+      # only became true in this change: the config previously ran a report-less reporter,
+      # so the upload step found nothing and this comment described an artifact that had
+      # never once existed.
       - run: pnpm --filter @repo/ui test:visual
 
       - name: Upload Playwright report
@@ -544,6 +575,17 @@ jobs:
           name: visual-report
           path: packages/ui/playwright-report/
           retention-days: 7
+          if-no-files-found: error
+
+      # The actual pixel diffs (expected/actual/diff PNGs) live here, not in the report.
+      - name: Upload visual diffs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-diffs
+          path: packages/ui/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
   perf:
     name: Performance budget (bundle size)
