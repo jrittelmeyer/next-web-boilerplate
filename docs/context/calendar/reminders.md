@@ -45,9 +45,14 @@ default**, and the sweeper takes that default (`expand.ts` filters
 occurrence start; the end is derived afterwards). An end-anchored reminder on a recurring
 series would therefore ask for a window the occurrence's start falls outside of, and would
 **silently never fire** — no log, no throw, and the concrete branch would keep working, so
-it would look correct. Phase 6 supports it by widening the expansion window by the master's
-nominal span and re-filtering on the end instant, with its own tests. Until then the CHECK
-makes it unreachable rather than merely undocumented.
+it would look correct. The expansion side already
+supports it (2026-08-02): `expandSeries` takes opt-in `match: "overlaps"`, which tests each
+occurrence's **real end instant** — deliberately an exact test, not the widened
+nominal-span bound once planned here, which is an hour short across a fall-back
+transition. The sweeper deliberately does not opt in, and `firesInWindow` still reads
+`startAtMs`, so lifting the CHECK remains a three-step change
+([MAINTENANCE.md → Watch](../../MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
+Until then the CHECK makes it unreachable rather than merely undocumented.
 
 The column and the union member ship now because widening a `text` union later is a
 one-line edit, while adding a column is a migration.
