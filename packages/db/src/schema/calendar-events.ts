@@ -41,6 +41,13 @@ export type EventStatus = (typeof EVENT_STATUSES)[number];
  * `PROTECTED_PREFIXES` with `startsWith`, so every URL under `/calendar` redirects a
  * signed-out visitor to `/login` — a visibility value no URL can serve would be a
  * lie in the schema. Add it together with a public event route, or not at all.
+ *
+ * ⚠️ **`private` is stored and returned but enforced nowhere** — no read filters on it,
+ * and the `.ics` serializer emits no `CLASS`. That is tolerable only because today's
+ * readers are the owner plus explicitly-invited attendees (an attendee holding no
+ * calendar role *does* read it — `getEventAccess`), so the value is unobservable to
+ * anyone not already entitled to the event. Phase 6 owes three separate answers — share
+ * readers, attendees, and the feed — see docs/context/calendar/acl.md.
  */
 export const EVENT_VISIBILITIES = ["default", "private"] as const;
 export type EventVisibility = (typeof EVENT_VISIBILITIES)[number];

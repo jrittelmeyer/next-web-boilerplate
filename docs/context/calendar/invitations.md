@@ -54,6 +54,14 @@ ingestion — a real feature (inbound provider, MIME + iTIP parsing, sender-vs-`
 authorization, `SEQUENCE` ordering, spoofing defences) and a hard external dependency in a
 starter that must build with its env unset; (c) keep `REQUEST` and ship the lie.
 
+**(b) was closed for good on 2026-08-02, by owner decision: a documented extension point,
+not scheduled work.** It had been carried as a Phase 6 item. The premise was re-checked
+rather than assumed — [`services/resend.md`](../services/resend.md) describes outbound
+sending plus a *delivery-event* webhook and **no inbound-parse path**, so building it means
+adopting a new provider capability *and* a public endpoint that accepts attacker-controlled
+mail. That is the same call the program already made for Google/Microsoft sync, and it is
+the option the `METHOD:PUBLISH` decision was explicitly chosen *over*.
+
 ## No `VTIMEZONE` — a stated debt, not an oversight
 
 Phase 4 emits `DTSTART;TZID=America/New_York:…` with **no accompanying `VTIMEZONE`

@@ -264,8 +264,11 @@ answer stops the file compiling instead of silently rendering nothing.
 **`/calendar/invites`, and nowhere else, through Phase 3.** `calendar.range` scopes the
 month grid to `calendars.user_id = me`; widening it would mean a fourth query on the
 hottest path in the feature, its own recurrence expansion and suppression handling, and a
-share of `MAX_RANGE_ROWS`. Phase 6 is already reworking that query for shares and folds
-the list into the grid then, retiring the route.
+share of `MAX_RANGE_ROWS`. Phase 6 owes the fold — **and owes it as its own change**,
+separate from widening that query for shares (that one only lengthens the `IN` list; the
+fold adds a fourth query from a different source). ⚠️ **This route is transitional by
+design and the fold retires it**, which is also why `calendar.listInvites` carries no time
+filter — so the fold is a scheduling commitment, not a nice-to-have.
 
 The list is its own route rather than a panel beside the grid for a plainer reason:
 "Invitations: Standup" next to a month that does not contain Standup reads as a bug, not

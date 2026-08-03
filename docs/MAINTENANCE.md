@@ -163,8 +163,11 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   - **Guest reminders are prevented by the writer, not the schema.**
     [`calendar/reminders.md`](context/calendar/reminders.md) states the trap outright: a
     reader who checks only the DDL would conclude they were already sanctioned. An external
-    guest has no `user_id` (so no in-app channel) and no consent record. *Removal condition:*
-    a consent + unsubscribe surface — not a widened write path.
+    guest has no `user_id` (so no in-app channel) and no consent record. **Owner decision
+    2026-08-02: out of scope — a documented extension point, not scheduled work.** Recurring
+    mail to non-users needs consent, and `email_suppressions` is a **bounce/complaint** list,
+    not a consent record. *Removal condition (unchanged, should anyone revisit it):* a consent
+    + unsubscribe surface — not a widened write path.
   - **Reminder emails are en-GB in the event's zone, even for an account holder whose zone
     `user_preferences` stores.** Forced for a Phase-4 guest (no account ⇒ no stored locale or
     zone); *not* forced for a Phase-5 reminder. `packages/email/src/format.ts` warns against

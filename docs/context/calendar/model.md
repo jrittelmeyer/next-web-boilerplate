@@ -4,14 +4,17 @@ Load when working in `packages/calendar` or on anything that converts between a
 wall-clock reading and a point on the timeline. Leaf rules (one imperative per line)
 live in [`packages/calendar/AGENTS.md`](../../../packages/calendar/AGENTS.md).
 
-> **Status:** Phases 0–3. The time core (`civil.ts`, `timezone.ts`, `derive.ts`) and the
+> **Status:** Phases 0–5. The time core (`civil.ts`, `timezone.ts`, `derive.ts`) and the
 > `calendars` / `calendar_events` schema exist. `recurrence_parent_id`, `recurrence_id`,
 > `rrule` and `series_end_at` are **written as of Phase 2** — no longer inert. The
 > `RRULE` engine, the `calendar_recurrence_dates` table, per-occurrence overrides and
 > the three edit scopes are documented in [`recurrence.md`](recurrence.md), which owns
 > that surface; attendees, RSVP and the invitation notifications are in
 > [`attendees.md`](attendees.md), which owns theirs. This file keeps the time model
-> underneath both. ICS and free/busy land in later phases and get their own sections here.
+> underneath both. Emailed invitations and the `.ics` serializer shipped in Phase 4
+([invitations.md](invitations.md)); reminders in Phase 5 ([reminders.md](reminders.md)).
+**Free/busy is Phase 7 and is not scheduled** — it has no backlog row, so do not read this
+file as promising it a section.
 
 ## The two kinds of time
 

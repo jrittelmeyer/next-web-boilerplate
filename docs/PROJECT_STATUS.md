@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-02 (a recurring multi-day occurrence no longer vanishes from a month it overlaps)._
+_Last updated: 2026-08-02 (Phase 6 sliced into two bands; Band 1 discharged)._
 
 ## Where we are
 
@@ -120,6 +120,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Doc audit — 2026-08-02 (4/4) | 1 | Showcase: 26 stale claims across guide, deck and FEATURES (99.65→99.9 over 12 passes, migrations 18→26, a11y 7→8); deck chart gained a 12th point; FEATURES stamped | [guide](plain-english-guide/README.md) |
 | TS7 re-gate — 2026-08-02 | 1 | TS 7 ships no `tsserver`, so a cutover trial could never license it; re-gated on 7.1. Also 10 specifiers not 9, next-intl a false positive | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Calendar grid fix — 2026-08-02 | 1 | Expansion selected by START while both SQL layers used overlap, so a recurring multi-day occurrence straddling the window vanished. Opt-in `match: "overlaps"` (exact end instant); `suppressionBounds` widened too, else a moved occurrence paints twice | [api.md](context/calendar/api.md) |
+| Phase 6 sliced — 2026-08-02 | 1 | B2 was the deferral bucket of Phases 3–5 (~100 commitments, 41 files), not a phase. Band 1 (already-true claims) discharged; Band 2 gated. Inbound iTIP + guest reminders closed as extension points; `private` unenforced, audit gap named | [BACKLOG.md](BACKLOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
