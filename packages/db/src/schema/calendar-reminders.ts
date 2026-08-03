@@ -35,9 +35,12 @@ export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
  * one-line edit while adding a column is a migration.
  *
  * The reason it is gated is a real defect, not caution: `expandSeries` in `@repo/calendar`
- * windows on each occurrence's **start** instant, so an end-anchored reminder on a recurring
+ * windows on each occurrence's **start** instant **by default**, and the reminder sweeper
+ * takes that default, so an end-anchored reminder on a recurring
  * series would ask for a window the occurrence's start falls outside of and would **silently
- * never fire**. Supporting it means widening the expansion window by the master's nominal
+ * never fire**. The engine now has a `match: "overlaps"` mode — added for the month grid,
+ * necessary for end anchors, and **not sufficient**: `firesInWindow` in `@repo/jobs` still
+ * computes fire times from `startAtMs`. Supporting it means widening the expansion window by the master's nominal
  * span and re-filtering on the end instant. Phase 6 does that with its own tests.
  */
 export const REMINDER_ANCHORS = ["start", "end"] as const;

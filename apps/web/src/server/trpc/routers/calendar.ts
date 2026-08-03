@@ -83,14 +83,25 @@ interface RangeItem {
  * The `recurrence_id` window the suppression scan reads.
  *
  * `recurrence_id` is a civil reading, the window is two instants, and the two live in
- * different spaces — so the bounds are the window read as UTC civil ±1 day, which is
- * safely wider than any real offset (±14 h) in both directions. Wider is free here: the
- * scan only ever answers "which of these occurrences already have a row", and an extra
- * day of candidates costs a handful of index entries.
+ * different spaces — so the bounds are the window read as UTC civil, widened past any
+ * real offset (±14 h) at both ends and past a maximum event span at the low end. Wider
+ * is free here: the scan only ever answers "which of these occurrences already have a
+ * row", it is bounded by `masterIds` either way, and the index it rides
+ * (`calendar_events_override_idx`) is keyed on `(recurrence_parent_id, recurrence_id)`.
  */
 function suppressionBounds(fromMs: number, toMs: number): { lo: LocalDateTime; hi: LocalDateTime } {
   return {
-    lo: formatLocalDateTime(addCivilDays(instantToCivil(fromMs, "UTC"), -1)),
+    // The LOW bound carries the same span slack as the window's redundant lower bound,
+    // and for the same reason the two share a constant. Expansion runs in `overlaps`
+    // mode, so it emits occurrences whose `recurrence_id` is up to one maximum span
+    // BEFORE `fromMs`. An override for one of those is a row this scan has to find: miss
+    // it and step 4 of `expandSeries`'s order of operations no-ops, the base occurrence
+    // is painted at its original time, and — because branch A paints the override at its
+    // new time too — the user sees the occurrence they moved still sitting in the slot
+    // they moved it out of. A day of slack was right when expansion selected by start.
+    lo: formatLocalDateTime(
+      addCivilDays(instantToCivil(fromMs, "UTC"), -(MAX_SPAN_SLACK_DAYS + 1)),
+    ),
     hi: formatLocalDateTime(addCivilDays(instantToCivil(toMs, "UTC"), 1)),
   };
 }
@@ -440,7 +451,13 @@ export const calendarRouter = createTRPCRouter({
               rdates: modifiers.rdates,
               overriddenRecurrenceIds: overriddenByMaster.get(master.id) ?? [],
             },
-            { fromMs: input.fromMs, toMs: input.toMs },
+            // `overlaps`, not the default: branch A above already selects concrete rows
+            // by overlap (`start_at <= to AND end_at >= from`) and branch B selects
+            // MASTERS by `series_end_at >= from`. Expanding by start alone was the only
+            // layer of the three that disagreed, so a recurring multi-day occurrence
+            // that began before the window and is still running when it opens rendered
+            // as a one-off and vanished as a series.
+            { fromMs: input.fromMs, toMs: input.toMs, match: "overlaps" },
             MAX_RANGE_ROWS,
           );
           if (series.truncated) truncated = true;

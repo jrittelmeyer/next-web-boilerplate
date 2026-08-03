@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { MS_PER_DAY, toDayNumber } from "./civil";
-import { expandSeries, type SeriesInput, seriesEndInstantMs } from "./occurrences";
-import { instantToCivil } from "./timezone";
+import { type LocalDateTime, MS_PER_DAY, parseLocalDateTime, toDayNumber } from "./civil";
+import {
+  type ExpandSeriesResult,
+  expandSeries,
+  type SeriesInput,
+  seriesEndInstantMs,
+} from "./occurrences";
+import { civilToInstant, instantToCivil } from "./timezone";
 
 const utcMs = (year: number, month: number, day: number) =>
   toDayNumber(year, month, day) * MS_PER_DAY;
@@ -135,6 +140,192 @@ describe("expandSeries", () => {
       "2027-01-06 09:00:00",
     ]);
     expect(result.truncated).toBe(true);
+  });
+});
+
+/**
+ * `match: "overlaps"` — the mode `calendar.range` uses.
+ *
+ * Selecting by START instant was the only one of the range query's three layers that did
+ * not use overlap semantics (branch A: `start_at <= to AND end_at >= from`; branch B's
+ * master selection: `series_end_at >= from`), so a recurring occurrence that began before
+ * the window and was still running when it opened vanished — while a byte-identical
+ * one-off in the same slot rendered.
+ */
+describe("expandSeries — match: overlaps", () => {
+  const NY = "America/New_York";
+  const nyInstant = (wall: LocalDateTime) => civilToInstant(parseLocalDateTime(wall), NY);
+  const recurrenceIds = (result: ExpandSeriesResult) =>
+    result.occurrences.map((occurrence) => occurrence.recurrenceId);
+
+  /** Weekly Monday 22:00 → Tuesday 02:00: four hours, crossing midnight. */
+  const overnight = series({
+    rrule: "FREQ=WEEKLY;BYDAY=MO",
+    startWall: "2027-01-04 22:00:00",
+    endWall: "2027-01-05 02:00:00",
+  });
+
+  /** Weekly Monday 09:00 → Thursday 17:00: the multi-day shape the pad cannot mask. */
+  const multiDay = series({
+    rrule: "FREQ=WEEKLY;BYDAY=MO",
+    startWall: "2027-01-04 09:00:00",
+    endWall: "2027-01-07 17:00:00",
+  });
+
+  it("returns an overnight occurrence that is still running when the window opens", () => {
+    const window = {
+      fromMs: nyInstant("2027-01-05 00:00:00"),
+      toMs: nyInstant("2027-01-20 00:00:00"),
+    };
+    expect(recurrenceIds(expandSeries(overnight, { ...window, match: "overlaps" }, 50))).toContain(
+      "2027-01-04 22:00:00",
+    );
+    // The defect, pinned: the same window under the default drops it.
+    expect(recurrenceIds(expandSeries(overnight, window, 50))).not.toContain("2027-01-04 22:00:00");
+  });
+
+  it("returns a multi-day occurrence that straddles the window's opening", () => {
+    const window = {
+      fromMs: nyInstant("2027-01-06 00:00:00"),
+      toMs: nyInstant("2027-01-20 00:00:00"),
+      match: "overlaps" as const,
+    };
+    expect(recurrenceIds(expandSeries(multiDay, window, 50))).toEqual([
+      "2027-01-04 09:00:00",
+      "2027-01-11 09:00:00",
+      "2027-01-18 09:00:00",
+    ]);
+  });
+
+  it("still suppresses a straddling occurrence that already has an override row", () => {
+    // The regression this mode could most easily have introduced. The override arrives
+    // separately through the range query's concrete branch, painted at the time it was
+    // MOVED to; emitting the base occurrence here as well would show the user the
+    // occurrence they moved, still sitting in the slot they moved it out of. The
+    // suppression list has to reach back as far as expansion now does — which is why
+    // `suppressionBounds` in the range query carries the same span slack as the window.
+    const window = {
+      fromMs: nyInstant("2027-01-06 00:00:00"),
+      toMs: nyInstant("2027-01-20 00:00:00"),
+      match: "overlaps" as const,
+    };
+    const result = expandSeries(
+      { ...multiDay, overriddenRecurrenceIds: ["2027-01-04 09:00:00"] },
+      window,
+      50,
+    );
+    expect(recurrenceIds(result)).not.toContain("2027-01-04 09:00:00");
+    expect(recurrenceIds(result)).toEqual(["2027-01-11 09:00:00", "2027-01-18 09:00:00"]);
+  });
+
+  it("catches an occurrence whose real span exceeds its nominal one across a fall-back transition", () => {
+    // `materialise` shifts the end by whole DAYS and re-resolves the offset, so this
+    // "3-day" series is 73 hours over the November transition, not 72. An implementation
+    // that widened the lower bound by the NOMINAL span would drop this occurrence; the
+    // exact end-instant test does not. The transition must be the fall-back one — a
+    // spring-forward fixture passes on the broken implementation.
+    const firstStart = nyInstant("2027-11-05 09:00:00");
+    const window = {
+      fromMs: firstStart + 72.5 * 60 * 60 * 1000,
+      toMs: nyInstant("2027-11-20 00:00:00"),
+      match: "overlaps" as const,
+    };
+    // Guards the fixture itself: if this stops exceeding the nominal span, the test has
+    // stopped exercising the thing it was written for.
+    expect(window.fromMs - firstStart).toBeGreaterThan(3 * MS_PER_DAY);
+    expect(
+      recurrenceIds(
+        expandSeries(
+          series({
+            rrule: "FREQ=WEEKLY;BYDAY=FR",
+            startWall: "2027-11-05 09:00:00",
+            endWall: "2027-11-08 09:00:00",
+          }),
+          window,
+          50,
+        ),
+      ),
+    ).toContain("2027-11-05 09:00:00");
+  });
+
+  it("catches an all-day series whose zone puts its start a day behind the viewer's", () => {
+    // All-day rows are placed by wall date but fetched by instant, so a +14 zone starts
+    // an "exactly one day" occurrence 14 hours before a UTC window that it still
+    // overlaps. This is the case the month grid's ±1 day of padding does NOT mask.
+    const allDay = series({
+      rrule: "FREQ=DAILY",
+      startWall: "2027-01-03 00:00:00",
+      startTzid: "Pacific/Kiritimati",
+      endWall: "2027-01-04 00:00:00",
+      endTzid: "Pacific/Kiritimati",
+    });
+    const window = { fromMs: utcMs(2027, 1, 4), toMs: utcMs(2027, 1, 10) };
+    // The 01-04 occurrence begins at 2027-01-03 10:00 UTC — 14 hours before a window a
+    // UTC viewer opens on 01-04 — and runs until 01-04 10:00 UTC, so it overlaps.
+    expect(recurrenceIds(expandSeries(allDay, { ...window, match: "overlaps" }, 50))).toContain(
+      "2027-01-04 00:00:00",
+    );
+    expect(recurrenceIds(expandSeries(allDay, window, 50))).not.toContain("2027-01-04 00:00:00");
+  });
+
+  it("applies the same test to an RDATE, so the two can never disagree", () => {
+    const window = {
+      fromMs: nyInstant("2027-02-03 00:00:00"),
+      toMs: nyInstant("2027-02-20 00:00:00"),
+      match: "overlaps" as const,
+    };
+    // The RDATE starts before the window and ends inside it — an addition, not a rule
+    // occurrence, and it has to be selected by the same predicate.
+    expect(
+      recurrenceIds(expandSeries({ ...multiDay, rdates: ["2027-02-01 09:00:00"] }, window, 50)),
+    ).toContain("2027-02-01 09:00:00");
+  });
+
+  it("keeps a zero-length occurrence on the boundary and drops it one millisecond later", () => {
+    const instant = series({ rrule: "FREQ=DAILY", endWall: "2027-01-04 09:00:00" });
+    const at = nyInstant("2027-01-04 09:00:00");
+    const to = nyInstant("2027-01-10 00:00:00");
+    expect(
+      recurrenceIds(expandSeries(instant, { fromMs: at, toMs: to, match: "overlaps" }, 50)),
+    ).toContain("2027-01-04 09:00:00");
+    expect(
+      recurrenceIds(expandSeries(instant, { fromMs: at + 1, toMs: to, match: "overlaps" }, 50)),
+    ).not.toContain("2027-01-04 09:00:00");
+  });
+
+  it("spends `limit` on occurrences that overlap, never on the ones it walked past", () => {
+    // The eviction this mode could have caused. Expansion walks from DTSTART, so a window
+    // late in a long series considers hundreds of occurrences before reaching it. `limit`
+    // counts what is RETURNED — if it counted what was considered, the cap would be
+    // exhausted by occurrences the caller can never see, and truncation is a bit rather
+    // than an error, so nothing would say so.
+    const daily = series({
+      rrule: "FREQ=DAILY",
+      startWall: "2027-01-04 09:00:00",
+      endWall: "2027-01-06 09:00:00",
+    });
+    const window = {
+      fromMs: nyInstant("2027-03-01 00:00:00"),
+      toMs: nyInstant("2027-03-05 00:00:00"),
+      match: "overlaps" as const,
+    };
+    const result = expandSeries(daily, window, 3);
+    expect(result.occurrences).toHaveLength(3);
+    for (const occurrence of result.occurrences) {
+      expect(occurrence.startAtMs).toBeLessThanOrEqual(window.toMs);
+      expect(occurrence.endAtMs).toBeGreaterThanOrEqual(window.fromMs);
+    }
+  });
+
+  it("leaves the default mode byte-identical", () => {
+    const window = {
+      fromMs: nyInstant("2027-01-06 00:00:00"),
+      toMs: nyInstant("2027-01-20 00:00:00"),
+    };
+    expect(expandSeries(multiDay, window, 50)).toEqual(
+      expandSeries(multiDay, { ...window, match: "starts-within" }, 50),
+    );
+    expect(recurrenceIds(expandSeries(multiDay, window, 50))).not.toContain("2027-01-04 09:00:00");
   });
 });
 

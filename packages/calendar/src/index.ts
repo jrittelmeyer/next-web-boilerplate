@@ -46,6 +46,7 @@ export {
   type ExpandSeriesResult,
   expandSeries,
   type MaterialisedOccurrence,
+  type OccurrenceMatch,
   type OccurrenceWindow,
   type SeriesInput,
   seriesEndInstantMs,

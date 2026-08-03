@@ -76,9 +76,25 @@ export interface ExpandSeriesResult {
   readonly truncated: boolean;
 }
 
+/**
+ * How an occurrence is tested against the window.
+ *
+ * - `starts-within` (default) — the occurrence's START instant falls inside it.
+ * - `overlaps` — the occurrence and the window intersect at all, so one that began
+ *   before the window opened and is still running when it does is returned.
+ *
+ * **`starts-within` is the default because widening is not free for every caller.**
+ * The reminder sweeper asks for occurrences by start (`packages/jobs` → `sweep.ts`),
+ * and although its own `firesInWindow` filter would reject the extra ones, `limit` is
+ * applied to what expansion *returns*: admitting earlier occurrences would let them
+ * sort first and evict the genuinely due ones, silently. A caller opts in.
+ */
+export type OccurrenceMatch = "starts-within" | "overlaps";
+
 export interface OccurrenceWindow {
   readonly fromMs: number;
   readonly toMs: number;
+  readonly match?: OccurrenceMatch;
 }
 
 /**
@@ -91,17 +107,25 @@ export interface OccurrenceWindow {
  * New York and arriving 11:30 Los Angeles has no meaningful "duration in wall minutes".
  * Where the two zones match, the two formulations agree.
  */
+function occurrenceEndCivil(
+  masterStart: CivilDateTime,
+  masterEnd: CivilDateTime,
+  occurrenceStart: CivilDateTime,
+): CivilDateTime {
+  const dayDelta =
+    toDayNumber(occurrenceStart.year, occurrenceStart.month, occurrenceStart.day) -
+    toDayNumber(masterStart.year, masterStart.month, masterStart.day);
+  return addCivilDays(masterEnd, dayDelta);
+}
+
 function materialise(
   series: SeriesInput,
   masterStart: CivilDateTime,
   masterEnd: CivilDateTime,
   occurrenceStart: CivilDateTime,
 ): MaterialisedOccurrence {
-  const dayDelta =
-    toDayNumber(occurrenceStart.year, occurrenceStart.month, occurrenceStart.day) -
-    toDayNumber(masterStart.year, masterStart.month, masterStart.day);
   const startWall = formatLocalDateTime(occurrenceStart);
-  const endWall = formatLocalDateTime(addCivilDays(masterEnd, dayDelta));
+  const endWall = formatLocalDateTime(occurrenceEndCivil(masterStart, masterEnd, occurrenceStart));
 
   // The single writer, unchanged. Each occurrence re-resolves its own offset, which is
   // what keeps a 09:00 series at 09:00 across a DST transition.
@@ -135,6 +159,29 @@ export function expandSeries(
   const masterStart = parseLocalDateTime(series.startWall);
   const masterEnd = parseLocalDateTime(series.endWall);
 
+  /**
+   * One predicate governs both the rule's occurrences and the `RDATE`s, so the two can
+   * never disagree about what the window means.
+   *
+   * Under `overlaps` this is the exact test — `start <= to AND end >= from` — rather
+   * than a widened lower bound. A bound widened by the master's *nominal* span would be
+   * wrong by an hour across a fall-back transition, because `materialise` shifts the end
+   * by whole DAYS and re-resolves the offset: a "3-day" series is 71 or 73 hours
+   * depending on which transition it straddles. Computing the occurrence's own end
+   * instant has no such slack to get wrong.
+   *
+   * The start half is checked first because it is cheap and rejects everything after the
+   * window; the end instant costs a second zone resolution and is only computed for an
+   * occurrence that began before the window opened.
+   */
+  const matchesWindow = (occurrence: CivilDateTime, instantMs: number): boolean => {
+    if (window.match !== "overlaps") return instantMs >= window.fromMs && instantMs <= window.toMs;
+    if (instantMs > window.toMs) return false;
+    if (instantMs >= window.fromMs) return true;
+    const end = occurrenceEndCivil(masterStart, masterEnd, occurrence);
+    return resolveCivil(end, series.endTzid).instantMs >= window.fromMs;
+  };
+
   const expanded = expandRRule({
     rule,
     dtstart: masterStart,
@@ -142,6 +189,7 @@ export function expandSeries(
     fromMs: window.fromMs,
     toMs: window.toMs,
     limit,
+    accept: matchesWindow,
   });
 
   const byRecurrenceId = new Map<LocalDateTime, CivilDateTime>();
@@ -155,7 +203,7 @@ export function expandSeries(
     const key = formatLocalDateTime(civil);
     if (byRecurrenceId.has(key)) continue;
     const instantMs = resolveCivil(civil, series.startTzid).instantMs;
-    if (instantMs >= window.fromMs && instantMs <= window.toMs) byRecurrenceId.set(key, civil);
+    if (matchesWindow(civil, instantMs)) byRecurrenceId.set(key, civil);
   }
 
   for (const exdate of series.exdates) {

@@ -204,8 +204,10 @@ export const MAX_REMINDERS_PER_EVENT = 10;
  *
  * `calendar_event_reminders_anchor_supported` rejects `'end'` outright, so submitting one
  * would raise a 23514 and surface as the generic write error. The CHECK is there because
- * `expandSeries` windows on an occurrence's START instant: an end-anchored reminder on a
- * recurring series would silently never fire. Narrowing here turns that into a field error
+ * `expandSeries` windows on an occurrence's START instant **by default**, and the sweeper
+ * takes that default: an end-anchored reminder on a recurring series would silently never
+ * fire. The engine grew a `match: "overlaps"` mode for the month grid, which is necessary
+ * for end anchors and nowhere near sufficient — `firesInWindow` is still start-based. Narrowing here turns that into a field error
  * instead of a database error, and `calendar.test.ts` asserts the two lists stay exhaustive
  * together so Phase 6 cannot widen the column without answering here.
  */

@@ -155,6 +155,25 @@ describe("dueOccurrences", () => {
     expect(dueOccurrences(overridden, -15, fireWindow(now, 5))).toEqual([]);
   });
 
+  it("selects occurrences by START, and does not inherit the grid's overlap mode", () => {
+    // `expandSeries` grew a `match: "overlaps"` mode for `calendar.range`, and the sweeper
+    // deliberately does NOT opt in. Two reasons, and the second is the structural one:
+    // `firesInWindow` is start-based, so an occurrence that merely overlaps would be
+    // rejected anyway — but `limit` is applied to what expansion RETURNS, so admitting
+    // occurrences that began earlier would let them sort first and evict the genuinely
+    // due ones, with truncation reported as a bit and nobody the wiser.
+    //
+    // A long-running occurrence that is still in progress when the window opens is
+    // therefore not due: its reminder fired at its start, days ago.
+    const retreat: SeriesInput = {
+      ...weekly,
+      startWall: "2027-05-03 09:00:00",
+      endWall: "2027-05-06 17:00:00",
+    };
+    const midOccurrence = Date.UTC(2027, 4, 4, 12, 0, 0); // inside 05-03's span
+    expect(dueOccurrences(retreat, -15, fireWindow(midOccurrence, 5))).toEqual([]);
+  });
+
   it("keeps a 09:00 series at 09:00 across a DST transition", () => {
     // The reason the sweeper expands civilly instead of stepping by 7×24h: in New York the
     // 2027-11-07 transition means the instants are NOT a uniform week apart, but the reminder

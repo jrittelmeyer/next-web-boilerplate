@@ -39,8 +39,9 @@ guest reminders were already sanctioned.
 `anchor` is `'start' | 'end'`, and `calendar_event_reminders_anchor_supported` currently
 rejects `'end'`. That is a real defect being fenced off, not caution:
 
-`expandSeries` in `@repo/calendar` windows on each occurrence's **start** instant
-(`expand.ts` filters `instantMs >= fromMs && instantMs <= toMs`, where `instantMs` is the
+`expandSeries` in `@repo/calendar` windows on each occurrence's **start** instant **by
+default**, and the sweeper takes that default (`expand.ts` filters
+`instantMs >= fromMs && instantMs <= toMs`, where `instantMs` is the
 occurrence start; the end is derived afterwards). An end-anchored reminder on a recurring
 series would therefore ask for a window the occurrence's start falls outside of, and would
 **silently never fire** — no log, no throw, and the concrete branch would keep working, so

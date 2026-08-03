@@ -144,12 +144,22 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   Filed 2026-08-02 by the doc audit: each was recorded in a context doc or a source comment
   and tracked nowhere, which is how *"the schema permits it"* turns into a shipped bug.
   All three belong to the **Calendar Phase 6** row in [`BACKLOG.md`](BACKLOG.md).
-  - **`anchor` is CHECK-gated to `'start'`, and dropping that CHECK is half the change.**
-    `packages/db/AGENTS.md` says *"Phase 6 drops that CHECK"* — do not do only that. The
-    sweeper windows on the occurrence's **start** instant, so an end-anchored reminder would
-    fall outside the window and **silently never fire**: no log, no throw, no dead-letter.
-    *Removal condition:* `expandSeries` widens by the master's nominal span and re-filters on
-    the end instant — **then** the CHECK goes.
+  - **`anchor` is CHECK-gated to `'start'`, and dropping that CHECK is a THIRD of the change.**
+    The sweeper windows on the occurrence's **start** instant, so an end-anchored reminder
+    would fall outside the window and **silently never fire**: no log, no throw, no
+    dead-letter. ⚠️ **And a reminder the composer cannot see is a reminder the next save
+    DELETES** (`components/calendar/calendar-workspace.tsx`) — the failure is data loss, not
+    a missed notification.
+    *Removal condition — three steps, in this order:*
+    **(i) the expansion supports it — DONE 2026-08-02.** `expandSeries` takes
+    `match: "overlaps"` and tests each occurrence's **real end instant**. Note it is an exact
+    test, *not* the widened nominal-span bound this condition used to ask for: a nominal span
+    is whole days, so it is an hour short across a fall-back transition.
+    ⚠️ **(i) alone changes nothing for reminders** — the sweeper does not opt in, deliberately.
+    **(ii) the sweeper opts in *and* computes fire times from `endAtMs`** — `firesInWindow`
+    reads `startAtMs` today.
+    **(iii) the composer seed and `REMINDER_SUBMITTABLE_ANCHORS` widen together.**
+    **Then** the CHECK goes.
   - **Guest reminders are prevented by the writer, not the schema.**
     [`calendar/reminders.md`](context/calendar/reminders.md) states the trap outright: a
     reader who checks only the DDL would conclude they were already sanctioned. An external

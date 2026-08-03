@@ -55,5 +55,11 @@ One imperative per line; mechanics + rationale live in
 - Key a delivery on the occurrence's **instant**, never its `recurrence_id` —
   `recurrence_id` is NULL on every non-override row, so a unique over it is
   all-NULLs-distinct and re-sends on every tick.
-- `calendar_event_reminders.anchor` is CHECK-gated to `'start'`; Phase 6 drops that CHECK
-  when end-anchored expansion exists (`expandSeries` windows on the START instant).
+- `calendar_event_reminders.anchor` is CHECK-gated to `'start'` (`expandSeries` windows on
+  the START instant **by default**, and the sweeper takes that default; its `match:
+  "overlaps"` mode is necessary for end anchors and **not sufficient** — `firesInWindow`
+  still computes fire times from `startAtMs`). **Do not drop that CHECK on its own:** the
+  composer seeds its reminder editor from the submittable anchors, so an end-anchored row
+  it cannot see is a row **the next save DELETES**. Order is expansion → sweeper →
+  composer + `REMINDER_SUBMITTABLE_ANCHORS` → *then* the CHECK
+  ([MAINTENANCE.md → Watch](../../docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
