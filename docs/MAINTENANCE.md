@@ -571,11 +571,6 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     in a *stable* release. **Corrected 2026-08-02** in its own pass with its own evidence (the
     installed artifact + the flag's shipped docs page), deliberately not inherited from this
     entry: see the TS7 Watch item above for what the flag costs and what still blocks a cutover.
-- The **e2e signup flake** — the `signUp`→`/dashboard` Playwright step is
-  intermittently flaky (absorbed by `retries: 2`, but it twice burned 2 of 3 CI
-  attempts). **Not a code bug** — a fragile signup+redirect timing flow on modest
-  runners. Harden **only if it ever turns a lane red**: bump that test's timeout, or
-  wait on a network/cookie signal rather than only the URL.
 - **Ship a real derived product end-to-end** (intent-level driver, owner-driven) — a
   real app built to completion on the template is the strongest validation of the
   "verified end-to-end" claim, **unlocks the gated B1 intake-drop row** (BACKLOG →

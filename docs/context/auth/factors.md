@@ -213,7 +213,7 @@ supplement to email+password.
   neutral "Check your inbox" sent state — the `ForgotPasswordForm` posture.
 - **E2E:** `e2e/magic-link.spec.ts` runs in the `chromium-email` Playwright project
   against a second webServer whose fake Resend creds + `EMAIL_TEST_CAPTURE_DIR` divert
-  sends to JSON files ([TESTING.md → Email capture](../TESTING.md#email-capture-the-magic-link-e2e-path-to-100-6));
+  sends to JSON files ([TESTING.md → Email capture](../TESTING.md#email-capture--the-magic-link-e2e-path-to-100-6));
   covers request → captured link → session (a sign-up-via-link journey) plus replay
   rejection. The hidden-when-unconfigured half is asserted in `auth.spec.ts` against the
   keyless main server.
