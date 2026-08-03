@@ -185,21 +185,32 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   **1 failed · 9 flaky · 56 passed**. The single "e2e signup flake" row this replaces
   conflated two unrelated defects, and the red was *not* the one it named — read the run
   log, not the label, before acting on either.
-  - **(a) The signup hang** — `e2e/support/auth.ts:30`, `page.waitForURL("**/dashboard")`.
-    All 9 flaky were this; **every one recovered on retry**, exactly as the old row
-    predicted. ⚠️ **Hardening the wait is NOT the pre-approved fix any more.**
-    `signup-form.tsx:88-89` — and `login-form.tsx:95`, `:346`, `:392` — fire
-    `router.push(redirectTo)` then `router.refresh()` immediately after an awaited Better
-    Auth fetch, the shape recorded (on **Next 16.2.9**, now `^16.2.12`) as intermittently
-    never committing. If that is the cause, the flake is the E2E face of *"a user clicks
-    Create account, the account is created, and the page sits there"* — and hardening the
-    wait deletes the only signal for it. *Before any fix:* re-verify on 16.2.12 against a
-    fresh prod build; the cheap experiment is dropping the `router.refresh()` that
-    immediately follows `router.push()` (precedent: `create-org-dialog.tsx:73` — *"the push
-    renders /organization fresh, so no `router.refresh()` is needed"*; escalate to a full
-    navigation per `delete-account-card.tsx:111` only if that fails). *Removal condition:*
-    the four call sites no longer depend on a `push`+`refresh` pair committing, **or**
-    16.2.12+ is shown not to reproduce it.
+  - **(a) The signup hang — DIAGNOSED 2026-08-03: a pre-hydration click, fixed in
+    `e2e/support/auth.ts`.** All 9 flaky were this, and every one recovered on retry.
+    `page.goto` resolves on **`load`**, which fires before React hydrates, and Playwright's
+    actionability checks do not wait for hydration — the server-rendered form is fillable
+    and clickable while its submit handler is not yet attached. A click landing in that
+    window submits **nothing**: no request, no session, and `waitForURL("**/dashboard")`
+    then hangs for the whole timeout with no error on the page. A slow, loaded CI runner
+    widens the window, which is why it read as "timing, not a code bug".
+    *Evidence:* reproduced **8/8** under 6× CPU throttling with the old helper sequence
+    (no request ever issued); and in CI the hung attempts left **no** server-side
+    `[email] verification email for …` line, i.e. the account was never created — each
+    retry mints a fresh address, so `e2e-admin-audit`, `e2e-admin-pagination` and
+    `e2e-org-invitee` show 1 line each, not 2.
+    *Fix:* `settleThenSubmit` waits for the form to settle, then awaits the auth response
+    **alongside** the click and asserts its status — so a 429 (this endpoint is 5/60s) or a
+    5xx fails by name instead of degrading into the same silent hang.
+    ⚠️ **Two hypotheses were tested and are now RULED OUT — do not revive them without new
+    evidence.** (i) *A Next router race* (`signup-form.tsx:88-89` fires `router.push()` then
+    `router.refresh()`): **30/30** paced signups navigated cleanly on `next@16.2.12`, and the
+    missing server-side line disproves the "account created, navigation never committed"
+    shape it required. (ii) *The 5/60s rate limiter*: reachable (an unpaced loop tripped it
+    on the 5th signup) but the failing CI log contains **zero** `429`s and no
+    "Too many requests".
+    *Removal condition:* 20 consecutive green e2e lanes, **or** a recurrence whose uploaded
+    trace names a different cause. ⚠️ Still unmeasured: a throttled control arm proving the
+    settle wait alone fixes it — the local server died mid-run three times. CI is the arbiter.
   - **(b) The `set-active` hang** — `e2e/organization.spec.ts:43`. **This is what died at
     Retry #2 and turned the lane red.** Root cause **unknown**: `waitForResponse` was the
     pending op at teardown, so the predicate never matched, but whether the POST never
