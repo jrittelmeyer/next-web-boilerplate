@@ -121,9 +121,40 @@ An admin who can list every user's meeting titles, locations and attendees is a 
 incident with a UI. Admins get `/admin/audit` and the organization-deletion cascade
 instead.
 
+⚠️ **Read "instead" narrowly: `audit_log` currently records no calendar action at all.**
+`AUDIT_ACTIONS` is eight `user.*` members and `server/actions/calendar.ts` writes none of
+them. That costs nothing today — there is no admin read path for a trail to catch — but it
+stops being free the moment access can be *granted*. **Phase 6 owes
+`calendar.share_granted` / `calendar.share_revoked` in the same change as
+`calendar_shares`**, because a share is the most audit-worthy calendar action there is and
+the alternative record is a mutable row with an `updated_at`.
+
 **If you are about to add one**, the thing to change is not this file: add a scoped,
 audited capability (a specific admin action that records what was accessed and why),
 never a blanket read.
+
+## `visibility: 'private'` is stored, returned, and enforced nowhere
+
+⚠️ `calendar_events.visibility` is `'default' | 'private'`, `NOT NULL`, and **no read
+filters on it** — `calendar.range` and `calendar.byId` both select it and hand it back.
+
+It is not inert because "only the owner reads", which would be false: `getEventAccess`
+grants `reads: true` to an **attendee** holding no calendar role, so an invited non-owner
+already reads the column today. It is tolerable because today's readers are the owner plus
+people explicitly invited to that event — so the value is unobservable to anyone not
+already entitled to see the event itself. There is also **no ICS `CLASS` mapping** in
+`@repo/calendar`'s serializer, so it has no wire semantics either.
+
+**Phase 6 owes three answers, not one**, and they are separate questions:
+
+1. what a **share reader** sees (Google shows `private` events as busy blocks);
+2. what an **attendee** sees — an invitee is conventionally exempt, which is why nothing
+   is broken today;
+3. what the **feed** emits — `CLASS:PRIVATE`, or exclusion, which the program's own feed
+   verification already assumes.
+
+Deciding only (1) because sharing is what prompted it would leave two live surfaces
+answering by accident.
 
 ## Freshness
 
