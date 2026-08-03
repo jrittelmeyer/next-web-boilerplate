@@ -1,6 +1,6 @@
 # Chapter 11 — Built With AI Agents: what agentic coding is, and how it actually worked here
 
-[← Shipping & Running](10-shipping-and-running.md) · [Guide index](README.md) · [Next: Glossary →](12-glossary.md)
+[← Shipping & Running](10-shipping-and-running.md) · [Guide index](README.md) · [Next: The Calendar →](12-the-calendar.md)
 
 ---
 
@@ -225,4 +225,4 @@ For a technical-leadership audience, the defensible claims are:
 
 ---
 
-[← Shipping & Running](10-shipping-and-running.md) · [Guide index](README.md) · [Next: Glossary →](12-glossary.md)
+[← Shipping & Running](10-shipping-and-running.md) · [Guide index](README.md) · [Next: The Calendar →](12-the-calendar.md)
