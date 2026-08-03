@@ -44,6 +44,17 @@ export interface ExpandRRuleInput {
   readonly toMs: number;
   /** Hard cap on returned occurrences. */
   readonly limit: number;
+  /**
+   * Replaces the default `fromMs <= start <= toMs` window test, for a caller that needs
+   * occurrences selected by something other than where they *start* — the overlap mode
+   * in `occurrences.ts`, whose predicate has to reach the occurrence's END.
+   *
+   * It is applied **before** the `limit` check on purpose. `limit` must count what is
+   * returned, not what was considered: a predicate that admits occurrences starting
+   * before the window would otherwise fill the cap with them and evict the ones the
+   * caller asked for — silently, because truncation is a bit, not an error.
+   */
+  readonly accept?: (occurrence: CivilDateTime, instantMs: number) => boolean;
 }
 
 export interface ExpandRRuleResult {
@@ -280,7 +291,7 @@ function seekPeriodIndex(rule: RecurrenceRule, dtstart: CivilDateTime, fromCivil
  * applied after expansion rather than during it.
  */
 export function expandRRule(input: ExpandRRuleInput): ExpandRRuleResult {
-  const { rule, dtstart, timeZone, fromMs, toMs, limit } = input;
+  const { rule, dtstart, timeZone, fromMs, toMs, limit, accept } = input;
   const occurrences: CivilDateTime[] = [];
 
   const dtstartDay = toDayNumber(dtstart.year, dtstart.month, dtstart.day);
@@ -320,7 +331,8 @@ export function expandRRule(input: ExpandRRuleInput): ExpandRRuleResult {
       emitted += 1;
       if (rule.count !== null && emitted > rule.count) return { occurrences, truncated: false };
 
-      if (instantMs >= fromMs && instantMs <= toMs) {
+      const selected = accept ? accept(civil, instantMs) : instantMs >= fromMs && instantMs <= toMs;
+      if (selected) {
         if (occurrences.length >= limit) return { occurrences, truncated: true };
         occurrences.push(civil);
       }

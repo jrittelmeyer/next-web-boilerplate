@@ -72,7 +72,8 @@ describe("union parity between @repo/db and @repo/validators", () => {
     it("does not guard REMINDER_SUBMITTABLE_ANCHORS, which is a submittable SUBSET", () => {
       // The ATTENDEE_RESPONSES rule again, with a sharper edge: `end` is not merely
       // unoffered, it is refused by `calendar_event_reminders_anchor_supported`, because
-      // `expandSeries` windows on an occurrence's START instant and an end-anchored
+      // `expandSeries` windows on an occurrence's START instant by default — the mode the
+      // reminder sweeper takes — and an end-anchored
       // reminder on a recurring series would silently never fire. The column declares
       // both; only `start` may be submitted until Phase 6 widens the expansion.
       expect(REMINDER_SUBMITTABLE_ANCHORS).toEqual(["start"]);

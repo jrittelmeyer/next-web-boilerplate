@@ -180,7 +180,8 @@ describe("the column constraints", () => {
   });
 
   it("rejects the end anchor until Phase 6 builds its expansion", async () => {
-    // Not caution: `expandSeries` windows on an occurrence's START instant, so an
+    // Not caution: `expandSeries` windows on an occurrence's START instant by default and
+    // the sweeper takes that default, so an
     // end-anchored reminder on a recurring series would silently never fire. The CHECK is
     // what makes that unreachable rather than merely undocumented.
     await expect(

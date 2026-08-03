@@ -593,9 +593,12 @@ editing are in [`packages/db/AGENTS.md`](../../packages/db/AGENTS.md):
 - A delivery is keyed on the occurrence's **instant**, never its `recurrence_id` —
   `recurrence_id` is NULL on every non-override row, so a unique over it is
   all-NULLs-distinct and re-sends on every tick.
-- `anchor` is CHECK-gated to `'start'`. Dropping that CHECK is **half** the change: the
+- `anchor` is CHECK-gated to `'start'`. Dropping that CHECK is **a third of** the change: the
   sweeper windows on the occurrence's start instant, so an end-anchored reminder would
-  silently never fire (tracked on the Calendar Phase 6 row in [BACKLOG.md](../BACKLOG.md)).
+  silently never fire — and one the composer cannot see is one the next save **deletes**. The
+  engine step landed 2026-08-02 (`expandSeries`'s `match: "overlaps"`); the sweeper and the
+  composer have not. Order and rationale:
+  [MAINTENANCE.md → Watch](../MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 
 ## Admin plugin columns (ban + impersonation)
 

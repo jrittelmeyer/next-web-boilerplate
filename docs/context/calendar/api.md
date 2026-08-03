@@ -240,11 +240,29 @@ calendars**, a **≤400-day** window, and a hard **2,000-row** limit
    `calendar_recurrence_dates` rows, partitioned exhaustively by `kind`.
 3. **The suppression scan**, on `calendar_events_override_idx`: which occurrences of
    those masters already have an override row, so expansion does not paint them twice.
-   Bounded by the window read as UTC civil ±1 day, safely wider than any real offset
-   (±14 h). **No `calendar_id` predicate** (measured: +42% index size for noise, and the
+   **No `calendar_id` predicate** (measured: +42% index size for noise, and the
    composite FK makes it redundant) and **no `deleted_at` predicate either** — a
    soft-deleted override still means *this occurrence is not a plain occurrence*, so
    filtering it would resurrect the base occurrence at its original time.
+
+   Its bounds are the window read as UTC civil, `+1 day` at the top and
+   **`−(MAX_SPAN_SLACK_DAYS + 1)` at the bottom** — the same slack the window's own
+   redundant lower bound carries, and they share the constant. A day was right while
+   expansion selected by start; it stopped being right when expansion moved to
+   `overlaps`, because that emits occurrences whose `recurrence_id` precedes `from` by up
+   to a maximum span. **Miss one of those and the user sees the occurrence they moved,
+   still sitting in the slot they moved it out of** — the override paints at its new time
+   through branch A while the base occurrence paints at its old one.
+
+**Expansion runs in `match: "overlaps"`, and it did not always.** Branch A selects concrete
+rows by overlap (`start_at <= to AND end_at >= from`) and branch B selects *masters* by
+`series_end_at >= from`, but expansion selected occurrences by their **start** instant — the
+one layer of three that disagreed. A recurring occurrence that began before the window and
+was still running when it opened therefore vanished, while a byte-identical one-off in the
+same slot rendered. The month grid's ±1 day of padding hid it for short events, so what
+reached a user was the multi-day case: a recurring conference missing from a month it
+genuinely overlaps. Fixed 2026-08-02; the mode is opt-in because `limit` counts what
+expansion *returns* ([reminders.md](reminders.md) — the sweeper keeps the default).
 
 Expansion runs in the app, then **concrete and expanded rows merge into one time-ordered
 stream and the first `MAX_RANGE_ROWS` are returned.** Merged, not concatenated: if the

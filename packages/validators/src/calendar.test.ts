@@ -626,7 +626,8 @@ describe("reminderInputSchema", () => {
   it("refuses the end anchor, which the column CHECK also refuses", () => {
     // Not pedantry: `calendar_event_reminders_anchor_supported` rejects it, so a submitted
     // 'end' would raise 23514 and surface as the generic write error. The CHECK exists
-    // because `expandSeries` windows on an occurrence's START instant — an end-anchored
+    // because `expandSeries` windows on an occurrence's START instant by default, which
+    // is the mode the reminder sweeper takes — an end-anchored
     // reminder on a recurring series would silently never fire. Narrowing here turns a
     // database error into a field error.
     expect(

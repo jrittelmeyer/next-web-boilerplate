@@ -16,6 +16,11 @@ One imperative per line; mechanics + rationale live in
   aliases real ICS files use.
 - Expansion is **always window-bounded** — an unbounded series must never allocate
   past `to`.
+- `expandSeries` selects by an occurrence's **start** instant unless the caller passes
+  `match: "overlaps"`, which selects anything intersecting the window. Opt-in, because
+  `limit` counts what is **returned**: widening for a caller that did not ask would let
+  earlier occurrences evict the ones it wanted, and truncation is a bit, not an error.
+  The month grid opts in; the reminder sweeper deliberately does not.
 - **Every `start_at`/`end_at`/`*_offset_minutes` write in the repo comes from
   `deriveEventInstants`.** It returns the resolved offset rather than discarding it
   because the database's CHECK reads that column; a caller that recomputes the instant
