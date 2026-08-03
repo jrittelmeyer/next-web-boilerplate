@@ -181,6 +181,41 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (Its sibling — a day-before reminder crossing a DST transition fires an hour off in local
     terms — is argued in [`context/DECISIONS.md`](context/DECISIONS.md) and stays accepted.)
 
+- **Two distinct e2e flakes — and the lane went red once, 2026-08-03.** PR #34 attempt 1:
+  **1 failed · 9 flaky · 56 passed**. The single "e2e signup flake" row this replaces
+  conflated two unrelated defects, and the red was *not* the one it named — read the run
+  log, not the label, before acting on either.
+  - **(a) The signup hang** — `e2e/support/auth.ts:30`, `page.waitForURL("**/dashboard")`.
+    All 9 flaky were this; **every one recovered on retry**, exactly as the old row
+    predicted. ⚠️ **Hardening the wait is NOT the pre-approved fix any more.**
+    `signup-form.tsx:88-89` — and `login-form.tsx:95`, `:346`, `:392` — fire
+    `router.push(redirectTo)` then `router.refresh()` immediately after an awaited Better
+    Auth fetch, the shape recorded (on **Next 16.2.9**, now `^16.2.12`) as intermittently
+    never committing. If that is the cause, the flake is the E2E face of *"a user clicks
+    Create account, the account is created, and the page sits there"* — and hardening the
+    wait deletes the only signal for it. *Before any fix:* re-verify on 16.2.12 against a
+    fresh prod build; the cheap experiment is dropping the `router.refresh()` that
+    immediately follows `router.push()` (precedent: `create-org-dialog.tsx:73` — *"the push
+    renders /organization fresh, so no `router.refresh()` is needed"*; escalate to a full
+    navigation per `delete-account-card.tsx:111` only if that fails). *Removal condition:*
+    the four call sites no longer depend on a `push`+`refresh` pair committing, **or**
+    16.2.12+ is shown not to reproduce it.
+  - **(b) The `set-active` hang** — `e2e/organization.spec.ts:43`. **This is what died at
+    Retry #2 and turned the lane red.** Root cause **unknown**: `waitForResponse` was the
+    pending op at teardown, so the predicate never matched, but whether the POST never
+    fired, returned non-2xx, or the `Promise.all`'s *click* half hung is not recoverable
+    from the annotation. The 2026-08-03 change removed `r.ok()` from the predicate (a
+    non-2xx now fails on status instead of hanging) and gave every Playwright lane a
+    report + traces. *Removal condition:* a recurrence is diagnosed from its uploaded
+    trace, or 20 consecutive green runs of the e2e lane.
+  - ⚠️ **Why this was invisible for so long:** all three Playwright lanes ran a
+    report-less CI reporter while `ci.yml` uploaded a report directory that was never
+    created, and `if-no-files-found` defaulted to `warn` — an annotation nobody read. The
+    e2e trace mode (`on-first-retry`) also captured neither the initial attempt nor the
+    last, which is where a test exhausting `retries: 2` actually dies. All fixed
+    2026-08-03; the uploads now use `if-no-files-found: error` so a re-break is red, not
+    quiet.
+
 - **A global `now` for relative-time formatting is deferred** (noted in
   [`context/I18N.md`](context/I18N.md)) — self-gating, because **no route server-renders a
   `relativeTime` yet**. *Removal condition:* add it alongside the first route that does, or

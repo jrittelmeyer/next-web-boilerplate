@@ -18,7 +18,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  reporter: process.env.CI ? "github" : "list",
+  // Same gap the app's config carried: `github` alone writes no report directory, so
+  // ci.yml's visual-lane upload had nothing to send — and a visual red is the one failure
+  // that is unreadable without its pixel diffs. The html reporter produces them.
+  reporter: process.env.CI ? [["github"] as const, ["html", { open: "never" }] as const] : "list",
   // A small tolerance absorbs sub-pixel antialiasing noise while still catching real
   // visual changes; `animations: "disabled"` freezes enter/exit transitions so an
   // open dialog is captured at its settled end-state, not mid-zoom.
@@ -28,7 +31,10 @@ export default defineConfig({
     // under a real small-component change (a button corner-radius tweak measured ~2%).
     toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: "disabled", scale: "css" },
   },
-  use: { baseURL: `http://localhost:${PORT}` },
+  // `retries: 0` here, so `on-first-retry` (the app config's local default) would never
+  // fire at all — this config carried no trace option whatsoever. `retain-on-failure`
+  // records the single attempt and keeps it only when it fails.
+  use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },
   projects: [
     {
       name: "chromium",

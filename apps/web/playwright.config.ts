@@ -32,10 +32,22 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? "github" : "list",
+  // The `github` reporter prints ONLY failures and writes no report directory, so
+  // ci.yml's "Upload Playwright report" step had nothing to upload on any run — a red
+  // lane could not be post-mortemed past its annotation. The html reporter runs beside
+  // it (annotations unchanged) purely to produce `playwright-report/`.
+  reporter: process.env.CI ? [["github"] as const, ["html", { open: "never" }] as const] : "list",
   use: {
     baseURL,
-    trace: "on-first-retry",
+    // NOT `on-first-retry` in CI: that records the first retry only, so neither the
+    // initial attempt nor the LAST one is captured — and the last is where a test that
+    // exhausts `retries: 2` actually dies. `retain-on-failure` records every attempt and
+    // keeps the failures.
+    trace: process.env.CI ? "retain-on-failure" : "on-first-retry",
+    // Bounds a single action (click/fill) well under the 30 s test timeout, so a hung
+    // click and a hung `waitForResponse` inside one `Promise.all` stop producing the
+    // identical annotation. `expect`'s own timeout already defaults to 5 s.
+    actionTimeout: 15_000,
   },
   projects: cspNonceMode
     ? [
