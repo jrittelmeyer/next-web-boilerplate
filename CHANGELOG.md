@@ -257,6 +257,21 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-03: `brace-expansion` 5.0.8 → 5.0.9 — the previous fix was bypassable, and
+  this one skipped the age gate by owner decision.** GHSA-rgw5-rvv9-x895 (high) affects
+  `<5.0.9`: nested arrays **bypass the CVE-2026-14257 mitigation** that 5.0.8 was taken
+  for a week earlier, so the entry below was closing an advisory that had already been
+  reopened in substance. Caught by CI's `pnpm audit` lane (not Dependabot) on a branch
+  that changed no dependency — advisories publish against the world, not the tree.
+  ⚠️ **5.0.9 (published 2026-07-30) was 4 days old when taken**, inside the 7-day gate,
+  so it required a scoped `minimumReleaseAgeExclude` — **the first time this repo has
+  bypassed that gate rather than parking the advisory in `auditConfig.ignoreGhsas` and
+  waiting**, which is what its own note prescribes. Owner decision, taken because parking
+  meant ~3 days carrying a high whose fix already existed; exposure is build tooling only
+  (eslint, Sentry/Storybook webpack plugins, react-email), with no request-handling path.
+  **The exclusion expires 2026-08-06**, when 5.0.9 clears the gate on its own, and must be
+  deleted then — left behind, it silently widens the gate's blind spot to every future
+  `brace-expansion` release. `auditConfig.ignoreGhsas` stays empty.
 - **2026-07-30: `brace-expansion` 5.0.7 → 5.0.8 — the deferred advisory closed on
   schedule** — GHSA-mh99-v99m-4gvg / CVE-2026-14257 (high; `expand_()` caps the result
   *count* but not each result's *length*, so ~7.5 KB of input reaches an uncatchable

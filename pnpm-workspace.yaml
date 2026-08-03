@@ -80,8 +80,17 @@ overrides:
   #     deferral it had been holding was dropped and the allowlist re-emptied — pnpm
   #     audit now guards BOTH advisories live. 5.0.8 is likewise in-range for
   #     minimatch's own `^5.0.5`, so this stays a fix-forward, not a pin-bypass.
-  # Remove this override once a routine bump naturally carries the lockfile past 5.0.8.
-  brace-expansion: 5.0.8
+  #   - GHSA-rgw5-rvv9-x895 (<5.0.9, HIGH — the CVE-2026-14257 mitigation above can be
+  #     BYPASSED with nested arrays, so 5.0.8 is not actually fixed): FIXED by this
+  #     override, 2026-08-03. ⚠️ 5.0.9 (published 2026-07-30) was **4 days old** when
+  #     taken — inside the 7-day gate — so it needs the `minimumReleaseAgeExclude`
+  #     below. **Owner-approved exception, 2026-08-03**, taken over the alternative this
+  #     file's own auditConfig note prescribes (park it in `ignoreGhsas`, wait, then
+  #     override). Recorded rather than quietly done, because it is the first time that
+  #     rule has been set aside. The exclusion expires on its own terms 2026-08-06,
+  #     when 5.0.9 clears the gate naturally.
+  # Remove this override once a routine bump naturally carries the lockfile past 5.0.9.
+  brace-expansion: 5.0.9
   # ——— Advisory remediation (2026-07-22): transitive-only advisories, all newly
   # disclosed since the prior day's green CI run (pnpm audit queries live
   # advisory data — nothing in the lockfile changed to surface these). Only
@@ -127,9 +136,41 @@ overrides:
 # install. The tree has since aged past the window: a frozen install verified all 1021
 # entries clear the gate. `minimumReleaseAge` reads each version's PUBLISH time (not its
 # lockfile-add date), so packages added recently but published long ago (e.g. sonner,
-# @manypkg/cli) pass. Value is in MINUTES. Security fixes are not exempted here — bypass
-# a specific advisory via auditConfig / an override if a fix is ever younger than 7 days.
+# @manypkg/cli) pass. Value is in MINUTES.
+#
+# ——— Security fixes are NOT exempted here, and this is the one place the rule is stated.
+# When an advisory's fix is younger than the gate, there are exactly three moves. Default
+# to (1); (2) is a bounded exception, not a shortcut.
+#   1. PARK IT — add the GHSA to `auditConfig.ignoreGhsas` with its reason, wait for the
+#      fix to age in, then promote it to a real `overrides:` entry and delete the ignore.
+#      This is the steady state; every deferral before 2026-08-03 took it.
+#   2. DATED EXCLUDE — `minimumReleaseAgeExclude`, scoped to `name@exact-version`, only
+#      when ALL hold: a published fix exists; the vulnerable path is build-tooling-only
+#      (or the advisory is reachable in a runtime path, which makes waiting worse); the
+#      expiry is no later than the date the fix ages in unaided; and it is recorded in
+#      MAINTENANCE Watch + CHANGELOG. Parking would otherwise mean knowingly carrying an
+#      unfixed HIGH. Used once — 2026-08-03, brace-expansion; see below.
+#      ⚠️ Never scope by bare package NAME: that exempts every future release of it.
+#   3. NEITHER FITS — no fix exists anywhere: `auditConfig.ignoreGhsas` with the path and
+#      why it is low-risk here, and no expiry to promise.
+# (`docs/MAINTENANCE.md` → Dependency policy carries the same three; keep them in step.)
 minimumReleaseAge: 10080 # 7 days
+# ⚠️ TEMPORARY, expires 2026-08-06 — owner-approved 2026-08-03. brace-expansion 5.0.9
+# (published 2026-07-30) is the ONLY fix for GHSA-rgw5-rvv9-x895, a HIGH that bypasses
+# the mitigation 5.0.8 was taken for, and it was 4 days old when taken. The gate does not
+# exempt security fixes, so without this the install rejects the very version that closes
+# the advisory. Scoped to the one package, and it lapses harmlessly once 5.0.9 ages in on
+# 2026-08-06 — DELETE IT THEN; leaving it behind would silently widen the gate's blind
+# spot to every future brace-expansion release. Exposure while it stands: build tooling
+# only (eslint, Sentry/Storybook webpack plugins, react-email), no request-handling path.
+# ⚠️ Scoped to the exact VERSION, never the package name. A bare `brace-expansion` would
+# exempt every future release of a tiny, deeply-transitive, single-maintainer utility —
+# so a hijacked 5.0.10 published tomorrow would install with zero maturity window, which
+# is the precise attack this gate exists to stop. With the version pinned the entry is
+# inert the moment 5.0.9 ages in, which makes the 08-06 deletion hygiene rather than a
+# security obligation — and keeps a derived project safe even if nobody reads this.
+minimumReleaseAgeExclude:
+  - brace-expansion@5.0.9
 # The 2026-07-23 `minimumReleaseAgeExclude` for next + @next/* was REMOVED 2026-07-28 on
 # schedule: 16.2.11 (published 2026-07-21T16:00:01Z) cleared the 7-day gate that day, and
 # every @next/* entry in the lockfile is either 16.2.11 (published ~2 minutes EARLIER) or
@@ -141,13 +182,16 @@ minimumReleaseAge: 10080 # 7 days
 # its path + why it's low-risk for this app, so the audit stays green on the accepted
 # status quo and goes red the moment a NEW advisory appears. Prune an entry once the
 # fix lands in the lockfile (an ignore for an absent advisory is a harmless no-op).
-# EMPTY — and empty is the steady state. Every deferral so far has been temporary by
+# EMPTY — and empty is the steady state. Deferrals here have been temporary by
 # construction, with the same shape each time: a real fix exists but is younger than
-# minimumReleaseAge, so the advisory is parked here — never waved through with a
-# minimumReleaseAgeExclude — and the entry is deleted the day the fix ages in and
+# minimumReleaseAge, so the advisory is parked here and the entry is deleted the day the
+# fix ages in and
 # becomes a real override above. Re-emptied 2026-07-15 (effect · esbuild · postcss),
 # 2026-07-27 (the two fast-uri GHSAs), and 2026-07-30 (GHSA-mh99-v99m-4gvg, once
 # brace-expansion 5.0.8 cleared the gate). `pnpm audit` therefore guards every
 # override above live, and goes red the moment one regresses or a new advisory lands.
+# ⚠️ For the one case that took route (2) instead — GHSA-rgw5-rvv9-x895, 2026-08-03 — see
+# the three-route rule stated once at `minimumReleaseAge` above, and the dated exclude
+# beneath it. This note is a pointer; the rule and its criteria live there.
 auditConfig:
   ignoreGhsas: []
