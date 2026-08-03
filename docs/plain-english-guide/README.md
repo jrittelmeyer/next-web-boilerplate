@@ -68,11 +68,12 @@ nothing else, read chapters **1, 2, and 11**.
 | [9. Quality & Trust](09-quality-and-trust.md) | The automated safety net: tests, inspections, and defenses against poisoned software parts |
 | [10. Shipping & Running](10-shipping-and-running.md) | How the app gets onto the internet, and how it stays healthy there |
 | [11. Built With AI Agents](11-built-with-ai-agents.md) | What "agentic coding" means, how this project was actually built, and why that matters |
-| [12. Glossary](12-glossary.md) | Every technical term in the guide, alphabetized, in one or two sentences each |
+| [12. The Calendar](12-the-calendar.md) | The newest and hardest feature: two kinds of time, repeating events, guests without accounts, and reminders that fire exactly once |
+| [13. Glossary](13-glossary.md) | Every technical term in the guide, alphabetized, in one or two sentences each |
 
 **A note on formatting:** throughout the guide, technical names appear `like this`
 (the actual name a developer would use), followed immediately by a plain-English
-explanation. The [Glossary](12-glossary.md) collects all of them for quick reference.
+explanation. The [Glossary](13-glossary.md) collects all of them for quick reference.
 
 **The slide deck:** this folder also contains [`slide-deck.html`](slide-deck.html) —
 a self-contained presentation covering the same ground pitch-style. GitHub shows
@@ -99,7 +100,7 @@ in any browser.
 
 ---
 
-*Current as of 2026-08-02. The audit score stands at 99.9 — it peaked at a
+*Current as of 2026-08-03. The audit score stands at 99.9 — it peaked at a
 perfect 100 across twelve passes, and the small dip was maintenance currency,
 not regressed code.*
 
@@ -112,9 +113,9 @@ have no account at all, the calendar file your email program recognises so an
 invitation becomes an entry with one click, and reminders that fire once and only
 once even if two servers try to send them at the same moment. That last guarantee
 is the sort of thing this project takes seriously and most starters leave to
-chance. The chapters that follow don't cover the calendar yet — they're being
-rewritten for it — so treat it as the newest room in the house rather than one
-you've been shown around.*
+chance. It now has a chapter of its own —
+[**12. The Calendar**](12-the-calendar.md) — which walks the newest room in the
+house properly, including the doors it deliberately hasn't opened yet.*
 
 *Also since the last stamp: the framework was updated twice, and a documentation
 review found — and fixed — a set of instructions that had quietly fallen out of
