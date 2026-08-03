@@ -181,9 +181,11 @@ written; the probe results are what changed three of them.
 - **Through Phase 3 an invitation is a list at `/calendar/invites`, never a row on the
   invitee's month grid.** Putting it on the grid means a fourth `calendar.range` query,
   its own recurrence expansion and a share of `MAX_RANGE_ROWS` — roughly doubling the
-  phase's risk on its hottest path. Phase 6 is already reworking that query for sharing
-  and folds the list in there. Stated outright in `PROJECT_STATUS.md` and
-  [api.md](calendar/api.md) rather than left as an apparent gap.
+  phase's risk on its hottest path. Phase 6 owes the fold — as a change of its **own**,
+  not as a by-product of widening that query for sharing: sharing changes which calendar
+  ids feed the existing queries, while the fold adds a fourth from a different source.
+  Stated outright in `PROJECT_STATUS.md` and [api.md](calendar/api.md) rather than left
+  as an apparent gap.
 - **A reminder delivery is deduped by the occurrence's INSTANT, never its `recurrence_id`
   (Phase 5).** The alternative is not merely lossy, it does not function:
   `calendar_events.recurrence_id` is NULL on every non-override row, so a unique over it

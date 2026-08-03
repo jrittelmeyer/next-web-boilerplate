@@ -210,8 +210,14 @@ claiming it away.
 > appear as a row on the invitee's month grid.** `calendar.range` scopes to
 > `calendars.user_id = me` (below), and widening it would mean a fourth query on the
 > feature's hottest path, its own recurrence expansion and suppression handling, and a
-> share of `MAX_RANGE_ROWS`. Phase 6 is already reworking that query for sharing and folds
-> the list into the grid there.
+> share of `MAX_RANGE_ROWS`.
+>
+> ⚠️ **These are two changes, not one, and this file used to say otherwise.** Sharing
+> changes *which calendar ids* feed the existing three queries — same shapes, same
+> indexes, longer `IN` list. The fold is a **fourth query from a different source**
+> (`calendar_event_attendees`, for events on calendars the invitee has no role on at all).
+> They touch the same procedure and share no work beyond the file. Phase 6 owes both; it
+> does not get the second free with the first.
 
 It cannot reuse `byId`'s join, because an owner-scoped join *is* an authorization and an
 invitee is not the owner. It scopes on the attendee rows themselves —
@@ -295,7 +301,8 @@ see simply contributes nothing.
 **That scope is also why an invitation is not on the grid.** An event on someone else's
 calendar is not in the `IN` list, so through Phase 3 **invitations appear as a list at
 `/calendar/invites` and do not appear as rows on the invitee's month grid** — see
-`calendar.listInvites` above. Phase 6 folds them in alongside sharing.
+`calendar.listInvites` above. Phase 6 owes the fold as **its own change**, separate from
+widening this scope for sharing.
 
 ## The client boundary
 

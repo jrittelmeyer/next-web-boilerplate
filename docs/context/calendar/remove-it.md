@@ -156,8 +156,9 @@ the first deploy.
     every timestamp in the app use it. It is **not** calendar-specific — leave it.
 12. **Docs**: remove the calendar row from `AGENTS.md`'s context table, the
     `context/calendar/` entry in **`docs/README.md`**'s reference section, the calendar
-    entries in `DECISIONS.md`, the Calendar Phase 6 row and Watch line in
-    **`BACKLOG.md`**, and the calendar lines in `FEATURES.md`, `PROJECT_STATUS.md` and
+    entries in `DECISIONS.md`, **every** calendar row and Watch line in **`BACKLOG.md`**
+    (Phase 6 is tracked as a band of slices, so grep rather than deleting one row), and
+    the calendar lines in `FEATURES.md`, `PROJECT_STATUS.md` and
     `packages/db/AGENTS.md` (**every calendar imperative in that leaf** — attendees,
     invitations *and* reminders; the list grew with each phase, so grep it).
 
