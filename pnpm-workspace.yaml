@@ -50,17 +50,19 @@ overrides:
   # peer warnings from uploadthing's exact 3.17.7 pins. Remove when uploadthing
   # ships on effect >=3.20.
   effect: 3.21.4
-  # postcss <=8.5.17 (GHSA-r28c-9q8g-f849, HIGH — path traversal via the `prev`
-  # source-map annotation). Supersedes GHSA-qx2v-qp2m-jg93 (<8.5.10, XSS via unescaped
-  # </style> in stringify), which 8.5.20 also fixes. Reached BOTH ways: next@16.2.11's
-  # own exact 8.4.31 pin AND the plain 8.5.15 the tailwind/vite chains resolve — the
-  # previous `postcss@<8.5.10` key only rewrote the former, so the 8.5.15 copies stayed
-  # vulnerable once the new advisory landed; the key floor moves to the advisory floor
-  # to close that hole. 8.5.20 is the newest patched release that clears the 7-day age
-  # gate (published 2026-07-19; 8.5.21+ are all <7d as of 2026-07-27). Ranged key so an
-  # already-safe >=8.5.18 copy is left alone. Remove when next's own pin AND the natural
-  # tree resolution both reach >=8.5.18.
-  "postcss@<8.5.18": 8.5.20
+  # postcss <=8.5.22 (GHSA-fxqj-rqcc-2cmp, MODERATE — incomplete fix of
+  # GHSA-6g55-p6wh-862q: attacker-controlled `sourceMappingURL` reads arbitrary .map
+  # files when `from` is unset). THIRD floor move for this key (2026-08-04, batch #5):
+  # the 8.5.20 pinned on 07-27 — itself a retarget after the 8.5.15 pin went
+  # vulnerable — fell inside the new advisory's range, so the floor and value move
+  # again. Advisories this entry still covers: GHSA-r28c-9q8g-f849 (<=8.5.17, path
+  # traversal via the `prev` source-map annotation) and GHSA-qx2v-qp2m-jg93 (<8.5.10,
+  # XSS via unescaped </style> in stringify). 8.5.23 (published 2026-07-24, aged in
+  # 07-31) is the advisory floor; 8.5.24 (07-28) and 8.5.25 (= `latest`, 07-29) exist
+  # but were boundary-fresh at take time and carry no advisory delta, so aged wins.
+  # Ranged key so an already-safe >=8.5.23 copy is left alone. Remove when next's own
+  # pin AND the natural tree resolution both reach >=8.5.23.
+  "postcss@<=8.5.22": 8.5.23
   # esbuild <=0.24.2 (GHSA-67mh-4wv8-2f99 — dev server lets any site read responses),
   # via drizzle-kit → @esbuild-kit/core-utils (deprecated upstream, frozen on 0.18.x).
   # Child-scoped so the healthy 0.25.12/0.28.1 copies elsewhere in the tree stay
@@ -105,7 +107,14 @@ overrides:
   # exposure). 3.1.4 CLEARED the 7-day gate 2026-07-26 (published 2026-07-19) and is
   # in-range for ajv's own `^3.0.1`; the two deferral entries this pair held in
   # auditConfig.ignoreGhsas were removed with this override (lockfile was on 3.1.2).
-  # Remove once a routine bump naturally carries the lockfile past 3.1.4.
+  # ⚠️ 2026-08-04 (batch #5): 3.1.4 is ITSELF vulnerable to GHSA-7p8r-x3mc-p8w7
+  # (<3.1.5, HIGH — host confusion via a backslash authority introducer, the third
+  # of the family). The only fix, 3.1.5 (published 2026-07-31T09:16:56Z), is inside
+  # the 7-day gate until 2026-08-07 ~09:17 UTC, so that advisory is PARKED in
+  # auditConfig.ignoreGhsas below — route (1) of the rule at minimumReleaseAge.
+  # ON 2026-08-07: raise this override to 3.1.5 AND delete the ignore entry, one
+  # change. This override stays meanwhile — dropping it would regress the two GHSAs
+  # above (3.1.2 satisfies ajv's range too).
   fast-uri: 3.1.4
   #
   # dompurify <=3.4.11 (GHSA-c2j3-45gr-mqc4, low — CUSTOM_ELEMENT_HANDLING
@@ -121,6 +130,35 @@ overrides:
   # (published 2026-07-01) and ships prebuilt binaries for every platform this
   # repo targets. Remove when next's own sharp pin reaches >=0.35.0.
   sharp: 0.35.3
+  # ——— Advisory batch #5 (2026-08-04, closed issue #41): nine advisories landed
+  # 08-03/04 across five packages — all transitive, every path build/dev/test tooling.
+  # brace-expansion 5.0.9 (above) was taken separately on 08-03 (PR #38); postcss and
+  # fast-uri are covered by the existing entries above, retargeted/annotated in this
+  # batch because BOTH previously-pinned remediation values had themselves gone
+  # vulnerable. The two entries below are new. Caught by CI's pnpm-audit lane;
+  # Dependabot alerted on only the undici five.
+  #
+  # undici >=7.0.0 <7.29.0 — FIVE advisories at once (GHSA-4cwx-7wf7-3272, HIGH —
+  # cross-user info disclosure + parse-time crash via degenerate private cache
+  # directives — plus moderates GHSA-8xcm-r25x-g524, GHSA-m8rv-5g2x-5cg5,
+  # GHSA-jr45-8vmc-qm54, GHSA-v3r7-h72x-cjcm), all fixed in 7.29.0 (published
+  # 2026-07-24, cleared the 7-day gate 07-31). Reached only via vitest→jsdom@29.1.1
+  # (19 paths — test tooling; nothing here ships it). 7.29.0 is in-range for jsdom's
+  # own `^7.25.0` — a fix-forward, not a pin-bypass. RANGED key, deliberately: a bare
+  # key would pin every future resolution (so its own removal condition could never
+  # trigger), and undici's `latest` is now the 8.x line (8.x fix floor 8.9.0), so a
+  # bare key would silently force a future undici@8 copy cross-major DOWN to 7.29.0.
+  # The ranged key rewrites only vulnerable copies, goes inert once the tree resolves
+  # >=7.29.0 naturally, and leaves any future 8.x copy for `pnpm audit` to judge
+  # loudly. Remove when the lockfile's undici entry moves past 7.29.0 (key inert then).
+  "undici@<7.29.0": 7.29.0
+  # socket.io-parser >=4.0.0 <4.2.7 (GHSA-2m8v-j782-fhvr, HIGH — zero-attachment
+  # memory exhaustion), via react-email→socket.io@4.8.3 (the email dev preview
+  # server — dev tooling only). 4.2.7 (published 2026-07-15, aged in 07-22) is
+  # in-range for socket.io's own `~4.2.4` — the lockfile's 4.2.6 simply predates it.
+  # Same ranged-key reasoning as undici above. Remove when the react-email chain
+  # re-resolves >=4.2.7 (key inert then).
+  "socket.io-parser@<4.2.7": 4.2.7
 # Supply-chain release-age gate (Step 26 · A11). Every Phase-1/2 dep note describes this
 # discipline ("let a release age before taking it; hours-old/days-old releases were
 # rejected, pins were chosen to clear the gate"). It is ENFORCED at two layers:
@@ -182,7 +220,7 @@ minimumReleaseAgeExclude:
 # its path + why it's low-risk for this app, so the audit stays green on the accepted
 # status quo and goes red the moment a NEW advisory appears. Prune an entry once the
 # fix lands in the lockfile (an ignore for an absent advisory is a harmless no-op).
-# EMPTY — and empty is the steady state. Deferrals here have been temporary by
+# Empty is the steady state. Deferrals here have been temporary by
 # construction, with the same shape each time: a real fix exists but is younger than
 # minimumReleaseAge, so the advisory is parked here and the entry is deleted the day the
 # fix ages in and
@@ -190,8 +228,14 @@ minimumReleaseAgeExclude:
 # 2026-07-27 (the two fast-uri GHSAs), and 2026-07-30 (GHSA-mh99-v99m-4gvg, once
 # brace-expansion 5.0.8 cleared the gate). `pnpm audit` therefore guards every
 # override above live, and goes red the moment one regresses or a new advisory lands.
+# OCCUPIED 2026-08-04 (batch #5): GHSA-7p8r-x3mc-p8w7 — fast-uri <3.1.5, which includes
+# the 3.1.4 the override above pins. Route (1): the fix 3.1.5 (published
+# 2026-07-31T09:16:56Z) ages in 2026-08-07 ~09:17 UTC — DELETE this entry then and raise
+# the fast-uri override to 3.1.5 in the same change. Exposure while parked: ajv via the
+# Sentry/Storybook webpack chains — build tooling only, no request-handling path.
 # ⚠️ For the one case that took route (2) instead — GHSA-rgw5-rvv9-x895, 2026-08-03 — see
 # the three-route rule stated once at `minimumReleaseAge` above, and the dated exclude
 # beneath it. This note is a pointer; the rule and its criteria live there.
 auditConfig:
-  ignoreGhsas: []
+  ignoreGhsas:
+    - GHSA-7p8r-x3mc-p8w7

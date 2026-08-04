@@ -390,14 +390,19 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   gate:
   - `effect: 3.21.4` → remove when **uploadthing** ships on effect >=3.20 (7.7.4
     exact-pins 3.17.7).
-  - `"postcss@<8.5.18": 8.5.20` → **retargeted 2026-07-27**. The original
-    `"postcss@<8.5.10": 8.5.15` only rewrote consumers declaring `<8.5.10` (next's
-    exact 8.4.31 pin); the tailwind/vite chains resolved a plain `postcss@8.5.15`
-    that the key never touched — and 8.5.15 became vulnerable itself when
-    GHSA-r28c-9q8g-f849 (`<=8.5.17`, path traversal via the `prev` source-map
-    annotation) landed, so **the key floor had to move, not just the value**.
-    8.5.20 is the newest patched release clearing the 7-day gate. Remove when
-    next's own pin **and** the natural tree resolution both reach >=8.5.18.
+  - `"postcss@<=8.5.22": 8.5.23` → **retargeted 2026-07-27, and again 2026-08-04
+    (batch #5) — both times because the pinned value itself went vulnerable.** The
+    original `"postcss@<8.5.10": 8.5.15` only rewrote consumers declaring `<8.5.10`
+    (next's exact 8.4.31 pin); the tailwind/vite chains resolved a plain
+    `postcss@8.5.15` the key never touched — and 8.5.15 fell to GHSA-r28c-9q8g-f849
+    (`<=8.5.17`, path traversal via the `prev` source-map annotation), so **the key
+    floor had to move, not just the value** (→ `<8.5.18`: 8.5.20). Then
+    GHSA-fxqj-rqcc-2cmp (`<=8.5.22`, moderate — an incomplete-fix follow-up:
+    attacker-controlled `sourceMappingURL` reads arbitrary `.map` files when `from`
+    is unset) swallowed 8.5.20 too → `<=8.5.22`: 8.5.23 (the advisory floor, aged in
+    07-31; 8.5.24/8.5.25 existed but were boundary-fresh with no advisory delta).
+    Remove when next's own pin **and** the natural tree resolution both reach
+    >=8.5.23.
   - `"@esbuild-kit/core-utils>esbuild": 0.25.12` → remove when **drizzle-kit** drops
     the deprecated `@esbuild-kit` loader.
 
@@ -429,8 +434,15 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     longer transforms turns the e2e lane red instead of passing silently.
   - `fast-uri: 3.1.4` → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
     the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
-    `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. Remove the override once a routine
-    bump naturally carries the lockfile past 3.1.4.
+    `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. **Reopened 2026-08-04 (batch #5):
+    3.1.4 is itself vulnerable to GHSA-7p8r-x3mc-p8w7** (`<3.1.5`, high — the third
+    host-confusion advisory of the family, via a backslash authority introducer).
+    The only fix, 3.1.5 (published 2026-07-31T09:16:56Z), is inside the 7-day gate
+    until **2026-08-07 ~09:17 UTC**, so the advisory is **parked** in
+    `auditConfig.ignoreGhsas` — route (1), the steady-state deferral, not a second
+    gate exception. **On 08-07: raise this override to 3.1.5 and delete the park in
+    one change**; thereafter remove the override once a routine bump naturally
+    carries the lockfile past 3.1.5.
 - **Advisory batch 2026-07-27** (closed [#10](https://github.com/jrittelmeyer/next-web-boilerplate/issues/10),
   red since 2026-07-25) — three highs, one of them a **direct** dependency:
   - **`better-auth` 1.6.20 → 1.6.23** (with `@better-auth/passkey` in lockstep).
@@ -457,6 +469,29 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     state was never wrong — the script's guard held — but the **run conclusion** was,
     and that is what a human reads in `gh run list`. A genuine npm outage now turns
     both lanes red and needs a re-run; that is the safe direction to fail.
+- **Advisory batch 2026-08-04 (#5** — closed
+  [#41](https://github.com/jrittelmeyer/next-web-boilerplate/issues/41), red since
+  2026-08-03/04**)** — nine advisories (4 high, 5 moderate) across five packages, every
+  path build/dev/test tooling; `brace-expansion` 5.0.9 (the ninth) merged separately as
+  PR #38. The batch's lesson: **two of the nine were against our own previous
+  remediation pins** (fast-uri 3.1.4, postcss 8.5.20) — an override is a standing
+  liability, and `pnpm audit` re-judging pinned values live is exactly how both
+  surfaced. New overrides, both RANGED deliberately (a bare key pins every future
+  resolution so its own removal condition can never fire, and would force a future
+  undici@8 copy cross-major *down*; a ranged key self-neutralizes and leaves new copies
+  for `pnpm audit` to judge loudly):
+  - `"undici@<7.29.0": 7.29.0` → five advisories at once (GHSA-4cwx-7wf7-3272, high,
+    plus four moderates), reached only via vitest→jsdom (test tooling). In-range for
+    jsdom's own `^7.25.0`. Remove when the lockfile's undici entry moves past 7.29.0
+    (the key is inert from that moment).
+  - `"socket.io-parser@<4.2.7": 4.2.7` → GHSA-2m8v-j782-fhvr (high, zero-attachment
+    memory exhaustion), via react-email's dev preview server. In-range for socket.io's
+    own `~4.2.4` — the lockfile's 4.2.6 simply predated the fix. Remove when the
+    react-email chain re-resolves >=4.2.7.
+  - postcss (second retarget) + fast-uri (parked GHSA, **exit 2026-08-07 ~09:17 UTC**):
+    see their bullets above.
+  Dependabot alerted on **only the undici five**; `pnpm audit` caught all nine — the
+  authoritative-gate ranking holds.
 - **`contrarian` subagent — evaluated 2026-07-28; both open items now closed.**
   - **The acceptance test RAN and passed its pre-committed bar.** It produced findings
     absent from both the plan and the PR body, each citing a file:line it read itself —

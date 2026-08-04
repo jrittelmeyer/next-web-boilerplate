@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-03 (E2E lanes made diagnosable; the two e2e flakes separated)._
+_Last updated: 2026-08-04 (advisory batch #5 shipped — closes #41; fast-uri parked until 08-07)._
 
 ## Where we are
 
@@ -125,6 +125,7 @@ Per-program summary (Rows = archived row count; full rows →
 | a11y scan fix — 2026-08-03 | 1 | Uploadthing's avatar button stays `data-state="readying"` with UPLOADTHING_TOKEN unset, painting white on #60a5fa (2.54:1) — axe caught it on `/account` across every branch at once. Excluded by that STATE only, so the `ready` button is still scanned | [a11y.spec.ts](../apps/web/e2e/a11y.spec.ts) |
 | E2E diagnosability — 2026-08-03 | 1 | All 3 Playwright lanes ran a report-less reporter while CI uploaded a never-created dir (`if-no-files-found` defaulted to warn); `on-first-retry` traced neither the first attempt nor the last. The one "signup flake" row was two defects | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Guide ch. 12 — 2026-08-03 | 1 | The guide's standing promise ("being rewritten for the calendar") delivered as **ch. 12**, glossary → 13 + 7 terms. Appended, not inserted at 9: `docs:sanity` cannot see a "Chapter N" label naming the wrong file. Deck: links only, its gap filed | [ch. 12](plain-english-guide/12-the-calendar.md) |
+| Advisory batch #5 — 2026-08-04 | 1 | 9 advisories (4 high) closed #41, two against our own pins (fast-uri 3.1.4, postcss 8.5.20). Ranged overrides undici 7.29.0 (×5) + socket.io-parser 4.2.7; postcss key → 8.5.23; fast-uri parked → 3.1.5 on 08-07 ~09:17Z. All tooling paths | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -138,10 +139,13 @@ deliberate cuts and *why* each was cut — including why invitations are a list 
 Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
-is canonical; the only item still open is **Renovate PR delivery FAILED** (the 2026-07-27
-window passed with zero `renovate/*` branches ever opened — a Mend-side diagnosis job,
-tracked as B1). Everything else that was pending here has closed: the `next`/`@next/*`
-age-exclude, `brace-expansion` → 5.0.8, `better-auth` → 1.6.25, and `next` 16.2.12.
+is canonical. Open now: the **merge queue #37 → #40 → #42** (un-reds `main`'s e2e axis;
+the audit axis is green again since batch #5) · **Renovate PR delivery FAILED** (zero
+`renovate/*` branches ever; Mend-side diagnosis, B1). Dated: **08-06** delete the
+`brace-expansion@5.0.9` age-exclude (hygiene by then — the entry is inert once 5.0.9
+ages in) · **08-07 ~09:17 UTC** promote fast-uri to a 3.1.5 override + delete the park ·
+**08-10 ~20:34 UTC** `next` 16.3.0 ages in (npm publish time governs; manual take while
+Renovate delivery is down).
 
 ## Fresh project on-ramp (clone → build a real app)
 

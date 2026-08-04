@@ -257,6 +257,31 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-04: advisory batch #5 (closed
+  [#41](https://github.com/jrittelmeyer/next-web-boilerplate/issues/41)) — nine advisories
+  in one morning, two of them against our own previous fixes.** Nine advisories (4 high,
+  5 moderate) across five packages landed 2026-08-03/04, every path build/dev/test tooling
+  (vitest→jsdom, react-email's preview server, the Sentry/Storybook webpack chains, the
+  next/vite postcss copies — no request-handling code). The notable shape: **both
+  `fast-uri: 3.1.4` and postcss `8.5.20` — values recorded here as remediations — fell
+  inside the new advisories' ranges.** An override is a standing liability, not a
+  fix-and-forget; `pnpm audit` re-judges pinned values live, which is exactly how both
+  surfaced. Moves: new ranged overrides **`"undici@<7.29.0": 7.29.0`** (five advisories at
+  once — GHSA-4cwx-7wf7-3272, high, cross-user info disclosure via degenerate private
+  cache directives, plus four moderates) and **`"socket.io-parser@<4.2.7": 4.2.7`**
+  (GHSA-2m8v-j782-fhvr, zero-attachment memory exhaustion); the postcss key retargeted a
+  **second** time (`"postcss@<=8.5.22": 8.5.23`, GHSA-fxqj-rqcc-2cmp — an incomplete-fix
+  follow-up); and GHSA-7p8r-x3mc-p8w7 (fast-uri `<3.1.5`, high) **parked** in
+  `auditConfig.ignoreGhsas` — route (1), the steady-state deferral, not a second gate
+  exception — until 3.1.5 ages in **2026-08-07 ~09:17 UTC**, when the override moves to
+  3.1.5 and the park is deleted. The new keys are **ranged, deliberately**: a bare key
+  pins every future resolution (its own "remove when a bump carries past it" condition
+  could never fire), and undici's `latest` is now the 8.x line, so a bare key would force
+  a future undici@8 copy silently cross-major *down* — the ranged key self-neutralizes
+  once the tree passes it and leaves new copies for `pnpm audit` to judge loudly.
+  `brace-expansion` 5.0.9 (the ninth advisory) merged separately as PR #38. Dependabot
+  alerted on **only the undici five**; `pnpm audit` caught all nine — the
+  authoritative-gate ranking holds.
 - **2026-08-03: `brace-expansion` 5.0.8 → 5.0.9 — the previous fix was bypassable, and
   this one skipped the age gate by owner decision.** GHSA-rgw5-rvv9-x895 (high) affects
   `<5.0.9`: nested arrays **bypass the CVE-2026-14257 mitigation** that 5.0.8 was taken
