@@ -428,14 +428,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   signal** (checking Dependabot alone would have missed a HIGH on `sharp`, which sits
   in Next's image-optimization path). Remove each when its upstream moves, then
   `pnpm install` + the full gate:
-  - `brace-expansion: 5.0.8` → **raised 2026-07-30 as scheduled**, and the
-    `GHSA-mh99-v99m-4gvg` ignore was dropped with it (allowlist empty again). The
-    second advisory on this path (`<=5.0.7` — `expand_()` caps the result *count* but
-    not each result's *length*, so ~7.5 KB of input reaches an uncatchable OOM) meant
-    5.0.7 was never a fix for it; 5.0.8 cleared the 7-day gate on 2026-07-30 and is
-    in-range for minimatch's own `^5.0.5`. **The override stays live** — remove it once
-    a routine bump naturally carries the lockfile past 5.0.8. (5.0.9 became `latest`
-    on 2026-07-30 and was deliberately not taken: ~10 h old, inside the gate.)
+  - `brace-expansion: 5.0.9` → the 5.0.8 raise of 2026-07-30 (which also dropped the
+    `GHSA-mh99-v99m-4gvg` ignore; allowlist empty again) was **superseded 2026-08-03**:
+    GHSA-rgw5-rvv9-x895 showed nested arrays bypass the mitigation 5.0.8 was taken
+    for, so 5.0.9 was taken 4 days old under a dated, version-scoped
+    `minimumReleaseAgeExclude` — the full story, the owner-approved gate exception,
+    and the **2026-08-06 exclude deletion** live in this file's own Watch item above.
+    Remove the override once a routine bump naturally carries the lockfile past 5.0.9.
   - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile
     past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).
   - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11

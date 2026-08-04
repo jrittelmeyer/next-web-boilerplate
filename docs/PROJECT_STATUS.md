@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-04 (advisory batch #5 shipped — closes #41; fast-uri parked until 08-07)._
+_Last updated: 2026-08-04 (thirteenth audit pass — 98.6, the calendar scored for the first time; advisory batch #5 shipped — closes #41, fast-uri parked until 08-07)._
 
 ## Where we are
 
@@ -43,11 +43,12 @@ _Last updated: 2026-08-04 (advisory batch #5 shipped — closes #41; fast-uri pa
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row SHIPPED (2026-07-07 → 13)**, incl. A23–A32 + A13.
-  Twelve `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65 → 99.9/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
-  (latest: [PROJECT_AUDIT_2026-07-29.md](archive/PROJECT_AUDIT_2026-07-29.md); the
-  07-22 findings F2–F4 verified closed; F1 — Renovate delivery, Mend-side — is the
-  one open deduction, now a B1 diagnosis row in [BACKLOG.md](BACKLOG.md)).
+  Thirteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
+  (latest: [PROJECT_AUDIT_2026-08-04.md](archive/PROJECT_AUDIT_2026-08-04.md) — the
+  first pass to score the calendar program, which enters as a 21st group at **85**;
+  its rows + the live advisory batch are the open work; F1 — Renovate delivery,
+  Mend-side — remains the standing tooling deduction).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
@@ -127,6 +128,7 @@ Per-program summary (Rows = archived row count; full rows →
 | E2E diagnosability — 2026-08-03 | 1 | All 3 Playwright lanes ran a report-less reporter while CI uploaded a never-created dir (`if-no-files-found` defaulted to warn); `on-first-retry` traced neither the first attempt nor the last. The one "signup flake" row was two defects | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Guide ch. 12 — 2026-08-03 | 1 | The guide's standing promise ("being rewritten for the calendar") delivered as **ch. 12**, glossary → 13 + 7 terms. Appended, not inserted at 9: `docs:sanity` cannot see a "Chapter N" label naming the wrong file. Deck: links only, its gap filed | [ch. 12](plain-english-guide/12-the-calendar.md) |
 | Doc audit — 2026-08-03 | 1 | Five drift fixes: the superseded flake row deleted; reminders' Phase-6 sentence caught up with the shipped exact test; jobs coverage include names `sweep.ts`; one anchor; kit 0.7.2. The adapter's broken `prodVerify.start` filed as B1 | [BACKLOG.md](BACKLOG.md) |
+| Audit — 2026-08-04 | 1 | Thirteenth pass, first to score the calendar: **98.6**; calendar enters at 85 — F4 external-guest cancellations (HIGH, silent), F5 series-delete footgun, F6 verified-email seams, F7/F8 silent recurrence edges. 14 rows → BACKLOG; drift fixed in 6 docs | [report](archive/PROJECT_AUDIT_2026-08-04.md) |
 | Advisory batch #5 — 2026-08-04 | 1 | 9 advisories (4 high) closed #41, two against our own pins (fast-uri 3.1.4, postcss 8.5.20). Ranged overrides undici 7.29.0 (×5) + socket.io-parser 4.2.7; postcss key → 8.5.23; fast-uri parked → 3.1.5 on 08-07 ~09:17Z. All tooling paths | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
@@ -141,13 +143,13 @@ deliberate cuts and *why* each was cut — including why invitations are a list 
 Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
-is canonical. Open now: the **merge queue #37 → #40 → #42** (un-reds `main`'s e2e axis;
-the audit axis is green again since batch #5) · **Renovate PR delivery FAILED** (zero
-`renovate/*` branches ever; Mend-side diagnosis, B1). Dated: **08-06** delete the
-`brace-expansion@5.0.9` age-exclude (hygiene by then — the entry is inert once 5.0.9
-ages in) · **08-07 ~09:17 UTC** promote fast-uri to a 3.1.5 override + delete the park ·
-**08-10 ~20:34 UTC** `next` 16.3.0 ages in (npm publish time governs; manual take while
-Renovate delivery is down).
+is canonical. Open now: **Renovate PR delivery FAILED** (two empty Monday windows, zero
+`renovate/*` branches ever; Mend-side diagnosis, B1) — the 2026-08-04 merge queue
+(#38 → #37 → #40 → #42 + batch #5) has fully landed, un-redding `main` on both axes.
+Dated: **08-06** delete the `brace-expansion@5.0.9` age-exclude (hygiene by then — the
+entry is inert once 5.0.9 ages in) · **08-07 ~09:17 UTC** promote fast-uri to a 3.1.5
+override + delete the park · **08-10 ~20:34 UTC** `next` 16.3.0 ages in (npm publish
+time governs; manual take while Renovate delivery is down).
 
 ## Fresh project on-ramp (clone → build a real app)
 
