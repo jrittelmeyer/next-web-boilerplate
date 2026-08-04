@@ -234,9 +234,11 @@ function that must not would read as an oversight beside them. It deliberately d
 stamp `user_id`: a session proves who the caller is, a token proves only that whoever holds
 the link was sent it, and those are not the same fact.
 
-Its rate limits (60/min read, 20/min write, keyed by `clientKeyFromHeaders`) are **abuse
-dampening, not the defence**. The limiter is in-memory per instance without Upstash and
-fails open, and IP-less requests share one bucket; what makes forgery infeasible is the HMAC.
+Its write limit (20/min, keyed by `clientKeyFromHeaders`) is **abuse dampening, not the
+defence** — and the **read path currently has no limiter at all** (the designed 60/min
+read limit was never wired; tracked as a B2 row in [BACKLOG.md](../../BACKLOG.md), audit
+2026-08-04). The limiter is in-memory per instance without Upstash and fails open, and
+IP-less requests share one bucket; what makes forgery infeasible is the HMAC.
 A multi-instance deploy that wants a real limit should set the Upstash pair.
 
 ## What an edit owes: three independent booleans

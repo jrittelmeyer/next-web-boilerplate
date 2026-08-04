@@ -14,7 +14,11 @@ overrides, or the edit and delete scopes. The time model underneath it all is
 
 `FREQ` ∈ `DAILY` | `WEEKLY` | `MONTHLY` | `YEARLY`, plus `INTERVAL`, `COUNT`, `UNTIL`,
 `WKST`, `BYMONTH`, `BYMONTHDAY` (negatives included), `BYDAY` (ordinals included, e.g.
-`-1FR`) and `BYSETPOS`.
+`-1FR`) and `BYSETPOS`. Two caveats inside that grammar (both audit 2026-08-04, B-rows in
+[BACKLOG.md](../../BACKLOG.md)): `DAILY`+`BYMONTHDAY` is **refused** (loudly — though the
+refusal's RFC attribution is wrong; the combination is valid), and
+`YEARLY;BYMONTHDAY` *without* `BYMONTH` currently expands only DTSTART's month where the
+RFC and the oracle expand every month.
 
 **Refused, explicitly, rather than silently mis-expanded:** `BYWEEKNO`, `BYYEARDAY`,
 `BYHOUR` / `BYMINUTE` / `BYSECOND`, sub-daily `FREQ`, `EXRULE`, RFC 7529 `RSCALE`.
@@ -85,7 +89,11 @@ is a permanent over-estimate. (Not "an `EXDATE` can only shorten it" — removin
 "optimise" `series_end_at` to track a trailing `EXDATE` and break the invariant.)
 
 - Unbounded → `NULL`.
-- `UNTIL` → `UNTIL` plus the nominal span; no expansion needed.
+- `UNTIL` → `UNTIL` plus the nominal span; no expansion needed. ⚠️ Not quite an
+  over-estimate in one case: a final occurrence *straddling a fall-back transition* is
+  up to the transition delta longer than its nominal span, so the true end can exceed
+  `series_end_at` by ~1 h (audit 2026-08-04; fix rides the long-tail B3 row in
+  [BACKLOG.md](../../BACKLOG.md)).
 - `COUNT` → expand to the count, take the last end.
 - **Only an `RDATE` past the rule's own end invalidates it.** `EXDATE` writes never
   recompute.

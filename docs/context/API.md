@@ -404,6 +404,8 @@ masters view. All three: [calendar/api.md](calendar/api.md).
 **One calendar action breaks the six-step shape, and deliberately.** `respondToEvent`
 does not call `getCalendarRole` at step 4 — an invitee is not a member of the organizer's
 calendar, so the attendee row *is* the authorization, answered by `getEventAccess`
-([calendar/acl.md](calendar/acl.md)). It is the only place in the repo where a write
-authorizes on a row rather than on a role, and
-[calendar/attendees.md](calendar/attendees.md) is where that is argued.
+([calendar/acl.md](calendar/acl.md)). Since Phase 4 there are exactly **two** places where
+a write authorizes on a row rather than on a role — this one and `respondByToken`, the
+external-RSVP path whose "row" is proven by an HMAC token instead of a session
+([calendar/invitations.md](calendar/invitations.md)) — and
+[calendar/attendees.md](calendar/attendees.md) is where the shape is argued.

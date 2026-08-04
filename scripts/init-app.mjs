@@ -278,8 +278,8 @@ const MENTION_PATCHES = [
   },
   {
     file: "docs/VERIFICATION.md",
-    from: " (documented in PROJECT_STATUS / [BACKLOG → Watch](BACKLOG.md));",
-    to: ";",
+    from: "; fix in PR #37)",
+    to: ")",
   },
 ];
 

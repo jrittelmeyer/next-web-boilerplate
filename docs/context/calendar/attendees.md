@@ -212,6 +212,12 @@ An invitation addressed to someone who signs up an hour later is found by
 
 - **The `emailVerified` conjunct is not optional.** Without it, signing up as
   `victim@example.com` and never verifying would expose that person's invitations.
+  ⚠️ **The conjunct guards the read/claim path only** — two writers currently re-state
+  identity by email *without* it (`resolveAttendeeUserIds` at invite time, and
+  `respondToEvent`'s UPDATE), so on an email-unconfigured deploy (where unverified
+  accounts can sign in) the defence this bullet describes can be bypassed at those
+  seams. Tracked as a B2 row in [BACKLOG.md](../../BACKLOG.md) (audit 2026-08-04, F6);
+  this note goes when the writers enforce the conjunct too.
 - **The first successful email-arm claim stamps `user_id`, inside the same transaction.**
   Without the stamp that arm never becomes durable: someone invited before signing up
   claims by verified email, accepts, later changes address — and the row still reads
