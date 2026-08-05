@@ -6,7 +6,7 @@ import {
   notifications,
   user,
 } from "@repo/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 /**
@@ -691,5 +691,53 @@ describe("calendar_event_attendees_email_idx — which spelling can use it", () 
       SELECT id FROM calendar_event_attendees WHERE lower(email) = 'bulk-5000@example.com'
     `);
     expect(JSON.stringify(unindexed.rows)).toMatch(/"Node Type": ?"Seq Scan"/);
+  });
+});
+
+describe("the cancellation fan-out — who is emailed when an event is deleted", () => {
+  // `softDeleteEvent`'s recipient predicate, restated rather than imported: the action
+  // lives in apps/web, which this package cannot depend on. What is proven here is the
+  // NULL semantics no apps/web mock can see — the unit test's fixture models this
+  // query's OUTPUT; this is the only place its WHERE meets real rows.
+  beforeEach(async () => {
+    await db.insert(calendarEventAttendees).values([
+      { eventId: MASTER_ID, email: TEST_OWNER.email, userId: TEST_OWNER.id, role: "organizer" },
+      { eventId: MASTER_ID, email: RESOLVED_GUEST.email, userId: RESOLVED_GUEST.id },
+      { eventId: MASTER_ID, email: "external@example.com" },
+    ]);
+  });
+
+  it("includes the external guest and excludes the deleting actor", async () => {
+    const rows = await db
+      .select({ email: calendarEventAttendees.email })
+      .from(calendarEventAttendees)
+      .where(
+        and(
+          eq(calendarEventAttendees.eventId, MASTER_ID),
+          or(
+            isNull(calendarEventAttendees.userId),
+            ne(calendarEventAttendees.userId, TEST_OWNER.id),
+          ),
+        ),
+      )
+      .orderBy(calendarEventAttendees.email);
+    expect(rows.map((row) => row.email)).toEqual(["external@example.com", RESOLVED_GUEST.email]);
+  });
+
+  it("silently drops the external under the bare `ne()` spelling", async () => {
+    // The defect, planted (audit F4). `NULL <> $actor` evaluates NULL, so the bare
+    // spelling filtered out exactly the guests whose ONLY notice a cancellation email
+    // is — an external holds a live `.ics` and no in-app feed, and nothing logged the
+    // drop. It fails closed, which is why nobody reported it.
+    const rows = await db
+      .select({ email: calendarEventAttendees.email })
+      .from(calendarEventAttendees)
+      .where(
+        and(
+          eq(calendarEventAttendees.eventId, MASTER_ID),
+          ne(calendarEventAttendees.userId, TEST_OWNER.id),
+        ),
+      );
+    expect(rows.map((row) => row.email)).toEqual([RESOLVED_GUEST.email]);
   });
 });

@@ -1000,14 +1000,51 @@ describe("which writer owes which email", () => {
   });
 
   it("sends a deleted event's guests a CANCELLATION, which does", async () => {
+    // The fixture is the FIXED recipient query's result (audit F4): an external guest
+    // (`userId` null) beside an account holder, the deleting actor already excluded by
+    // the SQL. The external row must reach the email fan-out un-dropped — the
+    // `.filter` below the query guards only the notification rows — while the predicate
+    // that produces this set (NULL-safe `or(isNull, ne)`) is proven against real
+    // Postgres in @repo/db's calendar-attendees integration suite; a mock cannot see a
+    // WHERE, which is exactly how the pre-fix version of this test passed while
+    // production dropped the external.
     dbSelect.mockImplementation((columns: unknown) =>
-      selectFor(columns, [{ userId: null, email: "guest@example.com", title: "Standup" }]),
+      selectFor(columns, [
+        { userId: null, email: "external@example.com", title: "Standup" },
+        { userId: "guest-user-id", email: "holder@example.com" },
+      ]),
     );
+    // The holder's row makes `createNotifications` insert for real now (the old
+    // external-only fixture short-circuited it), and `toPayload` reads the returned
+    // row's `createdAt` — so the returning must be a full notification row.
+    dbInsert.mockReturnValue({
+      values: () => ({
+        returning: () =>
+          Promise.resolve([
+            {
+              id: "n1",
+              userId: "guest-user-id",
+              type: "calendar_cancelled",
+              body: "owner@example.com",
+              title: "Standup",
+              link: null,
+              read: false,
+              createdAt: new Date(),
+            },
+          ]),
+      }),
+    });
     recordingUpdate();
 
     await deleteEvent({ id: EVENT, ...noScope });
 
-    expect(enqueueCancellations).toHaveBeenCalledWith(EVENT, ["guest@example.com"], "cancelled");
+    expect(enqueueCancellations).toHaveBeenCalledWith(
+      EVENT,
+      ["external@example.com", "holder@example.com"],
+      "cancelled",
+    );
+    // One in-app notification — the holder's. The external's only channel is the email.
+    expect(dbNotify).toHaveBeenCalledTimes(1);
   });
 
   it("emails the series when ONE occurrence moves, without re-asking", async () => {
