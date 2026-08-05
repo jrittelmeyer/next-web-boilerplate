@@ -50,7 +50,7 @@ import {
   updateCalendarSchema,
   updateEventSchema,
 } from "@repo/validators/calendar";
-import { and, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { partitionRecurrenceDates } from "@/lib/calendar/recurrence-dates";
@@ -1712,7 +1712,11 @@ async function softDeleteEvent(target: EventTarget, actor: Actor): Promise<Delet
         .where(
           and(
             eq(calendarEventAttendees.eventId, target.id),
-            ne(calendarEventAttendees.userId, actor.id),
+            // `user_id` is NULL for an external guest, and `NULL <> $actor` is NULL — a
+            // bare `ne()` silently dropped exactly the guests whose only notice this
+            // email is (audit F4). The NULL-safe spelling is proven against real
+            // Postgres in @repo/db's calendar-attendees integration suite.
+            or(isNull(calendarEventAttendees.userId), ne(calendarEventAttendees.userId, actor.id)),
           ),
         );
       // The addresses go out with the job, not an id to re-read: the event is soft-deleted
