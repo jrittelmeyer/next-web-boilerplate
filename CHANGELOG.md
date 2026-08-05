@@ -196,6 +196,27 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Fixed
 
+- **2026-08-05: external guests now receive cancellation emails** (audit F4, HIGH,
+  silent). `softDeleteEvent`'s recipient query excluded the deleting actor with a bare
+  `ne(userId, actor.id)` — and `user_id` is NULL for an external attendee, so
+  `NULL <> $actor` evaluated NULL and the row was dropped. The guests it dropped are
+  exactly the ones with no other channel: an external holds a live `.ics` and no in-app
+  feed, so a deleted event simply stayed on their calendar. Fixed with the NULL-safe
+  `or(isNull(user_id), ne(user_id, $actor))`. Two test corrections carry the lesson:
+  the mocked unit test had asserted the very result the real SQL contradicted (a mock
+  cannot see a WHERE), so its fixture now models the fixed query's output and says so —
+  and the predicate itself is proven both ways against real Postgres in
+  `@repo/db`'s calendar-attendees integration suite, planted-defect style (the bare
+  `ne()` spelling is asserted to drop the external).
+- **2026-08-05: `deleteEventSchema` refuses the scope/recurrenceId half-pair** (audit
+  F5). `updateEventSchema` ran `scopePairIssues` from day one; delete shipped without
+  it, so `{scope: "this", recurrenceId: null}` validated and fell through to the
+  whole-series branch — deleting every occurrence and fanning out cancellations the
+  caller never meant to send. Writer-authorized, so no privilege escalation — a
+  fail-destructive footgun at the boundary. The shared rule now runs in both schemas,
+  and the new validator tests are the **first** scope-pair coverage anywhere (update's
+  half was untested too, which is how delete shipped without it). Both UI callers
+  already sent compliant pairs; api.md's both-schemas claim is now true.
 - **Claude Code hooks no longer die from a subdirectory** (ai-dev-kit 0.7.2) — all five
   hook commands in `.claude/settings.json` wired their handler on a repo-relative path
   (`node .claude/hooks/…`). Hooks are spawned with the **session cwd, not the project

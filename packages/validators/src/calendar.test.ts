@@ -357,6 +357,54 @@ describe("updateEventSchema / deleteEventSchema", () => {
     expect(deleteEventSchema.parse({ id: UUID, ...noScope }).id).toBe(UUID);
     expect(deleteEventSchema.safeParse({ id: "nope", ...noScope }).success).toBe(false);
   });
+
+  it("refuses the scope/recurrenceId half-pair on delete, exactly as update does", () => {
+    // Audit F5: without this, `scope: "this"` with no occurrence id validated and fell
+    // through to the whole-series branch — deleting every occurrence and fanning out
+    // cancellations. Fail-destructive, so the refusal belongs at the boundary.
+    const scoped = deleteEventSchema.safeParse({ id: UUID, scope: "this", recurrenceId: null });
+    expect(scoped.success).toBe(false);
+    if (scoped.success) throw new Error("unreachable");
+    expect(issuePaths(scoped)).toContain("recurrenceId");
+
+    const dangling = deleteEventSchema.safeParse({
+      id: UUID,
+      scope: null,
+      recurrenceId: "2027-03-22 09:00:00",
+    });
+    expect(dangling.success).toBe(false);
+    if (dangling.success) throw new Error("unreachable");
+    expect(issuePaths(dangling)).toContain("scope");
+
+    expect(
+      deleteEventSchema.safeParse({ id: UUID, scope: "this", recurrenceId: "2027-03-22 09:00:00" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("refuses the same half-pairs on update — the shared rule, covered at both consumers", () => {
+    // First coverage of `scopePairIssues` anywhere: update carried the rule from day one
+    // but no test pinned it, which is how delete shipped without it.
+    const scoped = updateEventSchema.safeParse({
+      ...validEvent,
+      id: UUID,
+      scope: "all",
+      recurrenceId: null,
+    });
+    expect(scoped.success).toBe(false);
+    if (scoped.success) throw new Error("unreachable");
+    expect(issuePaths(scoped)).toContain("recurrenceId");
+
+    const dangling = updateEventSchema.safeParse({
+      ...validEvent,
+      id: UUID,
+      scope: null,
+      recurrenceId: "2027-03-22 09:00:00",
+    });
+    expect(dangling.success).toBe(false);
+    if (dangling.success) throw new Error("unreachable");
+    expect(issuePaths(dangling)).toContain("scope");
+  });
 });
 
 describe("eventRangeSchema", () => {

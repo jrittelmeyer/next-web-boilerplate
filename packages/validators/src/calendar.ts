@@ -461,10 +461,17 @@ export const updateEventSchema = z
 
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
-export const deleteEventSchema = z.object({
-  id: z.uuid("Event id is required"),
-  ...scopeFields,
-});
+export const deleteEventSchema = z
+  .object({
+    id: z.uuid("Event id is required"),
+    ...scopeFields,
+  })
+  .superRefine((value, ctx) => {
+    // The same both-or-neither rule update enforces (audit F5). Without it,
+    // `scope: "this"` with no occurrence id validated — and fell through to the
+    // whole-series branch, deleting every occurrence and fanning out cancellations.
+    for (const issue of scopePairIssues(value)) ctx.addIssue({ code: "custom", ...issue });
+  });
 
 export type DeleteEventInput = z.infer<typeof deleteEventSchema>;
 export type DeleteEventValues = z.input<typeof deleteEventSchema>;
