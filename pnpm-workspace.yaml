@@ -85,12 +85,12 @@ overrides:
   #   - GHSA-rgw5-rvv9-x895 (<5.0.9, HIGH — the CVE-2026-14257 mitigation above can be
   #     BYPASSED with nested arrays, so 5.0.8 is not actually fixed): FIXED by this
   #     override, 2026-08-03. ⚠️ 5.0.9 (published 2026-07-30) was **4 days old** when
-  #     taken — inside the 7-day gate — so it needs the `minimumReleaseAgeExclude`
-  #     below. **Owner-approved exception, 2026-08-03**, taken over the alternative this
-  #     file's own auditConfig note prescribes (park it in `ignoreGhsas`, wait, then
-  #     override). Recorded rather than quietly done, because it is the first time that
-  #     rule has been set aside. The exclusion expires on its own terms 2026-08-06,
-  #     when 5.0.9 clears the gate naturally.
+  #     taken — inside the 7-day gate — under a dated, version-scoped
+  #     `minimumReleaseAgeExclude`. **Owner-approved exception, 2026-08-03**, taken over
+  #     the alternative this file's own auditConfig note prescribes (park it in
+  #     `ignoreGhsas`, wait, then override). Recorded rather than quietly done, because
+  #     it is the first time that rule was set aside. The exclusion went inert when
+  #     5.0.9 aged in and was deleted on schedule 2026-08-06.
   # Remove this override once a routine bump naturally carries the lockfile past 5.0.9.
   brace-expansion: 5.0.9
   # ——— Advisory remediation (2026-07-22): transitive-only advisories, all newly
@@ -187,28 +187,18 @@ overrides:
 #      (or the advisory is reachable in a runtime path, which makes waiting worse); the
 #      expiry is no later than the date the fix ages in unaided; and it is recorded in
 #      MAINTENANCE Watch + CHANGELOG. Parking would otherwise mean knowingly carrying an
-#      unfixed HIGH. Used once — 2026-08-03, brace-expansion; see below.
+#      unfixed HIGH. Used once — brace-expansion@5.0.9 (2026-08-03; deleted on schedule
+#      2026-08-06 once it aged in).
 #      ⚠️ Never scope by bare package NAME: that exempts every future release of it.
 #   3. NEITHER FITS — no fix exists anywhere: `auditConfig.ignoreGhsas` with the path and
 #      why it is low-risk here, and no expiry to promise.
 # (`docs/MAINTENANCE.md` → Dependency policy carries the same three; keep them in step.)
 minimumReleaseAge: 10080 # 7 days
-# ⚠️ TEMPORARY, expires 2026-08-06 — owner-approved 2026-08-03. brace-expansion 5.0.9
-# (published 2026-07-30) is the ONLY fix for GHSA-rgw5-rvv9-x895, a HIGH that bypasses
-# the mitigation 5.0.8 was taken for, and it was 4 days old when taken. The gate does not
-# exempt security fixes, so without this the install rejects the very version that closes
-# the advisory. Scoped to the one package, and it lapses harmlessly once 5.0.9 ages in on
-# 2026-08-06 — DELETE IT THEN; leaving it behind would silently widen the gate's blind
-# spot to every future brace-expansion release. Exposure while it stands: build tooling
-# only (eslint, Sentry/Storybook webpack plugins, react-email), no request-handling path.
-# ⚠️ Scoped to the exact VERSION, never the package name. A bare `brace-expansion` would
-# exempt every future release of a tiny, deeply-transitive, single-maintainer utility —
-# so a hijacked 5.0.10 published tomorrow would install with zero maturity window, which
-# is the precise attack this gate exists to stop. With the version pinned the entry is
-# inert the moment 5.0.9 ages in, which makes the 08-06 deletion hygiene rather than a
-# security obligation — and keeps a derived project safe even if nobody reads this.
-minimumReleaseAgeExclude:
-  - brace-expansion@5.0.9
+# The 2026-08-03 `minimumReleaseAgeExclude` for brace-expansion@5.0.9 — route (2)'s one
+# use, above — was REMOVED 2026-08-06 on schedule: 5.0.9 (published 2026-07-30T10:00:32Z)
+# cleared the 7-day gate at 10:00:32Z that day, so the version-scoped entry had gone
+# inert. The gate is unconditional again, with zero exclusions — verified by a frozen
+# install against the existing lockfile.
 # The 2026-07-23 `minimumReleaseAgeExclude` for next + @next/* was REMOVED 2026-07-28 on
 # schedule: 16.2.11 (published 2026-07-21T16:00:01Z) cleared the 7-day gate that day, and
 # every @next/* entry in the lockfile is either 16.2.11 (published ~2 minutes EARLIER) or
@@ -233,9 +223,9 @@ minimumReleaseAgeExclude:
 # 2026-07-31T09:16:56Z) ages in 2026-08-07 ~09:17 UTC — DELETE this entry then and raise
 # the fast-uri override to 3.1.5 in the same change. Exposure while parked: ajv via the
 # Sentry/Storybook webpack chains — build tooling only, no request-handling path.
-# ⚠️ For the one case that took route (2) instead — GHSA-rgw5-rvv9-x895, 2026-08-03 — see
-# the three-route rule stated once at `minimumReleaseAge` above, and the dated exclude
-# beneath it. This note is a pointer; the rule and its criteria live there.
+# ⚠️ For the one case that took route (2) instead — GHSA-rgw5-rvv9-x895, 2026-08-03, its
+# dated exclude deleted on schedule 2026-08-06 — see the three-route rule stated once at
+# `minimumReleaseAge` above. This note is a pointer; the rule and its criteria live there.
 auditConfig:
   ignoreGhsas:
     - GHSA-7p8r-x3mc-p8w7

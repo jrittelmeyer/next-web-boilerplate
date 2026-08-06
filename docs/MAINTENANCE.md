@@ -361,40 +361,6 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The
   same-day 22B re-check confirmed the picture unchanged: still 0 `renovate/*`
   branches, 37 Awaiting Schedule.
-- ⚠️ **A dated age-gate bypass that MUST be deleted on 2026-08-06** — `pnpm-workspace.yaml`
-  carries a `minimumReleaseAgeExclude` for **`brace-expansion`**, added 2026-08-03 so the
-  tree could take **5.0.9** while it was 4 days old. It closes **GHSA-rgw5-rvv9-x895**
-  (high), which **bypasses the CVE-2026-14257 mitigation** that 5.0.8 was taken for on
-  07-30 — so the earlier fix was not one. Surfaced by CI's `pnpm audit` lane on a branch
-  that changed no dependency: advisories publish against the world, not the tree.
-  **This is the first time the age gate was bypassed rather than the advisory parked in
-  `auditConfig.ignoreGhsas`** — the trade that file's own note prescribes. Owner decision
-  (2026-08-03), on the grounds that parking meant ~3 days carrying a high whose fix
-  existed, against build-tooling-only exposure (eslint, Sentry/Storybook webpack plugins,
-  react-email — no request-handling path).
-  **Scoped to `brace-expansion@5.0.9`, never to the package name** — a bare name would
-  exempt every future release of a tiny single-maintainer transitive, so a hijacked
-  5.0.10 would install with no maturity window at all, which is the attack the gate
-  exists to stop. Because it is version-scoped the entry goes **inert** once 5.0.9 ages
-  in, making the removal below hygiene rather than a security deadline. Verified both
-  ways on pnpm 11.7.0: with the entry, a frozen install passes; without it,
-  `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` naming the publish date.
-  *Removal condition:* **2026-08-06**, when 5.0.9 clears the gate unaided. ⚠️ **It is a
-  six-site edit, not a two-line delete** — the previous exclude's removal (07-28) left
-  its prose behind, and this one's cross-references would dangle:
-  1. `pnpm-workspace.yaml` — the `minimumReleaseAgeExclude:` key and its comment block.
-  2. `pnpm-workspace.yaml` — the *"it needs the `minimumReleaseAgeExclude` below"* clause
-     inside the `brace-expansion` override comment (**keep the override** — it stays 5.0.9).
-  3. `pnpm-workspace.yaml` — the pointer note sitting above `auditConfig`.
-  4. `pnpm-workspace.yaml` — route (2)'s *"Used once — 2026-08-03"* line in the three-route
-     rule, which becomes historical rather than current.
-  5. This Watch item.
-  6. [`BACKLOG.md`](BACKLOG.md)'s Watch pointer and the `PROJECT_STATUS.md` row's caveat.
-  The CHANGELOG entry **stays** — it is a log, not live state.
-  ⚠️ Nothing machine-checks this date: `pnpm audit` will be **green** on 2026-08-06
-  (the advisory *is* fixed), so the authoritative gate gives an all-clear exactly when the
-  leftover bypass most needs surfacing. A `docs:sanity` expiry-marker check would close
-  that, and is filed rather than folded into a security fix.
 - **Temporary security overrides** (added 2026-07-15) — three pnpm `overrides:` in
   `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts (#1–#3) that have
   **no upstream fix**. Remove each when its upstream moves, then `pnpm install` + the full
@@ -432,8 +398,9 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `GHSA-mh99-v99m-4gvg` ignore; allowlist empty again) was **superseded 2026-08-03**:
     GHSA-rgw5-rvv9-x895 showed nested arrays bypass the mitigation 5.0.8 was taken
     for, so 5.0.9 was taken 4 days old under a dated, version-scoped
-    `minimumReleaseAgeExclude` — the full story, the owner-approved gate exception,
-    and the **2026-08-06 exclude deletion** live in this file's own Watch item above.
+    `minimumReleaseAgeExclude` (owner-approved — the first age-gate bypass rather than
+    a park; **deleted on schedule 2026-08-06** once 5.0.9 aged in; the full story: the
+    CHANGELOG Security entry and the three-route rule in `pnpm-workspace.yaml`).
     Remove the override once a routine bump naturally carries the lockfile past 5.0.9.
   - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile
     past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).

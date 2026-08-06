@@ -278,6 +278,14 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-06: the `brace-expansion@5.0.9` age-gate exclusion was deleted on schedule.**
+  5.0.9 (published 2026-07-30T10:00:32Z) cleared the 7-day `minimumReleaseAge` gate at
+  10:00:32 UTC, so the dated, version-scoped `minimumReleaseAgeExclude` added 2026-08-03
+  (the gate's first and only bypass — see that entry below) had gone inert. The gate is
+  unconditional again with **zero exclusions**; a frozen install against the unchanged
+  lockfile passes all supply-chain policies (1,111 entries). Hygiene, not remediation —
+  the entry was version-scoped precisely so leaving it could never exempt a future
+  release — but deleting it keeps the exclusion list's empty state the observable norm.
 - **2026-08-05: the verified-email conjunct now binds at both attendee *writer* seams
   (audit 2026-08-04, F6).** The rule that an invitation is claimed by a **verified**
   address was enforced only on the read/claim path; two writers re-stated identity by
