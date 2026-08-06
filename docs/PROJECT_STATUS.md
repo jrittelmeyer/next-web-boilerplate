@@ -122,7 +122,7 @@ Per-program summary (Rows = archived row count; full rows →
 | TS7 re-gate — 2026-08-02 | 1 | TS 7 ships no `tsserver`, so a cutover trial could never license it; re-gated on 7.1. Also 10 specifiers not 9, next-intl a false positive | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Calendar grid fix — 2026-08-02 | 1 | Expansion selected by START while both SQL layers used overlap, so a recurring multi-day occurrence straddling the window vanished. Opt-in `match: "overlaps"` (exact end instant); `suppressionBounds` widened too, else a moved occurrence paints twice | [api.md](context/calendar/api.md) |
 | Phase 6 sliced — 2026-08-02 | 1 | B2 was the deferral bucket of Phases 3–5 (~100 commitments, 41 files), not a phase. Band 1 (already-true claims) discharged; Band 2 gated. Inbound iTIP + guest reminders closed as extension points; `private` unenforced, audit gap named | [BACKLOG.md](BACKLOG.md) |
-| Advisory — 2026-08-03 | 1 | GHSA-rgw5-rvv9-x895 (high): nested arrays **bypass** the CVE-2026-14257 mitigation `brace-expansion` 5.0.8 was taken for, so that fix wasn't one. → 5.0.9, taken 4 days old under a dated `minimumReleaseAgeExclude` — **delete 2026-08-06** | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Advisory — 2026-08-03 | 1 | GHSA-rgw5-rvv9-x895 (high): nested arrays **bypass** the CVE-2026-14257 mitigation `brace-expansion` 5.0.8 was taken for, so that fix wasn't one. → 5.0.9, taken 4 days old under a dated `minimumReleaseAgeExclude` — **deleted on schedule 08-06** | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | a11y scan fix — 2026-08-03 | 1 | Uploadthing's avatar button stays `data-state="readying"` with UPLOADTHING_TOKEN unset, painting white on #60a5fa (2.54:1) — axe caught it on `/account` across every branch at once. Excluded by that STATE only, so the `ready` button is still scanned | [a11y.spec.ts](../apps/web/e2e/a11y.spec.ts) |
 | E2E signup flake fixed — 2026-08-03 | 1 | The helper clicked **before hydration**, so no request was issued and `waitForURL` hung on a form that had submitted nothing (8/8 at 6× CPU throttle; CI's hung attempts left no server-side signup line). Router-race and limiter hypotheses ruled out | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | E2E diagnosability — 2026-08-03 | 1 | All 3 Playwright lanes ran a report-less reporter while CI uploaded a never-created dir (`if-no-files-found` defaulted to warn); `on-first-retry` traced neither the first attempt nor the last. The one "signup flake" row was two defects | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
@@ -148,10 +148,10 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 is canonical. Open now: **Renovate PR delivery FAILED** (two empty Monday windows, zero
 `renovate/*` branches ever; Mend-side diagnosis, B1) — the 2026-08-04 merge queue
 (#38 → #37 → #40 → #42 + batch #5) has fully landed, un-redding `main` on both axes.
-Dated: **08-06** delete the `brace-expansion@5.0.9` age-exclude (hygiene by then — the
-entry is inert once 5.0.9 ages in) · **08-07 ~09:17 UTC** promote fast-uri to a 3.1.5
-override + delete the park · **08-10 ~20:34 UTC** `next` 16.3.0 ages in (npm publish
-time governs; manual take while Renovate delivery is down).
+Dated: **08-07 ~09:17 UTC** promote fast-uri to a 3.1.5 override + delete the park ·
+**08-10 ~20:34 UTC** `next` 16.3.0 ages in (npm publish time governs; manual take while
+Renovate delivery is down). The 08-06 `brace-expansion@5.0.9` age-exclude was **deleted
+on schedule 2026-08-06** once 5.0.9 aged in.
 
 ## Fresh project on-ramp (clone → build a real app)
 
