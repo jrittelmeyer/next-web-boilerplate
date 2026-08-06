@@ -6,7 +6,7 @@ import {
   notifications,
   user,
 } from "@repo/db";
-import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 /**
@@ -663,6 +663,142 @@ describe("the claim is stamped, so an accepted invitation survives an email chan
       .where(eq(user.id, RESOLVED_GUEST.id));
 
     expect(await listInvites(RESOLVED_GUEST.id)).toEqual([]);
+  });
+});
+
+describe("invite-time resolution counts only verified accounts", () => {
+  /**
+   * `resolveAttendeeUserIds`' SELECT, restated (the action lives in apps/web, which this
+   * package cannot depend on) — in both spellings, so the conjunct's effect is the only
+   * difference between them.
+   */
+  async function resolve(emails: readonly string[], verifiedOnly: boolean) {
+    const rows = await db
+      .select({ id: user.id, email: user.email })
+      .from(user)
+      .where(
+        verifiedOnly
+          ? and(inArray(user.email, [...emails]), eq(user.emailVerified, true))
+          : inArray(user.email, [...emails]),
+      );
+    return new Map(rows.map((row) => [row.email.toLowerCase(), row.id]));
+  }
+
+  /** What `addAttendees` does with that map: the resolution becomes a durable stamp. */
+  async function insertResolved(email: string, resolved: Map<string, string>) {
+    await db
+      .insert(calendarEventAttendees)
+      .values({ eventId: MASTER_ID, email, userId: resolved.get(email) ?? null });
+    return (await attendeeRows(MASTER_ID))[0];
+  }
+
+  beforeEach(async () => {
+    await db.update(user).set({ emailVerified: false }).where(eq(user.id, RESOLVED_GUEST.id));
+  });
+
+  it("leaves an unverified account's invitation external", async () => {
+    const map = await resolve([RESOLVED_GUEST.email], true);
+    expect(map.size).toBe(0);
+    expect(await insertResolved(RESOLVED_GUEST.email, map)).toMatchObject({ userId: null });
+  });
+
+  it("stamps the unproved address under the spelling without the conjunct", async () => {
+    // The defect, planted (audit F6, seam a). It fails OPEN, which is why nothing would
+    // report it: the invitation works, the notification arrives, the loop looks healthy.
+    // What it costs is the claim itself — the stamp is the durable arm every later read
+    // answers by, and no read re-checks `email_verified`, so squatting an address before
+    // the invitation is sent captures it permanently on a deploy where verification is
+    // off. The token path states the rule this breaks: being sent something is not
+    // proof of owning the address it was sent to.
+    const map = await resolve([RESOLVED_GUEST.email], false);
+    expect(map.get(RESOLVED_GUEST.email)).toBe(RESOLVED_GUEST.id);
+    expect(await insertResolved(RESOLVED_GUEST.email, map)).toMatchObject({
+      userId: RESOLVED_GUEST.id,
+    });
+  });
+
+  it("still resolves a verified account, which is the whole point of resolving", async () => {
+    await db.update(user).set({ emailVerified: true }).where(eq(user.id, RESOLVED_GUEST.id));
+    const map = await resolve([RESOLVED_GUEST.email], true);
+    expect(await insertResolved(RESOLVED_GUEST.email, map)).toMatchObject({
+      userId: RESOLVED_GUEST.id,
+    });
+  });
+});
+
+describe("the respond UPDATE cannot capture a co-invitee's row", () => {
+  /**
+   * Two guests on one event: the actor, invited after they had an account (durable
+   * stamp), and a victim invited at an address that has none — `user_id NULL`, reachable
+   * only by the email arm.
+   */
+  const VICTIM_EMAIL = "victim@example.com";
+
+  /** `respondToEvent`'s UPDATE, restated, in both spellings of its email arm. */
+  async function respond(userId: string, verifiedArm: boolean) {
+    const emailArm = verifiedArm
+      ? sql`EXISTS (SELECT 1 FROM "user" u
+                     WHERE u.id = ${userId}
+                       AND u.email_verified
+                       AND ${calendarEventAttendees.email} = lower(u.email))`
+      : sql`${calendarEventAttendees.email} = lower((SELECT email FROM "user" WHERE id = ${userId}))`;
+    const rows = await db
+      .update(calendarEventAttendees)
+      .set({ status: "accepted", comment: "actor's answer", respondedAt: sql`now()`, userId })
+      .where(
+        and(
+          eq(calendarEventAttendees.eventId, MASTER_ID),
+          sql`(${calendarEventAttendees.userId} = ${userId} OR ${emailArm})`,
+        ),
+      )
+      .returning({ email: calendarEventAttendees.email });
+    return rows.map((row) => row.email).sort();
+  }
+
+  beforeEach(async () => {
+    await db.insert(calendarEventAttendees).values([
+      { eventId: MASTER_ID, email: RESOLVED_GUEST.email, userId: RESOLVED_GUEST.id },
+      { eventId: MASTER_ID, email: VICTIM_EMAIL },
+    ]);
+    // The actor moves their account onto the victim's address without proving it. On an
+    // email-unconfigured deploy that is a supported, unremarkable account edit.
+    await db
+      .update(user)
+      .set({ email: VICTIM_EMAIL, emailVerified: false })
+      .where(eq(user.id, RESOLVED_GUEST.id));
+  });
+
+  it("updates only the actor's own row", async () => {
+    expect(await respond(RESOLVED_GUEST.id, true)).toEqual([RESOLVED_GUEST.email]);
+    const victim = (await attendeeRows(MASTER_ID)).find((row) => row.email === VICTIM_EMAIL);
+    expect(victim).toMatchObject({ status: "needs-action", userId: null, comment: null });
+    expect(victim?.respondedAt).toBeNull();
+  });
+
+  it("captures the co-invitee's row under the spelling without the conjunct", async () => {
+    // The defect, planted (audit F6, seam b). The UPDATE is not bounded to one row — the
+    // action destructures the first of RETURNING and never learns a second was written —
+    // so the victim's answer, their comment and their `user_id` are all overwritten by
+    // someone who merely typed their address into an account settings form.
+    expect(await respond(RESOLVED_GUEST.id, false)).toEqual(
+      [RESOLVED_GUEST.email, VICTIM_EMAIL].sort(),
+    );
+    const victim = (await attendeeRows(MASTER_ID)).find((row) => row.email === VICTIM_EMAIL);
+    expect(victim).toMatchObject({ status: "accepted", userId: RESOLVED_GUEST.id });
+  });
+
+  it("claims the unstamped row when the address IS proved, which is the legitimate path", async () => {
+    // The claim arm doing its job: someone invited before they had an account answers
+    // once from a verified address, and the stamp makes the durable arm answer forever
+    // after. Both rows update here, so this person now holds TWO rows on one event —
+    // legal, because the unique is `(event_id, email)`, and pre-existing: `listInvites`
+    // shows the event twice and `attendeeResponse` resolves by `limit(1)`. The fix
+    // neither creates nor closes that; it is written down here because this is the one
+    // test that makes it visible.
+    await db.update(user).set({ emailVerified: true }).where(eq(user.id, RESOLVED_GUEST.id));
+    expect(await respond(RESOLVED_GUEST.id, true)).toEqual(
+      [RESOLVED_GUEST.email, VICTIM_EMAIL].sort(),
+    );
   });
 });
 

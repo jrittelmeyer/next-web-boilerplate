@@ -41,6 +41,10 @@ One imperative per line; mechanics + rationale live in
 - Compare `calendar_event_attendees.email` to `user.email` as
   `attendees.email = lower($param)` — `user.email` has no lowercase CHECK, and
   `lower()` on the column side loses the index.
+- Match `user` by email **only** with `email_verified = true` — on reads *and* writes. An
+  unverified account is a miss, not an identity: a `user_id` stamp is durable and every
+  later read answers by it without re-checking
+  ([attendees.md](../../docs/context/calendar/attendees.md)).
 - `uid`, `sequence` and `reask_at` are written **only** by the invitation machinery —
   `eventColumns()` omits all three
   ([invitations.md](../../docs/context/calendar/invitations.md)).

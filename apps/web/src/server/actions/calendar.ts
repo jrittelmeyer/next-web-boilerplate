@@ -525,10 +525,23 @@ interface Actor {
  *
  * Matched on `user.email` directly rather than `lower(user.email)`: Better Auth
  * lower-cases on its sign-up path, so the column is lowercase in practice, and putting a
- * function on it here would seq-scan `user` on every event save. A miss is **benign** —
- * the row simply keeps `user_id NULL` and behaves as an external attendee, and the claim
- * path in `getEventAccess` compares `attendees.email = lower(user.email)`, which is the
- * safe direction and catches anyone this misses.
+ * function on it here would seq-scan `user` on every event save.
+ *
+ * **`emailVerified` is the second half of the match, not a filter on top of it.** The
+ * `user_id` this returns is stamped onto the attendee row, and a stamp is a durable
+ * identity claim: every later read answers by `user_id` alone, with no verified conjunct
+ * to re-check (`getEventAccess`, `calendar.listInvites`). So resolving an unproved
+ * address here would mint exactly the fact the token path refuses to record — that
+ * whoever holds an address owns it — and on an email-unconfigured deploy, where
+ * unverified accounts sign in freely (`requireEmailVerification: isEmailConfigured()`),
+ * signing up as someone else's address would capture their invitations for good.
+ *
+ * A miss is **benign** in both of its shapes — no account, or an unverified one. The row
+ * keeps `user_id NULL` and behaves as an external attendee, which is a real invitation
+ * reached by email; and the claim path compares `attendees.email = lower(user.email)`
+ * *with* the verified conjunct, so the person is picked up the moment they verify.
+ * `respondToEvent` then stamps on their first answer — the one unverified-to-durable
+ * promotion, and it happens under proof.
  */
 async function resolveAttendeeUserIds(
   tx: Transaction,
@@ -538,7 +551,7 @@ async function resolveAttendeeUserIds(
   const rows = await tx
     .select({ id: user.id, email: user.email })
     .from(user)
-    .where(inArray(user.email, [...emails]));
+    .where(and(inArray(user.email, [...emails]), eq(user.emailVerified, true)));
   return new Map(rows.map((row) => [row.email.toLowerCase(), row.id]));
 }
 
@@ -1559,7 +1572,20 @@ export async function respondToEvent(input: RespondToEventValues): Promise<Event
             eq(calendarEventAttendees.eventId, eventId),
             // Re-stating the identity rather than trusting the id: `getEventAccess` said
             // this person is an attendee, and this narrows the UPDATE to their own row.
-            sql`(${calendarEventAttendees.userId} = ${userId} OR ${calendarEventAttendees.email} = lower((SELECT email FROM "user" WHERE id = ${userId})))`,
+            //
+            // **The email arm carries `email_verified`, exactly as the read side does.**
+            // Without it this UPDATE matches every row bearing the caller's *current*
+            // address, and it is not bounded to one row: an attendee who moves their
+            // account onto a co-invitee's address — free on a deploy where verification
+            // is off — overwrites that person's status, comment and stamp along with
+            // their own. The durable arm needs no such conjunct, because a stamp is only
+            // ever minted under proof (`resolveAttendeeUserIds`, and this statement).
+            sql`(${calendarEventAttendees.userId} = ${userId} OR EXISTS (
+              SELECT 1 FROM "user" u
+               WHERE u.id = ${userId}
+                 AND u.email_verified
+                 AND ${calendarEventAttendees.email} = lower(u.email)
+            ))`,
           ),
         )
         .returning({ email: calendarEventAttendees.email });
