@@ -196,6 +196,29 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Fixed
 
+- **2026-08-06: `FREQ=YEARLY;BYMONTHDAY` without `BYMONTH` expands every month** (audit
+  F8 — the silent-wrong-render class the package vows to refuse rather than emit).
+  `yearlyDays` fell back to DTSTART's month, one occurrence a year, where RFC 5545
+  §3.3.10 makes `BYMONTHDAY` an *expansion* at YEARLY frequency — the 13th of **every**
+  month (seven a year for `BYMONTHDAY=31`, which short months skip). The emailed `.ics`
+  carries the RRULE verbatim, so an external guest's Gmail already rendered the RFC
+  expansion while the organizer's grid showed one-per-year. Invisible to the 528-case
+  differential because the corpus generator only ever paired YEARLY `BYMONTHDAY` with
+  `BYMONTH`, and the one unit test asserted a property both behaviors satisfy; the
+  corpus now samples the unpaired family — **+40 cases → 568** (BYSETPOS, UNTIL,
+  negative days included), zero oracle errors, a pure-append fixture diff with the
+  SHA-256 repinned in the same commit, and the unit tests assert exact lists and
+  counts. **Data compatibility, stated precisely** (this matters for projects derived
+  from the template; this repo's census found zero affected rows — the builder UI
+  always pairs): identity is preserved for `UNTIL`-bounded and unbounded rules, where
+  the correction only *adds* occurrences. A **`COUNT`** rule of this family now
+  consumes its count ~12× faster, so the corrected series ends much earlier — a stored
+  `series_end_at` becomes a permanent, safe over-estimate (the range query only
+  excludes on it), and an override past the corrected end keeps painting as a concrete
+  row. A **`BYSETPOS`** rule re-selects over twelve candidates instead of one —
+  `BYMONTHDAY=13;BYSETPOS=2` now means "February 13th yearly" where the broken engine
+  emitted DTSTART's month or nothing. Census before relying on prior expansions:
+  `rrule LIKE 'FREQ=YEARLY%' AND rrule LIKE '%BYMONTHDAY=%' AND rrule NOT LIKE '%BYMONTH=%'`.
 - **2026-08-06: the `overlaps` seek reaches back a full occurrence span** (audit F7 —
   the residual class of the 08-02 grid fix). That fix made all three selection layers
   overlap-aware (concrete rows, master selection, the accept predicate's exact

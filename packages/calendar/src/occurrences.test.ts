@@ -492,6 +492,27 @@ describe("seriesEndInstantMs", () => {
     });
   });
 
+  it("walks a YEARLY;BYMONTHDAY COUNT rule through every month, so it ends ~12x sooner", () => {
+    // The F8 data consequence recurrence.md states: the corrected engine consumes COUNT
+    // monthly rather than yearly, so a pre-fix stored `series_end_at` (computed at one
+    // occurrence a year) is a permanent over-estimate — the safe direction, since the
+    // range query only EXCLUDES on it. Ten occurrences from June 2027 end in March 2028,
+    // not June 2036.
+    const end = seriesEndInstantMs(
+      series({
+        rrule: "FREQ=YEARLY;BYMONTHDAY=15;COUNT=10",
+        startWall: "2027-06-15 09:00:00",
+        endWall: "2027-06-15 10:00:00",
+      }),
+    );
+    expect(instantToCivil(end ?? 0, "America/New_York")).toMatchObject({
+      year: 2028,
+      month: 3,
+      day: 15,
+      hour: 10,
+    });
+  });
+
   it("is deliberately blind to EXDATEs, so it can only over-estimate", () => {
     const withSkip = seriesEndInstantMs(
       series({ rrule: "FREQ=WEEKLY;COUNT=3", exdates: ["2027-01-18 09:00:00"] }),

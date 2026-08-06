@@ -140,6 +140,32 @@ function buildRules() {
     add(`FREQ=MONTHLY;BYMONTHDAY=-1;COUNT=6`, anchor, "last day of every month");
   }
 
+  // YEARLY;BYMONTHDAY *without* BYMONTH — audit F8's family, appended 2026-08-06. At
+  // YEARLY frequency BYMONTHDAY is an EXPANSION: "the 13th" means the 13th of every
+  // month. The original corpus only ever emitted the pair, which is exactly how a
+  // DTSTART's-month-only fallback shipped unnoticed behind 528 green cases. BYSETPOS
+  // and UNTIL ride along deliberately: BYSETPOS selects over the candidate set this
+  // family grows from 1 to 12 (the largest behavior change of the fix), and UNTIL is
+  // the bound shape whose series-end path never expands — the same axis-interaction
+  // principle as the BYSETPOS block above. Appended AFTER every existing block so the
+  // fixture diff is a pure insertion: any churn in the 528 existing entries is a flag.
+  for (const day of [13, 15, 31, -1, -31]) {
+    for (const anchor of ANCHORS) {
+      add(`FREQ=YEARLY;BYMONTHDAY=${day};COUNT=10`, anchor, "YEARLY BYMONTHDAY, no BYMONTH");
+    }
+  }
+  for (const anchor of ANCHORS) {
+    add(`FREQ=YEARLY;BYDAY=FR;BYMONTHDAY=13;COUNT=6`, anchor, "Friday the 13th, BYDAY limits");
+    add(`FREQ=YEARLY;INTERVAL=2;BYMONTHDAY=1;COUNT=10`, anchor, "alternate years, every month");
+    add(`FREQ=YEARLY;BYMONTHDAY=13;BYSETPOS=2;COUNT=5`, anchor, "setpos over twelve candidates");
+    add(
+      `FREQ=YEARLY;BYMONTHDAY=13;BYSETPOS=-1;COUNT=5`,
+      anchor,
+      "negative setpos, twelve candidates",
+    );
+    add(`FREQ=YEARLY;BYMONTHDAY=15;UNTIL=20290101T000000Z`, anchor, "UNTIL-bounded, no BYMONTH");
+  }
+
   return rules;
 }
 

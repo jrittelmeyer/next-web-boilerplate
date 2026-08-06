@@ -289,12 +289,45 @@ describe("selection rules the corpus exercises but does not name", () => {
     }
   });
 
+  it("expands YEARLY;BYMONTHDAY across every month when BYMONTH is absent", () => {
+    // Audit F8: the DTSTART's-month fallback emitted one occurrence a year where RFC
+    // 5545 §3.3.10 makes BYMONTHDAY an *expansion* at YEARLY frequency. Exact list, not
+    // a property — a per-month property holds for the broken fallback too.
+    expect(expand("FREQ=YEARLY;BYMONTHDAY=15", "2027-06-15 09:00:00", 200)).toEqual([
+      "2027-06-15",
+      "2027-07-15",
+      "2027-08-15",
+      "2027-09-15",
+      "2027-10-15",
+      "2027-11-15",
+      "2027-12-15",
+    ]);
+  });
+
+  it("skips the months a yearly BYMONTHDAY cannot land in, rather than clamping", () => {
+    // 31 exists in seven months; the five short ones contribute nothing. The count IS
+    // the assertion — 7/yr, not 12/yr and not 1/yr.
+    expect(expand("FREQ=YEARLY;BYMONTHDAY=31", "2027-01-31 09:00:00", 365)).toEqual([
+      "2027-01-31",
+      "2027-03-31",
+      "2027-05-31",
+      "2027-07-31",
+      "2027-08-31",
+      "2027-10-31",
+      "2027-12-31",
+    ]);
+  });
+
   it("lets BYDAY limit BYMONTHDAY on a yearly rule", () => {
-    // Every Friday the 13th in the first quarter. Asserted as a property rather than a
-    // literal list, because the literal answer depends on a window size that is not what
-    // this test is about.
+    // Every Friday the 13th. Before 2026-08-06 this asserted only the Friday-the-13th
+    // property, which the F8-broken engine also satisfied (audit: "a property both
+    // behaviors satisfy") — its DTSTART's-month fallback emitted the rare January
+    // Friday the 13ths and nothing else. The count and first element are what
+    // distinguish the RFC expansion: 2027's only Friday the 13th is in August, which
+    // the frozen oracle's own first entry pins.
     const dates = expand("FREQ=YEARLY;BYMONTHDAY=13;BYDAY=FR", "2027-01-01 09:00:00", 4000);
-    expect(dates.length).toBeGreaterThan(0);
+    expect(dates[0]).toBe("2027-08-13");
+    expect(dates.length).toBeGreaterThanOrEqual(15);
     for (const date of dates) {
       expect(date.endsWith("-13")).toBe(true);
       const civil = parseLocalDateTime(`${date} 00:00:00`);
