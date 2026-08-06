@@ -3,9 +3,11 @@ import { makeTestUser, signUp } from "./support/auth";
 import {
   deleteCalendarFixtures,
   getAttendeeStatus,
+  getAttendeeUserId,
   seedAttendee,
   seedCalendar,
   seedEvents,
+  setEmailVerified,
   setUserTimeZone,
 } from "./support/db";
 
@@ -75,6 +77,13 @@ test.beforeAll(async ({ browser }) => {
   watchTrpc(pageB);
   await signUp(pageB, guest); // signup 2 of 2
   await setUserTimeZone(guest.email, "UTC");
+  // **The guest is verified; the organizer deliberately is not.** In-app invitations are
+  // a verified-accounts feature — an address nobody has proved resolves to no account and
+  // stays an external row (audit F6) — and these lanes run email-unconfigured, so nothing
+  // would ever set this flag on its own. The organizer needs no verification: they own
+  // the calendar, and every flow they drive answers by `user_id`, never by address. That
+  // asymmetry is what the assertion after the save is for.
+  await setEmailVerified(guest.email);
 
   // The parked feeds. Never navigated again, so anything that appears on them arrived
   // over the open EventSource and nowhere else.
@@ -147,8 +156,23 @@ test("an invitation arrives live, is answered, and grants read on that event alo
   // Enter adds a chip; without the composer's `preventDefault` it would submit the form
   // with an empty guest list instead, which is a silent no-op rather than a visible break.
   await expect(composer.getByTestId("event-attendee-chips")).toContainText(guest.email);
+  // A second guest in the SAME save: the organizer's own address, which is an unverified
+  // account. Free — no extra signup, no extra save — and it is the only automated check
+  // that the shipped writer still refuses to resolve an unproved address (audit F6).
+  await composer.getByTestId("event-attendees").fill(organizer.email);
+  await composer.getByTestId("event-attendees").press("Enter");
+  await expect(composer.getByTestId("event-attendee-chips")).toContainText(organizer.email);
   await composer.getByTestId("event-save").click();
   await expect(composer).toBeHidden();
+
+  // Both rows exist; only the proved address became an identity. Read from the column
+  // because nothing else can see the difference — same chip, same invitation email, and
+  // the unit suite's mocks discard the predicate that decides it. Drop `emailVerified`
+  // from `resolveAttendeeUserIds` and this is the assertion that goes red.
+  expect(await getAttendeeUserId(standupId, guest.email)).toEqual({
+    userId: expect.any(String),
+  });
+  expect(await getAttendeeUserId(standupId, organizer.email)).toEqual({ userId: null });
 
   // --- The guest's parked feed receives it live ------------------------------
   const invited = `${organizer.email} invited you to Standup`;

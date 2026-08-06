@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-05 (audit F4+F5 shipped: external-guest cancellation emails; delete refuses the scope half-pair)._
+_Last updated: 2026-08-05 (audit F4+F5+F6 shipped: external-guest cancellation emails; delete refuses the scope half-pair; the verified-email conjunct binds at both attendee writer seams)._
 
 ## Where we are
 
@@ -131,6 +131,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Audit — 2026-08-04 | 1 | Thirteenth pass, first to score the calendar: **98.6**; calendar enters at 85 — F4 external-guest cancellations (HIGH, silent), F5 series-delete footgun, F6 verified-email seams, F7/F8 silent recurrence edges. 14 rows → BACKLOG; drift fixed in 6 docs | [report](archive/PROJECT_AUDIT_2026-08-04.md) |
 | Advisory batch #5 — 2026-08-04 | 1 | 9 advisories (4 high) closed #41, two against our own pins (fast-uri 3.1.4, postcss 8.5.20). Ranged overrides undici 7.29.0 (×5) + socket.io-parser 4.2.7; postcss key → 8.5.23; fast-uri parked → 3.1.5 on 08-07 ~09:17Z. All tooling paths | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Calendar F4+F5 — 2026-08-05 | 1 | F4: `ne(userId, actor)` NULL-dropped externals from cancellation email — fixed `or(isNull, ne)`; real-PG test proves both spellings, the mocked test's fixture had asserted what SQL contradicted. F5: delete now runs `scopePairIssues`; first scope-pair tests anywhere | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
+| Calendar F6 — 2026-08-05 | 1 | The verified-email conjunct reached only the read path: invite-time resolution stamped any account — a durable claim no read re-checks — and the unbounded respond UPDATE let an address move capture a co-invitee's row. Legacy stamps kept, stated | [attendees.md](context/calendar/attendees.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·

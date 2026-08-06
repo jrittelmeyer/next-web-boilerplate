@@ -194,12 +194,17 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
   reviewer can read. The fixture was committed *before* the expander was written, and its
   hash is pinned in the test, because otherwise a red differential has one one-line "fix"
   that turns the oracle into a mirror of the engine.
-- **Guests, and an RSVP that arrives live.** Invite by email address; anyone with an
-  account here gets an in-app notification pushed over the existing SSE stream, sees the
-  invitation at `/calendar/invites`, and answers yes / no / maybe — and the organizer's
-  feed says *"alice@example.com declined Standup"* without either page reloading. Invite
-  someone who has not signed up yet and the invitation is waiting for them when they
-  verify their address.
+- **Guests, and an RSVP that arrives live.** Invite by email address; anyone with a
+  **verified** account here gets an in-app notification pushed over the existing SSE
+  stream, sees the invitation at `/calendar/invites`, and answers yes / no / maybe — and
+  the organizer's feed says *"alice@example.com declined Standup"* without either page
+  reloading. Invite someone who has not signed up yet — or has not verified — and the
+  invitation is waiting for them when they verify their address. An unproved address is
+  never bound to an account, because that binding is permanent and every later read
+  trusts it. **With email unconfigured** (the default) nobody can verify, so invitations
+  reach guests as external ones: the organizer's event page carries a copyable RSVP link
+  per guest, which is also how the external-guest flow is demonstrated without an
+  outbound mail provider.
 - **Re-saving an event does not un-answer anybody.** The composer posts the whole guest
   list every time, so the write diffs it by address and leaves an unchanged one strictly
   alone. The obvious implementation — delete and re-insert — silently returns every guest

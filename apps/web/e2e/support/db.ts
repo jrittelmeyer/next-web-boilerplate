@@ -233,13 +233,16 @@ export async function seedEvents(
  * `calendar.range` refetch against the 20/min per-user limiter, and the invite spec
  * deliberately spends its UI on the ONE invitation whose live delivery it is proving.
  *
- * **`user_id` is resolved here rather than left NULL, and that is load-bearing.** E2E users
- * sign up with a password, and with email unconfigured Better Auth leaves them
- * `email_verified = false` — while decision 14's claim arm requires a *verified* address.
- * A row with a NULL `user_id` would therefore be invisible to `calendar.listInvites`, and
- * the spec would fail looking exactly like a product bug. (The claim arm itself is proved
- * against real Postgres in `@repo/db`'s `calendar-attendees.test.ts`, where a verified
- * user can be seeded outright.)
+ * **`user_id` is resolved here rather than left NULL, and that is load-bearing.** A row
+ * with a NULL `user_id` is an *external* invitation: reachable only by decision 14's claim
+ * arm, which requires a verified address. So this helper seeds the shape a claimed
+ * invitation has — which, since the F6 fix, is also the only shape the app itself mints
+ * (`resolveAttendeeUserIds` resolves verified accounts only, and `respondToEvent` stamps a
+ * claim under proof). A caller that seeds for an *unverified* fixture user therefore gets
+ * a row `calendar.listInvites` will not show, and the spec would fail looking exactly like
+ * a product bug — pair it with `setEmailVerified` when the invitation is meant to be
+ * visible in-app. (Both arms are proved against real Postgres in `@repo/db`'s
+ * `calendar-attendees.test.ts`.)
  *
  * Attendees hang off the **series master**, so `eventId` must be a master's id — which is
  * what the grid chips carry (`data-event-id`).
@@ -287,6 +290,48 @@ export async function getAttendeeStatus(
       ),
     );
   return row?.status ?? null;
+}
+
+/**
+ * Mark a signed-up user's address verified by a DIRECT write — the same sanctioned
+ * out-of-band path as `promoteToAdmin`, and for the same reason: there is no UI for it
+ * here. With email unconfigured (how every e2e lane runs) Better Auth never sends a
+ * verification link, so `email_verified` would stay false forever and the population that
+ * in-app invitations serve would not exist in the suite at all.
+ *
+ * This models what a configured deploy's verification flow produces. It is deliberately
+ * NOT applied to every fixture user — see the invite spec, where one account stays
+ * unverified so the writer-side conjunct has something to refuse.
+ */
+export async function setEmailVerified(email: string): Promise<void> {
+  await db.update(user).set({ emailVerified: true }).where(eq(user.email, email));
+}
+
+/**
+ * One guest's stored `user_id`, distinguishing "the row resolved to nobody" (`{ userId:
+ * null }`) from "there is no row" (`null`).
+ *
+ * **This is the CI guard on the invite-time verified-account conjunct**, and it has to
+ * read the column rather than any UI: an unresolved row is invisible from the outside —
+ * same guest chip, same invitation email — and the only place the difference shows is the
+ * stamp itself. The unit suite cannot see it either (its mocks discard predicates), and
+ * `@repo/db`'s integration pair proves the *spelling*, not that this app still uses it. So
+ * if `resolveAttendeeUserIds` ever loses `emailVerified`, this assertion is what fails.
+ */
+export async function getAttendeeUserId(
+  eventId: string,
+  email: string,
+): Promise<{ userId: string | null } | null> {
+  const [row] = await db
+    .select({ userId: calendarEventAttendees.userId })
+    .from(calendarEventAttendees)
+    .where(
+      and(
+        eq(calendarEventAttendees.eventId, eventId),
+        eq(calendarEventAttendees.email, email.toLowerCase()),
+      ),
+    );
+  return row ?? null;
 }
 
 /**

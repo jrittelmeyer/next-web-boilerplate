@@ -278,6 +278,36 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-05: the verified-email conjunct now binds at both attendee *writer* seams
+  (audit 2026-08-04, F6).** The rule that an invitation is claimed by a **verified**
+  address was enforced only on the read/claim path; two writers re-stated identity by
+  email without it. (a) `resolveAttendeeUserIds` resolved any account at invite time and
+  stamped its id onto the attendee row — and a `user_id` stamp is the durable arm every
+  later read answers by, with no verified conjunct to re-check, so signing up as
+  `victim@example.com` and never verifying captured that person's future invitations
+  permanently. (b) `respondToEvent`'s UPDATE matched every row bearing the caller's
+  current address and was **not bounded to one row** (the action reads the first of
+  `RETURNING` and never learns a second was written), so an attendee who moved their
+  account onto a co-invitee's address overwrote that person's status, comment,
+  `responded_at` **and** `user_id` with their own. Both were reachable on
+  **email-unconfigured deploys**, where `requireEmailVerification: isEmailConfigured()`
+  lets unverified accounts sign in — a supported configuration, so this is a real
+  reachable defect there and a defence-in-depth fix everywhere else. Now: an unverified
+  account is a **miss** at invite time (the row stays external — a real invitation,
+  reached by email, claimable the moment they verify), and the UPDATE's email arm is an
+  `EXISTS` over the caller's verified `user` row. The only unverified-to-durable
+  promotion left is a verified first response, under proof. Consequences worth knowing:
+  in-app invitations are now a verified-accounts feature, so on an email-unconfigured
+  deploy guests are reached as external ones via the organizer's per-guest copyable RSVP
+  link; and **rows stamped before this fix are not evicted** — a verified claimant who
+  later changed address is indistinguishable from a squatter in the wrong direction, the
+  same reason the durable arm carries no conjunct — so a deployment that ran
+  email-unconfigured with untrusted signups should audit
+  `calendar_event_attendees.user_id` against currently-unverified accounts. Proven by
+  planted-defect pairs against real Postgres (the vulnerable spelling demonstrably
+  captures the co-invitee's row) plus an e2e assertion on the stamp itself, which is the
+  only automated check that watches the *shipped* writer — restated integration queries
+  prove a spelling, and the unit suite's mocks discard predicates entirely.
 - **2026-08-04: advisory batch #5 (closed
   [#41](https://github.com/jrittelmeyer/next-web-boilerplate/issues/41)) — nine advisories
   in one morning, two of them against our own previous fixes.** Nine advisories (4 high,
