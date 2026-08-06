@@ -172,6 +172,19 @@ describe("expandSeries — match: overlaps", () => {
     endWall: "2027-01-07 17:00:00",
   });
 
+  /**
+   * Daily with a five-day span: successive occurrences overlap each other, and any
+   * window edge has FIVE straddlers — four of them from periods the pre-F7 seek never
+   * visited. Its one period of slack was sized for selection-by-start; under `overlaps`
+   * the accept reaches the occurrence's END, so generation has to reach back a full
+   * occurrence span (audit 2026-08-04, F7).
+   */
+  const fiveDayDaily = series({
+    rrule: "FREQ=DAILY",
+    startWall: "2027-01-04 09:00:00",
+    endWall: "2027-01-09 09:00:00",
+  });
+
   it("returns an overnight occurrence that is still running when the window opens", () => {
     const window = {
       fromMs: nyInstant("2027-01-05 00:00:00"),
@@ -216,6 +229,131 @@ describe("expandSeries — match: overlaps", () => {
     );
     expect(recurrenceIds(result)).not.toContain("2027-01-04 09:00:00");
     expect(recurrenceIds(result)).toEqual(["2027-01-11 09:00:00", "2027-01-18 09:00:00"]);
+  });
+
+  it("generates every straddler, not just the previous period's (audit F7)", () => {
+    const window = {
+      fromMs: nyInstant("2027-02-03 00:00:00"),
+      toMs: nyInstant("2027-02-10 00:00:00"),
+      match: "overlaps" as const,
+    };
+    // Starts 01-29 through 02-02 all END on or after 02-03; the one-period seek
+    // generated only the 02-02 one. The assertion is the COMPLETE set, deliberately —
+    // "every returned row satisfies the predicate" passes for the broken seek too,
+    // which is how F7 shipped behind a green suite.
+    expect(recurrenceIds(expandSeries(fiveDayDaily, window, 50))).toEqual([
+      "2027-01-29 09:00:00",
+      "2027-01-30 09:00:00",
+      "2027-01-31 09:00:00",
+      "2027-02-01 09:00:00",
+      "2027-02-02 09:00:00",
+      "2027-02-03 09:00:00",
+      "2027-02-04 09:00:00",
+      "2027-02-05 09:00:00",
+      "2027-02-06 09:00:00",
+      "2027-02-07 09:00:00",
+      "2027-02-08 09:00:00",
+      "2027-02-09 09:00:00",
+    ]);
+  });
+
+  it("reaches an occurrence two whole periods back when its span outlives them", () => {
+    // Weekly Monday with a sixteen-day span: 01-18 is still running when a window
+    // opening 02-03 starts, TWO weekly periods later. The pre-F7 seek began at the
+    // week of 01-25.
+    const sixteenDayWeekly = series({
+      rrule: "FREQ=WEEKLY;BYDAY=MO",
+      startWall: "2027-01-04 09:00:00",
+      endWall: "2027-01-20 09:00:00",
+    });
+    const window = {
+      fromMs: nyInstant("2027-02-03 00:00:00"),
+      toMs: nyInstant("2027-02-24 00:00:00"),
+      match: "overlaps" as const,
+    };
+    expect(recurrenceIds(expandSeries(sixteenDayWeekly, window, 50))).toEqual([
+      "2027-01-18 09:00:00",
+      "2027-01-25 09:00:00",
+      "2027-02-01 09:00:00",
+      "2027-02-08 09:00:00",
+      "2027-02-15 09:00:00",
+      "2027-02-22 09:00:00",
+    ]);
+  });
+
+  it("finds a straddler whose zones stretch its instant span past its civil one", () => {
+    // Start +14 (Kiritimati), end −11 (Niue): the whole-day civil span is 2, but the
+    // zones sit 25 hours apart, so the occurrence's INSTANT span exceeds three days.
+    // With the window opening exactly at a Kiritimati midnight, a seek widened by the
+    // civil span alone still starts one period too late — this is the case
+    // OVERLAP_SEEK_SLACK_DAYS exists for.
+    const stretched = series({
+      rrule: "FREQ=DAILY",
+      startWall: "2027-01-10 09:00:00",
+      startTzid: "Pacific/Kiritimati",
+      endWall: "2027-01-12 23:30:00",
+      endTzid: "Pacific/Niue",
+    });
+    const window = {
+      fromMs: civilToInstant(parseLocalDateTime("2027-01-14 00:00:00"), "Pacific/Kiritimati"),
+      toMs: utcMs(2027, 1, 16),
+      match: "overlaps" as const,
+    };
+    expect(recurrenceIds(expandSeries(stretched, window, 50))).toEqual([
+      "2027-01-10 09:00:00",
+      "2027-01-11 09:00:00",
+      "2027-01-12 09:00:00",
+      "2027-01-13 09:00:00",
+      "2027-01-14 09:00:00",
+      "2027-01-15 09:00:00",
+      "2027-01-16 09:00:00",
+    ]);
+  });
+
+  it("never widens the default mode's seek, so the sweeper's contract holds", () => {
+    // The reminder sweeper selects by start and relies on `limit` counting only what
+    // it asked for; the widened seek is `overlaps`-only. Same series, same window as
+    // the completeness test above — none of the five straddlers appear.
+    const window = {
+      fromMs: nyInstant("2027-02-03 00:00:00"),
+      toMs: nyInstant("2027-02-10 00:00:00"),
+    };
+    expect(recurrenceIds(expandSeries(fiveDayDaily, window, 50))).toEqual([
+      "2027-02-03 09:00:00",
+      "2027-02-04 09:00:00",
+      "2027-02-05 09:00:00",
+      "2027-02-06 09:00:00",
+      "2027-02-07 09:00:00",
+      "2027-02-08 09:00:00",
+      "2027-02-09 09:00:00",
+    ]);
+  });
+
+  it("suppresses a newly-reachable straddler that already has an override row", () => {
+    // The straddlers the widened seek now generates must still lose to step 4 of the
+    // order of operations — an override row two periods back would otherwise paint at
+    // its original time AND its moved-to time. Package-level guard of the coupling the
+    // range query's `suppressionBounds` relies on.
+    const window = {
+      fromMs: nyInstant("2027-02-03 00:00:00"),
+      toMs: nyInstant("2027-02-06 00:00:00"),
+      match: "overlaps" as const,
+    };
+    const result = expandSeries(
+      { ...fiveDayDaily, overriddenRecurrenceIds: ["2027-01-30 09:00:00"] },
+      window,
+      50,
+    );
+    expect(recurrenceIds(result)).not.toContain("2027-01-30 09:00:00");
+    expect(recurrenceIds(result)).toEqual([
+      "2027-01-29 09:00:00",
+      "2027-01-31 09:00:00",
+      "2027-02-01 09:00:00",
+      "2027-02-02 09:00:00",
+      "2027-02-03 09:00:00",
+      "2027-02-04 09:00:00",
+      "2027-02-05 09:00:00",
+    ]);
   });
 
   it("catches an occurrence whose real span exceeds its nominal one across a fall-back transition", () => {

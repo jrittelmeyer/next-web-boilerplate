@@ -15,6 +15,7 @@
  */
 
 import {
+  addCivilDays,
   type CivilDateTime,
   daysInMonth,
   fromDayNumber,
@@ -53,8 +54,20 @@ export interface ExpandRRuleInput {
    * returned, not what was considered: a predicate that admits occurrences starting
    * before the window would otherwise fill the cap with them and evict the ones the
    * caller asked for — silently, because truncation is a bit, not an error.
+   *
+   * ⚠️ An accept that admits occurrences ENDING after `fromMs` must come with a matching
+   * `seekBackDays`, or those occurrences are never generated: the seek still decides
+   * where generation *starts*, and a predicate cannot select what was never produced.
    */
   readonly accept?: (occurrence: CivilDateTime, instantMs: number) => boolean;
+  /**
+   * Widens the seek's lower bound by this many civil days before `fromMs`'s reading —
+   * the generation-side half of an end-reaching `accept` (see its note above). The
+   * caller owns the number because only it knows how far an occurrence's end trails its
+   * start; `expandSeries` passes the master's whole-day span plus zone slack. Extra days
+   * only generate candidates the accept then rejects. Default 0.
+   */
+  readonly seekBackDays?: number;
 }
 
 export interface ExpandRRuleResult {
@@ -291,7 +304,7 @@ function seekPeriodIndex(rule: RecurrenceRule, dtstart: CivilDateTime, fromCivil
  * applied after expansion rather than during it.
  */
 export function expandRRule(input: ExpandRRuleInput): ExpandRRuleResult {
-  const { rule, dtstart, timeZone, fromMs, toMs, limit, accept } = input;
+  const { rule, dtstart, timeZone, fromMs, toMs, limit, accept, seekBackDays = 0 } = input;
   const occurrences: CivilDateTime[] = [];
 
   const dtstartDay = toDayNumber(dtstart.year, dtstart.month, dtstart.day);
@@ -301,7 +314,11 @@ export function expandRRule(input: ExpandRRuleInput): ExpandRRuleResult {
   // condition in the same space as the generator.
   const endCivil = instantToCivil(toMs + MS_PER_DAY, timeZone);
   const endDay = toDayNumber(endCivil.year, endCivil.month, endCivil.day);
-  let index = seekPeriodIndex(rule, dtstart, instantToCivil(fromMs, timeZone));
+  let index = seekPeriodIndex(
+    rule,
+    dtstart,
+    addCivilDays(instantToCivil(fromMs, timeZone), -seekBackDays),
+  );
 
   let emitted = 0;
 

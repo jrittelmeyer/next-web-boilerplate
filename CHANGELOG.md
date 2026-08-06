@@ -196,6 +196,25 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Fixed
 
+- **2026-08-06: the `overlaps` seek reaches back a full occurrence span** (audit F7 —
+  the residual class of the 08-02 grid fix). That fix made all three selection layers
+  overlap-aware (concrete rows, master selection, the accept predicate's exact
+  end-instant test) but left *generation* seeking as if selection were still by start:
+  `seekPeriodIndex` kept one period of slack, so an occurrence starting two or more
+  recurrence periods before the window was never generated and the exact predicate never
+  saw it. A daily series with a five-day span lost four of its five straddlers at every
+  window edge — the precise symptom the 08-02 fix claimed eliminated, in the span > ~2
+  periods class. `expandRRule` gains an opt-in `seekBackDays`; `expandSeries` passes the
+  master's whole-day span (the same `dayDelta` the end formula shifts by) plus two civil
+  days of zone slack, `overlaps` mode only — per-master, not the 367-day maximum-span
+  constant, so a one-hour series pays two extra periods rather than a year's walk. The
+  default `starts-within` mode is byte-identical (the reminder sweeper's limit-eviction
+  contract depends on that), and `suppressionBounds`' existing 368-day reach already
+  covers everything the widened seek can emit (CHECK-bounded 366-day span + ~16 h of
+  offsets — verified, no apps/web change). The new tests assert **complete** occurrence
+  sets rather than "returned rows satisfy the predicate" — the assertion shape whose
+  absence let F4, F7 and F8 all ship behind green suites — and all four fail against the
+  pre-fix engine.
 - **2026-08-05: external guests now receive cancellation emails** (audit F4, HIGH,
   silent). `softDeleteEvent`'s recipient query excluded the deleting actor with a bare
   `ne(userId, actor.id)` — and `user_id` is NULL for an external attendee, so
