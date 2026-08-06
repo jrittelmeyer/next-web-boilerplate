@@ -8,7 +8,8 @@ overrides, or the edit and delete scopes. The time model underneath it all is
 
 > **Status:** Phase 2 is complete — schema (`0021`), the engine (`rrule.ts`, `expand.ts`,
 > `occurrences.ts`), the scoped actions, the expanded month grid and the builder UI.
-> Attendees on overrides are Phase 3 and ICS import is Phase 6.
+> Attendees on overrides shipped in Phase 3 — they **inherit** from the master
+> ([attendees.md](attendees.md)); ICS import is Phase 6 (unscheduled — BACKLOG B2).
 
 ## The grammar we support, and the parts we refuse
 
@@ -113,7 +114,10 @@ A per-occurrence override is a full `calendar_events` row: `recurrence_parent_id
 at the master, `recurrence_id` is the occurrence's **original** civil start — never the
 moved-to time — and `rrule` is NULL. It carries the master's `uid` and lives in the
 master's calendar. Because it is an ordinary row, a moved occurrence is found by the same
-range scan as anything else, and Phase 3's per-occurrence RSVP needs no extra schema.
+range scan as anything else. (Per-occurrence RSVP is **not** built on this — RSVP today is
+series-level ([attendees.md](attendees.md)); per-occurrence is the unscheduled Phase-6E
+slice, and [DECISIONS.md](../DECISIONS.md) rules the "it's free, no new schema" reading a
+privilege-escalation shape.)
 
 Three integrity rules, and only one of them is enforced by the database:
 

@@ -10,7 +10,8 @@ layout's authoritative gate and re-reads the session itself (`redirect("/login")
 reached from the **Account** item in the header `UserMenu`. Card components live in
 `components/account/`; client mutations follow the auth-client convention throughout
 ([core.md → Auth UI](core.md#auth-ui-c1)): the Better Auth client, re-validated
-server-side, `{ data, error }` (no throw), no new CSP origin. Cards:
+server-side, `{ data, error }` (no throw), no new CSP origin. Cards (the avatar uploader
+nested in Profile is `AvatarCard` — [../services/uploadthing.md](../services/uploadthing.md)):
 
 - **Profile** — the display name is editable via the `updateUserName` Server Action +
   `UpdateNameForm` (the action `revalidatePath`es `/account` too). The sign-in **email is
@@ -79,6 +80,11 @@ server-side, `{ data, error }` (no throw), no new CSP origin. Cards:
     card copy says so honestly. Regression-guarded by `e2e/account-sessions.spec.ts`, which
     proves the revoked context's authoritative `get-session?disableCookieCache=true` is null and
     that it re-gates to `/login`.
+- **Preferences** — `PreferencesCard` edits the `user_preferences` row (the stored **time
+  zone** the calendar renders in) via the `updateUserPreferences` Server Action + the shared
+  `updateUserPreferencesSchema`. A Radix `Select` item may not carry an empty-string value,
+  so "inherit the default" rides a real sentinel mapped back to `null` at the schema
+  boundary. Added by calendar Phase 0 ([../calendar/model.md](../calendar/model.md)).
 - **Danger zone — account deletion** — `DeleteAccountCard` calls `authClient.deleteUser`
   (enabled by `user.deleteUser` in `auth.ts`, `/delete-user` rate-limited 3/min). Mirrors
   `changeEmail`'s graceful split, but the branch is **per-deployment**, decided at config time:

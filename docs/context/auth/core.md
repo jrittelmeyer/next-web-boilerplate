@@ -82,10 +82,12 @@ const { data: session } = authClient.useSession();
 renamed the `middleware` file convention to `proxy` (same Edge runtime, same
 `config.matcher`; the exported function is `proxy`, not `middleware`).
 
-- `/dashboard/*`, `/account/*`, `/admin/*`, `/organization/*` — redirect to `/login` if
-  no session cookie is present (every page under the `(dashboard)` group, listed by its
-  **real** path — the route group never appears in the URL, so each sibling must be in
-  the matcher)
+- `/dashboard/*`, `/account/*`, `/admin/*`, `/organization/*`, `/calendar/*` — redirect to
+  `/login` if no session cookie is present (the `(dashboard)` siblings by their **real**
+  paths — the route group never appears in the URL. `/notifications` is deliberately
+  absent from the edge list: the `(dashboard)` layout's server-side `getSession` →
+  `redirect("/login")` is what enforces the whole group; this list is only the fast-UX
+  subset of it)
 - `/login`, `/signup` — redirect to `/dashboard` if a session cookie is present
 
 It only checks for the cookie's *presence* (no DB hit at the edge), so it is a
@@ -165,8 +167,8 @@ Better Auth has a plugin system. Common ones already configured or easy to add:
 ### Plugin tuple order (the conditional-spread gotcha)
 
 The `plugins` array in `packages/auth/src/auth.ts` is **order-sensitive**:
-`haveIBeenPwned()` first, the `$Infer`-contributing plugins (`twoFactor`, `admin`,
-`organization`, `passkey`) at **fixed tuple positions**, the conditionally-spread plugins
+`haveIBeenPwned()` first, the `$Infer`-contributing plugins (`organization`, `twoFactor`,
+`passkey`, `admin`, in that order) at **fixed tuple positions**, the conditionally-spread plugins
 (`captcha`, `magicLink`) after them, and `nextCookies()` genuinely **last**.
 
 **Why conditional spreads go last:** a conditional spread (`...(cond ? [plugin()] : [])`)

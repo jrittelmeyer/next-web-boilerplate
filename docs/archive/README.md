@@ -25,6 +25,7 @@ in `docs/context/`.
 | [PROJECT_AUDIT_2026-07-22.md](PROJECT_AUDIT_2026-07-22.md) | The tenth `/project-audit` scoring pass (2026-07-22): product code moved by 2 lines; re-scored **99.65** on maintenance-currency gaps (Renovate cadence proof, the `/_next/image` e2e gap, the day's advisory batch) — all closed the same week. |
 | [PROJECT_AUDIT_2026-07-22B.md](PROJECT_AUDIT_2026-07-22B.md) | The eleventh `/project-audit` scoring pass (2026-07-22B, same-day re-check on a byte-identical tree): **99.65 holds — nothing moved**; effort spent solely on the live surfaces (GitHub alerts APIs, npm-registry gates, the advisory lane). |
 | [PROJECT_AUDIT_2026-07-29.md](PROJECT_AUDIT_2026-07-29.md) | The twelfth `/project-audit` scoring pass (2026-07-29): verified the 07-22 findings F2–F4 closed in code and re-scored **99.9** — **F1 (Renovate PR delivery, Mend-side) is the sole open deduction**, escalated from a wait to a diagnosis row (B1 in `../BACKLOG.md`). |
+| [PROJECT_AUDIT_2026-08-04.md](PROJECT_AUDIT_2026-08-04.md) | The thirteenth `/project-audit` scoring pass (2026-08-04): the first to score the calendar program (a new 21st group, entering at **85**), re-scored **98.6** — seeded the 14 `audit-2026-08-04` rows in `../BACKLOG.md` (its F4–F8 were fixed 2026-08-05→06) while the live advisory batch #5 and the red `main` were both still fix-pending. |
 
 **Adding a file here updates this table in the same commit.**
 

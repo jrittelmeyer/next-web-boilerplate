@@ -9,17 +9,21 @@
 - Exports: `.` → `getResend()` + `isEmailConfigured()` + the `send*` helpers
   (`import "server-only"`) + the re-exported `WebhookEventPayload` type (so the
   webhook route never imports `resend` directly); `./templates/*` → templates.
-- Import rule: `@repo/email` may import from `@repo/validators` and `@repo/db` (the
+- Import rule: `@repo/email` imports only `@repo/db` (the
   suppression consult — see [../ARCHITECTURE.md](../ARCHITECTURE.md)). It is consumed
   by `@repo/auth` (the Better Auth callbacks) and app Server Actions.
 
 **Structure** (`packages/email/src/` — the [source tree](../../../packages/email/src)
 carries the per-file annotations): `client.ts` (`import "server-only"` + lazy
-`getResend()` guarded singleton) · `send.tsx` (`isEmailConfigured()` + the nine
+`getResend()` guarded singleton) · `send.tsx` (`isEmailConfigured()` + the thirteen
 `send*` helpers — welcome, verify-email, reset-password, the change-email
-confirm/verify-new/changed-notice trio, delete-account, org-invitation, magic-link —
+confirm/verify-new/changed-notice trio, delete-account, org-invitation, magic-link,
+and the four calendar helpers (invitation / event-updated / event-cancelled / reminder) —
 plus the suppression consult, gated on `RESEND_WEBHOOK_SECRET`, and the TEST-ONLY
 `EMAIL_TEST_CAPTURE_DIR` seam; see [../TESTING.md](../TESTING.md) → Email capture) ·
+`format.ts` (+ its test) — the event-zone date formatter every calendar email shares;
+the leaf [`AGENTS.md`](../../../packages/email/AGENTS.md) states why locale fixes
+don't belong here ·
 `templates/*.tsx` (one file per email; each has a named export for app use + a
 default export for the preview CLI — which flow sends which is in
 [../AUTH.md](../AUTH.md)).
@@ -65,7 +69,7 @@ only callers; a **removal** deliberately passes `ics: null`
 **inside** the capture branch and **after** the suppression consult, so a suppressed
 recipient still produces no file at all.
 
-**Render tests:** `src/templates.test.tsx` renders all 12 templates to both HTML
+**Render tests:** `src/templates.test.tsx` renders all 13 templates to both HTML
 and plain-text — the same `@react-email/render` calls used above — asserting non-empty
 output with the dynamic content (name, links); `src/send.test.tsx` locks the
 unconfigured → `{ error }` degradation contract across every helper plus the

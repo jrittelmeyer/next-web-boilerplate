@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-06 (audit F7+F8 shipped: the overlaps seek reaches a full occurrence span; YEARLY;BYMONTHDAY expands every month)._
+_Last updated: 2026-08-06 (doc audit: 16 drift fixes, showcase re-stamped at 98.6/thirteen passes)._
 
 ## Where we are
 
@@ -52,7 +52,8 @@ _Last updated: 2026-08-06 (audit F7+F8 shipped: the overlaps seek reaches a full
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
-- **CI is green** (`verify` · `audit` · `e2e` · `docker-image` · `visual` — the visual
+- **CI is green** (`verify` · `audit` · `e2e` · `csp-nonce` · `docker-image` · `visual`,
+  plus the variable-gated `perf` lane, deliberately unset here — the visual
   lane is live since A28). **CodeQL is live** — `ENABLE_CODEQL` is set on the public
   repo (code scanning is free once public); the variable gate stays so private forks
   don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
@@ -63,12 +64,10 @@ _Last updated: 2026-08-06 (audit F7+F8 shipped: the overlaps seek reaches a full
   ([per-row analysis](archive/PATH_TO_100_2026-07-15.md) ·
   [the verifying pass](archive/PROJECT_AUDIT_2026-07-17.md)). **Maintenance-only is the
   standing state again** — 100 is a state to maintain, and later passes re-run the
-  currency checks. The TS7 cutover stays outside it — its Next-side gate lifted
-  2026-08-02 (`useTypeScriptCli` in stable `next@16.2.12`), but **TS 7 ships no
-  `tsserver`**, so it was **re-gated the same day on TS 7.1** rather than on the
-  cutover trial that gate had called for — a trial runs no editor, so it could never
-  have licensed the change
-  ([MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)).
+  currency checks. The TS7 cutover stays outside it — **re-gated 2026-08-02 on TS 7.1**
+  (TS 7 ships no `tsserver`, and a cutover trial runs no editor, so it could never have
+  licensed the change):
+  [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
   standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.7.2 —
   the 2026-07-23 context-engineering release plus two patches); this repo consumes the installed
@@ -123,16 +122,17 @@ Per-program summary (Rows = archived row count; full rows →
 | Calendar grid fix — 2026-08-02 | 1 | Expansion selected by START while both SQL layers used overlap, so a recurring multi-day occurrence straddling the window vanished. Opt-in `match: "overlaps"` (exact end instant); `suppressionBounds` widened too, else a moved occurrence paints twice | [api.md](context/calendar/api.md) |
 | Phase 6 sliced — 2026-08-02 | 1 | B2 was the deferral bucket of Phases 3–5 (~100 commitments, 41 files), not a phase. Band 1 (already-true claims) discharged; Band 2 gated. Inbound iTIP + guest reminders closed as extension points; `private` unenforced, audit gap named | [BACKLOG.md](BACKLOG.md) |
 | Advisory — 2026-08-03 | 1 | GHSA-rgw5-rvv9-x895 (high): nested arrays **bypass** the CVE-2026-14257 mitigation `brace-expansion` 5.0.8 was taken for, so that fix wasn't one. → 5.0.9, taken 4 days old under a dated `minimumReleaseAgeExclude` — **deleted on schedule 08-06** | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
-| a11y scan fix — 2026-08-03 | 1 | Uploadthing's avatar button stays `data-state="readying"` with UPLOADTHING_TOKEN unset, painting white on #60a5fa (2.54:1) — axe caught it on `/account` across every branch at once. Excluded by that STATE only, so the `ready` button is still scanned | [a11y.spec.ts](../apps/web/e2e/a11y.spec.ts) |
+| a11y scan fix — 2026-08-03 | 1 | Uploadthing's avatar button stays `data-state="readying"` with UPLOADTHING_TOKEN unset, painting white on #60a5fa (2.54:1) — axe caught it on `/account` across every branch. Excluded by that STATE only, so the `ready` button is still scanned | [a11y.spec.ts](../apps/web/e2e/a11y.spec.ts) |
 | E2E signup flake fixed — 2026-08-03 | 1 | The helper clicked **before hydration**, so no request was issued and `waitForURL` hung on a form that had submitted nothing (8/8 at 6× CPU throttle; CI's hung attempts left no server-side signup line). Router-race and limiter hypotheses ruled out | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | E2E diagnosability — 2026-08-03 | 1 | All 3 Playwright lanes ran a report-less reporter while CI uploaded a never-created dir (`if-no-files-found` defaulted to warn); `on-first-retry` traced neither the first attempt nor the last. The one "signup flake" row was two defects | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Guide ch. 12 — 2026-08-03 | 1 | The guide's standing promise ("being rewritten for the calendar") delivered as **ch. 12**, glossary → 13 + 7 terms. Appended, not inserted at 9: `docs:sanity` cannot see a "Chapter N" label naming the wrong file. Deck: links only, its gap filed | [ch. 12](plain-english-guide/12-the-calendar.md) |
 | Doc audit — 2026-08-03 | 1 | Five drift fixes: the superseded flake row deleted; reminders' Phase-6 sentence caught up with the shipped exact test; jobs coverage include names `sweep.ts`; one anchor; kit 0.7.2. The adapter's broken `prodVerify.start` filed as B1 | [BACKLOG.md](BACKLOG.md) |
-| Audit — 2026-08-04 | 1 | Thirteenth pass, first to score the calendar: **98.6**; calendar enters at 85 — F4 external-guest cancellations (HIGH, silent), F5 series-delete footgun, F6 verified-email seams, F7/F8 silent recurrence edges. 14 rows → BACKLOG; drift fixed in 6 docs | [report](archive/PROJECT_AUDIT_2026-08-04.md) |
+| Audit — 2026-08-04 | 1 | Thirteenth pass, first to score the calendar: **98.6**; calendar enters at 85 — F4 external-guest cancellations (HIGH), F5 series-delete footgun, F6 verified-email seams, F7/F8 silent recurrence edges. 14 rows → BACKLOG; drift fixed in 6 docs | [report](archive/PROJECT_AUDIT_2026-08-04.md) |
 | Advisory batch #5 — 2026-08-04 | 1 | 9 advisories (4 high) closed #41, two against our own pins (fast-uri 3.1.4, postcss 8.5.20). Ranged overrides undici 7.29.0 (×5) + socket.io-parser 4.2.7; postcss key → 8.5.23; fast-uri parked → 3.1.5 on 08-07 ~09:17Z. All tooling paths | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
-| Calendar F4+F5 — 2026-08-05 | 1 | F4: `ne(userId, actor)` NULL-dropped externals from cancellation email — fixed `or(isNull, ne)`; real-PG test proves both spellings, the mocked test's fixture had asserted what SQL contradicted. F5: delete now runs `scopePairIssues`; first scope-pair tests anywhere | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
+| Calendar F4+F5 — 2026-08-05 | 1 | F4: `ne(userId, actor)` NULL-dropped externals from cancellations — fixed `or(isNull, ne)`; real-PG test proves both spellings, the mocked fixture had asserted what SQL contradicted. F5: delete now runs `scopePairIssues`; first scope-pair tests | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
 | Calendar F6 — 2026-08-05 | 1 | The verified-email conjunct reached only the read path: invite-time resolution stamped any account — a durable claim no read re-checks — and the unbounded respond UPDATE let an address move capture a co-invitee's row. Legacy stamps kept, stated | [attendees.md](context/calendar/attendees.md) |
-| Calendar F7+F8 — 2026-08-06 | 1 | F7: the `overlaps` seek now reaches back a full occurrence span — straddlers ≥2 periods out were never generated. F8: `YEARLY;BYMONTHDAY` sans `BYMONTH` expands all 12 months (corpus +40, pure append; COUNT/BYSETPOS rows re-identify — census gated, zero here) | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
+| Calendar F7+F8 — 2026-08-06 | 1 | F7: the `overlaps` seek reaches back a full occurrence span — straddlers ≥2 periods out never generated. F8: `YEARLY;BYMONTHDAY` sans `BYMONTH` expands every month (corpus +40 append-only; COUNT/BYSETPOS rows re-identify — census-gated: zero) | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
+| Doc audit — 2026-08-06 | 1 | 16 drift fixes — calendar absent from TESTING/ARCHITECTURE/I18N/STACK tables, api.md's limiter truth (per-procedure buckets), corpus 528→568; showcase re-stamped at 98.6/thirteen; archive index row restored; 2 backlog rows; 4 rows re-capped | [BACKLOG.md](BACKLOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·

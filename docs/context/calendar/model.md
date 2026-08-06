@@ -13,6 +13,8 @@ live in [`packages/calendar/AGENTS.md`](../../../packages/calendar/AGENTS.md).
 > [`attendees.md`](attendees.md), which owns theirs. This file keeps the time model
 > underneath both. Emailed invitations and the `.ics` serializer shipped in Phase 4
 ([invitations.md](invitations.md)); reminders in Phase 5 ([reminders.md](reminders.md)).
+**Every "Phase 6" mention across these calendar docs is deferred, unscheduled and
+unauthorized work** — its one tracked home is the B2 row in [BACKLOG.md](../../BACKLOG.md).
 **Free/busy is Phase 7 and is not scheduled** — it has no backlog row, so do not read this
 file as promising it a section.
 

@@ -93,18 +93,20 @@ in any browser.
 > the whole repository is structured so that AI coding assistants can work on it as
 > effectively as human engineers — which is also how it was built, under human
 > direction and review, to a quality score that peaked at a perfect 100 out of 100
-> (passes 8–9) and stands at 99.9 across twelve increasingly demanding audits, the
-> small dip coming not from any regressed code but from the moving "best-available"
-> bar reclaiming points on maintenance currency — exactly the way the project says
-> its own audits are allowed to.
+> (passes 8–9) and stands at 98.6 across thirteen increasingly demanding audits, the
+> dip coming not from regressed code but from the bar widening — the newest audit
+> graded the brand-new calendar feature for the first time, found it good but not yet
+> perfect, and five of the issues it raised were fixed within two days — exactly the
+> way the project says its own audits are allowed to behave.
 
 ---
 
-*Current as of 2026-08-03. The audit score stands at 99.9 — it peaked at a
-perfect 100 across twelve passes, and the small dip was maintenance currency,
-not regressed code.*
+*Current as of 2026-08-06. The audit score stands at 98.6 — it peaked at a
+perfect 100 across thirteen passes; the newest pass was the first to grade the
+brand-new calendar feature, which entered below the rest and is being worked
+back up (five of its findings were fixed within two days).*
 
-*Since the last stamp, the big one is a **calendar**: the project grew a full
+*The newest big piece is a **calendar**: the project grew a full
 scheduling feature, built and shipped in six planned stages. It handles the
 genuinely hard parts rather than the easy ones — repeating events ("every second
 Tuesday"), the difference between a wall-clock time and an actual instant so a
@@ -117,7 +119,7 @@ chance. It now has a chapter of its own —
 [**12. The Calendar**](12-the-calendar.md) — which walks the newest room in the
 house properly, including the doors it deliberately hasn't opened yet.*
 
-*Also since the last stamp: the framework was updated twice, and a documentation
+*Also recent: the framework was updated twice, and a documentation
 review found — and fixed — a set of instructions that had quietly fallen out of
 step with the code, including a removal guide that would have left broken pieces
 behind. Earlier: a high-severity sign-in vulnerability (an account-takeover path

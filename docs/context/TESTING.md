@@ -27,6 +27,7 @@ turbo-first model and lets each package pick the right environment:
 | --- | --- | --- | --- |
 | `@repo/validators` | `packages/validators/vitest.config.ts` | `node` | `src/index.test.ts` (the `updateNameSchema` schema) |
 | `@repo/auth` | `packages/auth/vitest.config.ts` | `node` | `src/config.test.ts` (the pure env-driven config helpers) |
+| `@repo/calendar` | `packages/calendar/vitest.config.ts` | `node` | `src/rrule-corpus.test.ts` (the 568-rule frozen differential oracle) |
 | `@repo/email` | `packages/email/vitest.config.ts` | `node` | `src/templates.test.tsx` (renders every template to HTML + plain text) |
 | `@repo/jobs` | `packages/jobs/vitest.config.ts` | `node` | `src/handlers/welcome-email.test.ts` (job contract + handler, `@repo/email` mocked) |
 | `@repo/ui` | `packages/ui/vitest.config.ts` | `jsdom` | `src/components/button.test.tsx` (renders the `Button`) |
@@ -371,7 +372,7 @@ Two more habits worth copying from it:
 ### The frozen differential oracle (`packages/calendar`)
 
 `rrule@2.8.1` is the independent oracle for the recurrence engine, and it runs **once**.
-`scripts/generate-rrule-corpus.mjs` emits `src/__fixtures__/rrule-corpus.json` — 528 rules
+`scripts/generate-rrule-corpus.mjs` emits `src/__fixtures__/rrule-corpus.json` — 568 rules
 generated as a deterministic cross-product of the *supported* grammar, each with rrule's
 expansion — and the permanent test diffs our engine against that file. CI never executes a
 2.7-year-stale dependency, generated projects never inherit it in their test path, and the
@@ -422,7 +423,7 @@ test("home page renders the boilerplate landing", async ({ page }) => {
 
 Every spec except the DB-free `home.spec.ts`, `security-headers.spec.ts`,
 `i18n.spec.ts`, `state.spec.ts`, and `image-optimization.spec.ts` touches the
-database (26 specs total as of the 2026-07-22 image-optimization spec), so the suite
+database (29 specs total as of the calendar program's three specs, 2026-08-01), so the suite
 belongs in the DB-backed E2E lane (the `e2e` job — every PR and push to main), which
 runs against a Postgres service.
 

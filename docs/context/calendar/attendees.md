@@ -145,7 +145,8 @@ exactly a NULL `user_id`.
 `apps/web/src/lib/calendar-attendees.ts` holds `diffAttendees` as a **pure function**, so
 the rule that matters most can be proved without a database.
 
-**The composer posts the whole guest list on every save.** So the naive writer — delete
+**The composer posts the whole guest list on every save** (capped at `MAX_ATTENDEES` = 50,
+enforced in `@repo/validators/calendar` and by the composer's `add()`). So the naive writer — delete
 everything, re-insert — silently returns every guest to `needs-action` on a title edit,
 and so does an upsert that sets `status` in its conflict branch. The diff buckets by
 `email`:

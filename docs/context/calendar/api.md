@@ -42,7 +42,9 @@ and resolves the override row itself.
 `createCalendar` · `updateCalendar` · `deleteCalendar` · `createEvent` · `updateEvent` ·
 `deleteEvent` · `setRecurrenceDate` · `respondToEvent`. Every one returns
 `ActionResult<T>` and runs the same six steps **in this order** (`respondToEvent` is the
-one exception, and step 4 is where it differs — see below):
+one exception, and step 4 is where it differs — see below; and `deleteCalendar` currently
+**skips step 2** — the one write with no limiter, a tracked gap:
+[BACKLOG.md → rate-limit completeness](../../BACKLOG.md)):
 
 1. **Session gate** → `{ error: "Unauthorized" }`.
 2. **`rateLimit`** per user (10/min for calendars, 20/min for events) → the typed
@@ -175,8 +177,11 @@ a worse state than gone; and nobody subscribes to a calendar that no longer exis
 ## Reads — `apps/web/src/server/trpc/routers/calendar.ts`
 
 All four are `userRateLimitedProcedure`: authenticated, but a window query over twenty
-calendars is expensive enough to want a per-account bucket rather than a per-IP one. They
-share one 20/min per-user budget, so a spec that drives several of them has to say so.
+calendars is expensive enough to want a per-account bucket rather than a per-IP one. Each
+procedure gets its **own** 20/min per-user bucket — the limiter key includes the procedure
+path (`trpc:${path}:user:${id}`), so driving `range` hard cannot starve `list`; a spec
+that loops a single procedure (24 month-arrow presses in a minute) still trips that
+procedure's bucket and must say so.
 
 | Procedure | Reads | Notes |
 | --- | --- | --- |

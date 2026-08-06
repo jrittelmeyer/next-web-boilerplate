@@ -11,6 +11,7 @@ next-web-boilerplate/
   packages/
     db/                     — @repo/db
     auth/                   — @repo/auth
+    calendar/               — @repo/calendar (pure time/recurrence core, zero runtime deps)
     email/                  — @repo/email
     jobs/                   — @repo/jobs
     observability/          — @repo/observability (dev/CI-only)
@@ -59,7 +60,8 @@ apps/web/
     server/           — Server-only code: tRPC routers (trpc/), server actions (actions/)
     hooks/            — Custom React hooks (placeholder until needed)
     stores/           — Zustand stores (client UI state, e.g. ui-store.ts — see STATE.md)
-    types/            — local TypeScript types (add when needed)
+    test/             — Vitest setup for the web unit project (@/env + server-only stubs)
+    env.ts            — typed env via @t3-oss/env-nextjs (imported as "@/env")
     instrumentation.ts          — Sentry register() + onRequestError (Next.js server hook)
     instrumentation-client.ts   — Sentry browser init + onRouterTransitionStart
     sentry.server.config.ts     — Sentry Node init (loaded by instrumentation.ts)
@@ -248,7 +250,7 @@ role-gated on top of the dashboard gate; see [auth/rbac-admin.md](auth/rbac-admi
 Unit/component tests are **co-located** with source as `*.test.ts(x)` and run by
 **Vitest per package** (each test-bearing package owns a `vitest.config.ts` + a
 `test` script; `turbo test` fans out across `@repo/validators`, `@repo/ui`,
-`@repo/jobs`, `@repo/auth`, `@repo/email`, and `web` — the `apps/web` project stubs
+`@repo/jobs`, `@repo/auth`, `@repo/email`, `@repo/calendar`, and `web` — the `apps/web` project stubs
 `@/env` + `server-only` so app modules unit-test in plain `node`). `@repo/db` has only
 DB-backed integration tests (`test:integration`, skipped by the default run).
 `apps/web` also owns the **Playwright** E2E tests in `apps/web/e2e/*.spec.ts`.
@@ -290,7 +292,7 @@ Browser
 - `@/*` → `apps/web/src/*` (declared in `apps/web/tsconfig.json`; no `baseUrl` — see [CONVENTIONS.md](CONVENTIONS.md))
 - `@repo/db` → `.` (`src/index.ts`), `./schema` (`src/schema/index.ts`)
 - `@repo/auth` → `.` (`src/index.ts`, server-only), `./client` (`src/client.ts`)
-- `@repo/validators` → `.` (`src/index.ts`)
+- `@repo/validators` → `.` (`src/index.ts`), `./calendar` (`src/calendar.ts` — see § `packages/validators`)
 - `@repo/ui` → **subpath-only** (no `.`): `./components/*`, `./lib/*`, `./hooks/*`, `./globals.css`
 - `@repo/tailwind-config` → `./base` (`base.css`); `@repo/typescript-config` → `./base` `./nextjs` `./react-library`; `@repo/eslint-config` → `./next`
 - `@repo/email` → `.` (`src/index.ts` → `getResend()` (lazy client) + `isEmailConfigured` + the `send*` helpers + the re-exported `WebhookEventPayload` type, **server-only**), `./templates/*` (`src/templates/*.tsx`). Ships raw `.tsx` (no build step) like `@repo/ui`, so it's in `next.config.ts` `transpilePackages`

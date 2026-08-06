@@ -6,7 +6,7 @@
 > [PROJECT_STATUS.md](PROJECT_STATUS.md) (also the only home of the audit score
 > litany), and the full per-item prose is in
 > [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md). The audits that seeded past
-> backlogs live in [docs/archive/](archive/) (Phase B + the twelve `/project-audit`
+> backlogs live in [docs/archive/](archive/) (Phase B + the thirteen `/project-audit`
 > scoring passes). Everything below goes plan → sign-off → build. Don't reintroduce
 > shipped-item entries here.
 
@@ -74,6 +74,8 @@ Full detail + removal conditions: [docs/MAINTENANCE.md](MAINTENANCE.md) (canonic
 | B3 | Calendar / UX | **Invitee-side signal when email is unconfigured** — post-F6, an invitee who cannot verify sees an empty `/calendar/invites`, no notification and no email, with nothing saying why. Add empty-state copy on the invites list, or a composer hint pointing at the per-guest RSVP link, gated on `!isEmailConfigured()` | [CHANGELOG](../CHANGELOG.md) (F6 entry) · [FEATURES.md](FEATURES.md) | **Filed 2026-08-05 by F6's contrarian pass** — deliberately not built inside an auth fix: it is an i18n copy surface (every string needs all locales), and the capability channel it should point at (the organizer's copyable RSVP link) already exists. "Features light up only when configured" is the standing agreement; this is the one place the calendar goes half-lit silently. Calendar/UX. Effort S. |
 | B3 | UI / uploads | **Gate the avatar uploader on config** (or style the `readying` state accessibly) — a keyless deploy shows a perpetual 2.54:1 button; the a11y scan now excludes that state, but users still see it | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) | UI +0.5. Effort S. |
 | B3 | Docs / showcase | **README calendar currency** — the front door says "calendar" zero times; add it to the status blurb + feature enumeration. Pairs with the deck row below and the B3 reframe | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) (F9) | Docs & DX +1. Effort S. |
+| B3 | UI / testing | **Stories for `select` + `form`** — the two `@repo/ui` primitives with no co-located `*.stories.tsx` (20 components, 13 stories), violating the leaf rule `packages/ui/AGENTS.md` states; add both, or soften the leaf rule if story-less primitives are the honest posture | [packages/ui/AGENTS.md](../packages/ui/AGENTS.md) | Filed 2026-08-06 by the doc audit. A story-less primitive also never enters the visual-baseline set (`visual.spec.ts` screenshots stories only). Effort S. |
+| B3 | Release | **Cut v1.2.0** — the CHANGELOG's `[Unreleased]` now holds the whole calendar program (Phases 0–5), the five audit F-fixes and three advisory batches; the file's own header promises each milestone a tag + GitHub Release | [CHANGELOG.md](../CHANGELOG.md) | Filed 2026-08-06 by the doc audit. Owner call on timing — e.g. after the dated deps land (fast-uri 08-07, `next` 16.3.0 08-10). Effort S. |
 
 ### Shipped (strikethrough record)
 

@@ -5,7 +5,7 @@ choice. Treat it as two things at once: a pitch (what you get by starting here i
 of `create-next-app`) and a decision record (why each piece is the right default in
 2026, so you can re-evaluate honestly as the ecosystem moves).
 
-_Current as of 2026-08-02. Numeric claims here (audit score, surface and doc counts) are
+_Current as of 2026-08-06. Numeric claims here (audit score, surface and doc counts) are
 re-checked by the `/doc-audit` pass; if this stamp is old, trust the code._
 
 Every claim below is backed by a deeper doc — each section links to the
@@ -188,7 +188,7 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
   and each one resolves its own offset afterwards — not because anything corrects them
   after the fact. Edit or delete **this occurrence / this and following / all**, skip a
   date, add a date; "this and following" is a real series split, not a flag.
-- **The recurrence engine is checked against an independent oracle, once.** 528 rules
+- **The recurrence engine is checked against an independent oracle, once.** 568 rules
   were expanded by `rrule@2.8.1` into a checked-in fixture that the permanent test diffs
   against — so CI never runs a 2.7-year-stale dependency, and the corpus is a diff a
   reviewer can read. The fixture was committed *before* the expander was written, and its
@@ -400,9 +400,11 @@ building and running, not by assuming**:
   deploy with managed Postgres serving a healthy `/api/health`.
 - CI runs the same gates on every push; four independent audit passes scored the repo
   against a best-available-boilerplate bar before launch (reports in
-  [`archive/`](archive/)). **Twelve** passes have now run in total — the score peaked at
-  **100.0/100** and stands at **99.9**, with the one open deduction sitting in an external
-  service rather than in this code.
+  [`archive/`](archive/)). **Thirteen** passes have now run in total — the score peaked at
+  **100.0/100** and stands at **98.6**: the thirteenth pass (2026-08-04) widened the bar to
+  score the new calendar program for the first time (it entered at 85, and five of its
+  findings were fixed within two days), alongside the one standing deduction that sits in
+  an external service rather than in this code.
 
 If you want the guided tour from `git clone` to your first deployed feature, start
 with [`GETTING_STARTED.md`](GETTING_STARTED.md).

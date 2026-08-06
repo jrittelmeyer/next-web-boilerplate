@@ -8,7 +8,7 @@ import { expandSeries } from "./occurrences";
 import { parseRRule } from "./rrule";
 
 /**
- * The frozen differential oracle: 528 rules expanded by `rrule@2.8.1` at generation
+ * The frozen differential oracle: 568 rules expanded by `rrule@2.8.1` at generation
  * time, diffed against this engine on every run.
  *
  * The dependency is not in this test's path — the fixture is. That is deliberate (see

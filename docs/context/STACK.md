@@ -32,7 +32,7 @@ ceiling.
 | pnpm | 11.7.0 | Pinned in packageManager field |
 | tailwindcss | ^4.3.1 | v4: config in CSS, no tailwind.config.js |
 | drizzle-orm | ^0.45.2 | |
-| drizzle-kit | latest 0.x | CLI for migrations and Drizzle Studio — verify at install |
+| drizzle-kit | ^0.31.10 | CLI for migrations and Drizzle Studio (devDep of `@repo/db`) |
 | better-auth | ^1.6.25 | also a direct dep of apps/web (route handler + proxy); floor raised 2026-07-27 to 1.6.23 for GHSA-qq9h-g4jm-xgf3 (account takeover — see MAINTENANCE.md → Watch items), then to 1.6.25 on 2026-07-30 (not advisory-driven, no migration) |
 | @trpc/server + @trpc/client | ^11.18.0 | verified latest 2026-06-22 |
 | @trpc/tanstack-react-query | ^11.18.0 | tRPC v11's recommended TanStack integration (`useTRPC()` + `queryOptions`), replacing the older `@trpc/react-query` `createTRPCReact` adapter |
@@ -72,6 +72,8 @@ ceiling.
 | @better-auth/passkey | 1.6.25 (exact) | `@repo/auth` (2026-07-09) — **pinned in lockstep with `better-auth` core** (the plugin reaches core internals; bump both together). Not just convention: each release peers `better-auth: ^<same version>`, so leaving this behind desyncs the peer graph. **Read the core version off `packages/auth/package.json`, not off this row** — the pair moved 07-27 and 07-30, and this row is where the drift shows up |
 | size-limit / @size-limit/file | 12.1.0 (exact) | `apps/web` devDeps (2026-07-10) — gates `.size-limit.json` on the emitted Turbopack chunks (see DEPLOYMENT.md → Performance budgets) |
 | esbuild | 0.28.1 (exact) | `@repo/jobs` devDep (2026-07-10) — bundles `worker.ts` into the one-file worker image (`build.mjs`) |
+| pg-boss | 12.20.0 (exact) | `@repo/jobs` — the Postgres-backed job queue/cron worker (owns the `pgboss` schema; never add it to Drizzle — see [services/jobs.md](services/jobs.md)). **Exact pin** — the frequent-publisher policy in MAINTENANCE.md names it |
+| rrule | 2.8.1 (exact) | `packages/calendar` devDep — generator of the frozen differential-oracle corpus only (`scripts/generate-rrule-corpus.mjs`, a knip `entry`); deliberately not wired into any package script, zero runtime or CI-test presence |
 | next-intl | 4.13.1 (exact) | `apps/web` (2026-07-11) — `[locale]` path routing + messages (see I18N.md) |
 | knip | 6.24.0 (exact) | root devDep (2026-07-12) — dead-code / unused-dep gate (`pnpm knip`, CI `verify` lane; config `knip.jsonc`). **Exact pin** (publishes near-daily; the newest aged release is pinned — bump as newer releases age out) |
 
