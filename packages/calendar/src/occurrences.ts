@@ -98,6 +98,17 @@ export interface OccurrenceWindow {
 }
 
 /**
+ * The civil days the `overlaps` seek reaches back beyond the master's own whole-day
+ * span. The seek compares civil days read in the START zone while the accept resolves
+ * the occurrence's end instant in the END zone, and two zones' readings of one instant
+ * can differ by up to two civil days (a ~26 h maximum spread); `seekPeriodIndex`'s own
+ * one-period slack absorbs the sub-day remainder. Over-seeking merely generates
+ * candidates the accept rejects — under-seeking is audit F7: occurrences that vanish
+ * because the predicate never saw them.
+ */
+const OVERLAP_SEEK_SLACK_DAYS = 2;
+
+/**
  * Builds one occurrence's full shape from a civil start.
  *
  * **The end is the master's end shifted by whole days, not by a duration in minutes.**
@@ -173,6 +184,11 @@ export function expandSeries(
    * The start half is checked first because it is cheap and rejects everything after the
    * window; the end instant costs a second zone resolution and is only computed for an
    * occurrence that began before the window opened.
+   *
+   * The generation-side half of this contract is `seekBackDays` below: an exact test
+   * can only judge occurrences the seek let the engine generate (audit F7 — the 08-02
+   * fix widened selection while the seek still assumed selection-by-start, so a
+   * straddler more than one period back was never generated at all).
    */
   const matchesWindow = (occurrence: CivilDateTime, instantMs: number): boolean => {
     if (window.match !== "overlaps") return instantMs >= window.fromMs && instantMs <= window.toMs;
@@ -182,6 +198,16 @@ export function expandSeries(
     return resolveCivil(end, series.endTzid).instantMs >= window.fromMs;
   };
 
+  // How far an accepted occurrence's START can trail the window's opening, in whole
+  // civil days — the same `dayDelta` quantity `occurrenceEndCivil` shifts by, and
+  // negative when extreme zone pairs put the end's civil day before the start's, hence
+  // the clamp. Per-master rather than a maximum-span constant on purpose: a constant
+  // would walk ~367 extra daily periods for every one-hour series on every month draw,
+  // and the seek exists because that walk was measured (8.3 ms).
+  const spanDays =
+    toDayNumber(masterEnd.year, masterEnd.month, masterEnd.day) -
+    toDayNumber(masterStart.year, masterStart.month, masterStart.day);
+
   const expanded = expandRRule({
     rule,
     dtstart: masterStart,
@@ -190,6 +216,7 @@ export function expandSeries(
     toMs: window.toMs,
     limit,
     accept: matchesWindow,
+    seekBackDays: window.match === "overlaps" ? Math.max(0, spanDays) + OVERLAP_SEEK_SLACK_DAYS : 0,
   });
 
   const byRecurrenceId = new Map<LocalDateTime, CivilDateTime>();
