@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-06 (doc audit: 16 drift fixes, showcase re-stamped at 98.6/thirteen passes)._
+_Last updated: 2026-08-06 (fourteenth audit pass: **99.3** — the 08-04 F4–F8 verified fixed; live surface fully green)._
 
 ## Where we are
 
@@ -43,12 +43,12 @@ _Last updated: 2026-08-06 (doc audit: 16 drift fixes, showcase re-stamped at 98.
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row SHIPPED (2026-07-07 → 13)**, incl. A23–A32 + A13.
-  Thirteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
-  (latest: [PROJECT_AUDIT_2026-08-04.md](archive/PROJECT_AUDIT_2026-08-04.md) — the
-  first pass to score the calendar program, which enters as a 21st group at **85**;
-  its rows + the live advisory batch are the open work; F1 — Renovate delivery,
-  Mend-side — remains the standing tooling deduction).
+  Fourteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
+  (latest: [PROJECT_AUDIT_2026-08-06.md](archive/PROJECT_AUDIT_2026-08-06.md) — the
+  fourteenth pass adversarially re-verified all five 08-04 calendar fixes, lifting
+  the calendar 85 → **95.5** with the live surface fully green; F1 — Renovate
+  delivery, Mend-side — remains the standing tooling deduction).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
@@ -133,6 +133,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Calendar F6 — 2026-08-05 | 1 | The verified-email conjunct reached only the read path: invite-time resolution stamped any account — a durable claim no read re-checks — and the unbounded respond UPDATE let an address move capture a co-invitee's row. Legacy stamps kept, stated | [attendees.md](context/calendar/attendees.md) |
 | Calendar F7+F8 — 2026-08-06 | 1 | F7: the `overlaps` seek reaches back a full occurrence span — straddlers ≥2 periods out never generated. F8: `YEARLY;BYMONTHDAY` sans `BYMONTH` expands every month (corpus +40 append-only; COUNT/BYSETPOS rows re-identify — census-gated: zero) | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
 | Doc audit — 2026-08-06 | 1 | 16 drift fixes — calendar absent from TESTING/ARCHITECTURE/I18N/STACK tables, api.md's limiter truth (per-procedure buckets), corpus 528→568; showcase re-stamped at 98.6/thirteen; archive index row restored; 2 backlog rows; 4 rows re-capped | [BACKLOG.md](BACKLOG.md) |
+| Audit — 2026-08-06 | 1 | Fourteenth pass: **99.3** (calendar 85→95.5). F4–F8 adversarially re-verified at their seams; live surface fully green (heartbeat + security lanes same day). New find: the F4/F6-respond fixes lack revert sensors — B2 sweep row sharpened, now first in band | [report](archive/PROJECT_AUDIT_2026-08-06.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -149,10 +150,12 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 is canonical. Open now: **Renovate PR delivery FAILED** (two empty Monday windows, zero
 `renovate/*` branches ever; Mend-side diagnosis, B1) — the 2026-08-04 merge queue
 (#38 → #37 → #40 → #42 + batch #5) has fully landed, un-redding `main` on both axes.
-Dated: **08-07 ~09:17 UTC** promote fast-uri to a 3.1.5 override + delete the park ·
-**08-10 ~20:34 UTC** `next` 16.3.0 ages in (npm publish time governs; manual take while
-Renovate delivery is down). The 08-06 `brace-expansion@5.0.9` age-exclude was **deleted
-on schedule 2026-08-06** once 5.0.9 aged in.
+Dated (the canonical set is MAINTENANCE → Watch → dated takes): **08-07 ~09:17 UTC**
+promote fast-uri to a 3.1.5 override + delete the park · **08-10 ~20:34 UTC** `next`
+16.3.0 ages in (rider from the 14th audit: retire the sharp override, check postcss
+inertness) · **08-11 ~21:20 UTC** `better-auth` 1.6.26 (routine). The 08-06
+`brace-expansion@5.0.9` age-exclude was **deleted on schedule 2026-08-06** once 5.0.9
+aged in.
 
 ## Fresh project on-ramp (clone → build a real app)
 

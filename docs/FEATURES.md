@@ -400,11 +400,12 @@ building and running, not by assuming**:
   deploy with managed Postgres serving a healthy `/api/health`.
 - CI runs the same gates on every push; four independent audit passes scored the repo
   against a best-available-boilerplate bar before launch (reports in
-  [`archive/`](archive/)). **Thirteen** passes have now run in total — the score peaked at
-  **100.0/100** and stands at **98.6**: the thirteenth pass (2026-08-04) widened the bar to
-  score the new calendar program for the first time (it entered at 85, and five of its
-  findings were fixed within two days), alongside the one standing deduction that sits in
-  an external service rather than in this code.
+  [`archive/`](archive/)). **Fourteen** passes have now run in total — the score peaked at
+  **100.0/100** and stands at **99.3**: the thirteenth pass (2026-08-04) widened the bar to
+  score the new calendar program for the first time (it entered at 85), and the fourteenth
+  (2026-08-06) verified all five of its headline fixes shipped within two days, lifting
+  the calendar to 95.5 — the one standing deduction still sits in an external service
+  rather than in this code.
 
 If you want the guided tour from `git clone` to your first deployed feature, start
 with [`GETTING_STARTED.md`](GETTING_STARTED.md).

@@ -200,7 +200,11 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `e2e-org-invitee` show 1 line each, not 2.
     *Fix:* `settleThenSubmit` waits for the form to settle, then awaits the auth response
     **alongside** the click and asserts its status — so a 429 (this endpoint is 5/60s) or a
-    5xx fails by name instead of degrading into the same silent hang.
+    5xx fails by name instead of degrading into the same silent hang. (Precision, from the
+    2026-08-06 audit's re-review: the settle wait is `networkidle` — a network proxy for
+    hydration, not proof of it — so the window is narrowed, not provably closed; what *is*
+    closed is the silent-hang failure mode, since a pre-attach click now times out by name
+    in `waitForResponse`.)
     ⚠️ **Two hypotheses were tested and are now RULED OUT — do not revive them without new
     evidence.** (i) *A Next router race* (`signup-form.tsx:88-89` fires `router.push()` then
     `router.refresh()`): **30/30** paced signups navigated cleanly on `next@16.2.12`, and the
@@ -361,6 +365,23 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The
   same-day 22B re-check confirmed the picture unchanged: still 0 `renovate/*`
   branches, 37 Awaiting Schedule.
+- **Dated dependency takes (manual while Renovate delivery is down)** — the npm
+  publish time governs each 7-day age-in; this bullet is the canonical dated set the
+  PROJECT_STATUS watch line points at. Open now:
+  - **2026-08-07 ~09:17 UTC — `fast-uri` 3.1.5** ages in: raise the override 3.1.4 →
+    3.1.5 **and** delete the `ignoreGhsas` park, one change (route (1) exit; detail in
+    the batch-#5 bullet below). Pre-authorized in the batch-#5 plan.
+  - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
+    Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the
+    2026-08-06 audit:** 16.3.0 pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take
+    plan should also **remove the `sharp: 0.35.3` override** (its removal condition —
+    next's own pin ≥0.35.0 — is met by this release) and re-check the postcss
+    override's second condition (natural tree resolution ≥8.5.23; the key goes inert
+    when both hold).
+  - **2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in (published
+    2026-08-04T21:19Z; routine bug-fix release — no advisory; includes an email-OTP
+    enumeration hardening). Normal take: bump both `^1.6.25` specifiers + the
+    workspace floor note; full gate + auth e2e.
 - **Temporary security overrides** (added 2026-07-15) — three pnpm `overrides:` in
   `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts (#1–#3) that have
   **no upstream fix**. Remove each when its upstream moves, then `pnpm install` + the full
