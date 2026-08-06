@@ -21,7 +21,7 @@ import { parseRRule } from "./rrule";
  * reviewer has to approve. The other half of the gate is in the branch history: the
  * fixture was committed before `expand.ts` existed, so it cannot have been fitted to it.
  */
-const CORPUS_SHA256 = "761a03a68c091625132a0bc8ff651f846005f6267d8da5b759902befc78551fe";
+const CORPUS_SHA256 = "f12080c8f2ff135078ea025b17c649a72827ffad2d4ecdce5140ac474648d82f";
 
 interface RuleCase {
   readonly rrule: string;

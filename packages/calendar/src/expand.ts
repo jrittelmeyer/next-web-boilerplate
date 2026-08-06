@@ -233,6 +233,8 @@ function monthlyDays(
   return monthDayNumbers(year, month, [dtstartDay]);
 }
 
+const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+
 function yearlyDays(rule: RecurrenceRule, year: number, dtstart: CivilDateTime): number[] {
   // BYDAY alone on a YEARLY rule expands across the whole year, so `-1FR` is the last
   // Friday of the *year*. With BYMONTH or BYMONTHDAY present it is scoped to the month
@@ -241,7 +243,15 @@ function yearlyDays(rule: RecurrenceRule, year: number, dtstart: CivilDateTime):
     return expandByDay(toDayNumber(year, 1, 1), isLeapYear(year) ? 366 : 365, rule.byDay);
   }
 
-  const months = rule.byMonth.length > 0 ? rule.byMonth : [dtstart.month];
+  // BYMONTHDAY at YEARLY frequency is an *expansion* (RFC 5545 §3.3.10): with no
+  // BYMONTH, "the 13th every year" means the 13th of every MONTH — twelve a year, not
+  // DTSTART's month once (audit F8; the frozen oracle agrees). The DTSTART-month
+  // fallback is only correct for the bare anniversary shape, where no BY part names a
+  // day at all.
+  let months: readonly number[];
+  if (rule.byMonth.length > 0) months = rule.byMonth;
+  else if (rule.byMonthDay.length > 0) months = ALL_MONTHS;
+  else months = [dtstart.month];
   const days: number[] = [];
   for (const month of months) {
     if (rule.byMonthDay.length > 0) {

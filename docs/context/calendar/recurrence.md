@@ -14,11 +14,11 @@ overrides, or the edit and delete scopes. The time model underneath it all is
 
 `FREQ` ∈ `DAILY` | `WEEKLY` | `MONTHLY` | `YEARLY`, plus `INTERVAL`, `COUNT`, `UNTIL`,
 `WKST`, `BYMONTH`, `BYMONTHDAY` (negatives included), `BYDAY` (ordinals included, e.g.
-`-1FR`) and `BYSETPOS`. Two caveats inside that grammar (both audit 2026-08-04, B-rows in
+`-1FR`) and `BYSETPOS`. One caveat inside that grammar (audit 2026-08-04, a B3 row in
 [BACKLOG.md](../../BACKLOG.md)): `DAILY`+`BYMONTHDAY` is **refused** (loudly — though the
-refusal's RFC attribution is wrong; the combination is valid), and
-`YEARLY;BYMONTHDAY` *without* `BYMONTH` currently expands only DTSTART's month where the
-RFC and the oracle expand every month.
+refusal's RFC attribution is wrong; the combination is valid). `YEARLY;BYMONTHDAY`
+*without* `BYMONTH` expands the day in **every** month — RFC semantics, fixed 2026-08-06
+(audit F8), and the frozen corpus samples the unpaired family since the same change.
 
 **Refused, explicitly, rather than silently mis-expanded:** `BYWEEKNO`, `BYYEARDAY`,
 `BYHOUR` / `BYMINUTE` / `BYSECOND`, sub-daily `FREQ`, `EXRULE`, RFC 7529 `RSCALE`.
@@ -63,6 +63,10 @@ so and most implementations get it wrong.
 Expansion is **always window-bounded**. Rules with `COUNT` iterate from `DTSTART` because
 `COUNT` is positional and no seek preserves it; every other rule seeks arithmetically to
 the first period overlapping the window, because the period grid is anchored at `DTSTART`.
+Under `match: "overlaps"` the seek reaches back a full occurrence span plus zone slack
+(`seekBackDays`) — the accept predicate can only judge occurrences generation produced,
+and a seek sized for selection-by-start starved it of every straddler more than one
+period out (audit F7, fixed 2026-08-06).
 
 ### An occurrence's end is the master's end shifted by whole days
 
@@ -94,7 +98,12 @@ is a permanent over-estimate. (Not "an `EXDATE` can only shorten it" — removin
   up to the transition delta longer than its nominal span, so the true end can exceed
   `series_end_at` by ~1 h (audit 2026-08-04; fix rides the long-tail B3 row in
   [BACKLOG.md](../../BACKLOG.md)).
-- `COUNT` → expand to the count, take the last end.
+- `COUNT` → expand to the count, take the last end. ⚠️ A value stored **before
+  2026-08-06** for a `COUNT`ed `YEARLY;BYMONTHDAY`-without-`BYMONTH` series is a
+  permanent over-estimate: the F8 fix consumes `COUNT` monthly rather than yearly, so
+  the corrected series ends far earlier than the stored instant says. The safe
+  direction — this column only *excludes* — so it is not backfilled, the same
+  no-backfill posture as the pre-F6 attendee stamps.
 - **Only an `RDATE` past the rule's own end invalidates it.** `EXDATE` writes never
   recompute.
 

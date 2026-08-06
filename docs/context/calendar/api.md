@@ -267,8 +267,12 @@ one layer of three that disagreed. A recurring occurrence that began before the 
 was still running when it opened therefore vanished, while a byte-identical one-off in the
 same slot rendered. The month grid's ±1 day of padding hid it for short events, so what
 reached a user was the multi-day case: a recurring conference missing from a month it
-genuinely overlaps. Fixed 2026-08-02; the mode is opt-in because `limit` counts what
-expansion *returns* ([reminders.md](reminders.md) — the sweeper keeps the default).
+genuinely overlaps. Fixed 2026-08-02 — selection and suppression; the *seek* still
+assumed selection-by-start and starved the accept of straddlers more than one period
+out, so spans over ~2 periods kept vanishing until the generation half landed
+2026-08-06 (audit F7 — `expandSeries` now passes `seekBackDays`, the master's whole-day
+span plus zone slack). The mode is opt-in because `limit` counts what expansion
+*returns* ([reminders.md](reminders.md) — the sweeper keeps the default).
 
 Expansion runs in the app, then **concrete and expanded rows merge into one time-ordered
 stream and the first `MAX_RANGE_ROWS` are returned.** Merged, not concatenated: if the
