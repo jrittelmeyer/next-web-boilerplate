@@ -128,7 +128,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Guide ch. 12 — 2026-08-03 | 1 | The guide's standing promise ("being rewritten for the calendar") delivered as **ch. 12**, glossary → 13 + 7 terms. Appended, not inserted at 9: `docs:sanity` cannot see a "Chapter N" label naming the wrong file. Deck: links only, its gap filed | [ch. 12](plain-english-guide/12-the-calendar.md) |
 | Doc audit — 2026-08-03 | 1 | Five drift fixes: the superseded flake row deleted; reminders' Phase-6 sentence caught up with the shipped exact test; jobs coverage include names `sweep.ts`; one anchor; kit 0.7.2. The adapter's broken `prodVerify.start` filed as B1 | [BACKLOG.md](BACKLOG.md) |
 | Audit — 2026-08-04 | 1 | Thirteenth pass, first to score the calendar: **98.6**; calendar enters at 85 — F4 external-guest cancellations (HIGH), F5 series-delete footgun, F6 verified-email seams, F7/F8 silent recurrence edges. 14 rows → BACKLOG; drift fixed in 6 docs | [report](archive/PROJECT_AUDIT_2026-08-04.md) |
-| Advisory batch #5 — 2026-08-04 | 1 | 9 advisories (4 high) closed #41, two against our own pins (fast-uri 3.1.4, postcss 8.5.20). Ranged overrides undici 7.29.0 (×5) + socket.io-parser 4.2.7; postcss key → 8.5.23; fast-uri parked → 3.1.5 on 08-07 ~09:17Z. All tooling paths | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Advisory batch #5 — 2026-08-04 | 1 | 9 advisories (4 high) closed #41, two against our own pins (fast-uri 3.1.4, postcss 8.5.20). Ranged overrides undici 7.29.0 (×5) + socket.io-parser 4.2.7; postcss key → 8.5.23; fast-uri park → promoted to 3.1.5 on schedule 08-07. All tooling paths | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Calendar F4+F5 — 2026-08-05 | 1 | F4: `ne(userId, actor)` NULL-dropped externals from cancellations — fixed `or(isNull, ne)`; real-PG test proves both spellings, the mocked fixture had asserted what SQL contradicted. F5: delete now runs `scopePairIssues`; first scope-pair tests | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
 | Calendar F6 — 2026-08-05 | 1 | The verified-email conjunct reached only the read path: invite-time resolution stamped any account — a durable claim no read re-checks — and the unbounded respond UPDATE let an address move capture a co-invitee's row. Legacy stamps kept, stated | [attendees.md](context/calendar/attendees.md) |
 | Calendar F7+F8 — 2026-08-06 | 1 | F7: the `overlaps` seek reaches back a full occurrence span — straddlers ≥2 periods out never generated. F8: `YEARLY;BYMONTHDAY` sans `BYMONTH` expands every month (corpus +40 append-only; COUNT/BYSETPOS rows re-identify — census-gated: zero) | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
@@ -150,12 +150,13 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 is canonical. Open now: **Renovate PR delivery FAILED** (two empty Monday windows, zero
 `renovate/*` branches ever; Mend-side diagnosis, B1) — the 2026-08-04 merge queue
 (#38 → #37 → #40 → #42 + batch #5) has fully landed, un-redding `main` on both axes.
-Dated (the canonical set is MAINTENANCE → Watch → dated takes): **08-07 ~09:17 UTC**
-promote fast-uri to a 3.1.5 override + delete the park · **08-10 ~20:34 UTC** `next`
-16.3.0 ages in (rider from the 14th audit: retire the sharp override, check postcss
-inertness) · **08-11 ~21:20 UTC** `better-auth` 1.6.26 (routine). The 08-06
-`brace-expansion@5.0.9` age-exclude was **deleted on schedule 2026-08-06** once 5.0.9
-aged in.
+Dated (the canonical set is MAINTENANCE → Watch → dated takes): **08-10 ~14:16 UTC**
+`dompurify` 3.4.13 ages in (GHSA-55q2-fjhq-7xh7, moderate, published 08-07 15:30Z
+against the 3.4.12 pin — plan → sign-off) · **08-10 ~20:34 UTC** `next` 16.3.0 ages in
+(rider from the 14th audit: retire the sharp override, check postcss inertness) ·
+**08-11 ~21:20 UTC** `better-auth` 1.6.26 (routine). The fast-uri park **exited on
+schedule 2026-08-07** (override → 3.1.5, allowlist empty); the 08-06
+`brace-expansion@5.0.9` age-exclude was likewise **deleted on schedule 2026-08-06**.
 
 ## Fresh project on-ramp (clone → build a real app)
 

@@ -107,15 +107,17 @@ overrides:
   # exposure). 3.1.4 CLEARED the 7-day gate 2026-07-26 (published 2026-07-19) and is
   # in-range for ajv's own `^3.0.1`; the two deferral entries this pair held in
   # auditConfig.ignoreGhsas were removed with this override (lockfile was on 3.1.2).
-  # ⚠️ 2026-08-04 (batch #5): 3.1.4 is ITSELF vulnerable to GHSA-7p8r-x3mc-p8w7
+  # ⚠️ 2026-08-04 (batch #5): 3.1.4 was ITSELF vulnerable to GHSA-7p8r-x3mc-p8w7
   # (<3.1.5, HIGH — host confusion via a backslash authority introducer, the third
-  # of the family). The only fix, 3.1.5 (published 2026-07-31T09:16:56Z), is inside
-  # the 7-day gate until 2026-08-07 ~09:17 UTC, so that advisory is PARKED in
-  # auditConfig.ignoreGhsas below — route (1) of the rule at minimumReleaseAge.
-  # ON 2026-08-07: raise this override to 3.1.5 AND delete the ignore entry, one
-  # change. This override stays meanwhile — dropping it would regress the two GHSAs
-  # above (3.1.2 satisfies ajv's range too).
-  fast-uri: 3.1.4
+  # of the family). The only fix, 3.1.5 (published 2026-07-31T09:16:56Z), sat inside
+  # the 7-day gate until 2026-08-07 ~09:17 UTC, so that advisory was PARKED in
+  # auditConfig.ignoreGhsas below — route (1) of the rule at minimumReleaseAge —
+  # and the park EXITED on schedule 2026-08-07: override raised to 3.1.5, ignore
+  # entry deleted, one change. 3.1.5 heads the 3.x line (npm `latest` is the 4.x
+  # major, outside ajv's ^3.0.1). Remove this override once a routine bump naturally
+  # carries the lockfile past 3.1.5 — dropping it earlier would regress all three
+  # GHSAs (3.1.2 satisfies ajv's range too).
+  fast-uri: 3.1.5
   #
   # dompurify <=3.4.11 (GHSA-c2j3-45gr-mqc4, low — CUSTOM_ELEMENT_HANDLING
   # bypasses afterSanitizeElements), via posthog-js's own sanitizer dependency
@@ -215,17 +217,13 @@ minimumReleaseAge: 10080 # 7 days
 # minimumReleaseAge, so the advisory is parked here and the entry is deleted the day the
 # fix ages in and
 # becomes a real override above. Re-emptied 2026-07-15 (effect · esbuild · postcss),
-# 2026-07-27 (the two fast-uri GHSAs), and 2026-07-30 (GHSA-mh99-v99m-4gvg, once
-# brace-expansion 5.0.8 cleared the gate). `pnpm audit` therefore guards every
+# 2026-07-27 (the two fast-uri GHSAs), 2026-07-30 (GHSA-mh99-v99m-4gvg, once
+# brace-expansion 5.0.8 cleared the gate), and 2026-08-07 (GHSA-7p8r-x3mc-p8w7 —
+# batch #5's fast-uri park, promoted to the 3.1.5 override above the day 3.1.5 aged
+# in). `pnpm audit` therefore guards every
 # override above live, and goes red the moment one regresses or a new advisory lands.
-# OCCUPIED 2026-08-04 (batch #5): GHSA-7p8r-x3mc-p8w7 — fast-uri <3.1.5, which includes
-# the 3.1.4 the override above pins. Route (1): the fix 3.1.5 (published
-# 2026-07-31T09:16:56Z) ages in 2026-08-07 ~09:17 UTC — DELETE this entry then and raise
-# the fast-uri override to 3.1.5 in the same change. Exposure while parked: ajv via the
-# Sentry/Storybook webpack chains — build tooling only, no request-handling path.
 # ⚠️ For the one case that took route (2) instead — GHSA-rgw5-rvv9-x895, 2026-08-03, its
 # dated exclude deleted on schedule 2026-08-06 — see the three-route rule stated once at
 # `minimumReleaseAge` above. This note is a pointer; the rule and its criteria live there.
 auditConfig:
-  ignoreGhsas:
-    - GHSA-7p8r-x3mc-p8w7
+  ignoreGhsas: []

@@ -368,9 +368,16 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
-  - **2026-08-07 ~09:17 UTC — `fast-uri` 3.1.5** ages in: raise the override 3.1.4 →
-    3.1.5 **and** delete the `ignoreGhsas` park, one change (route (1) exit; detail in
-    the batch-#5 bullet below). Pre-authorized in the batch-#5 plan.
+  - **2026-08-10 ~14:16 UTC — `dompurify` 3.4.13** ages in (published
+    2026-08-03T14:16Z). GHSA-55q2-fjhq-7xh7 (moderate — IN_PLACE hook removal leaves
+    a detached subtree executable, XSS) published 2026-08-07T15:30Z against the
+    `dompurify: 3.4.12` override pin — the **third** remediation pin to go vulnerable
+    itself (after fast-uri 3.1.4 and postcss 8.5.20). Path: posthog-js → dompurify, a
+    **client-side runtime path**, not build tooling; 3.4.13 is in-range for
+    posthog-js's own `^3.4.12`. Route decision (park vs owner-approved dated exclude,
+    given the runtime path) is the owner's — **plan → sign-off**; the take-time audit
+    that caught it (the 08-07 fast-uri PR) predates the triage issue the next `main`
+    audit run auto-files. Below the high/critical merge gate, so PRs stay unblocked.
   - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
     Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the
     2026-08-06 audit:** 16.3.0 pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take
@@ -430,17 +437,17 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     Its `/_next/image` runtime path is e2e-covered since 2026-07-22
     (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that installs but no
     longer transforms turns the e2e lane red instead of passing silently.
-  - `fast-uri: 3.1.4` → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
+  - `fast-uri: 3.1.5` → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
     the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
     `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. **Reopened 2026-08-04 (batch #5):
-    3.1.4 is itself vulnerable to GHSA-7p8r-x3mc-p8w7** (`<3.1.5`, high — the third
-    host-confusion advisory of the family, via a backslash authority introducer).
-    The only fix, 3.1.5 (published 2026-07-31T09:16:56Z), is inside the 7-day gate
-    until **2026-08-07 ~09:17 UTC**, so the advisory is **parked** in
-    `auditConfig.ignoreGhsas` — route (1), the steady-state deferral, not a second
-    gate exception. **On 08-07: raise this override to 3.1.5 and delete the park in
-    one change**; thereafter remove the override once a routine bump naturally
-    carries the lockfile past 3.1.5.
+    3.1.4 was itself vulnerable to GHSA-7p8r-x3mc-p8w7** (`<3.1.5`, high — the third
+    host-confusion advisory of the family, via a backslash authority introducer);
+    the only fix, 3.1.5 (published 2026-07-31T09:16:56Z), sat inside the 7-day gate,
+    so the advisory was **parked** in `auditConfig.ignoreGhsas` — route (1), the
+    steady-state deferral, not a second gate exception. **Closed again on schedule
+    2026-08-07**: 3.1.5 aged in at 09:16:56 UTC, the override moved 3.1.4 → 3.1.5 and
+    the park was deleted in one change (allowlist empty — zero ignored). Remove the
+    override once a routine bump naturally carries the lockfile past 3.1.5.
 - **Advisory batch 2026-07-27** (closed [#10](https://github.com/jrittelmeyer/next-web-boilerplate/issues/10),
   red since 2026-07-25) — three highs, one of them a **direct** dependency:
   - **`better-auth` 1.6.20 → 1.6.23** (with `@better-auth/passkey` in lockstep).
@@ -486,8 +493,8 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     memory exhaustion), via react-email's dev preview server. In-range for socket.io's
     own `~4.2.4` — the lockfile's 4.2.6 simply predated the fix. Remove when the
     react-email chain re-resolves >=4.2.7.
-  - postcss (second retarget) + fast-uri (parked GHSA, **exit 2026-08-07 ~09:17 UTC**):
-    see their bullets above.
+  - postcss (second retarget) + fast-uri (parked GHSA — **exited on schedule
+    2026-08-07**, the override now 3.1.5): see their bullets above.
   Dependabot alerted on **only the undici five**; `pnpm audit` caught all nine — the
   authoritative-gate ranking holds.
 - **`contrarian` subagent — evaluated 2026-07-28; both open items now closed.**

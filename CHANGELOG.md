@@ -320,6 +320,23 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-07: `fast-uri` 3.1.5 — batch #5's parked advisory closed on schedule.**
+  GHSA-7p8r-x3mc-p8w7 (`<3.1.5`, high — the third host-confusion advisory of the
+  family, via a backslash authority introducer) was parked in `auditConfig.ignoreGhsas`
+  on 2026-08-04 because its only fix, 3.1.5 (published 2026-07-31T09:16:56Z), sat
+  inside the 7-day `minimumReleaseAge` gate. It aged in at 09:16:56 UTC today; the
+  take is route (1)'s exit exactly as the batch-#5 plan pre-authorized: the override
+  raised 3.1.4 → 3.1.5 and the park deleted, one change. Registry re-verified at take
+  time — 3.1.5 still heads the 3.x line (npm `latest` is the 4.x major, outside ajv's
+  `^3.0.1`) — and the lockfile moved exactly one package. The allowlist's empty steady
+  state is restored: **zero ignored advisories**, every override guarded live again.
+  Exposure while parked: ajv via the Sentry/Storybook webpack chains — build tooling
+  only, no request-handling path. Dependabot #24 (the park's tracking alert)
+  auto-closes with the lockfile move. ⚠️ The take-time audit also caught
+  GHSA-55q2-fjhq-7xh7 (moderate, published **the same day at 15:30 UTC** — after the
+  06:03 UTC daily lane's green): `dompurify <=3.4.12`, the third remediation pin to go
+  vulnerable itself. Out of this change's scope — its fix 3.4.13 ages in 2026-08-10
+  ~14:16 UTC; response plan → sign-off (MAINTENANCE → Watch → dated takes).
 - **2026-08-06: the `brace-expansion@5.0.9` age-gate exclusion was deleted on schedule.**
   5.0.9 (published 2026-07-30T10:00:32Z) cleared the 7-day `minimumReleaseAge` gate at
   10:00:32 UTC, so the dated, version-scoped `minimumReleaseAgeExclude` added 2026-08-03
