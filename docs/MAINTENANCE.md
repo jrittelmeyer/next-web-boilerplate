@@ -371,13 +371,16 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   - **2026-08-10 ~14:16 UTC — `dompurify` 3.4.13** ages in (published
     2026-08-03T14:16Z). GHSA-55q2-fjhq-7xh7 (moderate — IN_PLACE hook removal leaves
     a detached subtree executable, XSS) published 2026-08-07T15:30Z against the
-    `dompurify: 3.4.12` override pin — the **third** remediation pin to go vulnerable
-    itself (after fast-uri 3.1.4 and postcss 8.5.20). Path: posthog-js → dompurify, a
-    **client-side runtime path**, not build tooling; 3.4.13 is in-range for
-    posthog-js's own `^3.4.12`. Route decision (park vs owner-approved dated exclude,
-    given the runtime path) is the owner's — **plan → sign-off**; the take-time audit
-    that caught it (the 08-07 fast-uri PR) predates the triage issue the next `main`
-    audit run auto-files. Below the high/critical merge gate, so PRs stay unblocked.
+    `dompurify: 3.4.12` override pin — the third pinned value to fall inside a new
+    advisory's range (after fast-uri 3.1.4 and postcss 8.5.20). ⚠️ The lockfile edge
+    is **audit-ledger only**: its sole importer, posthog-js@1.391.2 (dep range
+    `^3.3.2`; 3.4.13 in-range), bundles no dompurify into the `module.js` entry the
+    app imports — the IN_PLACE caller is its remotely-loaded product-tours chunk,
+    which **vendors its own dompurify 3.3.2** and is fixed by a posthog-js bump /
+    PostHog's CDN, never by this override. Route decision (park vs dated exclude) is
+    the owner's — **plan → sign-off**; below the high/critical merge gate, so PRs
+    stay unblocked; the moderate-threshold triage sync on `main` files/keeps the
+    security-triage issue until the response merges.
   - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
     Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the
     2026-08-06 audit:** 16.3.0 pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take
