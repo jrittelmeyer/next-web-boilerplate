@@ -21,7 +21,11 @@ vi.mock("drizzle-orm", () => ({
 import { hasActiveSubscription, hasOrgSubscription, isSubscriptionActive } from "./subscription";
 
 const NOW = new Date("2026-07-08T12:00:00Z");
-const FUTURE = new Date("2026-08-08T12:00:00Z");
+// FUTURE meets the REAL clock too: hasActiveSubscription/hasOrgSubscription apply
+// the default `new Date()`, so a calendar date here is a time bomb — the old
+// 2026-08-08T12:00Z pin lapsed and turned both wrapper tests red mid-day with no
+// commit. Max ECMAScript date, same trick as the "defaults `now`" case below.
+const FUTURE = new Date(8.64e15);
 const PAST = new Date("2026-06-08T12:00:00Z");
 
 describe("isSubscriptionActive", () => {
