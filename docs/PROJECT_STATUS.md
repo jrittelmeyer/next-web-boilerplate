@@ -69,8 +69,9 @@ _Last updated: 2026-08-06 (fourteenth audit pass: **99.3** — the 08-04 F4–F8
   licensed the change):
   [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
-  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.7.2 —
-  the 2026-07-23 context-engineering release plus two patches); this repo consumes the installed
+  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.8.0 —
+  the 2026-07-23 context-engineering release, two patches, and the 2026-08-08
+  project-adopt selective-merge release); this repo consumes the installed
   `.claude/` output (edit a clone, re-install — never the copies). Kit story: the kit
   repo's CHANGELOG + [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
 
@@ -136,6 +137,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Audit — 2026-08-06 | 1 | Fourteenth pass: **99.3** (calendar 85→95.5). F4–F8 adversarially re-verified at their seams; live surface fully green (heartbeat + security lanes same day). New find: the F4/F6-respond fixes lack revert sensors — B2 sweep row sharpened, now first in band | [report](archive/PROJECT_AUDIT_2026-08-06.md) |
 | Advisory — 2026-08-07 | 1 | Two parks: dompurify GHSA-55q2 (moderate — the 3.4.12 pin fell in turn) + nanoid GHSA-2v37 (HIGH — postcss calls plain nanoid(6); vulnerable fns never invoked). Both audit-edge only; one 08-10 exit PR promotes both to ranged keys + converts fast-uri | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | B2 sweep — 2026-08-08 | 1 | F2 closed both sides: spelling pins over the captured WHEREs (PgDialect, red-proven both reverts) beside the standing planted defects; 4 e2e sensors — cancel fan-out set, respond-capture victim row, invites read twin, range ownership gate. Long tail → B3 | [TESTING.md](context/TESTING.md) |
+| Kit 0.8.0 adopt-merge — 2026-08-08 | 1 | project-adopt 0.3.0: two-tiered meaningful-improvement bar (surface defaults keep-theirs; foundation keeps template presumption), recorded comparisons, incoming agentic layer surveyed, parity → pending-spec map, model routing; reinstalled | [kit CHANGELOG](https://github.com/jrittelmeyer/ai-dev-kit/blob/main/CHANGELOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·

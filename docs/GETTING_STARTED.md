@@ -72,8 +72,11 @@ light up template features the app lacks), asks one batched round of clarifying
 questions, then writes `docs/PRODUCT.md` + `docs/MIGRATION.md` and regenerates
 `PROJECT_STATUS.md`/`BACKLOG.md` into a port program whose finish line is an app
 indistinguishable from the original to its users — running on this template,
-with the relevant integrations baked in. Where the original runs, every port
-step is verified against it side-by-side.
+with the relevant integrations baked in. Dispositions are held to a
+meaningful-improvement bar — what already works in your product transplants
+intact, while the template's foundation carries its own presumption — and the
+parity contract becomes an executable test suite over the port. Where the
+original runs, every port step is verified against it side-by-side.
 
 ## Environment: what's required vs what lights up
 
