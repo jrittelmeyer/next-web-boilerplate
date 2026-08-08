@@ -327,6 +327,24 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Changed
 
+- **2026-08-08: `/project-adopt` learned the selective-merge bar (ai-dev-kit 0.8.0,
+  skill 0.3.0)** — adoption now answers "merge the template's improvements into my
+  existing app" as first-class intent. The disposition map runs a **two-tiered
+  meaningful-improvement bar**: the product surface (UI, flows, styles, copy,
+  business logic) defaults to **keep-theirs** — transplanted intact, bounded by the
+  adopting repo's gates *and* stated hard rules; a wash keeps theirs — while the
+  foundation (auth, DB, tooling, CI, security, observability) keeps the template
+  presumption, since the scaffold already wires it. Contested subsystems record a
+  real tech-choice comparison (no wash by ignorance), the incoming project's own
+  agentic layer (`.claude/`, instruction files, agent memory) is surveyed and
+  dispositioned instead of silently dropped, the parity contract is enumerated into
+  a one-to-one **pending-spec map** right behind the walking skeleton (each port row
+  flips its specs live; completion = zero pending specs + suites green at the
+  enforced thresholds), and the judgment steps run with extended thinking on the
+  most capable available model. Kit-side record: the
+  [ai-dev-kit CHANGELOG](https://github.com/jrittelmeyer/ai-dev-kit/blob/main/CHANGELOG.md);
+  reinstalled here via `install.mjs` (`--check` clean).
+
 - **2026-07-28: removed the dated `minimumReleaseAgeExclude` for `next` + `@next/*`**
   added 2026-07-23 for the advisory batch. 16.2.11 cleared the 7-day gate on schedule, so
   the bypass is gone and the supply-chain gate is unconditional again. Verified
