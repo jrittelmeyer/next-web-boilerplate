@@ -13,6 +13,23 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **2026-08-08: revert sensors for the two audit-F2 predicates, plus three read-gate
+  sensors beside them** (the B2 assertion-blind-spot sweep; tests and docs only). The
+  08-04 F4/F6-respond fixes could both be reverted with every CI lane green: the unit
+  suite mocks the query builders, and `@repo/db`'s real-Postgres proofs *restate* the
+  predicates across a package boundary they cannot import. Closed from both sides —
+  **spelling pins** in `calendar.test.ts` compile the actions' captured `where`
+  conditions (`PgDialect.sqlToQuery`) and assert the NULL-safe recipient pair and the
+  `email_verified` EXISTS arm, each proven red under its revert, while the planted
+  defects in `calendar-attendees.test.ts` keep proving those spellings' semantics —
+  and **behavioral e2e sensors** on existing fixtures: deleting the invitations spec's
+  event asserts the external guest's `reason:"cancelled"` job and their dead RSVP
+  link; an account moved onto a co-invitee's address unverified re-responds and the
+  victim row must keep its state and NULL identity; the unverified organizer's
+  `/calendar/invites` stays empty (the read twin); and `calendar.range` queried with a
+  foreign calendar id answers an empty window — the month grid's ownership conjunct's
+  only sensor at any level. The sweep's remaining weak-sensor predicates are filed as
+  one B3 backlog row (predicate-sensor long tail) rather than left untracked.
 - **Calendar, Phase 3 — attendees, internal RSVP and live invite notifications.**
   Migration `0023` adds `calendar_event_attendees`; `createEvent`/`updateWholeEvent` diff
   a guest list, `respondToEvent` records an answer, `calendar.listInvites` and

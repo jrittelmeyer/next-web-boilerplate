@@ -308,6 +308,21 @@ export async function setEmailVerified(email: string): Promise<void> {
 }
 
 /**
+ * Move an account onto a different address, UNVERIFIED — the audit-F6 attack shape: on a
+ * deploy where email is unconfigured nothing stops an account from squatting on someone
+ * else's address, and what the two F6 conjuncts guarantee is that an unproved address is
+ * never treated as an identity. The respond-capture sensor in `calendar-invites.spec.ts`
+ * is the caller. The target address must not belong to any account — `user.email` is
+ * unique, so moving onto a signed-up address would throw here rather than model the attack.
+ */
+export async function setUserEmail(currentEmail: string, newEmail: string): Promise<void> {
+  await db
+    .update(user)
+    .set({ email: newEmail.toLowerCase(), emailVerified: false })
+    .where(eq(user.email, currentEmail));
+}
+
+/**
  * One guest's stored `user_id`, distinguishing "the row resolved to nobody" (`{ userId:
  * null }`) from "there is no row" (`null`).
  *

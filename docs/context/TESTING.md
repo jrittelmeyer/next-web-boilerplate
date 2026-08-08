@@ -369,6 +369,37 @@ Two more habits worth copying from it:
   correctness test can tell them apart — only an `EXPLAIN` over ~10k rows can, and it is
   the only assertion that fails when someone moves the `lower()` onto the indexed side.
 
+### Predicate sensors — binding the app to a proven spelling (audit F2)
+
+A rule that lives in a WHERE conjunct has a blind spot all its own: the unit suite
+mocks the builders (`where()` discards its argument), this integration suite cannot
+import `apps/web` so it *restates* the SQL, and an e2e only notices if some flow reads
+the column the conjunct decides. Audit 08-06 F2 named two shipped HIGH-class fixes
+(the F4 cancellation-recipient predicate, the F6b respond-UPDATE arm) that could be
+reverted with every lane green. Two patterns close the class, used together:
+
+- **Spelling pins** (`apps/web/src/server/actions/calendar.test.ts`): capture the
+  action's real `where` argument through the transaction double, compile it with
+  `new PgDialect().sqlToQuery(...)`, and assert the rule-bearing tokens
+  (`is null or … <>`; `u.email_verified`). The pin proves the app still *issues* the
+  fixed spelling; the planted defect in `calendar-attendees.test.ts` proves that
+  spelling's *semantics*. **Pin + planted defect = a complete sensor.** A pin is a
+  text assertion on purpose — the same posture as the EXPLAIN pin above — so a
+  semantically-equivalent rewrite updates the pin beside the integration proof,
+  visibly, instead of drifting apart silently.
+- **Deciding-column e2e** (`e2e/support/db.ts` → `getAttendeeUserId` is the
+  template): drive the app's real write through the UI, then read the one column only
+  the conjunct decides. `calendar-invites.spec.ts` ends with three of these — the
+  respond-capture victim row, the unverified-account invites absence, the
+  `calendar.range` foreign-id empty window — and `calendar-invitations.spec.ts`
+  asserts the deletion fan-out's enqueued recipient set from `pgboss.job`.
+  ⚠️ Each sensor's discriminating fixture property (an account that stays unverified,
+  an address that must never sign up) carries a warning comment at the fixture site —
+  an innocent-looking fixture "fix" disarms the sensor silently.
+
+The predicates still lacking a sensor are one BACKLOG row (B3, predicate-sensor long
+tail), inventoried 2026-08-08.
+
 ### The frozen differential oracle (`packages/calendar`)
 
 `rrule@2.8.1` is the independent oracle for the recurrence engine, and it runs **once**.

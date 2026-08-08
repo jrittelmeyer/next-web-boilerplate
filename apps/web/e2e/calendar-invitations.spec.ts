@@ -42,7 +42,12 @@ test.describe.configure({ mode: "serial" });
 
 const EVENT_ZONE = "America/New_York";
 const organizer = makeTestUser("rsvp-organizer");
-/** No account, ever — that is the point of the phase. */
+/**
+ * No account, ever — that is the point of the phase. ⚠️ Also load-bearing for the
+ * cancellation-fan-out sensor at the bottom: an external's attendee row carries
+ * `user_id NULL`, which is exactly what the bare-`ne()` regression (audit F4) drops.
+ * Give this guest an account and that sensor stops discriminating.
+ */
 const guest = `rsvp-guest-${Date.now()}@example.com`;
 
 /** The 15th of the current month, so the chip is on the grid the page opens on. */
@@ -61,7 +66,9 @@ test("an external guest is invited, answers signed-out, and is re-asked when the
   page,
   browser,
 }) => {
-  test.setTimeout(180_000);
+  // 180s covered the original flow; the deletion sensor adds three UI round-trips
+  // and two queue polls.
+  test.setTimeout(210_000);
   await signUp(page, organizer);
   await setUserTimeZone(organizer.email, EVENT_ZONE);
   await page.goto("/calendar");
@@ -234,6 +241,79 @@ test("an external guest is invited, answers signed-out, and is re-asked when the
       forged.getByRole("heading", { name: "This invitation link is no longer valid" }),
     ).toBeVisible();
     await forged.close();
+
+    // --- Deleting the event tells the guest whose ONLY notice is the email ------
+    // The sensor audit 08-06 F2 asked for. `softDeleteEvent`'s recipient predicate
+    // (calendar.ts:1745) is NULL-safe — `or(isNull(user_id), ne(user_id, actor))` —
+    // and an external guest sits in the `isNull` arm. Revert it to a bare `ne()` and
+    // `NULL <> $actor` filters them out of `guestEmails`, so the `reason:"cancelled"`
+    // job below is never enqueued and the poll times out red. First, re-add the guest
+    // (the revoke step above removed their row).
+    await page.goto("/calendar");
+    await page
+      .getByRole("button", { name: /Stand-up/ })
+      .first()
+      .click();
+    const readder = page.getByRole("dialog");
+    await readder.getByTestId("event-attendees").fill(guest);
+    await readder.getByTestId("event-attendees").press("Enter");
+    await expect(readder.getByTestId("event-attendee-chips")).toContainText(guest);
+    await readder.getByTestId("event-save").click();
+    await expect(readder).toBeHidden();
+
+    // A second invite means the re-added row exists and has a fresh token.
+    await expect
+      .poll(
+        async () => (await getInvitationJobs(guest)).filter((job) => job.kind === "invite").length,
+        { timeout: 15_000 },
+      )
+      .toBe(2);
+    await page.goto(`/calendar/event/${eventId}`);
+    const readdedLink = page.getByTestId(`rsvp-link-${guest}`);
+    await expect(readdedLink).toBeVisible();
+    const readdedRsvpUrl = await readdedLink.inputValue();
+
+    // A one-off has no scopes, so the delete button deletes directly — no chooser.
+    await page.goto("/calendar");
+    await page
+      .getByRole("button", { name: /Stand-up/ })
+      .first()
+      .click();
+    const deleter = page.getByRole("dialog");
+    await deleter.getByTestId("event-delete").click();
+    await expect(deleter).toBeHidden();
+
+    // `reason:"cancelled"` distinguishes the deletion from the earlier REMOVAL cancel
+    // (`reason:"removed"`, no attachment) still sitting in the queue from the revoke step.
+    await expect
+      .poll(
+        async () =>
+          (await getInvitationJobs(guest)).some(
+            (job) => job.kind === "cancel" && job.reason === "cancelled",
+          ),
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+    const cancel = (await getInvitationJobs(guest)).find(
+      (job) => job.kind === "cancel" && job.reason === "cancelled",
+    );
+    const cancelIcs = cancel?.ics ?? "";
+    // STATUS:CANCELLED is derived from `deleted_at` at emission time, and the SEQUENCE
+    // must have risen past the rename's 2 or a conforming client ignores the attachment.
+    expect(cancelIcs).toContain("METHOD:PUBLISH");
+    expect(cancelIcs).toContain("STATUS:CANCELLED");
+    expect(Number(/SEQUENCE:(\d+)/.exec(cancelIcs)?.[1])).toBeGreaterThanOrEqual(3);
+
+    // And the re-added guest's link dies with the event: the RSVP landing read carries
+    // `isNull(calendar_events.deleted_at)` (server/calendar/rsvp.ts) — this is its
+    // behavioral sensor, same indistinguishable copy as revoked and forged above.
+    const dead = await guestContext.newPage();
+    const deadResponse = await dead.goto(readdedRsvpUrl);
+    expect(deadResponse?.status()).toBe(200);
+    await expect(
+      dead.getByRole("heading", { name: "This invitation link is no longer valid" }),
+    ).toBeVisible();
+    await dead.close();
   } finally {
     await guestContext.close();
   }
