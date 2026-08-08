@@ -213,6 +213,16 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Fixed
 
+- **2026-08-08: `subscription.test.ts`'s `FUTURE` fixture was a date time bomb** — it
+  pinned `2026-08-08T12:00Z`, and the two wrapper tests (`hasActiveSubscription` /
+  `hasOrgSubscription`) compare it against the **real** clock (the wrappers apply the
+  default `new Date()`), so both went red at noon UTC that day with no commit: the
+  morning's `main` run was green, the evening's PR run failed. Now the max ECMAScript
+  date (`new Date(8.64e15)`), the same trick the suite's own "defaults `now`" case
+  already used, with a warning comment at the fixture site. Class-swept the repo's
+  test fixtures: every other pinned future date is stored-and-read-back data or
+  compared to an explicit pinned `now`, never the real clock.
+
 - **2026-08-06: `FREQ=YEARLY;BYMONTHDAY` without `BYMONTH` expands every month** (audit
   F8 — the silent-wrong-render class the package vows to refuse rather than emit).
   `yearlyDays` fell back to DTSTART's month, one occurrence a year, where RFC 5545
