@@ -8,6 +8,7 @@ import {
   seedCalendar,
   seedEvents,
   setEmailVerified,
+  setUserEmail,
   setUserTimeZone,
 } from "./support/db";
 
@@ -43,6 +44,13 @@ test.describe.configure({ mode: "serial" });
 
 const organizer = makeTestUser("invite-organizer");
 const guest = makeTestUser("invite-guest");
+/**
+ * A same-event co-invitee with NO account, ever — the row the respond-capture sensor at
+ * the bottom protects. ⚠️ Sign this address up (or give `seedAttendee` a matching
+ * account) and that sensor stops discriminating: the attack it models is an *unproved*
+ * address being treated as an identity (audit F6b).
+ */
+const victimEmail = `invite-victim-${Date.now()}@example.com`;
 
 let contextA: BrowserContext;
 let contextB: BrowserContext;
@@ -52,6 +60,10 @@ let feedA: Page;
 /** The guest's driving page, and their parked feed. */
 let pageB: Page;
 let feedB: Page;
+
+/** The organizer's calendar and the seeded grid day, for the range-gate sensor below. */
+let inviteCalendarId: string;
+let seededDay: string;
 
 /** Every non-200 tRPC response either page sees. A 429 renders as an EMPTY LIST. */
 const trpcStatuses: string[] = [];
@@ -82,7 +94,9 @@ test.beforeAll(async ({ browser }) => {
   // stays an external row (audit F6) — and these lanes run email-unconfigured, so nothing
   // would ever set this flag on its own. The organizer needs no verification: they own
   // the calendar, and every flow they drive answers by `user_id`, never by address. That
-  // asymmetry is what the assertion after the save is for.
+  // asymmetry is what the assertion after the save is for. ⚠️ It is also load-bearing
+  // for two sensors near the end of the test: the invites-absence read twin and the
+  // respond-capture check both stop discriminating if the organizer is ever verified.
   await setEmailVerified(guest.email);
 
   // The parked feeds. Never navigated again, so anything that appears on them arrived
@@ -94,7 +108,7 @@ test.beforeAll(async ({ browser }) => {
   await expect(feedA.getByText("Live", { exact: true })).toBeVisible();
   await expect(feedB.getByText("Live", { exact: true })).toBeVisible();
 
-  const calendarId = await seedCalendar(organizer.email, {
+  inviteCalendarId = await seedCalendar(organizer.email, {
     name: "Invites",
     timeZone: "UTC",
     isPrimary: true,
@@ -111,8 +125,9 @@ test.beforeAll(async ({ browser }) => {
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-date") ?? ""));
   const day = dates.find((date) => date.endsWith("-15"));
   if (!day) throw new Error("the grid showed no 15th");
+  seededDay = day;
 
-  await seedEvents(calendarId, [
+  await seedEvents(inviteCalendarId, [
     { title: "Standup", startWall: `${day} 09:00:00`, endWall: `${day} 09:30:00`, timeZone: "UTC" },
     { title: "Retro", startWall: `${day} 11:00:00`, endWall: `${day} 11:30:00`, timeZone: "UTC" },
     {
@@ -132,8 +147,9 @@ test.afterAll(async () => {
 
 test("an invitation arrives live, is answered, and grants read on that event alone", async () => {
   // One long linear flow across four pages, deliberately not split: every `test()` costs a
-  // signup, and a retry re-runs `beforeAll`.
-  test.setTimeout(180_000);
+  // signup, and a retry re-runs `beforeAll`. 180s covered the original loop; the three
+  // predicate sensors at the end add two page visits and one raw tRPC request.
+  test.setTimeout(210_000);
 
   await pageA.reload();
   await pageA.getByRole("grid").waitFor();
@@ -233,6 +249,71 @@ test("an invitation arrives live, is answered, and grants read on that event alo
   await pageB.goto(`/calendar/event/${privateId}`);
   await expect(pageB.getByText("Page not found")).toBeVisible();
   await expect(pageB.getByText("Private planning")).toHaveCount(0);
+
+  // --- An unverified account sees no invitations addressed to it -------------
+  // The read-side twin of the invite-time conjunct asserted after the save above:
+  // `listInvites` widens to the address arm only for `me.emailVerified` (and
+  // `getEventAccess` carries the same conjunct). The organizer holds a Standup row at
+  // their own address, unverified — drop the verified guard from either read and
+  // "Standup" appears here. The empty-state copy is the anchor that the page loaded.
+  await pageA.goto("/calendar/invites");
+  await expect(pageA.getByText("You have no invitations.")).toBeVisible();
+  await expect(pageA.getByTestId("invites-list")).toHaveCount(0);
+  await expect(pageA.getByText("Standup")).toHaveCount(0);
+
+  // --- An address move must not capture a co-invitee's row (audit F6b) -------
+  // The victim shape: a same-event row whose address belongs to nobody (`user_id`
+  // NULL). The attacker shape: the guest's account moved onto that address,
+  // UNVERIFIED — free on this email-unconfigured deploy. Their own stamped row keeps
+  // them authorized (the durable arm), so the ONLY thing keeping the write off the
+  // victim's row is `u.email_verified` inside `respondToEvent`'s UPDATE
+  // (calendar.ts:1583-1588). Revert that conjunct and the UPDATE matches both rows —
+  // the action destructures `[row]` and never learns, which is why no green-path
+  // assertion can catch it and these two column reads are the sensor.
+  await seedAttendee(standupId, victimEmail);
+  await setUserEmail(guest.email, victimEmail);
+
+  await pageB.goto("/calendar/invites");
+  const movedInvite = pageB
+    .getByTestId("invites-list")
+    .locator("li")
+    .filter({ hasText: "Standup" });
+  await movedInvite.getByTestId("rsvp-tentative").click();
+  await expect(movedInvite.getByTestId("rsvp-tentative")).toHaveAttribute("aria-pressed", "true");
+
+  // Postgres again, not the button: the attacker's own row took the change…
+  expect(await getAttendeeStatus(standupId, guest.email)).toBe("tentative");
+  // …and the victim's row kept its state, its comment slot, and its NULL identity.
+  expect(await getAttendeeStatus(standupId, victimEmail)).toBe("needs-action");
+  expect(await getAttendeeUserId(standupId, victimEmail)).toEqual({ userId: null });
+
+  // --- calendar.range refuses by scoping, not by trusting ids ----------------
+  // The `eq(calendars.userId, me)` conjunct (trpc/routers/calendar.ts:281) IS the
+  // authorization for the whole month grid — no unit test executes any tRPC query
+  // body, so this request is its only sensor. The guest asks for the organizer's
+  // calendar by id; ownership scoping must answer with an empty window, same shape as
+  // "no calendars selected". Driven via the raw batch+superjson envelope because the
+  // UI can never select a foreign calendar.
+  const dayMs = Date.parse(`${seededDay}T00:00:00Z`);
+  const rangeInput = {
+    0: {
+      json: {
+        calendarIds: [inviteCalendarId],
+        fromMs: dayMs - 2 * 86_400_000,
+        toMs: dayMs + 2 * 86_400_000,
+      },
+    },
+  };
+  const rangeResponse = await pageB.request.get(
+    `/api/trpc/calendar.range?batch=1&input=${encodeURIComponent(JSON.stringify(rangeInput))}`,
+  );
+  expect(rangeResponse.status()).toBe(200);
+  const rangeBody = await rangeResponse.text();
+  const rangeJson = JSON.parse(rangeBody) as [
+    { result?: { data?: { json?: { items?: unknown[] } } } },
+  ];
+  expect(rangeJson[0]?.result?.data?.json?.items).toEqual([]);
+  expect(rangeBody).not.toContain("Private planning");
 
   // A 429 on any of the reads above renders as an empty list with no message, which is
   // indistinguishable from "there was nothing there" — the trap `calendar.spec.ts` already

@@ -1,3 +1,5 @@
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mocked: the session gate, the limiter, the ACL, the active-org read, the DB, and
@@ -231,6 +233,35 @@ function selectFor(columns: unknown, rows: unknown[]) {
     innerJoin: () => tail,
   };
   return { from: () => tail };
+}
+
+/**
+ * Like `selectReturning`, but records every `where(...)` condition it is handed, for the
+ * spelling pins below. Same chain contract: awaitable and `.limit()`-able.
+ */
+function whereCapturingSelect(conditions: unknown[], rows: unknown[] = []) {
+  const settled = (cond: unknown) => {
+    conditions.push(cond);
+    return Object.assign(Promise.resolve(rows), { limit: () => Promise.resolve(rows) });
+  };
+  const tail: { where: typeof settled; innerJoin: () => typeof tail } = {
+    where: settled,
+    innerJoin: () => tail,
+  };
+  return { from: () => tail };
+}
+
+/**
+ * Compile a captured condition to SQL text. The pins assert on this text because both
+ * predicates guard rules that no green-path unit assertion can see (the mocks model the
+ * query's OUTPUT): the pin proves the app still ISSUES the fixed spelling, and
+ * `@repo/db`'s calendar-attendees integration suite proves that spelling's semantics
+ * against real rows — planted defects included. Pin + planted defect = the complete
+ * sensor audit 08-06 F2 asked for. A semantically-equivalent rewrite that trips a pin
+ * should update it in the same commit, beside the integration proof.
+ */
+function compiledSql(condition: unknown): string {
+  return new PgDialect().sqlToQuery(condition as SQL).sql;
 }
 
 /**
@@ -1149,6 +1180,22 @@ describe("deleteEvent", () => {
     expect(dbNotify).toHaveBeenCalledTimes(1);
   });
 
+  it("pins the NULL-safe spelling of the recipient predicate (audit F4)", async () => {
+    // `NULL <> $actor` is NULL, so a bare `ne()` silently drops every external guest —
+    // exactly the people whose ONLY notice of a cancellation is this email. The planted
+    // defect for the wrong spelling lives in @repo/db's calendar-attendees suite; this
+    // pin is what turns red if the action stops issuing the right one.
+    const conditions: unknown[] = [];
+    dbSelect.mockImplementation(() => whereCapturingSelect(conditions));
+
+    expect(await deleteEvent({ id: EVENT, ...noScope })).toEqual({ data: { id: EVENT } });
+
+    const guests = conditions.map(compiledSql).find((text) => text.includes('"user_id"'));
+    expect(guests).toMatch(
+      /"calendar_event_attendees"\."user_id" is null or "calendar_event_attendees"\."user_id" <> \$\d/,
+    );
+  });
+
   it("rejects a non-uuid id as not found", async () => {
     expect(await deleteEvent({ id: "nope", ...noScope })).toEqual({ error: "Event not found" });
   });
@@ -1272,6 +1319,30 @@ describe("respondToEvent", () => {
     expect(dbNotify).toHaveBeenCalledTimes(1);
     expect(revalidatePath).toHaveBeenCalledWith("/calendar/invites");
     expect(revalidatePath).toHaveBeenCalledWith(`/calendar/event/${EVENT}`);
+  });
+
+  it("pins the verified-email arm of the UPDATE's row selection (audit F6b)", async () => {
+    // Without `u.email_verified` the UPDATE is not bounded to one row: an attendee who
+    // moves their account onto a co-invitee's address — free on a deploy where
+    // verification is off — overwrites that person's status, comment and stamp, and the
+    // action destructures `[row]` so it never learns a second row was written. The
+    // planted defect is in @repo/db's calendar-attendees suite; this pin binds the app.
+    const wheres: unknown[] = [];
+    dbUpdate.mockReturnValue({
+      set: () => ({
+        where: (cond: unknown) => {
+          wheres.push(cond);
+          return { returning: () => Promise.resolve([{ email: GUEST_EMAIL }]) };
+        },
+      }),
+    });
+
+    await respondToEvent({ eventId: EVENT, status: "accepted", comment: null });
+
+    const text = compiledSql(wheres[0]);
+    expect(text).toMatch(/"calendar_event_attendees"\."user_id" = \$\d+ OR EXISTS/);
+    expect(text).toContain("u.email_verified");
+    expect(text).toContain('"calendar_event_attendees"."email" = lower(u.email)');
   });
 
   it("splits the notification type by status rather than carrying a status field", async () => {
