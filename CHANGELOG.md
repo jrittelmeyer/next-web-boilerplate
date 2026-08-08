@@ -320,6 +320,52 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-07 (same PR, later the same day): `nanoid` GHSA-2v37-7h3g-55p8 parked —
+  the second route-(1) park in one PR, and the first HIGH parked since fast-uri.**
+  The HIGH (CVSS v4 8.2 — `customAlphabet`/`customRandom` never exit their
+  generation loop when size is 0) reached the audit feed hours after the dompurify
+  plan below was signed: the advisory published 2026-07-29 against the 5.x line
+  (fixed there in 5.1.6 back in 2025) and gained its `<3.3.17` range only after the
+  3.x backport landed 2026-08-03 — so no lockfile change surfaced it, the advisory
+  data moved. Our sole edge is `postcss>nanoid@3.3.16` — 19 paths, every one build
+  tooling — and postcss calls the plain `nanoid(6)` from `nanoid/non-secure` with a
+  hardcoded size, so **the vulnerable functions are never invoked in this tree**
+  (audit-edge only, the same classification as dompurify, verified in the installed
+  artifact). Parked in `auditConfig.ignoreGhsas` until 3.3.17 (published
+  2026-08-03T10:39:22Z) ages in **2026-08-10 ~10:39 UTC**; the one 08-10 exit PR
+  then promotes both parks — nanoid to the ranged `"nanoid@<3.3.17": 3.3.17`
+  (in-range for postcss's `^3.3.16`, a fix-forward). ⚠️ 3.3.18 (published 08-07) is
+  an unrelated React-Native fix with no advisory delta — boundary-fresh, so the aged
+  advisory floor wins (the postcss 8.5.23 precedent). Route (2) was
+  criterion-eligible under the tightening shipped in this same PR (HIGH+) and
+  deliberately not used: with the vulnerable functions unreachable and a 3-day
+  window there is no urgency, and the exception stays bounded. Parking a HIGH
+  follows the fast-uri/batch-#5 precedent — the steady-state deferral, not a gate
+  exception.
+- **2026-08-07: `dompurify` GHSA-55q2-fjhq-7xh7 parked — route (1), with the exit
+  pre-signed.** The moderate advisory (`<=3.4.12` — removing an element from a hook
+  during `IN_PLACE` sanitization leaves a detached subtree executable, XSS; published
+  15:30 UTC, hours after the daily lane's green) catches the `dompurify: 3.4.12`
+  override — the third remediation pin to fall inside a new advisory's range. Its
+  only fix, 3.4.13 (published 2026-08-03T14:16:00Z), sits inside the 7-day
+  `minimumReleaseAge` gate until **2026-08-10 ~14:16 UTC**, so the GHSA is parked in
+  `auditConfig.ignoreGhsas` until then, with a self-contained exit note (a derived
+  project generated during the window carries the yaml verbatim, so the note tells
+  its reader what to execute if the date has passed). **The contrarian pass corrected
+  the exposure model, and the override comment now records it: the lockfile edge is
+  audit-ledger only.** posthog-js (the tree's sole importer) bundles no dompurify
+  into the `module.js` entry the app imports; the `IN_PLACE` caller is its
+  remotely-loaded product-tours chunk, which vendors its own dompurify 3.3.2 — so
+  neither parking nor bumping changes an executed byte on any deploy, and the real
+  fix channel is a posthog-js release whose chunks vendor >=3.4.13 (new Watch line
+  carries the verify recipe). Signed alongside the park: the exit uses a **ranged**
+  key (`"dompurify@<3.4.13": 3.4.13` — a bare key pins every future resolution,
+  making its own removal condition unsatisfiable), the same exit PR converts
+  `fast-uri: 3.1.5` to `"fast-uri@<3.1.5": 3.1.5` (same defect), and the three-route
+  rule's route (2) gained a severity/reachability criterion recording why this
+  advisory stayed parked while `brace-expansion` (HIGH, with a broken prior fix) did
+  not. Issue #49 (the moderate-threshold triage sync) closes on this merge;
+  Dependabot #25 tracks the lockfile edge and auto-closes with the 08-10 exit.
 - **2026-08-07: `fast-uri` 3.1.5 — batch #5's parked advisory closed on schedule.**
   GHSA-7p8r-x3mc-p8w7 (`<3.1.5`, high — the third host-confusion advisory of the
   family, via a backslash authority introducer) was parked in `auditConfig.ignoreGhsas`
