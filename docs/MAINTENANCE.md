@@ -28,8 +28,11 @@ The full per-dependency record (versions, pin style, and *why*) is
      7 days (security fixes bypass this).
    - **pnpm** (`minimumReleaseAge: 10080` in `pnpm-workspace.yaml`) validates every
      lockfile entry at *install* time, so a too-fresh package can't enter the tree at
-     all. Note pnpm's gate does **not** exempt security fixes — a <7-day-old fix needs
-     a deliberate `minimumReleaseAgeExclude`.
+     all. Note pnpm's gate does **not** exempt security fixes — a <7-day-old fix takes
+     the three-route rule stated at `minimumReleaseAge` in `pnpm-workspace.yaml`:
+     default is route (1), park the GHSA in `auditConfig.ignoreGhsas` until the fix
+     ages in; a dated `minimumReleaseAgeExclude` is route (2), a bounded exception
+     (HIGH+ or reachable by untrusted input in a configured deploy).
 3. **Exact-pin frequent publishers** (`stripe`, `@sentry/nextjs`, `posthog-*`, `knip`,
    `pg-boss`, …): with a caret range, a near-daily publisher re-trips the age gate on
    every resolve. Renovate's `rangeStrategy: "auto"` preserves each dependency's pin
@@ -368,6 +371,23 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
+  - **2026-08-10 ~10:39 UTC — `nanoid` 3.3.17** ages in (published
+    2026-08-03T10:39Z). GHSA-2v37-7h3g-55p8 (HIGH, CVSS v4 8.2 —
+    `customAlphabet`/`customRandom` spin forever when size is 0) reached the audit
+    feed 2026-08-07 evening: the advisory published 07-29 against the 5.x line
+    (fixed there in 5.1.6 back in 2025) and gained its `<3.3.17` range only after
+    the 3.x backport landed 08-03. Sole edge: `postcss>nanoid@3.3.16` (19 paths,
+    all build tooling), and postcss calls the plain `nanoid(6)` from
+    `nanoid/non-secure` with a hardcoded size — **the vulnerable functions are
+    never invoked in this tree** (audit-edge only, verified in the installed
+    artifact). **Parked route (1), owner-signed 2026-08-07** in the same PR as
+    dompurify below (a HIGH park has the fast-uri/batch-#5 precedent; route (2)
+    was criterion-eligible after the same-day tightening but with zero urgency the
+    exception stays bounded). Exit rides the same one exit PR as dompurify (after
+    ~14:16 UTC): ranged `"nanoid@<3.3.17": 3.3.17` (in-range for postcss's
+    `^3.3.16` — fix-forward). ⚠️ Take 3.3.17, not 3.3.18 (published 08-07 — an
+    unrelated React-Native async fix, no advisory delta; boundary-fresh, aged
+    floor wins per the postcss 8.5.23 precedent). Registry re-verify at take time.
   - **2026-08-10 ~14:16 UTC — `dompurify` 3.4.13** ages in (published
     2026-08-03T14:16Z). GHSA-55q2-fjhq-7xh7 (moderate — IN_PLACE hook removal leaves
     a detached subtree executable, XSS) published 2026-08-07T15:30Z against the
@@ -377,10 +397,18 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `^3.3.2`; 3.4.13 in-range), bundles no dompurify into the `module.js` entry the
     app imports — the IN_PLACE caller is its remotely-loaded product-tours chunk,
     which **vendors its own dompurify 3.3.2** and is fixed by a posthog-js bump /
-    PostHog's CDN, never by this override. Route decision (park vs dated exclude) is
-    the owner's — **plan → sign-off**; below the high/critical merge gate, so PRs
-    stay unblocked; the moderate-threshold triage sync on `main` files/keeps the
-    security-triage issue until the response merges.
+    PostHog's CDN, never by this override (Watch line below). **SIGNED 2026-08-07 —
+    route (1) PARK**, in place the same day (allowlist holds the one GHSA; daily lane
+    green; triage issue #49 closed on the park's merge). Exit, after 14:16 UTC on
+    08-10 (one exit PR, shared with the nanoid park above): registry re-verify at
+    take time, replace the bare `dompurify:` key with
+    the **ranged** `"dompurify@<3.4.13": 3.4.13`, delete the park (allowlist back to
+    `[]` — zero ignored), one-package lockfile move, full gate. **Rider, signed:**
+    convert `fast-uri: 3.1.5` → `"fast-uri@<3.1.5": 3.1.5` in the same exit PR (same
+    bare-key defect — a bare key makes "remove once a routine bump carries past it"
+    unsatisfiable). **Sequencing:** the exit PR lands before the `next` 16.3.0 take
+    below (~20:34 UTC, adjacent override lines + the same doc bullets), which rebases
+    on it — separate PRs; a security exit never rides a framework minor.
   - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
     Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the
     2026-08-06 audit:** 16.3.0 pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take
@@ -392,6 +420,16 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     2026-08-04T21:19Z; routine bug-fix release — no advisory; includes an email-OTP
     enumeration hardening). Normal take: bump both `^1.6.25` specifiers + the
     workspace floor note; full gate + auth e2e.
+- **posthog-js rebuild bump — the real GHSA-55q2-fjhq-7xh7 fix channel** — the
+  dompurify override is **audit-edge only**: the vulnerable `IN_PLACE` caller is
+  posthog-js's remotely-loaded product-tours chunk, which vendors its own dompurify
+  (3.3.2 in the npm-shipped copy of the installed 1.391.2). PostHog's CDN redeploy
+  fixes hosted loads on their side automatically; the npm artifact is fixed only by a
+  posthog-js release whose chunks vendor >=3.4.13. *Removal condition:* on the next
+  posthog-js take, verify the vendored copy — grep the installed
+  `dist/product-tours*.js` for `version="3\.` expecting >=3.4.13 — then drop this
+  line (and the dompurify override once the tree resolves past its range).
+
 - **Temporary security overrides** (added 2026-07-15) — three pnpm `overrides:` in
   `pnpm-workspace.yaml` remediate transitive-only Dependabot alerts (#1–#3) that have
   **no upstream fix**. Remove each when its upstream moves, then `pnpm install` + the full
@@ -433,8 +471,15 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     a park; **deleted on schedule 2026-08-06** once 5.0.9 aged in; the full story: the
     CHANGELOG Security entry and the three-route rule in `pnpm-workspace.yaml`).
     Remove the override once a routine bump naturally carries the lockfile past 5.0.9.
-  - `dompurify: 3.4.12` → remove once a routine bump naturally carries the lockfile
-    past 3.4.12 (already in-range for **posthog-js**'s own `^3.3.2`).
+  - `dompurify: 3.4.12` → **fell vulnerable in turn 2026-08-07** (GHSA-55q2-fjhq-7xh7,
+    moderate — parked route (1), owner-signed; the 2026-08-10 ~14:16 UTC exit promotes
+    it to the **ranged** `"dompurify@<3.4.13": 3.4.13`). ⚠️ The removal condition
+    previously stated here — "remove once a routine bump naturally carries the
+    lockfile past 3.4.12" — was unsatisfiable as written: a **bare** key pins every
+    future resolution to its own value, so no routine bump can ever carry the
+    lockfile past it. The ranged exit key is what makes the condition real: it goes
+    inert once posthog-js resolves >=3.4.13 — which is also the moment the real fix
+    lands, this edge being audit-only (see the posthog-js Watch line above).
   - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
     still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22).
     Its `/_next/image` runtime path is e2e-covered since 2026-07-22
@@ -606,9 +651,12 @@ issue list, the latest scheduled-run conclusions, and run `pnpm audit` before
 declaring the ledger clear):
 
 1. **Direct dependency with a fixed version** → bump it (registry-verified). A fix
-   younger than the 7-day age gate needs a dated `minimumReleaseAgeExclude` entry
-   in `pnpm-workspace.yaml` (pnpm's gate doesn't exempt security fixes) — remove
-   it once the version ages out.
+   younger than the 7-day age gate takes the three-route rule stated at
+   `minimumReleaseAge` in `pnpm-workspace.yaml` — default route (1): park the GHSA
+   in `auditConfig.ignoreGhsas` and promote it to a real override when the fix ages
+   in; a dated `minimumReleaseAgeExclude` is route (2), a bounded exception (HIGH+
+   or reachable by untrusted input in a configured deploy), removed once the
+   version ages out.
 2. **Transitive with a compatible fixed version** → scoped override in
    `pnpm-workspace.yaml` + plain `pnpm install` (never `pnpm update --recursive` —
    it re-resolves the whole lockfile).

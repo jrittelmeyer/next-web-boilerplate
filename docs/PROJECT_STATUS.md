@@ -134,6 +134,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Calendar F7+F8 — 2026-08-06 | 1 | F7: the `overlaps` seek reaches back a full occurrence span — straddlers ≥2 periods out never generated. F8: `YEARLY;BYMONTHDAY` sans `BYMONTH` expands every month (corpus +40 append-only; COUNT/BYSETPOS rows re-identify — census-gated: zero) | [audit 08-04](archive/PROJECT_AUDIT_2026-08-04.md) |
 | Doc audit — 2026-08-06 | 1 | 16 drift fixes — calendar absent from TESTING/ARCHITECTURE/I18N/STACK tables, api.md's limiter truth (per-procedure buckets), corpus 528→568; showcase re-stamped at 98.6/thirteen; archive index row restored; 2 backlog rows; 4 rows re-capped | [BACKLOG.md](BACKLOG.md) |
 | Audit — 2026-08-06 | 1 | Fourteenth pass: **99.3** (calendar 85→95.5). F4–F8 adversarially re-verified at their seams; live surface fully green (heartbeat + security lanes same day). New find: the F4/F6-respond fixes lack revert sensors — B2 sweep row sharpened, now first in band | [report](archive/PROJECT_AUDIT_2026-08-06.md) |
+| Advisory — 2026-08-07 | 1 | Two parks: dompurify GHSA-55q2 (moderate — the 3.4.12 pin fell in turn) + nanoid GHSA-2v37 (HIGH — postcss calls plain nanoid(6); vulnerable fns never invoked). Both audit-edge only; one 08-10 exit PR promotes both to ranged keys + converts fast-uri | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -150,9 +151,11 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 is canonical. Open now: **Renovate PR delivery FAILED** (two empty Monday windows, zero
 `renovate/*` branches ever; Mend-side diagnosis, B1) — the 2026-08-04 merge queue
 (#38 → #37 → #40 → #42 + batch #5) has fully landed, un-redding `main` on both axes.
-Dated (the canonical set is MAINTENANCE → Watch → dated takes): **08-10 ~14:16 UTC**
-`dompurify` 3.4.13 ages in (GHSA-55q2-fjhq-7xh7, moderate, published 08-07 15:30Z
-against the 3.4.12 pin — plan → sign-off) · **08-10 ~20:34 UTC** `next` 16.3.0 ages in
+Dated (the canonical set is MAINTENANCE → Watch → dated takes): **08-10** two park
+exits — `nanoid` 3.3.17 ~10:39 UTC (GHSA-2v37-7h3g-55p8, high) + `dompurify` 3.4.13
+~14:16 UTC (GHSA-55q2-fjhq-7xh7, moderate); **both parked route 1, signed + in place
+08-07**, both audit-edge only; one exit PR after 14:16 takes the ranged keys + the
+fast-uri conversion · **08-10 ~20:34 UTC** `next` 16.3.0 ages in
 (rider from the 14th audit: retire the sharp override, check postcss inertness) ·
 **08-11 ~21:20 UTC** `better-auth` 1.6.26 (routine). The fast-uri park **exited on
 schedule 2026-08-07** (override → 3.1.5, allowlist empty); the 08-06
