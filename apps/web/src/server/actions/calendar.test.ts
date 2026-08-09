@@ -395,6 +395,9 @@ describe("the shared gates", () => {
     expect(await updateEvent({ ...eventInput, ...noScope, id: EVENT })).toMatchObject({
       error: expect.stringContaining("Too many requests"),
     });
+    expect(await deleteCalendar({ id: CAL })).toMatchObject({
+      error: expect.stringContaining("Too many requests"),
+    });
   });
 });
 
@@ -589,6 +592,15 @@ describe("deleteCalendar", () => {
     expect(await deleteCalendar({ id: CAL })).toEqual({
       error: "Failed to delete the calendar.",
     });
+  });
+
+  it("rate-limits per user before touching the database", async () => {
+    rateLimit.mockResolvedValue({ success: false });
+    expect(await deleteCalendar({ id: CAL })).toMatchObject({
+      error: expect.stringContaining("Too many requests"),
+    });
+    expect(rateLimit).toHaveBeenCalledWith("calendar:delete:u1", { limit: 10, windowSec: 60 });
+    expect(dbDelete).not.toHaveBeenCalled();
   });
 });
 

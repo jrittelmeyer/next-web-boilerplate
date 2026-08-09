@@ -42,9 +42,7 @@ and resolves the override row itself.
 `createCalendar` · `updateCalendar` · `deleteCalendar` · `createEvent` · `updateEvent` ·
 `deleteEvent` · `setRecurrenceDate` · `respondToEvent`. Every one returns
 `ActionResult<T>` and runs the same six steps **in this order** (`respondToEvent` is the
-one exception, and step 4 is where it differs — see below; and `deleteCalendar` currently
-**skips step 2** — the one write with no limiter, a tracked gap:
-[BACKLOG.md → rate-limit completeness](../../BACKLOG.md)):
+one exception, and step 4 is where it differs — see below):
 
 1. **Session gate** → `{ error: "Unauthorized" }`.
 2. **`rateLimit`** per user (10/min for calendars, 20/min for events) → the typed

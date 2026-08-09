@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { dbSelect } = vi.hoisted(() => ({ dbSelect: vi.fn() }));
+const { dbSelect, rateLimit } = vi.hoisted(() => ({ dbSelect: vi.fn(), rateLimit: vi.fn() }));
 vi.mock("@repo/db", () => ({ db: { select: dbSelect } }));
+vi.mock("@/lib/rate-limit", () => ({ rateLimit }));
 
 import { mintRsvpToken } from "@/lib/calendar-tokens";
 import { isStaleResponse, loadRsvpView } from "./rsvp";
@@ -33,6 +34,7 @@ function selectResolving(rows: unknown[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rateLimit.mockResolvedValue({ success: true });
   selectResolving([row]);
 });
 
@@ -93,6 +95,23 @@ describe("loadRsvpView", () => {
 
   it("does not query at all when the token cannot be verified", async () => {
     await loadRsvpView("nope", NOW);
+    expect(dbSelect).not.toHaveBeenCalled();
+    // ...and it never even consumes the read limiter: verify precedes the limit, so a forged
+    // token cannot burn a real invitation's bucket.
+    expect(rateLimit).not.toHaveBeenCalled();
+  });
+
+  it("caps the read at 60/min per invitation, keyed by attendee id", async () => {
+    await loadRsvpView(mintRsvpToken(ATTENDEE, null), NOW);
+    expect(rateLimit).toHaveBeenCalledWith(`calendar:rsvp:read:${ATTENDEE}`, {
+      limit: 60,
+      windowSec: 60,
+    });
+  });
+
+  it("returns null without querying when the read limit is exceeded", async () => {
+    rateLimit.mockResolvedValue({ success: false });
+    expect(await loadRsvpView(mintRsvpToken(ATTENDEE, null), NOW)).toBeNull();
     expect(dbSelect).not.toHaveBeenCalled();
   });
 });

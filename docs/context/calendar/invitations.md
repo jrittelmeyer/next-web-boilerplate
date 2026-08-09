@@ -235,11 +235,16 @@ stamp `user_id`: a session proves who the caller is, a token proves only that wh
 the link was sent it, and those are not the same fact.
 
 Its write limit (20/min, keyed by `clientKeyFromHeaders`) is **abuse dampening, not the
-defence** — and the **read path currently has no limiter at all** (the designed 60/min
-read limit was never wired; tracked as a B2 row in [BACKLOG.md](../../BACKLOG.md), audit
-2026-08-04). The limiter is in-memory per instance without Upstash and fails open, and
-IP-less requests share one bucket; what makes forgery infeasible is the HMAC.
-A multi-instance deploy that wants a real limit should set the Upstash pair.
+defence** — as is the **read cap**: the DB-bearing read (`loadRsvpView`, a four-table join)
+is limited to **60/min per invitation**, keyed by attendee id, returning the same 200 "no
+longer valid" page on denial rather than a distinguishing 429. It sits on `loadRsvpView` and
+**not** on the `/rsvp/[token]` route handler on purpose — that handler verifies the HMAC and
+redirects with **no database read**, so a held or forwarded token replaying the cookie
+amplifies against the *page*, not the exchange, and a one-hour cookie means limiting the
+exchange would cap nothing downstream. Per-invitation (attendee id), **not** per-IP, so
+guests behind one shared egress don't cross-lock. The limiter is in-memory per instance
+without Upstash and fails open; what makes forgery infeasible is the HMAC. A multi-instance
+deploy that wants a real limit should set the Upstash pair.
 
 ## What an edit owes: three independent booleans
 
