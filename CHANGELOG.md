@@ -365,6 +365,17 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-08: the two missing rate limiters wired (B2 completeness).**
+  `deleteCalendar` was the one calendar write skipping step 2 of the six-step contract
+  — now limited at 10/min per user like its siblings. And the `/rsvp` read is capped at
+  **60/min per invitation**, placed on the DB-bearing `loadRsvpView` (a four-table join)
+  rather than the `/rsvp/[token]` route handler: a contrarian pass showed the handler
+  does **no** database read, while a held or forwarded token can replay the httpOnly
+  cookie against the *page* for the cookie's hour-long life. Keyed by attendee id (not
+  IP, so guests behind one shared egress don't cross-lock) and returns the same 200 "no
+  longer valid" page on denial, so it adds no enumeration oracle. Abuse dampening, not
+  the defence — the HMAC is; in-memory per instance without Upstash. Revert sensors on
+  both sites.
 - **2026-08-07 (same PR, later the same day): `nanoid` GHSA-2v37-7h3g-55p8 parked —
   the second route-(1) park in one PR, and the first HIGH parked since fast-uri.**
   The HIGH (CVSS v4 8.2 — `customAlphabet`/`customRandom` never exit their

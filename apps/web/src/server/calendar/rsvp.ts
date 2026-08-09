@@ -5,6 +5,7 @@ import { calendarEventAttendees, calendarEvents, calendars, user } from "@repo/d
 import { formatEventWhen } from "@repo/email";
 import { and, eq, isNull } from "drizzle-orm";
 import { verifyRsvpToken } from "@/lib/calendar-tokens";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * Resolving an RSVP token into something the public page can render.
@@ -38,6 +39,15 @@ export interface RsvpView {
 export async function loadRsvpView(token: string, nowMs: number): Promise<RsvpView | null> {
   const attendeeId = verifyRsvpToken(token, nowMs);
   if (attendeeId === null) return null;
+
+  // Cap the DB read at 60/min per invitation (keyed by attendee id): a held or forwarded
+  // token can otherwise replay the cookie to re-run this four-table join unbounded. Runs
+  // AFTER verify (an unverifiable token consumes no bucket) and returns null on denial,
+  // which the page renders as the same 200 "no longer valid" page — so it adds no
+  // enumeration oracle. Abuse dampening, not the defence (the HMAC is); in-memory per
+  // instance without Upstash. See invitations.md.
+  const limit = await rateLimit(`calendar:rsvp:read:${attendeeId}`, { limit: 60, windowSec: 60 });
+  if (!limit.success) return null;
 
   const [row] = await db
     .select({

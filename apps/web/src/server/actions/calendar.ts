@@ -912,6 +912,12 @@ export async function deleteCalendar(input: { id: string }): Promise<DeleteResul
   const gate = await requireSession();
   if (!gate) return { error: UNAUTHORIZED };
 
+  const limit = await rateLimit(`calendar:delete:${gate.session.user.id}`, {
+    limit: 10,
+    windowSec: 60,
+  });
+  if (!limit.success) return { error: RATE_LIMITED };
+
   const parsed = deleteCalendarSchema.safeParse(input);
   if (!parsed.success) return { error: "Calendar not found" };
 
