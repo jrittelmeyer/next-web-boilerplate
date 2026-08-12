@@ -11,8 +11,13 @@
  */
 import { readFileSync } from "node:fs";
 
-const input = JSON.parse(readFileSync(0, "utf8"));
-const filePath = String(input.tool_input?.file_path ?? "").replaceAll("\\", "/");
+let input = null;
+try {
+  input = JSON.parse(readFileSync(0, "utf8"));
+} catch {
+  process.exit(0); // malformed harness event — advise-only, exit silently
+}
+const filePath = String(input?.tool_input?.file_path ?? "").replaceAll("\\", "/");
 
 if (!/(^|\/)\.claude\/(skills|hooks)\//.test(filePath)) process.exit(0);
 

@@ -12,14 +12,25 @@
  * living docs. Never blocks; the agent decides.
  */
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const input = JSON.parse(readFileSync(0, "utf8"));
-const filePath = String(input.tool_input?.file_path ?? "").replaceAll("\\", "/");
+let input = null;
+try {
+  input = JSON.parse(readFileSync(0, "utf8"));
+} catch {
+  process.exit(0); // malformed harness event — advise-only, exit silently
+}
+const filePath = String(input?.tool_input?.file_path ?? "").replaceAll("\\", "/");
 if (!filePath) process.exit(0);
+
+// Hooks spawn with the *session* cwd (any subdirectory the session cd'd into);
+// the harness exports the project root as CLAUDE_PROJECT_DIR. The adapter config
+// must resolve against the root, or a custom contextDir is silently lost.
+const projectDir = process.env.CLAUDE_PROJECT_DIR ?? ".";
 
 let contextDir = "docs/context";
 try {
-  const cfg = JSON.parse(readFileSync(".claude/ai-dev-kit.config.json", "utf8"));
+  const cfg = JSON.parse(readFileSync(join(projectDir, ".claude/ai-dev-kit.config.json"), "utf8"));
   if (cfg?.docs?.contextDir) {
     contextDir = String(cfg.docs.contextDir).replaceAll("\\", "/").replace(/\/+$/, "");
   }
@@ -27,9 +38,15 @@ try {
   /* no adapter config — keep the default */
 }
 
-const isInstructionFile = /(^|\/)(AGENTS|CLAUDE)\.md$/.test(filePath);
-const isContextDoc = filePath.includes(`${contextDir}/`);
-const isMemoryFile = /\/\.claude\/projects\/[^/]+\/memory\/[^/]+\.md$/.test(filePath);
+// Segment-boundary + case-insensitive matching: an unanchored substring would let
+// `mydocs/context/` hit a `docs/context` contextDir, and case-insensitive
+// filesystems (Windows/macOS) make `Claude.md` the same file as `CLAUDE.md`.
+// Advise-only, so the rare case-sensitive-Linux false positive costs one
+// harmless reminder; the false negative would silently skip the guard.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const isInstructionFile = /(^|\/)(AGENTS|CLAUDE)\.md$/i.test(filePath);
+const isContextDoc = new RegExp(`(^|/)${escapeRe(contextDir)}/`, "i").test(filePath);
+const isMemoryFile = /\/\.claude\/projects\/[^/]+\/memory\/[^/]+\.md$/i.test(filePath);
 if (!isInstructionFile && !isContextDoc && !isMemoryFile) process.exit(0);
 
 const additionalContext = isMemoryFile

@@ -9,8 +9,13 @@
  */
 import { readFileSync } from "node:fs";
 
-const input = JSON.parse(readFileSync(0, "utf8"));
-const command = String(input.tool_input?.command ?? "");
+let input = null;
+try {
+  input = JSON.parse(readFileSync(0, "utf8"));
+} catch {
+  process.exit(0); // malformed harness event — advise-only, exit silently
+}
+const command = String(input?.tool_input?.command ?? "");
 
 // Match `git … commit` within one command segment (not across | & ;), so
 // `git log | grep commit` doesn't fire but `git -c x=y commit` and the commit

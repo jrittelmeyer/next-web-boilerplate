@@ -9,10 +9,15 @@
  */
 import { readFileSync } from "node:fs";
 
-const input = JSON.parse(readFileSync(0, "utf8"));
-const tool = input.tool_name ?? "";
-const filePath = String(input.tool_input?.file_path ?? "").replaceAll("\\", "/");
-const command = String(input.tool_input?.command ?? "");
+let input = null;
+try {
+  input = JSON.parse(readFileSync(0, "utf8"));
+} catch {
+  process.exit(0); // malformed harness event — advise-only, exit silently
+}
+const tool = input?.tool_name ?? "";
+const filePath = String(input?.tool_input?.file_path ?? "").replaceAll("\\", "/");
+const command = String(input?.tool_input?.command ?? "");
 
 const editsManifest =
   (tool === "Edit" || tool === "Write") && /(^|\/)package\.json$/.test(filePath);

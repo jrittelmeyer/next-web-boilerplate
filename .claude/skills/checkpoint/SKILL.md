@@ -1,6 +1,6 @@
 ---
 name: checkpoint
-description: Commit and push pending work, then either continue to the next backlog step (context still healthy) or emit a paste-ready resume prompt for a fresh session (context tight). Use when the user says "checkpoint", "commit and continue", "wrap this step up", or asks whether to keep going vs. clear context.
+description: Commit and push pending work, then either continue to the next backlog step (context still healthy) or emit a paste-ready resume prompt plus a recommended relaunch model + reasoning effort for a fresh session (context tight). Use when the user says "checkpoint", "commit and continue", "wrap this step up", or asks whether to keep going vs. clear context.
 ---
 
 # checkpoint
@@ -67,6 +67,11 @@ instead of ingesting a wall of text:
    out of version control unless the project tracks it deliberately.
 2. Emit the seed — one line: "fresh session: Read <path>, then continue" — plus
    the same prompt as a fenced paste-ready block for convenience.
+3. End the response with the launch recommendation (rubric below) as the literal
+   last line — `Launch: <model> @ <effort> — <why>` — it is what the user reads
+   when picking the model for the relaunch. Mirror the same line at the top of
+   the handoff file, right under the title, so it still reaches the user when
+   only the file survives.
 
 Assume the next session starts cold with only CLAUDE.md + memory — anything not in
 the handoff file, a doc, or memory is lost. The prompt must contain, in order:
@@ -86,3 +91,25 @@ the handoff file, a doc, or memory is lost. The prompt must contain, in order:
 5. **Close-the-loop checklist** — docs to tick/update, commit style (per the adapter's
    `commit` block), push, the CI-watch commands, and what to propose next before
    stopping.
+
+### The launch recommendation (model × effort)
+
+Spend capability where judgment lives, not where the plan already decided. From
+the step shape §2 estimated, recommend the cheapest configuration that executes
+the next step *well* — name a tier of the harness's current ladder (e.g.
+Haiku < Sonnet < Opus < Fable, late-2026) and a reasoning effort (low → max):
+
+- **Mechanical** — an approved plan with named files, docs/config-only edits,
+  release chores, gate re-runs: smallest tier that drives the tools reliably,
+  low effort. The plan is the intelligence; the session just executes it.
+- **Standard build** — a signed-off S/M item around a known design (build →
+  tests → gate → live loop): mid tier, medium effort — high when the diff
+  touches concurrency, authz, or money paths.
+- **Judgment** — planning or design, audits and scoring, debugging an unknown,
+  adversarial verification of findings: top tier, high effort or above.
+- A mixed next step splits by session: a plan-only session is Judgment; its
+  approved execution relaunches as Mechanical — recommend for the first
+  session-sized chunk and say what the one after relaunches as.
+- In doubt between tiers on work that ships product code or scores quality,
+  take the higher: an oversized model wastes tokens, an undersized one ships
+  plausible-but-wrong work a later session must unwind.
