@@ -114,10 +114,15 @@ overrides:
   # auditConfig.ignoreGhsas below — route (1) of the rule at minimumReleaseAge —
   # and the park EXITED on schedule 2026-08-07: override raised to 3.1.5, ignore
   # entry deleted, one change. 3.1.5 heads the 3.x line (npm `latest` is the 4.x
-  # major, outside ajv's ^3.0.1). Remove this override once a routine bump naturally
-  # carries the lockfile past 3.1.5 — dropping it earlier would regress all three
-  # GHSAs (3.1.2 satisfies ajv's range too).
-  fast-uri: 3.1.5
+  # major, outside ajv's ^3.0.1). CONVERTED to the ranged form 2026-08-12 (rider
+  # signed 2026-08-07, riding the dompurify/nanoid exit PR): the bare key had the
+  # same defect as dompurify's — it pinned every future resolution, so its own
+  # removal condition could never fire. The ranged key rewrites only vulnerable
+  # copies and is inert once the tree resolves >=3.1.5; the conversion itself moved
+  # nothing (the lockfile was already on 3.1.5). Remove once a routine bump
+  # naturally carries the lockfile past 3.1.5 — dropping it earlier would regress
+  # all three GHSAs (3.1.2 satisfies ajv's range too).
+  "fast-uri@<3.1.5": 3.1.5
   #
   # dompurify — classification: AUDIT-EDGE ONLY (this pin moves the audit ledger,
   # never executed bytes). posthog-js is the tree's sole dompurify importer, but the
@@ -133,14 +138,37 @@ overrides:
   # 2026-08-07 to GHSA-55q2-fjhq-7xh7 (<=3.4.12, moderate — removing an element from
   # a hook during IN_PLACE sanitization leaves a detached subtree executable, XSS) —
   # the third pinned value to fall inside a new advisory's range (fast-uri 3.1.4,
-  # postcss 8.5.20). The fix, 3.4.13, is PARKED in auditConfig.ignoreGhsas below
-  # until it ages in 2026-08-10 ~14:16 UTC (route (1), owner-signed 2026-08-07); the
-  # exit replaces this bare key with the ranged "dompurify@<3.4.13": 3.4.13, whose
-  # removal condition can actually fire (a bare key pins every future resolution, so
-  # "remove once a routine bump carries past it" could never come true).
+  # postcss 8.5.20). The fix, 3.4.13, was PARKED in auditConfig.ignoreGhsas (route
+  # (1), owner-signed 2026-08-07) and the park EXITED 2026-08-12 (due 2026-08-10
+  # ~14:16 UTC once 3.4.13 aged in; taken two days late — audit-edge only, and the
+  # daily security lane stayed green through the gap): the bare key became this
+  # RANGED one, whose removal condition can actually fire (a bare key pins every
+  # future resolution, so "remove once a routine bump carries past it" could never
+  # come true). Registry re-verified at take time: 3.4.13 = `latest`, no newer
+  # release, no advisory delta.
   # Ranges: the installed posthog-js@1.391.2 declares ^3.3.2 (3.4.13 in-range — a
   # fix-forward, not a pin-bypass); posthog-js latest 1.414.0 declares ^3.4.12.
-  dompurify: 3.4.12
+  # Remove once a routine bump naturally carries the lockfile past 3.4.13 (the
+  # ranged key is inert from that moment).
+  "dompurify@<3.4.13": 3.4.13
+  # nanoid <3.3.17 (GHSA-2v37-7h3g-55p8, HIGH, CVSS v4 8.2 — customAlphabet/
+  # customRandom never exit their generation loop when size is 0). Sole edge:
+  # postcss>nanoid@3.3.16 (19 paths, all build tooling), and postcss calls the
+  # plain nanoid(6) from nanoid/non-secure with a hardcoded size — the vulnerable
+  # functions are NEVER INVOKED in this tree (audit-edge only, verified in the
+  # installed artifact 2026-08-07). The advisory published 07-29 against the 5.x
+  # line (fixed there in 5.1.6, back in 2025); the <3.3.17 range appeared with the
+  # 08-03 backport — advisory data moved, not the lockfile. PARKED route (1)
+  # 2026-08-07 (owner-signed; a HIGH park has the fast-uri/batch-#5 precedent),
+  # EXITED 2026-08-12 in the same PR as the dompurify exit above (due 2026-08-10
+  # ~10:39 UTC once 3.3.17 aged in; taken two days late). ⚠️ 3.3.17 taken over
+  # 3.3.18 (published 08-07, npm dist-tag `legacy`) deliberately: an unrelated
+  # React-Native async fix with no advisory delta — the aged advisory floor wins
+  # (the postcss 8.5.23 precedent). 3.3.17 is in-range for postcss's ^3.3.16 — a
+  # fix-forward, not a pin-bypass. RANGED key so it rewrites only vulnerable
+  # copies; remove once a routine bump naturally carries the lockfile past 3.3.17
+  # (the key is inert from that moment).
+  "nanoid@<3.3.17": 3.3.17
   # sharp <0.35.0 (GHSA-f88m-g3jw-g9cj — inherited libvips CVE-2026-33327/33328/
   # 35590/35591, HIGH), via next@16.2.11's own EXACT `^0.34.5` optionalDependency
   # pin, which excludes the fix (Next.js's built-in image-optimization engine —
@@ -238,41 +266,14 @@ minimumReleaseAge: 10080 # 7 days
 # fix ages in and
 # becomes a real override above. Re-emptied 2026-07-15 (effect · esbuild · postcss),
 # 2026-07-27 (the two fast-uri GHSAs), 2026-07-30 (GHSA-mh99-v99m-4gvg, once
-# brace-expansion 5.0.8 cleared the gate), and 2026-08-07 (GHSA-7p8r-x3mc-p8w7 —
+# brace-expansion 5.0.8 cleared the gate), 2026-08-07 (GHSA-7p8r-x3mc-p8w7 —
 # batch #5's fast-uri park, promoted to the 3.1.5 override above the day 3.1.5 aged
-# in). `pnpm audit` therefore guards every
+# in), and 2026-08-12 (the 08-07 dompurify + nanoid parks — GHSA-55q2-fjhq-7xh7,
+# GHSA-2v37-7h3g-55p8 — promoted to the ranged overrides above; due 08-10, taken
+# two days late). `pnpm audit` therefore guards every
 # override above live, and goes red the moment one regresses or a new advisory lands.
 # ⚠️ For the one case that took route (2) instead — GHSA-rgw5-rvv9-x895, 2026-08-03, its
 # dated exclude deleted on schedule 2026-08-06 — see the three-route rule stated once at
 # `minimumReleaseAge` above. This note is a pointer; the rule and its criteria live there.
 auditConfig:
-  # OCCUPIED 2026-08-07 → scheduled exit 2026-08-10 ~14:16 UTC (route (1) PARK,
-  # owner-signed 2026-08-07). GHSA-55q2-fjhq-7xh7: dompurify <=3.4.12 IN_PLACE
-  # hook-removal XSS (moderate, CVSS v4 5.1) — catches the `dompurify: 3.4.12`
-  # override above; the only fix, 3.4.13 (published 2026-08-03T14:16:00Z), is inside
-  # the 7-day gate until then. Audit-edge only (see that override's comment): no
-  # executed byte changes either way, so route (2)'s exception was not invoked.
-  # READING THIS AFTER 2026-08-10 ~14:16 UTC → the exit is due NOW: re-verify the
-  # registry, replace the bare `dompurify:` key above with the ranged
-  # `"dompurify@<3.4.13": 3.4.13`, also convert `fast-uri: 3.1.5` to
-  # `"fast-uri@<3.1.5": 3.1.5` (same bare-key defect, rider signed 2026-08-07),
-  # delete this entry (allowlist back to []), `pnpm install` (exactly one lockfile
-  # move), full gate. Exit spec: docs/MAINTENANCE.md → Watch → dated takes.
-  #
-  # OCCUPIED (2nd) 2026-08-07, same-day exit window (route (1) PARK, owner-signed
-  # 2026-08-07; a HIGH park has the fast-uri/batch-#5 precedent).
-  # GHSA-2v37-7h3g-55p8: nanoid <3.3.17 (HIGH, CVSS v4 8.2) — customAlphabet/
-  # customRandom never exit their generation loop when size is 0. Sole edge:
-  # postcss>nanoid@3.3.16 (19 paths, all build tooling), and postcss calls the
-  # plain nanoid(6) from nanoid/non-secure with a hardcoded size — the vulnerable
-  # functions are NEVER INVOKED in this tree (audit-edge only, verified in the
-  # installed artifact). Fix 3.3.17 (published 2026-08-03T10:39:22Z) ages in
-  # 2026-08-10 ~10:39 UTC. READING THIS AFTER THAT → exit now, in the same change
-  # as the dompurify exit above: add the ranged "nanoid@<3.3.17": 3.3.17 to
-  # overrides (in-range for postcss's ^3.3.16 — fix-forward), delete this entry.
-  # ⚠️ Take 3.3.17, not a fresher 3.3.x, unless the registry shows an advisory
-  # delta — 3.3.18 (published 08-07) is an unrelated React-Native fix, and the
-  # aged advisory floor wins (the postcss 8.5.23 precedent).
-  ignoreGhsas:
-    - GHSA-55q2-fjhq-7xh7
-    - GHSA-2v37-7h3g-55p8
+  ignoreGhsas: []
