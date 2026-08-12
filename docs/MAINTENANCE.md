@@ -371,44 +371,25 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
-  - **2026-08-10 ~10:39 UTC — `nanoid` 3.3.17** ages in (published
-    2026-08-03T10:39Z). GHSA-2v37-7h3g-55p8 (HIGH, CVSS v4 8.2 —
-    `customAlphabet`/`customRandom` spin forever when size is 0) reached the audit
-    feed 2026-08-07 evening: the advisory published 07-29 against the 5.x line
-    (fixed there in 5.1.6 back in 2025) and gained its `<3.3.17` range only after
-    the 3.x backport landed 08-03. Sole edge: `postcss>nanoid@3.3.16` (19 paths,
-    all build tooling), and postcss calls the plain `nanoid(6)` from
-    `nanoid/non-secure` with a hardcoded size — **the vulnerable functions are
-    never invoked in this tree** (audit-edge only, verified in the installed
-    artifact). **Parked route (1), owner-signed 2026-08-07** in the same PR as
-    dompurify below (a HIGH park has the fast-uri/batch-#5 precedent; route (2)
-    was criterion-eligible after the same-day tightening but with zero urgency the
-    exception stays bounded). Exit rides the same one exit PR as dompurify (after
-    ~14:16 UTC): ranged `"nanoid@<3.3.17": 3.3.17` (in-range for postcss's
-    `^3.3.16` — fix-forward). ⚠️ Take 3.3.17, not 3.3.18 (published 08-07 — an
-    unrelated React-Native async fix, no advisory delta; boundary-fresh, aged
-    floor wins per the postcss 8.5.23 precedent). Registry re-verify at take time.
-  - **2026-08-10 ~14:16 UTC — `dompurify` 3.4.13** ages in (published
-    2026-08-03T14:16Z). GHSA-55q2-fjhq-7xh7 (moderate — IN_PLACE hook removal leaves
-    a detached subtree executable, XSS) published 2026-08-07T15:30Z against the
-    `dompurify: 3.4.12` override pin — the third pinned value to fall inside a new
-    advisory's range (after fast-uri 3.1.4 and postcss 8.5.20). ⚠️ The lockfile edge
-    is **audit-ledger only**: its sole importer, posthog-js@1.391.2 (dep range
-    `^3.3.2`; 3.4.13 in-range), bundles no dompurify into the `module.js` entry the
-    app imports — the IN_PLACE caller is its remotely-loaded product-tours chunk,
-    which **vendors its own dompurify 3.3.2** and is fixed by a posthog-js bump /
-    PostHog's CDN, never by this override (Watch line below). **SIGNED 2026-08-07 —
-    route (1) PARK**, in place the same day (allowlist holds the one GHSA; daily lane
-    green; triage issue #49 closed on the park's merge). Exit, after 14:16 UTC on
-    08-10 (one exit PR, shared with the nanoid park above): registry re-verify at
-    take time, replace the bare `dompurify:` key with
-    the **ranged** `"dompurify@<3.4.13": 3.4.13`, delete the park (allowlist back to
-    `[]` — zero ignored), one-package lockfile move, full gate. **Rider, signed:**
-    convert `fast-uri: 3.1.5` → `"fast-uri@<3.1.5": 3.1.5` in the same exit PR (same
-    bare-key defect — a bare key makes "remove once a routine bump carries past it"
-    unsatisfiable). **Sequencing:** the exit PR lands before the `next` 16.3.0 take
-    below (~20:34 UTC, adjacent override lines + the same doc bullets), which rebases
-    on it — separate PRs; a security exit never rides a framework minor.
+  - ~~**2026-08-10 — the `nanoid` 3.3.17 + `dompurify` 3.4.13 park exits**~~ —
+    **EXITED 2026-08-12, two days late** (each was due when its fix aged in on
+    08-10: nanoid ~10:39 UTC, dompurify ~14:16 UTC; the gap carried no exposure —
+    both edges are audit-only and the daily security lane ran green 08-10/11/12).
+    One PR per the 2026-08-07 signed spec: registry re-verified at take time
+    (3.4.13 = `latest`, no newer release; **3.3.17 taken over 3.3.18** — npm's
+    `legacy` tag, an unrelated React-Native fix with no advisory delta, so the
+    aged advisory floor won per the postcss 8.5.23 precedent), the bare
+    `dompurify:` key promoted to the ranged `"dompurify@<3.4.13": 3.4.13`,
+    `"nanoid@<3.3.17": 3.3.17` added (in-range for postcss's `^3.3.16` —
+    fix-forward), and the signed rider converted `fast-uri: 3.1.5` to its ranged
+    form (same bare-key defect; the conversion moved nothing). Allowlist back to
+    `[]` — `pnpm audit` zero vulnerabilities, **zero ignored**; the lockfile moved
+    exactly two packages; Dependabot #25 + #26 auto-close. Removal conditions now
+    live on the ranged keys in `pnpm-workspace.yaml`. The advisory detail this
+    entry used to carry lives on those keys' comments (nanoid: GHSA-2v37-7h3g-55p8,
+    HIGH, functions never invoked here; dompurify: GHSA-55q2-fjhq-7xh7, moderate,
+    audit-ledger-only edge — the real fix channel is the posthog-js Watch line
+    below).
   - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
     Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the
     2026-08-06 audit:** 16.3.0 pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take
@@ -471,13 +452,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     a park; **deleted on schedule 2026-08-06** once 5.0.9 aged in; the full story: the
     CHANGELOG Security entry and the three-route rule in `pnpm-workspace.yaml`).
     Remove the override once a routine bump naturally carries the lockfile past 5.0.9.
-  - `dompurify: 3.4.12` → **fell vulnerable in turn 2026-08-07** (GHSA-55q2-fjhq-7xh7,
-    moderate — parked route (1), owner-signed; the 2026-08-10 ~14:16 UTC exit promotes
-    it to the **ranged** `"dompurify@<3.4.13": 3.4.13`). ⚠️ The removal condition
-    previously stated here — "remove once a routine bump naturally carries the
-    lockfile past 3.4.12" — was unsatisfiable as written: a **bare** key pins every
-    future resolution to its own value, so no routine bump can ever carry the
-    lockfile past it. The ranged exit key is what makes the condition real: it goes
+  - `"dompurify@<3.4.13": 3.4.13` (ranged since the 2026-08-12 park exit) → 3.4.12
+    **fell vulnerable in turn 2026-08-07** (GHSA-55q2-fjhq-7xh7, moderate — parked
+    route (1), owner-signed; **exited 2026-08-12**, due 08-10 ~14:16 UTC). ⚠️ The
+    removal condition previously stated here — "remove once a routine bump naturally
+    carries the lockfile past 3.4.12" — was unsatisfiable as written: a **bare** key
+    pins every future resolution to its own value, so no routine bump can ever carry
+    the lockfile past it. The ranged key is what makes the condition real: it goes
     inert once posthog-js resolves >=3.4.13 — which is also the moment the real fix
     lands, this edge being audit-only (see the posthog-js Watch line above).
   - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
@@ -494,7 +475,10 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     so the advisory was **parked** in `auditConfig.ignoreGhsas` — route (1), the
     steady-state deferral, not a second gate exception. **Closed again on schedule
     2026-08-07**: 3.1.5 aged in at 09:16:56 UTC, the override moved 3.1.4 → 3.1.5 and
-    the park was deleted in one change (allowlist empty — zero ignored). Remove the
+    the park was deleted in one change (allowlist empty — zero ignored). **Converted
+    to the ranged `"fast-uri@<3.1.5": 3.1.5` on 2026-08-12** (signed rider on the
+    dompurify/nanoid park exit — the bare key shared their unsatisfiable-removal
+    defect; the conversion itself moved nothing). Remove the
     override once a routine bump naturally carries the lockfile past 3.1.5.
 - **Advisory batch 2026-07-27** (closed [#10](https://github.com/jrittelmeyer/next-web-boilerplate/issues/10),
   red since 2026-07-25) — three highs, one of them a **direct** dependency:

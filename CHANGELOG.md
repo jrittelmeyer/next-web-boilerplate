@@ -365,6 +365,20 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-12: the 2026-08-07 security parks exited — dompurify 3.4.13 + nanoid
+  3.3.17, two days late.** The route-(1) parks for GHSA-55q2-fjhq-7xh7 (moderate) and
+  GHSA-2v37-7h3g-55p8 (high) were due out 2026-08-10 when their fixes aged in; taken
+  2026-08-12 with no exposure in the gap (both edges are audit-only and the daily
+  security lane ran green through it). Per the signed spec: registry re-verified at
+  take time — 3.4.13 is `latest`, and 3.3.17 was taken over the fresher 3.3.18 (npm's
+  `legacy` tag, an unrelated React-Native fix; the aged advisory floor wins) — the
+  bare `dompurify:` key became the ranged `"dompurify@<3.4.13": 3.4.13`,
+  `"nanoid@<3.3.17": 3.3.17` was added (in-range for postcss's `^3.3.16`, a
+  fix-forward), and the signed rider converted `fast-uri: 3.1.5` to its ranged form
+  (a bare key pins every future resolution, so its own removal condition could never
+  fire; the conversion moved nothing). `auditConfig.ignoreGhsas` is `[]` again —
+  `pnpm audit` reports zero vulnerabilities with **zero ignored** — the lockfile
+  moved exactly two packages, and Dependabot alerts #25 and #26 auto-close.
 - **2026-08-08: the two missing rate limiters wired (B2 completeness).**
   `deleteCalendar` was the one calendar write skipping step 2 of the six-step contract
   — now limited at 10/min per user like its siblings. And the `/rsvp` read is capped at
