@@ -102,7 +102,7 @@ in any browser.
 
 ---
 
-*Current as of 2026-08-06. The audit score stands at 99.3 — it peaked at a
+*Current as of 2026-08-12. The audit score stands at 99.3 — it peaked at a
 perfect 100 across fourteen passes; the newest pass verified that the calendar
 feature's five headline fixes all landed (it entered at 85 two days earlier,
 now sits at 95.5, and is still being worked back up).*

@@ -5,7 +5,7 @@ choice. Treat it as two things at once: a pitch (what you get by starting here i
 of `create-next-app`) and a decision record (why each piece is the right default in
 2026, so you can re-evaluate honestly as the ecosystem moves).
 
-_Current as of 2026-08-06. Numeric claims here (audit score, surface and doc counts) are
+_Current as of 2026-08-12. Numeric claims here (audit score, surface and doc counts) are
 re-checked by the `/doc-audit` pass; if this stamp is old, trust the code._
 
 Every claim below is backed by a deeper doc — each section links to the

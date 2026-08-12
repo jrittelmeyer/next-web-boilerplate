@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-06 (fourteenth audit pass: **99.3** — the 08-04 F4–F8 verified fixed; live surface fully green)._
+_Last updated: 2026-08-12 (doc audit — currency re-verified; the latest scoring pass remains the fourteenth, 2026-08-06: **99.3**)._
 
 ## Where we are
 
@@ -139,6 +139,7 @@ Per-program summary (Rows = archived row count; full rows →
 | B2 sweep — 2026-08-08 | 1 | F2 closed both sides: spelling pins over the captured WHEREs (PgDialect, red-proven both reverts) beside the standing planted defects; 4 e2e sensors — cancel fan-out set, respond-capture victim row, invites read twin, range ownership gate. Long tail → B3 | [TESTING.md](context/TESTING.md) |
 | Kit 0.8.0 adopt-merge — 2026-08-08 | 1 | project-adopt 0.3.0: two-tiered meaningful-improvement bar (surface defaults keep-theirs; foundation keeps template presumption), recorded comparisons, incoming agentic layer surveyed, parity → pending-spec map, model routing; reinstalled | [kit CHANGELOG](https://github.com/jrittelmeyer/ai-dev-kit/blob/main/CHANGELOG.md) |
 | Rate-limit completeness — 2026-08-08 | 1 | B2: `deleteCalendar` gains the contract's missing limiter (10/min); `/rsvp` DB read capped 60/min per invitation on `loadRsvpView` (contrarian moved it off the no-DB route handler); null-on-denial keeps the 200-page invariant | [invitations.md](context/calendar/invitations.md) |
+| Doc audit — 2026-08-12 | 1 | Three drift fixes (BACKLOG's fused row unhid the reminder-email row; STATUS date; api.md 20/min) + the deck learns the fourteenth pass (99.3, 14th chart point); showcase re-stamped; doc-map memory repaired. Zero new backlog rows | [deck](plain-english-guide/slide-deck.html) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·

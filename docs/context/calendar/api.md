@@ -146,7 +146,7 @@ whoever holds the link was sent it. Rate-limited at `calendar:rsvp:respond:<clie
 ### `setRecurrenceDate`
 
 Skip an occurrence (`exdate`) or add one (`rdate`) without editing the series, rate-limited
-under `calendar:event:recurrence-date:<userId>`. One `INSERT … ON CONFLICT DO NOTHING`, so
+under `calendar:event:recurrence-date:<userId>` (20/min). One `INSERT … ON CONFLICT DO NOTHING`, so
 pressing the button twice — or two people pressing it at once — is idempotent rather than a
 race. **Only an `RDATE` recomputes `series_end_at`**, and it reads the rows back inside the
 same transaction so the row it just wrote is included.
