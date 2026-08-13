@@ -390,6 +390,24 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     HIGH, functions never invoked here; dompurify: GHSA-55q2-fjhq-7xh7, moderate,
     audit-ledger-only edge — the real fix channel is the posthog-js Watch line
     below).
+  - **2026-08-14 ~16:41 UTC — `nanoid` 3.3.18** ages in (published 2026-08-07T16:41Z).
+    **GHSA-2v37-7h3g-55p8 WIDENED 2026-08-13T15:43Z** — the 3.x vulnerable range is
+    now `<3.3.18` (first-patched 3.3.18), so the 08-12 exit's 3.3.17 is inside it
+    again and the tree re-flags HIGH. The exit was right when taken (3.3.18 read as
+    the `legacy`-tag React-Native fix with no advisory delta — true *until* the
+    advisory moved); the exposure analysis is unchanged (postcss calls plain
+    `nanoid(6)`; the vulnerable custom-generator functions are never invoked here).
+    Two admissible responses: **park GHSA-2v37 (route 1) now** and every lane stays
+    green, or **accept one red daily lane** (2026-08-14 05:00 UTC — it will file the
+    triage issue) and take the exit directly at age-in. Either way the take is:
+    promote the ranged key to `"nanoid@<3.3.18": 3.3.18` (3.3.17 sits outside the
+    current `<3.3.17` key, so the key floor must move), registry re-verify at take
+    time, delete any park in the same change. ⚠️ The CI audit *merge gate* fails at
+    HIGH from 2026-08-13T15:43Z until this lands — any PR opened before then needs
+    the park first. Found by the fifteenth audit pass, four hours after the
+    advisory moved. **Rider:** convert the bare `brace-expansion: 5.0.9` key to its
+    ranged form in the same change (audit F5 — same file, same
+    unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
   - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
     Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the
     2026-08-06 audit:** 16.3.0 pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take
@@ -400,7 +418,10 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   - **2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in (published
     2026-08-04T21:19Z; routine bug-fix release — no advisory; includes an email-OTP
     enumeration hardening). Normal take: bump both `^1.6.25` specifiers + the
-    workspace floor note; full gate + auth e2e.
+    workspace floor note; full gate + auth e2e. **1.6.27 exists** (published
+    2026-08-11T18:02Z → ages in 2026-08-18 ~18:02 UTC; no advisory) — the due take
+    today is still 1.6.26; registry re-verify at take time and prefer 1.6.27 only
+    once it clears the gate.
 - **posthog-js rebuild bump — the real GHSA-55q2-fjhq-7xh7 fix channel** — the
   dompurify override is **audit-edge only**: the vulnerable `IN_PLACE` caller is
   posthog-js's remotely-loaded product-tours chunk, which vendors its own dompurify
@@ -451,7 +472,14 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `minimumReleaseAgeExclude` (owner-approved — the first age-gate bypass rather than
     a park; **deleted on schedule 2026-08-06** once 5.0.9 aged in; the full story: the
     CHANGELOG Security entry and the three-route rule in `pnpm-workspace.yaml`).
-    Remove the override once a routine bump naturally carries the lockfile past 5.0.9.
+    ⚠️ The removal condition previously stated here — "remove once a routine bump
+    naturally carries the lockfile past 5.0.9" — is **unsatisfiable while the key
+    is bare** (a bare key pins every future resolution to its own value; the
+    identical defect the 2026-08-12 exit PR diagnosed and fixed for fast-uri and
+    dompurify, missed on this third key — fifteenth audit, F5). Convert to the
+    ranged `"brace-expansion@<5.0.9": 5.0.9` (riding the 2026-08-14 nanoid take),
+    after which the condition becomes real: the key goes inert once the tree
+    resolves past 5.0.9.
   - `"dompurify@<3.4.13": 3.4.13` (ranged since the 2026-08-12 park exit) → 3.4.12
     **fell vulnerable in turn 2026-08-07** (GHSA-55q2-fjhq-7xh7, moderate — parked
     route (1), owner-signed; **exited 2026-08-12**, due 08-10 ~14:16 UTC). ⚠️ The

@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-12 (doc audit — currency re-verified; the latest scoring pass remains the fourteenth, 2026-08-06: **99.3**)._
+_Last updated: 2026-08-13 (fifteenth scoring pass: **99.3** — do-now items on the watch line: `main` is red + the 08-14 nanoid take)._
 
 ## Where we are
 
@@ -43,12 +43,14 @@ _Last updated: 2026-08-12 (doc audit — currency re-verified; the latest scorin
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row SHIPPED (2026-07-07 → 13)**, incl. A23–A32 + A13.
-  Fourteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
-  (latest: [PROJECT_AUDIT_2026-08-06.md](archive/PROJECT_AUDIT_2026-08-06.md) — the
-  fourteenth pass adversarially re-verified all five 08-04 calendar fixes, lifting
-  the calendar 85 → **95.5** with the live surface fully green; F1 — Renovate
-  delivery, Mend-side — remains the standing tooling deduction).
+  Fifteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
+  (latest: [PROJECT_AUDIT_2026-08-13.md](archive/PROJECT_AUDIT_2026-08-13.md) — the
+  fifteenth pass verified the 08-08 closures genuine (API layer → **100**, the F2
+  sensors red-proven) and found the week's two pipeline events: `main` red on the
+  un-gated kit-0.13.0 push, and the nanoid advisory widened out from under the
+  08-12 exit; F1 — Renovate delivery, Mend-side — remains the standing tooling
+  deduction).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
@@ -140,6 +142,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Kit 0.8.0 adopt-merge — 2026-08-08 | 1 | project-adopt 0.3.0: two-tiered meaningful-improvement bar (surface defaults keep-theirs; foundation keeps template presumption), recorded comparisons, incoming agentic layer surveyed, parity → pending-spec map, model routing; reinstalled | [kit CHANGELOG](https://github.com/jrittelmeyer/ai-dev-kit/blob/main/CHANGELOG.md) |
 | Rate-limit completeness — 2026-08-08 | 1 | B2: `deleteCalendar` gains the contract's missing limiter (10/min); `/rsvp` DB read capped 60/min per invitation on `loadRsvpView` (contrarian moved it off the no-DB route handler); null-on-denial keeps the 200-page invariant | [invitations.md](context/calendar/invitations.md) |
 | Doc audit — 2026-08-12 | 1 | Three drift fixes (BACKLOG's fused row unhid the reminder-email row; STATUS date; api.md 20/min) + the deck learns the fourteenth pass (99.3, 14th chart point); showcase re-stamped; doc-map memory repaired. Zero new backlog rows | [deck](plain-english-guide/slide-deck.html) |
+| Audit — 2026-08-13 | 1 | Fifteenth pass: **99.3** flat — 08-08 closures verified (API 100, sensors red-proven by reconstruction); found `main` red (un-gated kit-0.13.0 push fails Biome — B1 row), nanoid advisory re-widened (dated take 08-14), bare brace-expansion key (rider) | [report](archive/PROJECT_AUDIT_2026-08-13.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -160,10 +163,15 @@ Dated (the canonical set is MAINTENANCE → Watch → dated takes): the **08-10 
 exits LANDED 2026-08-12, two days late** — `nanoid` 3.3.17 + `dompurify` 3.4.13 as
 ranged keys plus the signed fast-uri conversion rider; allowlist `[]` (zero
 ignored), Dependabot #25/#26 auto-close; no exposure in the gap (audit-edge only,
-daily lane green throughout). **Still open:** `next` 16.3.0 aged in **08-10 ~20:34
-UTC** (plan → sign-off; riders from the 14th audit: retire the sharp override,
-check postcss inertness) · `better-auth` 1.6.26 aged in **08-11 ~21:20 UTC**
-(routine). The fast-uri park **exited on
+daily lane green throughout). **Still open:** **`main` is RED since 08-12 23:54Z** — the un-gated kit-0.13.0
+push fails `pnpm lint` on `.claude/settings.json` formatting; one-commit fix, B1
+row (15th audit F2) · **nanoid re-flagged 08-13** — GHSA-2v37 widened to
+`<3.3.18` after the correct 08-12 exit; dated take **08-14 ~16:41 UTC** + the
+brace-expansion ranged-key rider (MAINTENANCE canonical; the CI audit merge gate
+fails at HIGH until it lands) · `next` 16.3.0 aged in **08-10 ~20:34 UTC** (plan
+→ sign-off; riders from the 14th audit: retire the sharp override, check postcss
+inertness) · `better-auth` 1.6.26 aged in **08-11 ~21:20 UTC** (routine; 1.6.27
+ages in 08-18). The fast-uri park **exited on
 schedule 2026-08-07** (override → 3.1.5, allowlist empty); the 08-06
 `brace-expansion@5.0.9` age-exclude was likewise **deleted on schedule 2026-08-06**.
 
