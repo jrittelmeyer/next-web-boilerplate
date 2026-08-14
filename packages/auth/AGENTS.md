@@ -26,7 +26,16 @@ One imperative per line; mechanics + rationale live in
   the same PR — the *patch* 1.6.23 added two (`two_factor.failed_verification_count`,
   `locked_until`), and the adapter throws at runtime, not build time, when one is
   missing. Diff the installed artifacts under `node_modules/.pnpm`; release notes omit
-  schema changes.
+  schema changes. ⚠️ **The `better-auth` package's own `dist/plugins/*/schema.mjs`
+  files are NOT the whole surface** (found by contrarian, 2026-08-14, reviewing the
+  1.6.26 bump): the `user`/`session`/`account`/`verification` core tables are
+  defined in the separate `@better-auth/core` package (`dist/db/get-tables.mjs` +
+  `dist/db/schema/*.mjs`, pinned exact by `better-auth` itself — same version,
+  always in lockstep) — diffing only `better-auth`'s own dist misses a core-table
+  column entirely. `@better-auth/passkey`'s table is inline in its `dist/index.mjs`
+  (search `src/schema.ts`), not a separate `schema.mjs` either. Diff **all three**:
+  `better-auth`'s plugin `schema.mjs` files, `@better-auth/core`'s `dist/db/`, and
+  `@better-auth/passkey`'s inline schema block.
 - Since 1.6.24, the magic-link and email-OTP **send** endpoints enforce `Origin` on
   cookieless requests: a wrong `Origin` is rejected, an absent one (server-to-server)
   still works, same-origin browsers are unaffected. Expected when driving them
