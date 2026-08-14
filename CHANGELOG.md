@@ -396,6 +396,14 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-14: `nanoid` GHSA-2v37-7h3g-55p8 park exited — 3.3.18 taken** — 3.3.18
+  (published 2026-08-07T16:41Z) cleared the 7-day `minimumReleaseAge` gate at
+  ~16:41 UTC; registry re-verified at take time (~17:08 UTC). The ranged override
+  promoted `"nanoid@<3.3.17": 3.3.17` → `"nanoid@<3.3.18": 3.3.18` and
+  `auditConfig.ignoreGhsas` reverted to `[]` in the same change. `pnpm audit` —
+  zero vulnerabilities, zero ignored. Exposure analysis unchanged (postcss's
+  sole edge calls plain `nanoid(6)`, the vulnerable `customAlphabet`/
+  `customRandom` functions never invoked).
 - **2026-08-14: `nanoid` GHSA-2v37-7h3g-55p8 re-parked** — the advisory widened
   2026-08-13T15:43Z from `<3.3.17` to `<3.3.18` (first-patched 3.3.18), catching
   the 2026-08-12 exit's `"nanoid@<3.3.17": 3.3.17` override again. 3.3.18

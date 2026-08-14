@@ -390,26 +390,20 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     HIGH, functions never invoked here; dompurify: GHSA-55q2-fjhq-7xh7, moderate,
     audit-ledger-only edge — the real fix channel is the posthog-js Watch line
     below).
-  - **2026-08-14 ~16:41 UTC — `nanoid` 3.3.18** ages in (published 2026-08-07T16:41Z).
-    **GHSA-2v37-7h3g-55p8 WIDENED 2026-08-13T15:43Z** — the 3.x vulnerable range is
-    now `<3.3.18` (first-patched 3.3.18), so the 08-12 exit's 3.3.17 is inside it
-    again and the tree re-flags HIGH. The exit was right when taken (3.3.18 read as
-    the `legacy`-tag React-Native fix with no advisory delta — true *until* the
-    advisory moved); the exposure analysis is unchanged (postcss calls plain
-    `nanoid(6)`; the vulnerable custom-generator functions are never invoked here).
-    **Parked (route 1) 2026-08-14, ~14:10 UTC** — 3.3.18 was ~2.5h short of the age
-    gate and `main` has no branch protection, so nothing was actually blocked by
-    waiting; parking now traded that wait for one small follow-up commit later and
-    landed the same-day lint fix + brace-expansion rider (below) without a second
-    red daily lane. `auditConfig.ignoreGhsas` carries `GHSA-2v37-7h3g-55p8` with
-    the exit condition in its comment; the existing `"nanoid@<3.3.17": 3.3.17"`
-    override comment is annotated in place too, so a reader of either site sees
-    the current state. **Still open — the take itself:** promote the ranged key to
-    `"nanoid@<3.3.18": 3.3.18` (3.3.17 sits outside the current `<3.3.17` key, so
-    the key floor must move), registry re-verify at take time, delete the
-    `ignoreGhsas` entry in the same change, once 3.3.18 ages in (~2026-08-14T16:41Z).
-    **Rider — DONE 2026-08-14:** the bare `brace-expansion: 5.0.9` key converted to
-    its ranged form in the same change (audit F5 — same file, same
+  - ~~**2026-08-14 ~16:41 UTC — `nanoid` 3.3.18** ages in~~ — **TAKEN 2026-08-14
+    ~17:08 UTC**, on schedule. **GHSA-2v37-7h3g-55p8 WIDENED 2026-08-13T15:43Z** —
+    the 3.x vulnerable range moved to `<3.3.18` (first-patched 3.3.18), so the
+    08-12 exit's 3.3.17 was inside it again and the tree re-flagged HIGH. Parked
+    (route 1) ~14:10 UTC the same day (3.3.18 was ~2.5h short of the age gate at
+    that point); registry re-verified at take time (3.3.18 published
+    2026-08-07T16:41Z — gate cleared). The ranged override promoted
+    `"nanoid@<3.3.17": 3.3.17"` → `"nanoid@<3.3.18": 3.3.18` and the
+    `auditConfig.ignoreGhsas` entry was deleted in the same change (back to `[]`).
+    `pnpm audit` — zero vulnerabilities, zero ignored. Exposure analysis
+    unchanged throughout (postcss's sole edge calls plain `nanoid(6)`; the
+    vulnerable custom-generator functions are never invoked here). **Rider —
+    DONE 2026-08-14:** the bare `brace-expansion: 5.0.9` key converted to its
+    ranged form in the earlier same-day change (audit F5 — same file, same
     unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
   - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — **superseded 2026-08-14,
     take `next` 16.3.1 instead.** 16.3.0 is aged and due, but a plan → contrarian

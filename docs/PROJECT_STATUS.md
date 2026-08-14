@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-14 (the fifteenth pass's do-now bundle: `main` lint un-red, nanoid re-parked, brace-expansion ranged — the nanoid *take* itself is still pending age-in ~16:41 UTC today)._
+_Last updated: 2026-08-14 (the fifteenth pass's do-now bundle: `main` lint un-red, nanoid re-parked, brace-expansion ranged — plus the nanoid *take* itself once 3.3.18 aged in ~17:08 UTC the same day)._
 
 ## Where we are
 
@@ -146,6 +146,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Bundled fix — 2026-08-14 | 1 | `main` un-reds: Biome format on kit-0.13.0's `.claude/settings.json` output; nanoid GHSA-2v37 re-parked (route 1, 3.3.18 ~2.5h short of the age gate); brace-expansion → ranged key (F5); kit 0.13.0 update documented retroactively | [CHANGELOG](../CHANGELOG.md) |
 | `next` 16.3.0 superseded — 2026-08-14 | 1 | Contrarian caught a live `next/image`/`next/og` sharp SVG-blocking regression in 16.3.0 hitting this repo's OG/icon routes (verified against `vercel/next.js#96733`); taking 16.3.1 instead once it ages in 08-20 | [MAINTENANCE](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | `better-auth` 1.6.26 — 2026-08-14 | 1 | Routine bump, no advisory; schema-diffed clean across the full surface (auth leaf rule's blind spot — `@better-auth/core`/passkey — found by contrarian and fixed same session); live-verified: 2FA challenge, org invite/accept, admin ban, session cleanup on delete (4/4 sessions gone) | [CHANGELOG](../CHANGELOG.md) |
+| `nanoid` 3.3.18 taken — 2026-08-14 | 1 | Mechanical, spec pre-signed: 3.3.18 aged in ~17:08 UTC; override promoted `<3.3.17` → `<3.3.18`, `ignoreGhsas` back to `[]`, `pnpm audit` zero vulnerabilities/zero ignored | [CHANGELOG](../CHANGELOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -171,9 +172,10 @@ un-gated kit-0.13.0 push's `.claude/settings.json` formatting; Biome-formatted,
 one commit (B1 row's repo half done; the kit-side `install.mjs` fix stays open in
 BACKLOG). **nanoid re-parked 2026-08-14** (route 1 — GHSA-2v37 widened to
 `<3.3.18` 08-13, 3.3.18 was ~2.5h short of the age gate at fix time) + the
-brace-expansion ranged-key rider landed same commit. **Still open:** the nanoid
-*take* itself — promote `"nanoid@<3.3.18": 3.3.18`, delete the park — once 3.3.18
-ages in **08-14 ~16:41 UTC** (MAINTENANCE canonical) · **`next` 16.3.0 → superseded
+brace-expansion ranged-key rider landed same commit. **nanoid TAKEN 2026-08-14
+~17:08 UTC** — 3.3.18 aged in on schedule; override promoted to
+`"nanoid@<3.3.18": 3.3.18`, `ignoreGhsas` back to `[]`, `pnpm audit` zero
+vulnerabilities/zero ignored · **`next` 16.3.0 → superseded
 2026-08-14**: contrarian found 16.3.0 ships a live `next/image`/`next/og` `sharp`
 SVG-blocking regression this repo's OG/icon routes hit (verified against
 `vercel/next.js#96733`); taking **16.3.1** instead once it ages in **08-20 ~22:45
