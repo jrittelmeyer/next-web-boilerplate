@@ -92,7 +92,13 @@ overrides:
   #     it is the first time that rule was set aside. The exclusion went inert when
   #     5.0.9 aged in and was deleted on schedule 2026-08-06.
   # Remove this override once a routine bump naturally carries the lockfile past 5.0.9.
-  brace-expansion: 5.0.9
+  # RETARGETED to its ranged form 2026-08-14 (audit F5, fifteenth pass): the bare
+  # key pinned every future resolution to 5.0.9, so its stated removal condition
+  # ("remove once a routine bump carries the lockfile past 5.0.9") could never
+  # fire — the same defect already fixed for fast-uri and dompurify 2026-08-12.
+  # The ranged key rewrites only vulnerable copies and goes inert once the tree
+  # resolves >=5.0.9 naturally; the conversion itself moved nothing.
+  "brace-expansion@<5.0.9": 5.0.9
   # ——— Advisory remediation (2026-07-22): transitive-only advisories, all newly
   # disclosed since the prior day's green CI run (pnpm audit queries live
   # advisory data — nothing in the lockfile changed to surface these). Only
@@ -168,6 +174,15 @@ overrides:
   # fix-forward, not a pin-bypass. RANGED key so it rewrites only vulnerable
   # copies; remove once a routine bump naturally carries the lockfile past 3.3.17
   # (the key is inert from that moment).
+  # ⚠️ RE-FLAGGED 2026-08-13T15:43Z: GHSA-2v37-7h3g-55p8 WIDENED to `<3.3.18`
+  # (first-patched 3.3.18), so this 3.3.17 key sits back inside the vulnerable
+  # range. 3.3.18 (published 2026-08-07T16:41Z) hadn't cleared the 7-day age gate
+  # at the time of the re-flag, so GHSA-2v37-7h3g-55p8 was PARKED again (route 1,
+  # see `auditConfig.ignoreGhsas` below) rather than the key promoted early.
+  # Exposure analysis unchanged (postcss calls plain nanoid(6); the vulnerable
+  # functions are still never invoked). Promote this key to
+  # `"nanoid@<3.3.18": 3.3.18` and delete the ignore entry once 3.3.18 ages in
+  # (~2026-08-14T16:41Z) — see docs/MAINTENANCE.md → Dated dependency takes.
   "nanoid@<3.3.17": 3.3.17
   # sharp <0.35.0 (GHSA-f88m-g3jw-g9cj — inherited libvips CVE-2026-33327/33328/
   # 35590/35591, HIGH), via next@16.2.11's own EXACT `^0.34.5` optionalDependency
@@ -276,4 +291,15 @@ minimumReleaseAge: 10080 # 7 days
 # dated exclude deleted on schedule 2026-08-06 — see the three-route rule stated once at
 # `minimumReleaseAge` above. This note is a pointer; the rule and its criteria live there.
 auditConfig:
-  ignoreGhsas: []
+  # GHSA-2v37-7h3g-55p8 (nanoid, HIGH) — PARKED route (1) 2026-08-14, re-parked
+  # after the 2026-08-13T15:43Z widen to `<3.3.18` caught the existing
+  # `"nanoid@<3.3.17": 3.3.17` override (see that override's comment above). The
+  # fix, 3.3.18, was published 2026-08-07T16:41Z and hadn't cleared the 7-day
+  # `minimumReleaseAge` gate at park time. Exposure unchanged: sole edge is
+  # postcss>nanoid@3.3.16 (build tooling only), and postcss calls plain
+  # nanoid(6) — the vulnerable customAlphabet/customRandom functions are never
+  # invoked in this tree. Delete this entry and promote the override to
+  # `"nanoid@<3.3.18": 3.3.18` once 3.3.18 ages in (~2026-08-14T16:41Z);
+  # registry re-verify at take time. Full history: docs/MAINTENANCE.md → Dated
+  # dependency takes.
+  ignoreGhsas: [GHSA-2v37-7h3g-55p8]

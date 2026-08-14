@@ -397,16 +397,19 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     the `legacy`-tag React-Native fix with no advisory delta — true *until* the
     advisory moved); the exposure analysis is unchanged (postcss calls plain
     `nanoid(6)`; the vulnerable custom-generator functions are never invoked here).
-    Two admissible responses: **park GHSA-2v37 (route 1) now** and every lane stays
-    green, or **accept one red daily lane** (2026-08-14 05:00 UTC — it will file the
-    triage issue) and take the exit directly at age-in. Either way the take is:
-    promote the ranged key to `"nanoid@<3.3.18": 3.3.18` (3.3.17 sits outside the
-    current `<3.3.17` key, so the key floor must move), registry re-verify at take
-    time, delete any park in the same change. ⚠️ The CI audit *merge gate* fails at
-    HIGH from 2026-08-13T15:43Z until this lands — any PR opened before then needs
-    the park first. Found by the fifteenth audit pass, four hours after the
-    advisory moved. **Rider:** convert the bare `brace-expansion: 5.0.9` key to its
-    ranged form in the same change (audit F5 — same file, same
+    **Parked (route 1) 2026-08-14, ~14:10 UTC** — 3.3.18 was ~2.5h short of the age
+    gate and `main` has no branch protection, so nothing was actually blocked by
+    waiting; parking now traded that wait for one small follow-up commit later and
+    landed the same-day lint fix + brace-expansion rider (below) without a second
+    red daily lane. `auditConfig.ignoreGhsas` carries `GHSA-2v37-7h3g-55p8` with
+    the exit condition in its comment; the existing `"nanoid@<3.3.17": 3.3.17"`
+    override comment is annotated in place too, so a reader of either site sees
+    the current state. **Still open — the take itself:** promote the ranged key to
+    `"nanoid@<3.3.18": 3.3.18` (3.3.17 sits outside the current `<3.3.17` key, so
+    the key floor must move), registry re-verify at take time, delete the
+    `ignoreGhsas` entry in the same change, once 3.3.18 ages in (~2026-08-14T16:41Z).
+    **Rider — DONE 2026-08-14:** the bare `brace-expansion: 5.0.9` key converted to
+    its ranged form in the same change (audit F5 — same file, same
     unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
   - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
     Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the

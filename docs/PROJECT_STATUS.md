@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-13 (fifteenth scoring pass: **99.3** — do-now items on the watch line: `main` is red + the 08-14 nanoid take)._
+_Last updated: 2026-08-14 (the fifteenth pass's do-now bundle: `main` lint un-red, nanoid re-parked, brace-expansion ranged — the nanoid *take* itself is still pending age-in ~16:41 UTC today)._
 
 ## Where we are
 
@@ -143,6 +143,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Rate-limit completeness — 2026-08-08 | 1 | B2: `deleteCalendar` gains the contract's missing limiter (10/min); `/rsvp` DB read capped 60/min per invitation on `loadRsvpView` (contrarian moved it off the no-DB route handler); null-on-denial keeps the 200-page invariant | [invitations.md](context/calendar/invitations.md) |
 | Doc audit — 2026-08-12 | 1 | Three drift fixes (BACKLOG's fused row unhid the reminder-email row; STATUS date; api.md 20/min) + the deck learns the fourteenth pass (99.3, 14th chart point); showcase re-stamped; doc-map memory repaired. Zero new backlog rows | [deck](plain-english-guide/slide-deck.html) |
 | Audit — 2026-08-13 | 1 | Fifteenth pass: **99.3** flat — 08-08 closures verified (API 100, sensors red-proven by reconstruction); found `main` red (un-gated kit-0.13.0 push fails Biome — B1 row), nanoid advisory re-widened (dated take 08-14), bare brace-expansion key (rider) | [report](archive/PROJECT_AUDIT_2026-08-13.md) |
+| Bundled fix — 2026-08-14 | 1 | `main` un-reds: Biome format on kit-0.13.0's `.claude/settings.json` output; nanoid GHSA-2v37 re-parked (route 1, 3.3.18 ~2.5h short of the age gate); brace-expansion → ranged key (F5); kit 0.13.0 update documented retroactively | [CHANGELOG](../CHANGELOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -163,12 +164,15 @@ Dated (the canonical set is MAINTENANCE → Watch → dated takes): the **08-10 
 exits LANDED 2026-08-12, two days late** — `nanoid` 3.3.17 + `dompurify` 3.4.13 as
 ranged keys plus the signed fast-uri conversion rider; allowlist `[]` (zero
 ignored), Dependabot #25/#26 auto-close; no exposure in the gap (audit-edge only,
-daily lane green throughout). **Still open:** **`main` is RED since 08-12 23:54Z** — the un-gated kit-0.13.0
-push fails `pnpm lint` on `.claude/settings.json` formatting; one-commit fix, B1
-row (15th audit F2) · **nanoid re-flagged 08-13** — GHSA-2v37 widened to
-`<3.3.18` after the correct 08-12 exit; dated take **08-14 ~16:41 UTC** + the
-brace-expansion ranged-key rider (MAINTENANCE canonical; the CI audit merge gate
-fails at HIGH until it lands) · `next` 16.3.0 aged in **08-10 ~20:34 UTC** (plan
+daily lane green throughout). **`main`'s 08-12 red fixed 2026-08-14** — the
+un-gated kit-0.13.0 push's `.claude/settings.json` formatting; Biome-formatted,
+one commit (B1 row's repo half done; the kit-side `install.mjs` fix stays open in
+BACKLOG). **nanoid re-parked 2026-08-14** (route 1 — GHSA-2v37 widened to
+`<3.3.18` 08-13, 3.3.18 was ~2.5h short of the age gate at fix time) + the
+brace-expansion ranged-key rider landed same commit. **Still open:** the nanoid
+*take* itself — promote `"nanoid@<3.3.18": 3.3.18`, delete the park — once 3.3.18
+ages in **08-14 ~16:41 UTC** (MAINTENANCE canonical) · `next` 16.3.0 aged in **08-10
+~20:34 UTC** (plan
 → sign-off; riders from the 14th audit: retire the sharp override, check postcss
 inertness) · `better-auth` 1.6.26 aged in **08-11 ~21:20 UTC** (routine; 1.6.27
 ages in 08-18). The fast-uri park **exited on

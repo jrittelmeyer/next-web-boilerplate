@@ -213,6 +213,13 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Fixed
 
+- **2026-08-14: `main` un-reds — kit-output Biome formatting.** The 2026-08-12
+  un-gated ai-dev-kit 0.8.0 → 0.13.0 reinstall (see Changed) left
+  `.claude/settings.json`'s hook `args` arrays multi-line where Biome's formatter
+  collapses them to one line, failing `pnpm lint` on every push and the 2026-08-13
+  Thursday CI heartbeat. `pnpm exec biome format --write .claude/settings.json` —
+  content unchanged, hook wiring untouched, whitespace only. The kit-side half
+  (`install.mjs` should emit gate-clean output) stays open as a BACKLOG B1 row.
 - **2026-08-08: `subscription.test.ts`'s `FUTURE` fixture was a date time bomb** — it
   pinned `2026-08-08T12:00Z`, and the two wrapper tests (`hasActiveSubscription` /
   `hasOrgSubscription`) compare it against the **real** clock (the wrappers apply the
@@ -337,6 +344,12 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Changed
 
+- **2026-08-12: ai-dev-kit updated 0.8.0 → 0.13.0** (checkpoint skill 0.2.0 →
+  0.3.0), reinstalled un-gated directly to `main`. Shipped without a plan → sign-off
+  pass or a CHANGELOG entry at the time — documented here retroactively, four
+  commits (and one red `main`) later. The kit's `install.mjs` re-serialized
+  `.claude/settings.json`'s hook `args` arrays multi-line, which Biome collapses;
+  see the **2026-08-14 Fixed entry** for the un-red.
 - **2026-08-08: `/project-adopt` learned the selective-merge bar (ai-dev-kit 0.8.0,
   skill 0.3.0)** — adoption now answers "merge the template's improvements into my
   existing app" as first-class intent. The disposition map runs a **two-tiered
@@ -365,6 +378,26 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Security
 
+- **2026-08-14: `nanoid` GHSA-2v37-7h3g-55p8 re-parked** — the advisory widened
+  2026-08-13T15:43Z from `<3.3.17` to `<3.3.18` (first-patched 3.3.18), catching
+  the 2026-08-12 exit's `"nanoid@<3.3.17": 3.3.17` override again. 3.3.18
+  (published 2026-08-07T16:41Z) hadn't cleared the 7-day `minimumReleaseAge` gate
+  at the time this was found (fifteenth `/project-audit` pass, four hours after
+  the widen), so route (1) — the repo's documented default — parks it again in
+  `auditConfig.ignoreGhsas` rather than promoting the key early; exposure analysis
+  unchanged (postcss's sole edge calls plain `nanoid(6)`, the vulnerable
+  `customAlphabet`/`customRandom` functions never invoked). Promotes to
+  `"nanoid@<3.3.18": 3.3.18` and the park is deleted once 3.3.18 ages in
+  (~2026-08-14T16:41Z) — a small separate follow-up, tracked in
+  `docs/MAINTENANCE.md` → Dated dependency takes.
+- **2026-08-14: bare `brace-expansion: 5.0.9` key converted to its ranged form**
+  (audit F5, fifteenth pass) — the same unsatisfiable-removal defect the
+  2026-08-12 PR fixed for `fast-uri` and `dompurify`: a bare override key pins
+  every future resolution to its own value, so "remove once a routine bump
+  carries the lockfile past 5.0.9" could never actually fire. Now
+  `"brace-expansion@<5.0.9": 5.0.9` — rewrites only vulnerable copies and goes
+  inert once the tree resolves past 5.0.9 naturally. The conversion itself moved
+  nothing in the lockfile.
 - **2026-08-12: the 2026-08-07 security parks exited — dompurify 3.4.13 + nanoid
   3.3.17, two days late.** The route-(1) parks for GHSA-55q2-fjhq-7xh7 (moderate) and
   GHSA-2v37-7h3g-55p8 (high) were due out 2026-08-10 when their fixes aged in; taken
