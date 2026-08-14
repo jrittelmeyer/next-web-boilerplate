@@ -11,7 +11,16 @@ Claude-Code-specific notes:
   `.claude/hooks/ai-dev-kit/` — edit a kit clone, then
   `node <clone>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json
   --dest <this repo> --global --hooks`; `install.mjs --check` guards drift.
-- Run `/checkpoint` at each step boundary.
+- Run `/checkpoint` at each step boundary. `.claude/hooks/checkpoint-autorun.mjs`
+  (Stop hook) automates this: if the tree is dirty/unpushed when a session goes idle,
+  it forces one more turn that runs `checkpoint` fully autonomously (commit, push,
+  watch CI, prune cache, write the resume-prompt handoff) — no confirmation prompt,
+  per the standing authorization in
+  [DECISIONS.md → checkpoint-autorun](docs/context/DECISIONS.md#tooling--dx). Guarded
+  to fire only in this repo (checks root `package.json`'s name — `.claude/**` is
+  template surface and this consent doesn't travel to generated projects), and skips
+  when the last message looks like a pending question or a rebase/merge/cherry-pick
+  is in progress.
 - `.claude/settings.json` (tracked) holds the shared permission allowlist **and all hook
   wiring — whose `hooks` key is co-owned**, so fix a kit handler's entry upstream, not
   here ([CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude));

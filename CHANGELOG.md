@@ -13,6 +13,16 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **2026-08-14: `checkpoint-autorun.mjs` — a Stop hook that automates the
+  `checkpoint` skill.** When a session goes idle with a dirty/unpushed tree, it
+  forces one more turn that commits, pushes, watches CI, prunes the build cache,
+  and writes a resume-prompt handoff — no confirmation prompt (standing
+  authorization: `docs/context/DECISIONS.md` → checkpoint-autorun). Repo-scoped
+  by design (checks the root `package.json` name) so the consent doesn't leak
+  into projects scaffolded from this template; skips when the last message reads
+  like a pending question or a rebase/merge/cherry-pick is in progress. A
+  `contrarian` pass (Always-triggered — template surface) found and closed both
+  gaps before this shipped.
 - **2026-08-08: revert sensors for the two audit-F2 predicates, plus three read-gate
   sensors beside them** (the B2 assertion-blind-spot sweep; tests and docs only). The
   08-04 F4/F6-respond fixes could both be reverted with every CI lane green: the unit

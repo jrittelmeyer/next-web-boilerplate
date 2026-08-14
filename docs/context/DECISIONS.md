@@ -497,3 +497,22 @@ written; the probe results are what changed three of them.
   ignores are the last resort and each carries its reason. Adoption caught two real defects
   on day one (a phantom `server-only` dep of `apps/web`; a redundant
   `@next/eslint-plugin-next` devDep) — both fixed.
+- **`checkpoint-autorun.mjs` standing push authorization (2026-08-14, owner-directed).**
+  The owner asked for the `checkpoint` skill to run automatically whenever a session goes
+  idle with pending work, so no session ends with unpushed context across the many
+  projects they run. Confirmed via `AskUserQuestion` the same session: (1) full-auto
+  tier — commit, push, and watch CI to green with no per-run confirmation prompt; (2)
+  scope — `next-web-boilerplate` only, not a template default (see the repo-identity
+  guard in `.claude/hooks/checkpoint-autorun.mjs`, since `.claude/**` ships to every
+  generated project and this consent was never given by a project's actual owner); (3)
+  trigger — only when the repo is actually dirty or has unpushed commits, so a Stop hook
+  fires on every idle turn but is a silent no-op unless there's something to checkpoint.
+  This is the authorization record the hook's `reason` text points back to — it is a
+  one-time grant recorded here, not re-asserted from scratch by the hook itself. A
+  `contrarian` review (Always-triggered — this is a template-surface edit) found and
+  fixed two gaps before this shipped: the missing repo-identity guard (above), and a
+  risk that a dirty tree mid-question (the assistant paused to ask the user something)
+  would get misread as "done, checkpoint now" — the hook now skips when the last
+  assistant message reads like a pending question, and when a rebase/merge/cherry-pick
+  is in progress. Not re-confirmed periodically by design; revisit this entry (not the
+  hook's prose) if the scope should ever change.

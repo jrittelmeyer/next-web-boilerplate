@@ -70,6 +70,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/checkpoint-autorun.mjs\"",
+            "timeout": 15,
+            "statusMessage": "checkpoint: autorun check"
+          }
+        ]
+      }
     ]
   }
 }

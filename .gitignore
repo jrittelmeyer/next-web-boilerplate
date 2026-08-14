@@ -52,6 +52,8 @@ Thumbs.db
 
 # Claude Code — local/personal settings (shared settings.json is committed)
 .claude/settings.local.json
+# checkpoint-autorun.mjs's short-TTL loop guard (see .claude/hooks/checkpoint-autorun.mjs)
+.claude/.checkpoint-hook-active
 
 # Drizzle (generated files are committed; local db state is not)
 *.db
