@@ -435,13 +435,34 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     bump). **Verification must be order-dependent**: exercise a `next/image`
     optimization first, then hit the OG/icon routes — testing them in isolation
     would not have caught 16.3.0's bug.
-  - **2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in (published
-    2026-08-04T21:19Z; routine bug-fix release — no advisory; includes an email-OTP
-    enumeration hardening). Normal take: bump both `^1.6.25` specifiers + the
-    workspace floor note; full gate + auth e2e. **1.6.27 exists** (published
-    2026-08-11T18:02Z → ages in 2026-08-18 ~18:02 UTC; no advisory) — the due take
-    today is still 1.6.26; registry re-verify at take time and prefer 1.6.27 only
-    once it clears the gate.
+  - ~~**2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in~~ — **TAKEN
+    2026-08-14.** Registry-verified over `latest` (1.6.28, published
+    2026-08-13T22:40Z) and 1.6.27 (2026-08-11T17:59Z) — both still inside the
+    7-day gate at take time, and their release notes carried nothing over 1.6.26
+    worth jumping the gate for (Suspense/CLI/type fixes only, no advisories).
+    Bumped `better-auth` `^1.6.25` → `^1.6.26` in both `apps/web/package.json`
+    and `packages/auth/package.json`, plus `@better-auth/passkey` `1.6.25` →
+    `1.6.26` (exact pin, its `peerDependencies.better-auth` registry-confirmed
+    `^1.6.26` first). **Schema-diffed the installed 1.6.26 artifacts against
+    1.6.25 before building** (`packages/auth/AGENTS.md`'s standing rule): a
+    contrarian pass on the plan found the diff procedure itself was incomplete —
+    it only covered `better-auth`'s own `dist/plugins/*/schema.mjs` files, missing
+    that the `user`/`session`/`account`/`verification` core tables live in the
+    separate `@better-auth/core` package and that `@better-auth/passkey`'s table
+    is inline, not a separate file. Both were independently diffed too (also
+    byte-identical) and the leaf rule corrected for future bumps. **No migration
+    needed.** Full gate + `@repo/auth`'s 38-test unit suite green. Live-verified
+    on a fresh prod build (`:3100`, email blanked): sign-up, sign-in, full 2FA
+    enrollment + challenge round-trip (via the repo's own `totp.ts` helper), an
+    organization invite-and-accept round-trip, admin set-role + ban, and —
+    1.6.26's own behavioral change — deleting an account with 4 active sessions
+    confirmed all 4 gone from `session` in the same request. One gotcha hit and
+    fixed mid-verify: port 3100 was held by an unrelated project's orphaned
+    server from a prior session (`civicmatch`, running since 08-12) answering
+    health checks and auth calls with plausible-looking responses that never
+    touched this repo's DB — caught by cross-checking the listener PID's command
+    line and confirming rows actually landed in `nwb-postgres`/`appdb`, not by
+    the response shape alone.
 - **posthog-js rebuild bump — the real GHSA-55q2-fjhq-7xh7 fix channel** — the
   dompurify override is **audit-edge only**: the vulnerable `IN_PLACE` caller is
   posthog-js's remotely-loaded product-tours chunk, which vendors its own dompurify

@@ -344,6 +344,24 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Changed
 
+- **2026-08-14: `better-auth` 1.6.25 → 1.6.26** (+ `@better-auth/passkey` 1.6.25 →
+  1.6.26, exact-pinned in lockstep). Routine bug-fix release, no advisory: session
+  cleanup on user deletion now also clears secondary-storage sessions, email-OTP
+  verification no longer reveals whether an email is registered before the OTP is
+  verified, JWT key minting moved inside the DB transaction to prevent deadlocks.
+  Registry-verified over `latest` (1.6.28) and 1.6.27, both still inside the 7-day
+  age gate at take time and carrying nothing material over 1.6.26 per their release
+  notes. **Schema-diffed the installed 1.6.26 artifacts against 1.6.25 across the
+  full surface** (per `packages/auth/AGENTS.md`'s standing rule, itself corrected
+  this session after a contrarian pass found the old procedure only checked
+  `better-auth`'s own plugin schemas and missed `@better-auth/core` — where the
+  `user`/`session`/`account`/`verification` core tables actually live — and
+  `@better-auth/passkey`'s inline table): all byte-identical, **no migration
+  needed**. Live-verified on a fresh prod build (`:3100`): sign-up, sign-in, full
+  2FA enrollment + challenge round-trip, an organization invite-and-accept
+  round-trip, admin set-role + ban, and — the release's own behavioral change —
+  deleting a test account with 4 active sessions confirmed all 4 rows gone from
+  `session` in the same request.
 - **2026-08-12: ai-dev-kit updated 0.8.0 → 0.13.0** (checkpoint skill 0.2.0 →
   0.3.0), reinstalled un-gated directly to `main`. Shipped without a plan → sign-off
   pass or a CHANGELOG entry at the time — documented here retroactively, four

@@ -144,6 +144,8 @@ Per-program summary (Rows = archived row count; full rows →
 | Doc audit — 2026-08-12 | 1 | Three drift fixes (BACKLOG's fused row unhid the reminder-email row; STATUS date; api.md 20/min) + the deck learns the fourteenth pass (99.3, 14th chart point); showcase re-stamped; doc-map memory repaired. Zero new backlog rows | [deck](plain-english-guide/slide-deck.html) |
 | Audit — 2026-08-13 | 1 | Fifteenth pass: **99.3** flat — 08-08 closures verified (API 100, sensors red-proven by reconstruction); found `main` red (un-gated kit-0.13.0 push fails Biome — B1 row), nanoid advisory re-widened (dated take 08-14), bare brace-expansion key (rider) | [report](archive/PROJECT_AUDIT_2026-08-13.md) |
 | Bundled fix — 2026-08-14 | 1 | `main` un-reds: Biome format on kit-0.13.0's `.claude/settings.json` output; nanoid GHSA-2v37 re-parked (route 1, 3.3.18 ~2.5h short of the age gate); brace-expansion → ranged key (F5); kit 0.13.0 update documented retroactively | [CHANGELOG](../CHANGELOG.md) |
+| `next` 16.3.0 superseded — 2026-08-14 | 1 | Contrarian caught a live `next/image`/`next/og` sharp SVG-blocking regression in 16.3.0 hitting this repo's OG/icon routes (verified against `vercel/next.js#96733`); taking 16.3.1 instead once it ages in 08-20 | [MAINTENANCE](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| `better-auth` 1.6.26 — 2026-08-14 | 1 | Routine bump, no advisory; schema-diffed clean across the full surface (auth leaf rule's blind spot — `@better-auth/core`/passkey — found by contrarian and fixed same session); live-verified: 2FA challenge, org invite/accept, admin ban, session cleanup on delete (4/4 sessions gone) | [CHANGELOG](../CHANGELOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -177,8 +179,7 @@ SVG-blocking regression this repo's OG/icon routes hit (verified against
 `vercel/next.js#96733`); taking **16.3.1** instead once it ages in **08-20 ~22:45
 UTC** (no cost to waiting — 16.3.1 carries no security content). Riders from the
 14th audit still apply at that take: retire the sharp override, check postcss
-inertness (already inert today, independent of the bump) · `better-auth` 1.6.26 aged in **08-11 ~21:20 UTC** (routine; 1.6.27
-ages in 08-18). The fast-uri park **exited on
+inertness (already inert today, independent of the bump) · **`better-auth` 1.6.26 — TAKEN 2026-08-14**: routine, no advisory; schema-diffed clean (full surface, incl. the `@better-auth/core`/passkey blind spot contrarian found and the leaf rule now covers); live-verified. The fast-uri park **exited on
 schedule 2026-08-07** (override → 3.1.5, allowlist empty); the 08-06
 `brace-expansion@5.0.9` age-exclude was likewise **deleted on schedule 2026-08-06**.
 
