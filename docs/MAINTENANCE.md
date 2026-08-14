@@ -411,13 +411,30 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     **Rider — DONE 2026-08-14:** the bare `brace-expansion: 5.0.9` key converted to
     its ranged form in the same change (audit F5 — same file, same
     unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
-  - **2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in (published 2026-08-03T20:34Z).
-    Plan → sign-off (minor-version runbook, `@next/*` lockstep). **Rider, found by the
-    2026-08-06 audit:** 16.3.0 pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take
-    plan should also **remove the `sharp: 0.35.3` override** (its removal condition —
-    next's own pin ≥0.35.0 — is met by this release) and re-check the postcss
-    override's second condition (natural tree resolution ≥8.5.23; the key goes inert
-    when both hold).
+  - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — **superseded 2026-08-14,
+    take `next` 16.3.1 instead.** 16.3.0 is aged and due, but a plan → contrarian
+    pass the same day found a live regression: `next/image`'s optimizer calls
+    `sharp.block()` and only selectively unblocks raster formats, not SVG (the
+    block/unblock registry is process-global), so any `next/image` optimization
+    request permanently blocks SVG decoding for the rest of the process — breaking
+    `next/og`'s `ImageResponse` (satori renders JSX → SVG, sharp rasterizes it).
+    Verified against Next.js's own PR (`vercel/next.js#96733`, merged into the
+    `next-16-3` branch 2026-08-06 — three days *after* 16.3.0 shipped — whose own
+    verification note reproduces the break via `test/e2e/og-api/index.test.ts`)
+    rather than taken on the contrarian's word alone. This repo has three files on
+    that exact surface: `opengraph-image.tsx`, `icon.tsx`, `apple-icon.tsx` (all
+    `ImageResponse`, confirmed by grep). **`next` 16.3.1** (published
+    2026-08-13T22:45Z, ages in ~2026-08-20T22:45Z) is the first stable release
+    carrying the fix; no security content of its own, so there's no cost to
+    waiting the ~6 days rather than taking 16.3.0's regression. **Rider, found by
+    the 2026-08-06 audit, still applies to 16.3.1** (re-verify at build time):
+    pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take plan should also
+    **remove the `sharp: 0.35.3` override** (its removal condition — next's own
+    pin ≥0.35.0 — is met) and re-check the postcss override's second condition
+    (natural tree resolution ≥8.5.23 — already true today, independent of the
+    bump). **Verification must be order-dependent**: exercise a `next/image`
+    optimization first, then hit the OG/icon routes — testing them in isolation
+    would not have caught 16.3.0's bug.
   - **2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in (published
     2026-08-04T21:19Z; routine bug-fix release — no advisory; includes an email-OTP
     enumeration hardening). Normal take: bump both `^1.6.25` specifiers + the

@@ -171,10 +171,13 @@ BACKLOG). **nanoid re-parked 2026-08-14** (route 1 — GHSA-2v37 widened to
 `<3.3.18` 08-13, 3.3.18 was ~2.5h short of the age gate at fix time) + the
 brace-expansion ranged-key rider landed same commit. **Still open:** the nanoid
 *take* itself — promote `"nanoid@<3.3.18": 3.3.18`, delete the park — once 3.3.18
-ages in **08-14 ~16:41 UTC** (MAINTENANCE canonical) · `next` 16.3.0 aged in **08-10
-~20:34 UTC** (plan
-→ sign-off; riders from the 14th audit: retire the sharp override, check postcss
-inertness) · `better-auth` 1.6.26 aged in **08-11 ~21:20 UTC** (routine; 1.6.27
+ages in **08-14 ~16:41 UTC** (MAINTENANCE canonical) · **`next` 16.3.0 → superseded
+2026-08-14**: contrarian found 16.3.0 ships a live `next/image`/`next/og` `sharp`
+SVG-blocking regression this repo's OG/icon routes hit (verified against
+`vercel/next.js#96733`); taking **16.3.1** instead once it ages in **08-20 ~22:45
+UTC** (no cost to waiting — 16.3.1 carries no security content). Riders from the
+14th audit still apply at that take: retire the sharp override, check postcss
+inertness (already inert today, independent of the bump) · `better-auth` 1.6.26 aged in **08-11 ~21:20 UTC** (routine; 1.6.27
 ages in 08-18). The fast-uri park **exited on
 schedule 2026-08-07** (override → 3.1.5, allowlist empty); the 08-06
 `brace-expansion@5.0.9` age-exclude was likewise **deleted on schedule 2026-08-06**.
