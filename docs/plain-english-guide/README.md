@@ -93,7 +93,7 @@ in any browser.
 > the whole repository is structured so that AI coding assistants can work on it as
 > effectively as human engineers — which is also how it was built, under human
 > direction and review, to a quality score that peaked at a perfect 100 out of 100
-> (passes 8–9) and stands at 99.3 across fourteen increasingly demanding audits, the
+> (passes 8–9) and stands at 99.3 across fifteen increasingly demanding audits, the
 > dip-and-recovery coming not from regressed code but from the bar widening — one
 > audit graded the brand-new calendar feature for the first time, found it good but
 > not yet perfect, and the next audit verified that five of the issues it raised were
@@ -102,10 +102,10 @@ in any browser.
 
 ---
 
-*Current as of 2026-08-12. The audit score stands at 99.3 — it peaked at a
-perfect 100 across fourteen passes; the newest pass verified that the calendar
-feature's five headline fixes all landed (it entered at 85 two days earlier,
-now sits at 95.5, and is still being worked back up).*
+*Current as of 2026-08-19. The audit score stands at 99.3 — it peaked at a
+perfect 100 across fifteen passes; the calendar feature that entered at 85 now
+sits at 95.5, and the newest pass's only new findings were slips in the build
+pipeline rather than the product, both fixed the next day.*
 
 *The newest big piece is a **calendar**: the project grew a full
 scheduling feature, built and shipped in six planned stages. It handles the

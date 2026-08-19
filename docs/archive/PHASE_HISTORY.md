@@ -1933,3 +1933,44 @@ event card with **"Add to Calendar"** and **no Yes/No/Maybe buttons**, at the co
 time. That is the direct falsification of the `METHOD:PUBLISH` decision — the only part of
 it not asserted in code — and it holds. Detail:
 [../context/calendar/invitations.md](../context/calendar/invitations.md).
+
+## Archived 2026-08-19: status watch and overrides history
+
+Moved verbatim by the 2026-08-19 doc audit, which compacted two regrown narrative
+blocks back to pointers: the "Date-gated watch" paragraph from `PROJECT_STATUS.md`
+(its facts all carried by the per-program summary rows, `MAINTENANCE.md` → Watch and
+the CHANGELOG) and the "Temporary security overrides" Watch bullet from `BACKLOG.md`
+(its facts all carried by the per-key comments in `pnpm-workspace.yaml` and
+`MAINTENANCE.md`). Preserved here so the compaction destroys nothing.
+
+### "Date-gated watch" — as it stood in PROJECT_STATUS.md (2026-08-14 → 08-19)
+
+**Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
+is canonical. Open now: **Renovate PR delivery FAILED** (two empty Monday windows, zero
+`renovate/*` branches ever; Mend-side diagnosis, B1) — the 2026-08-04 merge queue
+(#38 → #37 → #40 → #42 + batch #5) has fully landed, un-redding `main` on both axes.
+Dated (the canonical set is MAINTENANCE → Watch → dated takes): the **08-10 park
+exits LANDED 2026-08-12, two days late** — `nanoid` 3.3.17 + `dompurify` 3.4.13 as
+ranged keys plus the signed fast-uri conversion rider; allowlist `[]` (zero
+ignored), Dependabot #25/#26 auto-close; no exposure in the gap (audit-edge only,
+daily lane green throughout). **`main`'s 08-12 red fixed 2026-08-14** — the
+un-gated kit-0.13.0 push's `.claude/settings.json` formatting; Biome-formatted,
+one commit (B1 row's repo half done; the kit-side `install.mjs` fix stays open in
+BACKLOG). **nanoid re-parked 2026-08-14** (route 1 — GHSA-2v37 widened to
+`<3.3.18` 08-13, 3.3.18 was ~2.5h short of the age gate at fix time) + the
+brace-expansion ranged-key rider landed same commit. **nanoid TAKEN 2026-08-14
+~17:08 UTC** — 3.3.18 aged in on schedule; override promoted to
+`"nanoid@<3.3.18": 3.3.18`, `ignoreGhsas` back to `[]`, `pnpm audit` zero
+vulnerabilities/zero ignored · **`next` 16.3.0 → superseded
+2026-08-14**: contrarian found 16.3.0 ships a live `next/image`/`next/og` `sharp`
+SVG-blocking regression this repo's OG/icon routes hit (verified against
+`vercel/next.js#96733`); taking **16.3.1** instead once it ages in **08-20 ~22:45
+UTC** (no cost to waiting — 16.3.1 carries no security content). Riders from the
+14th audit still apply at that take: retire the sharp override, check postcss
+inertness (already inert today, independent of the bump) · **`better-auth` 1.6.26 — TAKEN 2026-08-14**: routine, no advisory; schema-diffed clean (full surface, incl. the `@better-auth/core`/passkey blind spot contrarian found and the leaf rule now covers); live-verified. The fast-uri park **exited on
+schedule 2026-08-07** (override → 3.1.5, allowlist empty); the 08-06
+`brace-expansion@5.0.9` age-exclude was likewise **deleted on schedule 2026-08-06**.
+
+### "Temporary security overrides" — as it stood in BACKLOG.md (2026-08-14 → 08-19)
+
+- **Temporary security overrides** — ten pnpm `overrides:` (2026-07-15 · 07-22 · 07-27 · 08-04 batches + the 08-12 nanoid key; `fast-uri` graduated from a deferral to a real override on 07-27, went vulnerable itself, and its GHSA-7p8r-x3mc-p8w7 park was **promoted to a 3.1.5 override on schedule 2026-08-07** — allowlist empty again; ⚠️ `dompurify: 3.4.12` went vulnerable in turn 2026-08-07, GHSA-55q2-fjhq-7xh7 — parked route (1), owner-signed 08-07, and **exited 2026-08-12** (due 08-10) as the ranged `"dompurify@<3.4.13": 3.4.13`, the same PR converting `fast-uri` to its ranged form; ⚠️ `nanoid` GHSA-2v37-7h3g-55p8 (HIGH via the postcss edge, the vulnerable functions never invoked here) parked the same day and **exited with it** as `"nanoid@<3.3.17": 3.3.17` — allowlist `[]` again, zero ignored — **then RE-FLAGGED 2026-08-13**: the advisory widened to `<3.3.18` four hours before the fifteenth audit pass, so 3.3.17 is vulnerable again; the 2026-08-14 dated take in MAINTENANCE (promote the key floor to `"nanoid@<3.3.18": 3.3.18`) is the response) + the dated `minimumReleaseAgeExclude` for `brace-expansion@5.0.9` (GHSA-rgw5-rvv9-x895; taken 4 days old by owner decision — the first age-gate bypass rather than a park — and **deleted on schedule 2026-08-06** once 5.0.9 aged in) + `better-auth`/`@better-auth/passkey` → 1.6.25 (≥ 2026-07-30). The `next`/`@next/*` age-exclude was removed on schedule 2026-07-28 (16.2.12 becomes admissible 2026-08-01).

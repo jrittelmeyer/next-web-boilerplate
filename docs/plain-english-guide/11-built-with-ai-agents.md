@@ -132,7 +132,9 @@ become:
 
 - **Skills** — reusable, checked-in procedures the agent can invoke by name
   (they live in the repository like code). This repo ships eight: a
-  *checkpoint* skill (commit and push work safely at each step boundary), a
+  *checkpoint* skill (commit and push work safely at each step boundary — since
+  August 2026 it also fires automatically when a session goes idle with unpushed
+  work), a
   *project-audit* skill (the deep scoring audits from
   [Chapter 1](01-the-big-picture.md)), a *doc-audit* skill (the drift-hunting
   described above), a machine-hygiene (*tidy*) skill, a dependency
@@ -165,8 +167,8 @@ become:
 
 ## The audit loop: AI checking AI, with receipts
 
-The quality scores from [Chapter 1](01-the-big-picture.md) (twelve passes,
-93 → 100 → 99.9, against a "best imaginable starter kit" bar) come from the audit
+The quality scores from [Chapter 1](01-the-big-picture.md) (fifteen passes,
+93 → 100 → 99.3, against a "best imaginable starter kit" bar) come from the audit
 skill above: a full sweep that re-verifies documentation claims against actual
 code, scores every feature area, and emits a prioritized backlog — which was
 then worked to completion through the same plan → sign-off → build loop, and

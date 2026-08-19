@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-14 (the fifteenth pass's do-now bundle: `main` lint un-red, nanoid re-parked, brace-expansion ranged — plus the nanoid *take* itself once 3.3.18 aged in ~17:08 UTC the same day)._
+_Last updated: 2026-08-19 (doc audit: showcase caught up to the fifteenth pass; the watch narrative compacted — detail in MAINTENANCE + the archive)._
 
 ## Where we are
 
@@ -71,9 +71,9 @@ _Last updated: 2026-08-14 (the fifteenth pass's do-now bundle: `main` lint un-re
   licensed the change):
   [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
-  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.8.0 —
+  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.13.0 —
   the 2026-07-23 context-engineering release, two patches, and the 2026-08-08
-  project-adopt selective-merge release); this repo consumes the installed
+  project-adopt selective-merge release, then the 0.9–0.13 line, reinstalled here 2026-08-12); this repo consumes the installed
   `.claude/` output (edit a clone, re-install — never the copies). Kit story: the kit
   repo's CHANGELOG + [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
 
@@ -147,6 +147,7 @@ Per-program summary (Rows = archived row count; full rows →
 | `next` 16.3.0 superseded — 2026-08-14 | 1 | Contrarian caught a live `next/image`/`next/og` sharp SVG-blocking regression in 16.3.0 hitting this repo's OG/icon routes (verified against `vercel/next.js#96733`); taking 16.3.1 instead once it ages in 08-20 | [MAINTENANCE](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | `better-auth` 1.6.26 — 2026-08-14 | 1 | Routine bump, no advisory; schema-diffed clean across the full surface (auth leaf rule's blind spot — `@better-auth/core`/passkey — found by contrarian and fixed same session); live-verified: 2FA challenge, org invite/accept, admin ban, session cleanup on delete (4/4 sessions gone) | [CHANGELOG](../CHANGELOG.md) |
 | `nanoid` 3.3.18 taken — 2026-08-14 | 1 | Mechanical, spec pre-signed: 3.3.18 aged in ~17:08 UTC; override promoted `<3.3.17` → `<3.3.18`, `ignoreGhsas` back to `[]`, `pnpm audit` zero vulnerabilities/zero ignored | [CHANGELOG](../CHANGELOG.md) |
+| Doc audit — 2026-08-19 | 1 | Showcase caught up to the fifteenth pass (ch. 1 was three passes stale; deck 15th chart point); kit 0.13.0 + Renovate-still-zero currency; STATUS watch + BACKLOG overrides compacted, verbatim → archive; 2 memory repairs | [deck](plain-english-guide/slide-deck.html) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -160,30 +161,17 @@ deliberate cuts and *why* each was cut — including why invitations are a list 
 Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
-is canonical. Open now: **Renovate PR delivery FAILED** (two empty Monday windows, zero
-`renovate/*` branches ever; Mend-side diagnosis, B1) — the 2026-08-04 merge queue
-(#38 → #37 → #40 → #42 + batch #5) has fully landed, un-redding `main` on both axes.
-Dated (the canonical set is MAINTENANCE → Watch → dated takes): the **08-10 park
-exits LANDED 2026-08-12, two days late** — `nanoid` 3.3.17 + `dompurify` 3.4.13 as
-ranged keys plus the signed fast-uri conversion rider; allowlist `[]` (zero
-ignored), Dependabot #25/#26 auto-close; no exposure in the gap (audit-edge only,
-daily lane green throughout). **`main`'s 08-12 red fixed 2026-08-14** — the
-un-gated kit-0.13.0 push's `.claude/settings.json` formatting; Biome-formatted,
-one commit (B1 row's repo half done; the kit-side `install.mjs` fix stays open in
-BACKLOG). **nanoid re-parked 2026-08-14** (route 1 — GHSA-2v37 widened to
-`<3.3.18` 08-13, 3.3.18 was ~2.5h short of the age gate at fix time) + the
-brace-expansion ranged-key rider landed same commit. **nanoid TAKEN 2026-08-14
-~17:08 UTC** — 3.3.18 aged in on schedule; override promoted to
-`"nanoid@<3.3.18": 3.3.18`, `ignoreGhsas` back to `[]`, `pnpm audit` zero
-vulnerabilities/zero ignored · **`next` 16.3.0 → superseded
-2026-08-14**: contrarian found 16.3.0 ships a live `next/image`/`next/og` `sharp`
-SVG-blocking regression this repo's OG/icon routes hit (verified against
-`vercel/next.js#96733`); taking **16.3.1** instead once it ages in **08-20 ~22:45
-UTC** (no cost to waiting — 16.3.1 carries no security content). Riders from the
-14th audit still apply at that take: retire the sharp override, check postcss
-inertness (already inert today, independent of the bump) · **`better-auth` 1.6.26 — TAKEN 2026-08-14**: routine, no advisory; schema-diffed clean (full surface, incl. the `@better-auth/core`/passkey blind spot contrarian found and the leaf rule now covers); live-verified. The fast-uri park **exited on
-schedule 2026-08-07** (override → 3.1.5, allowlist empty); the 08-06
-`brace-expansion@5.0.9` age-exclude was likewise **deleted on schedule 2026-08-06**.
+is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each
+landed item. Open now, and nothing else: **Renovate PR delivery FAILED** (zero
+`renovate/*` branches ever — re-checked 2026-08-19, every Monday window through 08-17
+empty; the Mend-side diagnosis is BACKLOG B1) · the **`next` 16.3.1 dated take**
+(16.3.0 superseded 2026-08-14 over a live `sharp`/SVG regression; 16.3.1 ages in
+~2026-08-20T22:45 UTC — plan, riders and the order-dependent verification live in
+MAINTENANCE → Dated dependency takes). Ledger clear as of 2026-08-14: `nanoid` 3.3.18
++ `better-auth` 1.6.26 taken, `main` green, `auditConfig.ignoreGhsas` `[]`,
+`pnpm audit` zero vulnerabilities / zero ignored. The verbatim history this paragraph
+used to carry:
+[archive/PHASE_HISTORY.md → Archived 2026-08-19](archive/PHASE_HISTORY.md#archived-2026-08-19-status-watch-and-overrides-history).
 
 ## Fresh project on-ramp (clone → build a real app)
 

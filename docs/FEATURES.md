@@ -5,7 +5,7 @@ choice. Treat it as two things at once: a pitch (what you get by starting here i
 of `create-next-app`) and a decision record (why each piece is the right default in
 2026, so you can re-evaluate honestly as the ecosystem moves).
 
-_Current as of 2026-08-12. Numeric claims here (audit score, surface and doc counts) are
+_Current as of 2026-08-19. Numeric claims here (audit score, surface and doc counts) are
 re-checked by the `/doc-audit` pass; if this stamp is old, trust the code._
 
 Every claim below is backed by a deeper doc — each section links to the
@@ -400,12 +400,14 @@ building and running, not by assuming**:
   deploy with managed Postgres serving a healthy `/api/health`.
 - CI runs the same gates on every push; four independent audit passes scored the repo
   against a best-available-boilerplate bar before launch (reports in
-  [`archive/`](archive/)). **Fourteen** passes have now run in total — the score peaked at
+  [`archive/`](archive/)). **Fifteen** passes have now run in total — the score peaked at
   **100.0/100** and stands at **99.3**: the thirteenth pass (2026-08-04) widened the bar to
   score the new calendar program for the first time (it entered at 85), and the fourteenth
   (2026-08-06) verified all five of its headline fixes shipped within two days, lifting
-  the calendar to 95.5 — the one standing deduction still sits in an external service
-  rather than in this code.
+  the calendar to 95.5, and the fifteenth (2026-08-13) held 99.3 with its only new
+  findings in the delivery pipeline rather than the product (both fixed the next day)
+  — the one standing deduction still sits in an external service rather than in
+  this code.
 
 If you want the guided tour from `git clone` to your first deployed feature, start
 with [`GETTING_STARTED.md`](GETTING_STARTED.md).

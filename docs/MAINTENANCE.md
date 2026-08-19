@@ -367,7 +367,9 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   pending-approval major, and `@testing-library/jest-dom v7` sits age-gated in the
   dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The
   same-day 22B re-check confirmed the picture unchanged: still 0 `renovate/*`
-  branches, 37 Awaiting Schedule.
+  branches, 37 Awaiting Schedule. **Re-checked 2026-08-19** (doc audit): still zero
+  `renovate/*` branches ever — every Monday window through 2026-08-17 has passed
+  empty; the B1 diagnosis row remains the open path.
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
@@ -420,7 +422,8 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `ImageResponse`, confirmed by grep). **`next` 16.3.1** (published
     2026-08-13T22:45Z, ages in ~2026-08-20T22:45Z) is the first stable release
     carrying the fix; no security content of its own, so there's no cost to
-    waiting the ~6 days rather than taking 16.3.0's regression. **Rider, found by
+    waiting the ~6 days rather than taking 16.3.0's regression. (Registry
+    re-checked 2026-08-19: 16.3.1 is still `latest`; no 16.3.2 has shipped.) **Rider, found by
     the 2026-08-06 audit, still applies to 16.3.1** (re-verify at build time):
     pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take plan should also
     **remove the `sharp: 0.35.3` override** (its removal condition — next's own
