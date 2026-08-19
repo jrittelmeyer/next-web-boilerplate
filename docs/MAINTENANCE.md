@@ -460,6 +460,22 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     touched this repo's DB — caught by cross-checking the listener PID's command
     line and confirming rows actually landed in `nwb-postgres`/`appdb`, not by
     the response shape alone.
+  - **2026-08-24 ~19:11 UTC — `better-auth` 1.6.30** ages in (published
+    2026-08-17T19:11Z) — the routine successor take. **Added 2026-08-19 by the
+    sixteenth audit pass**, which found the line had moved with no bullet
+    tracking it (1.6.27 aged in 08-18 unnoticed — the F1 channel cost again).
+    Registry re-verify at take time (five releases shipped in the week after
+    1.6.26); none of 1.6.27–1.7.1 carries a security fix (release notes
+    checked 2026-08-19). Rides the standing rules: schema-diff the installed
+    artifacts across the FULL surface (`better-auth` plugin `schema.mjs`
+    files, `@better-auth/core` `dist/db/`, passkey inline — the leaf rule as
+    widened 2026-08-14) and bump `@better-auth/passkey` in exact lockstep.
+    ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18) is NOT a routine
+    take**: a breaking minor — 15 breaking changes incl. account identity
+    scoped by issuer (requires migration), captcha paths needing explicit
+    wildcards (this repo wires CAPTCHA), SCIM/MCP extractions. Plan →
+    sign-off when there's a reason to move; no advisory forces it.
+    `@better-auth/passkey` 1.7.1 exists for lockstep when that day comes.
 - **posthog-js rebuild bump — the real GHSA-55q2-fjhq-7xh7 fix channel** — the
   dompurify override is **audit-edge only**: the vulnerable `IN_PLACE` caller is
   posthog-js's remotely-loaded product-tours chunk, which vendors its own dompurify

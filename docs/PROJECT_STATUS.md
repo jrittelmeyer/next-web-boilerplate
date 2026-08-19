@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-19 (doc audit: showcase caught up to the fifteenth pass; the watch narrative compacted — detail in MAINTENANCE + the archive)._
+_Last updated: 2026-08-19 (sixteenth audit pass: **99.4/100** — report in the archive; better-auth 1.6.30 dated take added, 1.7.x plan-gated)._
 
 ## Where we are
 
@@ -43,14 +43,15 @@ _Last updated: 2026-08-19 (doc audit: showcase caught up to the fifteenth pass; 
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row SHIPPED (2026-07-07 → 13)**, incl. A23–A32 + A13.
-  Fifteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
-  (latest: [PROJECT_AUDIT_2026-08-13.md](archive/PROJECT_AUDIT_2026-08-13.md) — the
-  fifteenth pass verified the 08-08 closures genuine (API layer → **100**, the F2
-  sensors red-proven) and found the week's two pipeline events: `main` red on the
-  un-gated kit-0.13.0 push, and the nanoid advisory widened out from under the
-  08-12 exit; F1 — Renovate delivery, Mend-side — remains the standing tooling
-  deduction).
+  Sixteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
+  (latest: [PROJECT_AUDIT_2026-08-19.md](archive/PROJECT_AUDIT_2026-08-19.md) — the
+  sixteenth pass verified the fifteenth's prescriptions all executed on schedule
+  (`main` green since 08-14, the nanoid closure, F5's ranged key → Security 100,
+  Testing 99) and the checkpoint Stop hook clean with full process compliance;
+  its one find — the better-auth line moved to a breaking 1.7 `latest` with no
+  watch bullet — became a MAINTENANCE dated take; F1 — Renovate delivery,
+  Mend-side — remains the standing tooling deduction).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
@@ -148,6 +149,7 @@ Per-program summary (Rows = archived row count; full rows →
 | `better-auth` 1.6.26 — 2026-08-14 | 1 | Routine bump, no advisory; schema-diffed clean across the full surface (auth leaf rule's blind spot — `@better-auth/core`/passkey — found by contrarian and fixed same session); live-verified: 2FA challenge, org invite/accept, admin ban, session cleanup on delete (4/4 sessions gone) | [CHANGELOG](../CHANGELOG.md) |
 | `nanoid` 3.3.18 taken — 2026-08-14 | 1 | Mechanical, spec pre-signed: 3.3.18 aged in ~17:08 UTC; override promoted `<3.3.17` → `<3.3.18`, `ignoreGhsas` back to `[]`, `pnpm audit` zero vulnerabilities/zero ignored | [CHANGELOG](../CHANGELOG.md) |
 | Doc audit — 2026-08-19 | 1 | Showcase caught up to the fifteenth pass (ch. 1 was three passes stale; deck 15th chart point); kit 0.13.0 + Renovate-still-zero currency; STATUS watch + BACKLOG overrides compacted, verbatim → archive; 2 memory repairs | [deck](plain-english-guide/slide-deck.html) |
+| Audit — 2026-08-19 | 1 | Sixteenth pass: **99.4** — 08-14 executions verified (F5 closed → Security 100; `main` green → Testing 99); checkpoint hook reviewed clean (anti-F2 process); found the better-auth watch gap (breaking 1.7 untracked) → dated take added; zero new rows | [report](archive/PROJECT_AUDIT_2026-08-19.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -167,7 +169,10 @@ landed item. Open now, and nothing else: **Renovate PR delivery FAILED** (zero
 empty; the Mend-side diagnosis is BACKLOG B1) · the **`next` 16.3.1 dated take**
 (16.3.0 superseded 2026-08-14 over a live `sharp`/SVG regression; 16.3.1 ages in
 ~2026-08-20T22:45 UTC — plan, riders and the order-dependent verification live in
-MAINTENANCE → Dated dependency takes). Ledger clear as of 2026-08-14: `nanoid` 3.3.18
+MAINTENANCE → Dated dependency takes) · the **`better-auth` 1.6.30 dated take**
+(ages in 2026-08-24 ~19:11 UTC — routine; ⚠️ **1.7.x is a breaking minor: plan →
+sign-off, not a routine take** — added 2026-08-19 by the sixteenth audit pass, which
+found the line had moved with no bullet tracking it). Ledger clear as of 2026-08-14: `nanoid` 3.3.18
 + `better-auth` 1.6.26 taken, `main` green, `auditConfig.ignoreGhsas` `[]`,
 `pnpm audit` zero vulnerabilities / zero ignored. The verbatim history this paragraph
 used to carry:
