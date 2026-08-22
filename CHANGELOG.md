@@ -354,35 +354,47 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Changed
 
-- **2026-08-22: `next` 16.2.12 → 16.3.1** (+ `@next/eslint-plugin-next` lockstep,
-  `tooling/eslint`). Registry-verified at take time (16.3.1 published
-  2026-08-13T22:45:02Z, gate cleared 2026-08-20T22:45:02Z); a `16.3.2` had shipped
-  by build time (2026-08-21T09:54:02Z, still inside the 7-day gate) but its release
-  notes are routine backports (Turbopack tracing/chunk-loading, a catch-all-route
-  fix, app-entry export-validation scoping, Turborepo OIDC caching auth) — no
-  security fix, so it did not warrant jumping the gate. **Removed the
-  `pnpm-workspace.yaml` `sharp: 0.35.3` override** — next 16.3.1's own
-  `optionalDependencies` pin moved to `sharp: ^0.35.3` (was `^0.34.5` exact), so
-  the override's stated removal condition ("next's own sharp pin reaches
-  >=0.35.0") is met and the caret now self-heals; `pnpm why sharp` confirms
-  `0.35.3` resolves from next's own pin. ⚠️ **This removal is only safe on
-  next >=16.3.1** — a derived project or a future downgrade below 16.3.1 without
-  restoring the override re-exposes `GHSA-f88m-g3jw-g9cj` (libvips HIGH, via
-  next's pre-16.3.1 exact `^0.34.5` pin). The `postcss` override was
-  deliberately **kept** (a contrarian-caught correction to the original plan,
-  which would have dropped it too): 16.3.1 pins `postcss` **exactly** at
-  `8.5.23` (no caret self-heal), and `8.5.26` already ships a same-family
-  sourceMappingURL/symlink hardening fix that makes a GHSA on `<=8.5.23` a
-  plausible next step — the override's `<=8.5.22` key is already inert against
-  the installed `8.5.23`, so removing it now would only discard the lever
-  needed to react fast if that advisory lands. Added a durable e2e guard
-  (`apps/web/e2e/image-optimization.spec.ts`) asserting both the
-  `/_next/image` optimizer and the `/opengraph-image` `ImageResponse` route
-  return non-empty `image/png`/`image/webp` bytes on the prod-build
-  `webServer` — a green build alone proves compilation, not that sharp/Satori
-  still transform. Gate (`lint`·`type-check`·`build`) clean, `pnpm audit`
-  zero/zero-ignored, `pnpm test:coverage` and `pnpm knip` clean, full CI e2e
-  lane green before merge.
+- **2026-08-22: `next` 16.2.12 → 16.3.1 taken, then REVERTED same day** (commit
+  `1bd8d1d773b57f947fdc57c1d691a4489a252393`, briefly on `main`). Passed the full
+  gate, both E2E CI lanes, `pnpm audit`, and a manual `:3100` `next start` live-verify
+  — but CI's Docker image job (which the local verify never exercises, since
+  `next start` and the Docker image's `output: 'standalone'` are different code
+  paths) caught a real regression: the container crashed at boot with
+  `Cannot find module '.../@swc/helpers/esm/_interop_require_default.js'`
+  ([failing run](https://github.com/jrittelmeyer/next-web-boilerplate/actions/runs/32593341802)).
+  **Root cause, verified against upstream primary sources, not taken on trust:**
+  `next@16.3.1` bumped its bundled `@swc/helpers` `0.5.15` → `0.5.23`, whose
+  `exports` map added a `module-sync` condition ahead of `default`. Under pnpm's
+  `.pnpm` virtual store (which creates a second `node_modules/.pnpm/node_modules`
+  candidate directory), Next's build-time file tracing resolves the `default`
+  condition and copies only `cjs/` into `.next/standalone`, while Node ≥22.12 (we
+  run Node 24-alpine) resolves `module-sync` at runtime → the never-copied
+  `esm/…js` → `MODULE_NOT_FOUND`. Matches vercel/next.js#97356/97358/97547/97597/97598/97599
+  (six near-duplicate reports) exactly, including one byte-identical root-cause
+  writeup. Already fixed upstream — PR vercel/next.js#97372 ("Turbopack: retain
+  conditions when replacing resolve request keys"), backported into the `next-16-3`
+  branch as #97453 — and #97453 is one of the six PRs listed in **16.3.2**'s own
+  release notes; its merge commit is confirmed present in the `v16.3.1...v16.3.2`
+  range. **Chose a plain revert over bypassing the 7-day age gate to take 16.3.2
+  immediately**: `16.2.12` (the pre-take state) predates 16.3.0 entirely, so it
+  never had the SVG-blocking `next/image`/`next/og` regression 16.3.1 was fixing in
+  the first place — nothing is lost by waiting the ~6 remaining days for 16.3.2 to
+  clear the gate on the normal, no-exception path (2026-08-28). A `contrarian` pass
+  (mandatory — `pnpm-workspace.yaml` is template surface) reviewed the alternative
+  (a dated `minimumReleaseAgeExclude` bypass) and flagged it would need all 9
+  lockstep packages enumerated (`next` + 8 `@next/swc-*` platform binaries, not just
+  `next` + the eslint plugin) and a rewrite of the age-gate's authoritative rule
+  text to add a real fourth route beyond its three security-only ones — real
+  surface for a second mistake on a day that already had one. **Process gap this
+  exposed, independent of which path was chosen:** the original take's registry
+  re-verify asked "is 16.3.2's changelog security-relevant" and, finding it wasn't,
+  never read it closely enough to notice it fixed a regression in the exact
+  subsystem (`output: 'standalone'` file tracing) the bump itself touched — logged
+  in MAINTENANCE.md's `next` watch item as a standing checklist addition for every
+  future `next` bump: exercise `output: 'standalone'` (a local Docker build, not
+  just `next start`) before taking, and skim the very next patch version's
+  changelog for anything touching the subsystem being bumped, independent of
+  whether it's flagged as security content.
 - **2026-08-14: `better-auth` 1.6.25 → 1.6.26** (+ `@better-auth/passkey` 1.6.25 →
   1.6.26, exact-pinned in lockstep). Routine bug-fix release, no advisory: session
   cleanup on user deletion now also clears secondary-storage sessions, email-OTP

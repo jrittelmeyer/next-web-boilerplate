@@ -48,6 +48,19 @@ The full per-dependency record (versions, pin style, and *why*) is
    `auditConfig.ignoreGhsas` (with its reason) only when nothing fixable exists.
    **Prune both kinds** once the upstream fix lands. Same for the `vite` version
    override — bump it as newer releases age out.
+6. **A `next` bump must exercise every deployment code path it touches, not just the
+   one that's convenient to check locally.** Learned 2026-08-22: `next` 16.3.1 passed
+   the full gate, both E2E CI lanes, and a manual `:3100` `next start` live-verify,
+   but CI's Docker image job caught a boot-crashing regression in `output:
+   'standalone'` — a code path `next start` never touches at all. Before taking a
+   `next` bump: (a) run an actual `docker build` + `docker run` + `/api/health` hit
+   locally for both the `web` and `worker` Dockerfile targets, not just `next start`;
+   (b) skim the *immediate next* patch version's changelog for anything touching the
+   subsystem just bumped, independent of whether it carries security content — "is
+   the newer version security-relevant" is the wrong question when the newer version
+   might instead fix a regression the one you're about to pin just introduced. Full
+   incident: [CHANGELOG](../CHANGELOG.md) 2026-08-22, [Watch → `next`
+   16.3.x](#watch-items-known-tracked-deliberately-not-done).
 
 ## Automation on a fork / new repo
 
@@ -407,40 +420,61 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     DONE 2026-08-14:** the bare `brace-expansion: 5.0.9` key converted to its
     ranged form in the earlier same-day change (audit F5 — same file, same
     unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
-  - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — ~~**superseded
-    2026-08-14, take `next` 16.3.1 instead**~~ — **TAKEN 2026-08-22.** 16.3.0
-    was aged and due, but a plan → contrarian pass the same day found a live
-    regression: `next/image`'s optimizer calls `sharp.block()` and only
-    selectively unblocks raster formats, not SVG (the block/unblock registry is
-    process-global), so any `next/image` optimization request permanently
-    blocks SVG decoding for the rest of the process — breaking `next/og`'s
-    `ImageResponse` (satori renders JSX → SVG, sharp rasterizes it). Verified
-    against Next.js's own PR (`vercel/next.js#96733`, merged into the
+  - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — ~~**superseded 2026-08-14,
+    take `next` 16.3.1 instead**~~ — **16.3.1 TAKEN then REVERTED 2026-08-22, defer
+    to `next` 16.3.2 (ages in 2026-08-28).** 16.3.0 is aged and due, but a plan →
+    contrarian pass the same day found a live regression: `next/image`'s optimizer
+    calls `sharp.block()` and only selectively unblocks raster formats, not SVG (the
+    block/unblock registry is process-global), so any `next/image` optimization
+    request permanently blocks SVG decoding for the rest of the process — breaking
+    `next/og`'s `ImageResponse` (satori renders JSX → SVG, sharp rasterizes it).
+    Verified against Next.js's own PR (`vercel/next.js#96733`, merged into the
     `next-16-3` branch 2026-08-06 — three days *after* 16.3.0 shipped — whose own
     verification note reproduces the break via `test/e2e/og-api/index.test.ts`)
     rather than taken on the contrarian's word alone. This repo has three files on
     that exact surface: `opengraph-image.tsx`, `icon.tsx`, `apple-icon.tsx` (all
-    `ImageResponse`, confirmed by grep). `next` 16.3.1 was the first stable
-    release carrying the fix. Build-time re-verify (2026-08-22) found `16.3.2`
-    had shipped meanwhile (2026-08-21T09:54Z, 1.4 days old — inside the 7-day
-    gate); its release notes are routine backports (Turbopack tracing/chunk
-    loading, a catch-all-route fix, app-entry export-validation scoping,
-    Turborepo OIDC caching auth) with no advisory content, so 16.3.1 stood as
-    taken. Both releases pin `sharp ^0.35.3` and `postcss 8.5.23` identically.
-    **Removed the `sharp: 0.35.3` override** (removal condition met — next's
-    own pin reached ≥0.35.0); `pnpm why sharp` confirms `0.35.3` now resolves
-    from next's own pin. **Kept the `postcss` override** — its second removal
-    condition (next's own pin ≥8.5.23) is met, but the exact `8.5.23` pin has
-    no caret self-heal and `8.5.26` already carries a same-family
-    sourceMappingURL/symlink hardening fix that makes a fresh advisory on
-    `<=8.5.23` plausible, so the override stays live as the fast-response lever;
-    see the override's own comment in `pnpm-workspace.yaml` for the retargeting
-    history. Verification ran order-dependent as prescribed: the new
-    `image-optimization.spec.ts` e2e guard requests `/_next/image` first, then
-    `/opengraph-image`, asserting both return non-empty real image bytes — a
-    green build alone proves compilation, not that sharp/Satori still
-    transform. Full CI e2e lane required green before merge (this is a MINOR
-    bump with cache/routing surface, not a patch).
+    `ImageResponse`, confirmed by grep). `next` 16.3.1 was the first stable release
+    carrying the fix, and was taken 2026-08-22 (full gate, both E2E CI lanes, a
+    manual `:3100` `next start` live-verify, `sharp` override removed per its met
+    removal condition) — **but CI's Docker image job caught a SECOND, independent
+    regression**: `output: 'standalone'`'s runtime (the code path only the Docker
+    build exercises, never `next start`) crashed at boot,
+    `Cannot find module '.../@swc/helpers/esm/_interop_require_default.js'`. Root
+    cause: 16.3.1 bumped bundled `@swc/helpers` `0.5.15`→`0.5.23`, whose `exports`
+    map added a `module-sync` condition that build-time file tracing (resolves
+    `default`→`cjs/`) and Node ≥22.12's runtime resolver (resolves `module-sync`→
+    `esm/`) disagree about under pnpm's `.pnpm` virtual store — matches
+    vercel/next.js#97356/97358/97547/97597/97598/97599 exactly. Already fixed
+    upstream (PR #97372, backported as #97453) and **that fix is one of the six PRs
+    in `next` 16.3.2's own release notes** — confirmed via the GitHub compare API
+    that #97453's merge commit sits in the `v16.3.1...v16.3.2` range. **Reverted the
+    16.3.1 take rather than bypass the 7-day age gate for 16.3.2** (a `contrarian`
+    pass on that bypass plan flagged it would need all 9 lockstep packages
+    enumerated — `next` + 8 `@next/swc-*` platform binaries — plus a rewrite of the
+    age-gate's authoritative rule text, since its three documented exception routes
+    are security-only): `16.2.12` predates 16.3.0 entirely, so it never had the
+    SVG-blocking regression in the first place, and nothing is lost waiting the
+    ~6 remaining days for 16.3.2 to clear the gate normally. Full incident record:
+    [CHANGELOG](../CHANGELOG.md) 2026-08-22.
+    **Rider, found by the 2026-08-06 audit, applies again to the 16.3.2 retake**
+    (re-verify at build time): pins `sharp ^0.35.3` and `postcss 8.5.23` identically
+    to 16.3.1 (registry-confirmed 2026-08-22), so the take plan should again
+    **remove the `sharp: 0.35.3` override** (its removal condition — next's own pin
+    ≥0.35.0 — is met) and re-check the postcss override's second condition (natural
+    tree resolution ≥8.5.23 — already true, independent of the bump).
+    **Verification must be order-dependent**: exercise a `next/image` optimization
+    first, then hit the OG/icon routes — testing them in isolation would not have
+    caught 16.3.0's bug. **New for the retake, learned from the 16.3.1 revert:**
+    (a) exercise `output: 'standalone'` locally — an actual `docker build` +
+    `docker run` + `/api/health` hit, for both the `web` and `worker` Dockerfile
+    targets — before pushing, not just `next start` on `:3100`; the two code paths
+    diverge and CI's Docker job is the only lane that exercises the standalone
+    runtime; (b) skim the *very next* patch version's changelog for anything
+    touching the subsystem just bumped, independent of whether it's flagged as
+    security content — the disqualifying test applied to 16.3.2 the first time
+    ("is this security-relevant") was the wrong question; "does it fix a known
+    regression in what I'm about to pin" is the one that would have caught this
+    before CI did.
   - ~~**2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in~~ — **TAKEN
     2026-08-14.** Registry-verified over `latest` (1.6.28, published
     2026-08-13T22:40Z) and 1.6.27 (2026-08-11T17:59Z) — both still inside the
@@ -552,16 +586,11 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     the lockfile past it. The ranged key is what makes the condition real: it goes
     inert once posthog-js resolves >=3.4.13 — which is also the moment the real fix
     lands, this edge being audit-only (see the posthog-js Watch line above).
-  - `sharp: 0.35.3` → **CLOSED 2026-08-22**: `next` 16.3.1's own `sharp`
-    optionalDependency pin moved to `^0.35.3` (was `^0.34.5` exact), meeting the
-    removal condition; override deleted from `pnpm-workspace.yaml`, `pnpm why
-    sharp` confirms `0.35.3` resolves from next's own pin, `pnpm audit`
-    zero/zero-ignored. ⚠️ **Only safe on next >=16.3.1** — a derived project or
-    a downgrade below 16.3.1 without restoring this override re-exposes
-    `GHSA-f88m-g3jw-g9cj` (libvips HIGH). Its `/_next/image` runtime path stays
-    e2e-covered (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that
-    installs but no longer transforms turns the e2e lane red instead of
-    passing silently.
+  - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
+    still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22).
+    Its `/_next/image` runtime path is e2e-covered since 2026-07-22
+    (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that installs but no
+    longer transforms turns the e2e lane red instead of passing silently.
   - `fast-uri: 3.1.5` → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
     the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
     `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. **Reopened 2026-08-04 (batch #5):

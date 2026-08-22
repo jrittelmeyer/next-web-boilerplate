@@ -62,14 +62,6 @@ overrides:
   # but were boundary-fresh at take time and carry no advisory delta, so aged wins.
   # Ranged key so an already-safe >=8.5.23 copy is left alone. Remove when next's own
   # pin AND the natural tree resolution both reach >=8.5.23.
-  # ⚠️ RE-EVALUATED 2026-08-22 (next 16.3.1 take): next pins postcss EXACTLY at
-  # 8.5.23 (no caret, unlike its sharp optionalDependency) — so "next's own pin
-  # reaches >=8.5.23" is met today but can only move again when next itself
-  # republishes with a newer exact pin, not via any local install/bump. Kept
-  # the override live rather than removing it: 8.5.26 already ships a
-  # same-family sourceMappingURL/symlink hardening fix, making a GHSA on
-  # <=8.5.23 a plausible next advisory, and this key is the fast-response
-  # lever for that. Removing it now would only have to be re-added.
   "postcss@<=8.5.22": 8.5.23
   # esbuild <=0.24.2 (GHSA-67mh-4wv8-2f99 — dev server lets any site read responses),
   # via drizzle-kit → @esbuild-kit/core-utils (deprecated upstream, frozen on 0.18.x).
@@ -191,6 +183,13 @@ overrides:
   # vulnerable copies; remove once a routine bump naturally carries the
   # lockfile past 3.3.18 (the key is inert from that moment).
   "nanoid@<3.3.18": 3.3.18
+  # sharp <0.35.0 (GHSA-f88m-g3jw-g9cj — inherited libvips CVE-2026-33327/33328/
+  # 35590/35591, HIGH), via next@16.2.11's own EXACT `^0.34.5` optionalDependency
+  # pin, which excludes the fix (Next.js's built-in image-optimization engine —
+  # a real runtime path, not build tooling). 0.35.3 clears the age gate
+  # (published 2026-07-01) and ships prebuilt binaries for every platform this
+  # repo targets. Remove when next's own sharp pin reaches >=0.35.0.
+  sharp: 0.35.3
   # ——— Advisory batch #5 (2026-08-04, closed issue #41): nine advisories landed
   # 08-03/04 across five packages — all transitive, every path build/dev/test tooling.
   # brace-expansion 5.0.9 (above) was taken separately on 08-03 (PR #38); postcss and
