@@ -60,3 +60,22 @@ test("optimizer rejects a remote url outside images.remotePatterns", async ({ re
   const response = await request.get(optimizeUrl("https://example.com/x.png"));
   expect(response.status()).toBe(400);
 });
+
+test("the /_next/image pipeline and the generated opengraph-image both render (next 16.3.1)", async ({
+  request,
+}) => {
+  // Guard for the next 16.3.1 bump (2026-08): proves the image-optimization
+  // path and the ImageResponse-based OG route both still produce real image
+  // bytes, not just that `next build` succeeded. A single sequence stands in
+  // for the manual :3100 smoke test so this stays enforced on every CI run.
+  const optimized = await request.get(optimizeUrl(FIXTURE_PUBLIC_PATH));
+  expect(optimized.status()).toBe(200);
+  const optimizedBody = await optimized.body();
+  expect(optimizedBody.length).toBeGreaterThan(0);
+
+  const og = await request.get("/opengraph-image");
+  expect(og.status()).toBe(200);
+  expect(og.headers()["content-type"]).toBe("image/png");
+  const ogBody = await og.body();
+  expect(ogBody.length).toBeGreaterThan(0);
+});

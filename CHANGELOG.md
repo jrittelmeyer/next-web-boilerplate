@@ -354,6 +354,35 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Changed
 
+- **2026-08-22: `next` 16.2.12 → 16.3.1** (+ `@next/eslint-plugin-next` lockstep,
+  `tooling/eslint`). Registry-verified at take time (16.3.1 published
+  2026-08-13T22:45:02Z, gate cleared 2026-08-20T22:45:02Z); a `16.3.2` had shipped
+  by build time (2026-08-21T09:54:02Z, still inside the 7-day gate) but its release
+  notes are routine backports (Turbopack tracing/chunk-loading, a catch-all-route
+  fix, app-entry export-validation scoping, Turborepo OIDC caching auth) — no
+  security fix, so it did not warrant jumping the gate. **Removed the
+  `pnpm-workspace.yaml` `sharp: 0.35.3` override** — next 16.3.1's own
+  `optionalDependencies` pin moved to `sharp: ^0.35.3` (was `^0.34.5` exact), so
+  the override's stated removal condition ("next's own sharp pin reaches
+  >=0.35.0") is met and the caret now self-heals; `pnpm why sharp` confirms
+  `0.35.3` resolves from next's own pin. ⚠️ **This removal is only safe on
+  next >=16.3.1** — a derived project or a future downgrade below 16.3.1 without
+  restoring the override re-exposes `GHSA-f88m-g3jw-g9cj` (libvips HIGH, via
+  next's pre-16.3.1 exact `^0.34.5` pin). The `postcss` override was
+  deliberately **kept** (a contrarian-caught correction to the original plan,
+  which would have dropped it too): 16.3.1 pins `postcss` **exactly** at
+  `8.5.23` (no caret self-heal), and `8.5.26` already ships a same-family
+  sourceMappingURL/symlink hardening fix that makes a GHSA on `<=8.5.23` a
+  plausible next step — the override's `<=8.5.22` key is already inert against
+  the installed `8.5.23`, so removing it now would only discard the lever
+  needed to react fast if that advisory lands. Added a durable e2e guard
+  (`apps/web/e2e/image-optimization.spec.ts`) asserting both the
+  `/_next/image` optimizer and the `/opengraph-image` `ImageResponse` route
+  return non-empty `image/png`/`image/webp` bytes on the prod-build
+  `webServer` — a green build alone proves compilation, not that sharp/Satori
+  still transform. Gate (`lint`·`type-check`·`build`) clean, `pnpm audit`
+  zero/zero-ignored, `pnpm test:coverage` and `pnpm knip` clean, full CI e2e
+  lane green before merge.
 - **2026-08-14: `better-auth` 1.6.25 → 1.6.26** (+ `@better-auth/passkey` 1.6.25 →
   1.6.26, exact-pinned in lockstep). Routine bug-fix release, no advisory: session
   cleanup on user deletion now also clears secondary-storage sessions, email-OTP

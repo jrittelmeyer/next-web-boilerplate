@@ -407,31 +407,40 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     DONE 2026-08-14:** the bare `brace-expansion: 5.0.9` key converted to its
     ranged form in the earlier same-day change (audit F5 — same file, same
     unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
-  - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — **superseded 2026-08-14,
-    take `next` 16.3.1 instead.** 16.3.0 is aged and due, but a plan → contrarian
-    pass the same day found a live regression: `next/image`'s optimizer calls
-    `sharp.block()` and only selectively unblocks raster formats, not SVG (the
-    block/unblock registry is process-global), so any `next/image` optimization
-    request permanently blocks SVG decoding for the rest of the process — breaking
-    `next/og`'s `ImageResponse` (satori renders JSX → SVG, sharp rasterizes it).
-    Verified against Next.js's own PR (`vercel/next.js#96733`, merged into the
+  - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — ~~**superseded
+    2026-08-14, take `next` 16.3.1 instead**~~ — **TAKEN 2026-08-22.** 16.3.0
+    was aged and due, but a plan → contrarian pass the same day found a live
+    regression: `next/image`'s optimizer calls `sharp.block()` and only
+    selectively unblocks raster formats, not SVG (the block/unblock registry is
+    process-global), so any `next/image` optimization request permanently
+    blocks SVG decoding for the rest of the process — breaking `next/og`'s
+    `ImageResponse` (satori renders JSX → SVG, sharp rasterizes it). Verified
+    against Next.js's own PR (`vercel/next.js#96733`, merged into the
     `next-16-3` branch 2026-08-06 — three days *after* 16.3.0 shipped — whose own
     verification note reproduces the break via `test/e2e/og-api/index.test.ts`)
     rather than taken on the contrarian's word alone. This repo has three files on
     that exact surface: `opengraph-image.tsx`, `icon.tsx`, `apple-icon.tsx` (all
-    `ImageResponse`, confirmed by grep). **`next` 16.3.1** (published
-    2026-08-13T22:45Z, ages in ~2026-08-20T22:45Z) is the first stable release
-    carrying the fix; no security content of its own, so there's no cost to
-    waiting the ~6 days rather than taking 16.3.0's regression. (Registry
-    re-checked 2026-08-19: 16.3.1 is still `latest`; no 16.3.2 has shipped.) **Rider, found by
-    the 2026-08-06 audit, still applies to 16.3.1** (re-verify at build time):
-    pins `sharp ^0.35.3` and `postcss 8.5.23`, so the take plan should also
-    **remove the `sharp: 0.35.3` override** (its removal condition — next's own
-    pin ≥0.35.0 — is met) and re-check the postcss override's second condition
-    (natural tree resolution ≥8.5.23 — already true today, independent of the
-    bump). **Verification must be order-dependent**: exercise a `next/image`
-    optimization first, then hit the OG/icon routes — testing them in isolation
-    would not have caught 16.3.0's bug.
+    `ImageResponse`, confirmed by grep). `next` 16.3.1 was the first stable
+    release carrying the fix. Build-time re-verify (2026-08-22) found `16.3.2`
+    had shipped meanwhile (2026-08-21T09:54Z, 1.4 days old — inside the 7-day
+    gate); its release notes are routine backports (Turbopack tracing/chunk
+    loading, a catch-all-route fix, app-entry export-validation scoping,
+    Turborepo OIDC caching auth) with no advisory content, so 16.3.1 stood as
+    taken. Both releases pin `sharp ^0.35.3` and `postcss 8.5.23` identically.
+    **Removed the `sharp: 0.35.3` override** (removal condition met — next's
+    own pin reached ≥0.35.0); `pnpm why sharp` confirms `0.35.3` now resolves
+    from next's own pin. **Kept the `postcss` override** — its second removal
+    condition (next's own pin ≥8.5.23) is met, but the exact `8.5.23` pin has
+    no caret self-heal and `8.5.26` already carries a same-family
+    sourceMappingURL/symlink hardening fix that makes a fresh advisory on
+    `<=8.5.23` plausible, so the override stays live as the fast-response lever;
+    see the override's own comment in `pnpm-workspace.yaml` for the retargeting
+    history. Verification ran order-dependent as prescribed: the new
+    `image-optimization.spec.ts` e2e guard requests `/_next/image` first, then
+    `/opengraph-image`, asserting both return non-empty real image bytes — a
+    green build alone proves compilation, not that sharp/Satori still
+    transform. Full CI e2e lane required green before merge (this is a MINOR
+    bump with cache/routing surface, not a patch).
   - ~~**2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in~~ — **TAKEN
     2026-08-14.** Registry-verified over `latest` (1.6.28, published
     2026-08-13T22:40Z) and 1.6.27 (2026-08-11T17:59Z) — both still inside the
@@ -543,11 +552,16 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     the lockfile past it. The ranged key is what makes the condition real: it goes
     inert once posthog-js resolves >=3.4.13 — which is also the moment the real fix
     lands, this edge being audit-only (see the posthog-js Watch line above).
-  - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
-    still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22).
-    Its `/_next/image` runtime path is e2e-covered since 2026-07-22
-    (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that installs but no
-    longer transforms turns the e2e lane red instead of passing silently.
+  - `sharp: 0.35.3` → **CLOSED 2026-08-22**: `next` 16.3.1's own `sharp`
+    optionalDependency pin moved to `^0.35.3` (was `^0.34.5` exact), meeting the
+    removal condition; override deleted from `pnpm-workspace.yaml`, `pnpm why
+    sharp` confirms `0.35.3` resolves from next's own pin, `pnpm audit`
+    zero/zero-ignored. ⚠️ **Only safe on next >=16.3.1** — a derived project or
+    a downgrade below 16.3.1 without restoring this override re-exposes
+    `GHSA-f88m-g3jw-g9cj` (libvips HIGH). Its `/_next/image` runtime path stays
+    e2e-covered (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that
+    installs but no longer transforms turns the e2e lane red instead of
+    passing silently.
   - `fast-uri: 3.1.5` → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
     the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
     `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. **Reopened 2026-08-04 (batch #5):
