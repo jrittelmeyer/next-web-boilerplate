@@ -72,11 +72,14 @@ _Last updated: 2026-08-19 (sixteenth audit pass: **99.4/100** — report in the 
   licensed the change):
   [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
-  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (kit 0.13.0 —
-  the 2026-07-23 context-engineering release, two patches, and the 2026-08-08
-  project-adopt selective-merge release, then the 0.9–0.13 line, reinstalled here 2026-08-12); this repo consumes the installed
-  `.claude/` output (edit a clone, re-install — never the copies). Kit story: the kit
-  repo's CHANGELOG + [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
+  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (**kit 0.18.0**,
+  reinstalled here 2026-08-23 — the 0.14–0.18 modernization line: skill-lint CI gate ·
+  any-project portability · `harness-audit` + `retro` · plugin-marketplace packaging ·
+  per-skill eval scenarios; ten skills, `references/` progressive disclosure, 12 → 31
+  kit-owned `.claude/` files); this repo consumes the installed `.claude/` output (edit a
+  clone, re-install — never the copies) and is **installer-route, `--hooks` withheld**
+  ([CONVENTIONS.md → Agent tooling](context/CONVENTIONS.md#agent-tooling-claude)). Kit story:
+  the kit repo's CHANGELOG + [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
 
 ## Build progress
 

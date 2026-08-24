@@ -127,15 +127,35 @@ layers, with different ownership:
 
 | Path | Owner | Rule |
 | --- | --- | --- |
-| `.claude/skills/`, `.claude/hooks/ai-dev-kit/` | ai-dev-kit (installer output) | Never edit in place — edit a kit clone and re-run `install.mjs`; `install.mjs --check` guards drift. |
+| `.claude/skills/`, `.claude/hooks/ai-dev-kit/` | ai-dev-kit (installer output) | Never edit in place — edit a kit clone and re-run `install.mjs`; `install.mjs --check` guards drift. Includes `hooks/ai-dev-kit/hooks.json` (since kit 0.17.0) — a **record** of the kit's wiring, not live config; `settings.json` is what actually runs. |
 | `.claude/agents/`, `.claude/hooks/*.mjs` (top level) | this repo | Hand-maintained; edit directly. Add each to `knip.jsonc`'s root `entry` list — nothing imports them, so knip reports them as dead files otherwise. |
 | `.claude/settings.json` | this repo, merged by the installer | See below. |
 
+**This repo is installer-route — do not also install the kit's marketplace plugin.** The kit
+ships two install channels and they are mutually exclusive: the plugin loader auto-discovers the
+plugin's own wiring file, so a repo that already carries installer-form entries in
+`settings.json` would fire **every kit hook twice**, from two files, with no local artifact
+explaining it. The installer's ownership marker cannot help — it only sees `settings.json`.
+
+**`compact-reorient.mjs` is installed but deliberately NOT wired.** The kit's install command
+here omits `--hooks`, so the handler sits inert on disk. Its injected text hardcodes "re-open
+the status doc and the current backlog row", but `scripts/init-app.mjs --slim` — the documented
+scaffold command — deletes `docs/PROJECT_STATUS.md` and `docs/BACKLOG.md` while leaving
+`.claude/` verbatim, so in a generated project the nudge would point at two files that do not
+exist, on every compaction, forever. Advise-only hooks never error, so it would fail silently.
+**Don't "fix" this by adding `--hooks`** — the fix is kit-side (have the handler resolve the
+adapter's `docs.status`/`docs.backlog` and stat them first); adopt the wiring after that lands.
+
 **`settings.json` survives a kit install** — it is not regenerated. The installer mutates
-only its `hooks` key, and within each event strips only entries whose `command` contains the
-literal marker `.claude/hooks/ai-dev-kit/`; the header of `install.mjs` says as much
-("the adapter config and settings.json are user-owned and never checked"). A repo-owned hook
-whose command points *outside* that path is preserved by construction.
+only its `hooks` key, and within each event strips only entries carrying the literal marker
+`.claude/hooks/ai-dev-kit/`; the header of `install.mjs` says as much ("the adapter config and
+settings.json are user-owned and never checked"). A repo-owned hook whose handler path points
+*outside* that path is preserved by construction.
+
+Since kit 0.17.0 the marker is read from **both** `command` and every `args` entry
+(`install.mjs` → `carriesMarker`), so wiring in either form is recognised and replaced cleanly.
+Before that it read `command` only, which is why older revisions of this file called exec form
+unusable — see below.
 
 That marker — not `--check` — is the real reason `contrarian-nudge.mjs` sits at the top level.
 `--check` walks the kit **source** tree and diffs each source file against its destination, so
@@ -146,6 +166,12 @@ effect of a reinstall is a one-time reordering of the `PreToolUse` groups (kit e
 after repo-owned ones); it is idempotent thereafter. `pnpm docs:sanity` asserts every
 repo-owned handler is still wired, so a bad hand-merge fails a gate instead of silently
 disarming the hook.
+
+⚠️ **That assertion only covers shell-form entries.** `docs-sanity.mjs` reads each hook's
+`command` string; for an exec-form entry that string is just `"node"`, so **kit hooks are
+invisible to both the wiring check and the anchor check below**. Repo-owned handlers are
+shell-form and stay covered — which is the case the gate exists for — but don't read a green
+`docs:sanity` as proof the kit wiring is intact. Widening it is a backlog row.
 
 **Every handler path must be anchored on `${CLAUDE_PROJECT_DIR}`, braced and double-quoted:**
 
@@ -161,16 +187,25 @@ advise, and every gate stayed green — it cost this repo 14 silently-lost runs 
 reads as `$null` under the PowerShell hook shell (Windows without Git Bash), and an
 **unquoted** path word-splits under bash when the project path contains a space. The official
 hooks-guide examples use the bare form — they are POSIX-only, don't copy them here.
-`pnpm docs:sanity` now fails on an un-anchored command, and the kit's `smoke-hooks.mjs`
-asserts the same over `hooks.json`.
+`pnpm docs:sanity` fails on an un-anchored command (shell form only, per the warning above),
+and the kit's `smoke-hooks.mjs` asserts the same over **both** its wiring files —
+`installer-hooks.json` against `${CLAUDE_PROJECT_DIR}` and the plugin-form `hooks.json`
+against `${CLAUDE_PLUGIN_ROOT}` — plus structural parity between them.
 
-Exec form (`args`) is cleaner at runtime — Claude Code substitutes the placeholder itself and
-spawns with no shell — but it is **wrong here**: it moves the path out of `command`, which is
-exactly where the installer's ownership marker looks, so kit entries stop being recognised and
-the next install appends duplicates. It also degrades worse on adopter builds predating `args`,
-where the shell form degrades to precisely the prior behaviour. Revisit when the marker keys
-on `args` too. Do **not** reach for `"shell": "bash"` for determinism either — it hard-throws
-on Windows without Git Bash.
+**The double-quoting half applies to shell form only.** In exec form the path is a JSON array
+element in `args`, carries no inner quotes, and the harness substitutes and spawns without a
+shell — quoting is its job, not yours. Braced (`${…}`, never bare `$…`) is required in both.
+
+**Form, by owner.** Exec form (`args`) is cleaner at runtime — Claude Code substitutes the
+placeholder itself and spawns with no shell. The kit ships its own entries that way and, since
+0.17.0, its ownership marker reads `args` too, so the duplicate-wiring hazard this section used
+to warn about is gone.
+
+**Repo-owned handlers stay shell form** for a reason that has not changed: on an adopter build
+predating `args` support, an exec-form entry runs bare `node` with no arguments, while the
+shell form degrades to precisely the prior behaviour. It is a harness version floor, not a
+marker consequence — and `docs:sanity` only polices shell form anyway (above). Do **not** reach
+for `"shell": "bash"` for determinism either — it hard-throws on Windows without Git Bash.
 
 Residual limit: `CLAUDE_PROJECT_DIR` is the **launch cwd**, not the git root, so starting
 `claude` from inside `apps/web` still misses. Strictly better than a relative path, which broke

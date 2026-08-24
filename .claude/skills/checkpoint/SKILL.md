@@ -8,9 +8,8 @@ description: Commit and push pending work, then either continue to the next back
 Commit + push whatever is pending, then decide: continue to the next step in this
 session, or hand off cleanly with a resume prompt. Never do half of both.
 
-Project parameters (commit style, CI facts, cache-prune command, doc paths) come from
-the adapter config `.claude/ai-dev-kit.config.json`. Where a field is absent, derive
-it from the repo (`git log` for message style, `package.json` scripts) and say so.
+Adapter: `.claude/ai-dev-kit.config.json` (`commit`, `ci`, `cache`, `docs`); a
+missing field → derive it from the repo and say so.
 
 ## 1. Commit & push
 
@@ -23,11 +22,11 @@ it from the repo (`git log` for message style, `package.json` scripts) and say s
   write the message to a scratchpad file and `git commit -F <file>` (inline `-m`
   quoting breaks on PowerShell 5.1).
 - Push. **If this checkpoint ends the session** (step 2 says hand off), watch CI to
-  green now. On GitHub Actions: `gh run list --commit <full 40-char sha>` (a short sha
-  silently matches nothing) → the adapter's `ci.workflow` run → `gh run watch <id>`,
-  then **confirm** with `gh run view <id> --json status,conclusion` (watch's
-  `--exit-status` is unreliable). If instead you're continuing with more work that
-  ends in its own watched CI run, one watch at the end covers the tree.
+  green now — provider recipes (find the run for this exact sha → watch → confirm
+  the conclusion via a JSON query, never the stream alone) are in
+  [references/ci-watch.md](references/ci-watch.md), keyed on the adapter's
+  `ci.provider`. If instead you're continuing with more work that ends in its own
+  watched CI run, one watch at the end covers the tree.
 - **Housekeeping (after push):** run the adapter's `cache.prune` command if defined —
   local build caches often have no TTL or size cap and grow by gigabytes per build, so
   pruning at every checkpoint bounds them at the exact cadence they grow (a pre-push
@@ -49,7 +48,8 @@ live loop → docs → commit → CI watch: typically a third to half of a *fres
   unhealthy regardless of remaining window — the window is now full of failure
   and poisons further attempts. Hand off with a diagnosis of the wrong
   assumption (the fix is to the spec or the context, not another retry); never
-  coach it out in-window.
+  coach it out in-window — and suggest a `retro` pass so the obstacle becomes
+  a codified lesson, not a rerun.
 
 State the verdict and the rough numbers behind it — don't decide silently.
 
@@ -97,7 +97,10 @@ the handoff file, a doc, or memory is lost. The prompt must contain, in order:
 Spend capability where judgment lives, not where the plan already decided. From
 the step shape §2 estimated, recommend the cheapest configuration that executes
 the next step *well* — name a tier of the harness's current ladder (e.g.
-Haiku < Sonnet < Opus < Fable, late-2026) and a reasoning effort (low → max):
+Haiku < Sonnet < Opus < Fable, late-2026 — an aging example: verify against the
+lineup the session actually offers) and a reasoning effort (low → max):
+<!-- lint-ok: dated — deliberate example ladder; re-checked each harness-audit -->
+
 
 - **Mechanical** — an approved plan with named files, docs/config-only edits,
   release chores, gate re-runs: smallest tier that drives the tools reliably,

@@ -13,6 +13,21 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **2026-08-23: ai-dev-kit 0.13.0 → 0.18.0** — the kit's four-phase modernization line plus
+  its eval release: skill-lint CI gate, any-project portability (skill bodies became
+  domain-neutral skeletons with per-domain `references/`), the new `harness-audit` and
+  `retro` skills, plugin-marketplace packaging, and per-skill eval scenarios. Kit-owned
+  `.claude/` files go 12 → 31; `settings.json` is untouched (its wiring already matched).
+  **Installed without `--hooks`, deliberately:** that flag would wire the new
+  `compact-reorient` SessionStart hook, whose injected text points at
+  `docs/PROJECT_STATUS.md` and `docs/BACKLOG.md` — two files `init-app --slim` deletes from
+  every generated project, where an advise-only hook would then misdirect silently forever.
+  The handler ships inert pending a kit-side fix. A `contrarian` pass (Always-triggered —
+  template surface) caught that, caught that the kit clone had moved to 0.18.0 mid-session,
+  and found the stale remediation string in `docs-sanity.mjs` that this bump made wrong.
+  The adapter stays on the v1 schema (it is the kit's v1 regression fixture) and was
+  re-verified valid. `harness-audit`/`retro` are installed but **not adopted** — that is a
+  separate decision.
 - **2026-08-14: `checkpoint-autorun.mjs` — a Stop hook that automates the
   `checkpoint` skill.** When a session goes idle with a dirty/unpushed tree, it
   forces one more turn that commits, pushes, watches CI, prunes the build cache,

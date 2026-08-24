@@ -129,7 +129,7 @@ for (const command of commands) {
   // and an unquoted path word-splits under bash when the project path has a space.
   if (referenced && !command.includes(`"\${CLAUDE_PROJECT_DIR}/${referenced}"`)) {
     failures.push(
-      `.claude/settings.json runs "${referenced}" on a path relative to the session cwd — it will silently fail from any subdirectory. Write it as node "\${CLAUDE_PROJECT_DIR}/${referenced}" (braced and double-quoted). For ai-dev-kit/ handlers, fix hooks/hooks.json in the kit and reinstall — an edit here is reverted by the next install.`,
+      `.claude/settings.json runs "${referenced}" on a path relative to the session cwd — it will silently fail from any subdirectory. Write it as node "\${CLAUDE_PROJECT_DIR}/${referenced}" (braced and double-quoted). For ai-dev-kit/ handlers, fix hooks/installer-hooks.json in the kit and reinstall — an edit here is reverted by the next install. (Since kit 0.17.0 hooks/hooks.json is the plugin-form file, which the installer never reads.)`,
     );
   }
 }

@@ -11,194 +11,123 @@ description: >-
 # Documentation / Context / Memory Audit
 
 A periodic, sign-off-gated pass that keeps a project's docs, agent-context files,
-persistent memory, and showcase docs **accurate** and **token-efficient**. Use extended
-thinking — this is an analysis task before it's an editing task.
+persistent memory, and showcase docs **accurate** and **token-efficient**. Use
+extended thinking — this is an analysis task before it's an editing task.
 
 ## Operating principles (the "why")
 
-- **Optimize the hot path first.** The most expensive tokens are in files the agent
-  loads *every turn* (`CLAUDE.md`/`AGENTS.md`, the memory index) or *every resume* (a
-  status/handoff file). Slimming those beats slimming an on-demand reference doc.
-  Triage every file by load frequency: always-loaded → on-resume → on-demand → archival.
-- **Spend audit tokens the same way.** Read hot-path files fully; spot-check on-demand
-  files against their drift-prone claims; review archives at index level only. Reuse
-  the project's own doc map (a docs README, a memory doc-map file) instead of
-  re-deriving the landscape. Verify with the cheapest sufficient probe — grep for the
-  symbol instead of reading the file; query the registry for a version instead of a
-  changelog.
-- **Accuracy beats completeness.** A doc that contradicts the code actively misleads
-  the agent. Never trust a doc's claim about code; verify it against source.
+- **Optimize the hot path first.** The most expensive tokens are in files the
+  agent loads *every turn* (`CLAUDE.md`/`AGENTS.md`, the memory index) or *every
+  resume* (a status/handoff file). Slimming those beats slimming an on-demand
+  reference doc. Triage every file by load frequency: always-loaded → on-resume
+  → on-demand → archival.
+- **Spend audit tokens the same way.** Read hot-path files fully; spot-check
+  on-demand files against their drift-prone claims; review archives at index
+  level only. Reuse the project's own doc map instead of re-deriving the
+  landscape. Verify with the cheapest sufficient probe — grep for the symbol
+  instead of reading the file; query the registry instead of a changelog.
+- **Accuracy beats completeness.** A doc that contradicts the code actively
+  misleads the agent. Never trust a doc's claim about code; verify it against
+  source.
 - **Preserve, don't destroy.** Cull verbose detail by *moving* it to an
-  archive/history file, and record in the archive's index what was preserved where.
-  Keep a compact one-line-per-item record in the hot-path file; the prose lives in the
-  archive.
+  archive/history file and recording in the archive's index what was preserved
+  where. The hot-path file keeps a compact one-line-per-item record.
 - **One source of truth.** If two files state the same fact, the hot-path file
   *defers* (links) to the authoritative one instead of duplicating it.
-- **Respect the project's cadence.** Follow documented working agreements (plan →
-  sign-off → build, verify-by-running). Default: present findings + plan, get
-  sign-off, then execute. If the invoking request already authorized the full pass
-  end-to-end (or the session is non-interactive), proceed — and record in the final
-  report the decisions a sign-off would have covered.
-- **Measure.** Quantify the savings (word counts before → after; tokens ≈ words ×
-  1.35) so the win is concrete.
+- **Respect the project's cadence.** Follow documented working agreements
+  (plan → sign-off → build). Default: present findings + plan, get sign-off,
+  then execute. If the invoking request pre-authorized the full pass (or the
+  session is non-interactive), proceed — and record in the final report the
+  decisions a sign-off would have covered.
+- **Measure.** Quantify the savings (chars before → after; tokens ≈ chars/4)
+  so the win is concrete.
 
 ## Process
 
 ### 1 — Discover & read
 
-- Map the landscape: `README`, `CLAUDE.md`/`AGENTS.md`, any **leaf** `AGENTS.md`/
-  `CLAUDE.md` files in subdirectories (glob for them — monorepo packages carry
-  their own), everything under `docs/**`, any status / handoff / backlog /
-  changelog / decision-log files, and the agent **memory** directory + its index.
+- Map the landscape: `README`, `CLAUDE.md`/`AGENTS.md` (including **leaf**
+  copies in subdirectories — glob for them), everything under `docs/**`, any
+  status / handoff / backlog / changelog / decision-log files, and the agent
+  **memory** directory + its index.
 - **Hunt for local-only docs.** Check `.gitignore` and `.git/info/exclude` for
-  doc-shaped exclusions (a private explainer directory, a pitch deck, an internal
-  guide) and check the project's memory for designated doc sets. These never appear
-  in `git status`, so they are the easiest to forget and the fastest to rot.
+  doc-shaped exclusions and check the project's memory for designated doc sets
+  — these never appear in `git status`, so they rot fastest.
 - Classify each file by **load frequency** (always / on-resume / on-demand /
-  archival) and by **audience**:
-  - **agent-facing** — context the agent loads to do work;
-  - **outward-facing** — README, quickstart, contributing: read by human adopters at
-    the moment of adoption, where a wrong claim costs trust, not just tokens;
-  - **showcase** — pitch decks, plain-English guides, slide decks: persuasion and
-    comprehension docs for non-technical readers, often local-only.
-- Read at the tiered depth above. Don't skim the hot path — you can't spot
-  duplication or drift you haven't read.
+  archival) and **audience** (agent-facing / outward-facing / showcase), then
+  read at tiered depth — don't skim the hot path; you can't spot duplication
+  or drift you haven't read.
 
 ### 2 — Analyze (change nothing yet)
 
-Hunt for seven things:
+Run the **seven hunts** — full mechanics, examples, and the
+standing-instruction placement sub-rules live in
+[references/hunts.md](references/hunts.md); read it before the pass:
 
-1. **Code↔doc drift.** List the doc claims most likely to rot: file/function/flag
-   names, config values, env vars, schema shapes, command names, route/endpoint
-   lists, version pins, "we do X" architectural claims. **Spot-check the drift-prone
-   ones against the actual code** (grep/read it — don't trust the doc). Record each
-   confirmed mismatch.
-2. **Duplication / bloat.** The same fact stated in multiple files; a per-step
-   "append-log" that has regrown inside a status file **or a persistent-memory
-   file**; a backlog that re-describes already-shipped work; a memory file that
-   duplicates a living doc. Flag the worst offenders on the hot path.
-3. **Archivable / irrelevant content.** Completed plans, superseded audits, finished
-   migrations, history that isn't normal task context — candidates to move to an
-   archive.
-4. **Backlog gaps.** Things the codebase lacks that aren't tracked: scattered
-   `TODO`s, known-but-unfiled issues, "deferred" notes. Candidates to add to the
-   backlog.
-5. **Currency & status drift.** Claims that rot with **zero repo changes**:
-   "current / latest / the <year> default", "blocked on upstream X",
-   "maintenance-only / feature-complete", external links, version claims. Spot-check
-   the decision-gating ones (did the upstream gate lift? did a major ship?). For
-   outward-facing docs, verify the *runnable* claims too — quickstart commands
-   against the real scripts, badges, links.
-6. **Showcase-doc lag.** Find the set's "Current as of" stamp (or file mtimes) and
-   run `git log --oneline --since=<then>` — every feature shipped since is a
-   candidate gap. Spot-check the **numeric and superlative claims** (counts, quality
-   scores, "N of 100", version numbers, "the only starter that…") — those rot with
-   every release. For an HTML deck, grep the headings/stat markup for claims rather
-   than reading the whole file.
-7. **Standing-instruction budget & placement.** Measure the always-loaded set
-   (tokens ≈ chars/4): the agent-onboarding file (`AGENTS.md`), tool-specific
-   files (`CLAUDE.md` and kin), the memory index, and skill descriptions. Check
-   against the project's budgets (adapter `contextBudget` where present;
-   defaults: onboarding file ~150 lines; memory index ~700 tokens with
-   ~120-char one-line hooks; a context doc above ~3,000 tokens is a
-   split-candidate; a memory file above ~1,500 likewise). Budgets are
-   heuristics — flag-and-recommend, never churn a stable file to chase a
-   number. Then check *placement*, which matters as much as size:
-   - **Prime directive:** flag always-loaded lines the agent could infer from
-     the repo itself — file trees, script lists package.json already carries,
-     stack tables duplicated from a README.
-   - **Thin pointers:** tool-specific files should import the onboarding doc
-     and carry only genuinely tool-specific config — flag re-catalogs of
-     content the harness already indexes (e.g. skill descriptions).
-   - **Cache stability:** flag volatile facts — dates, audit scores, deadlines,
-     version litanies — in always-loaded files. They invalidate the
-     prompt-cache prefix on every edit and are stale by construction; they
-     belong in the status doc, pointed at rather than pasted.
-   - **Leaf files:** audit any leaf `AGENTS.md` for drift against its owning
-     context doc (a stale leaf is worse than none) and note high-traffic
-     packages with sharp package-local rules that lack one.
-   - **Load-when precision:** every context doc gets exactly one trigger-shaped
-     row in the onboarding doc's index; flag rows that fire on everything
-     ("writing any code") or span too many topics to load selectively.
+1. **Code↔doc drift** — spot-check the rot-prone claims against source.
+2. **Duplication / bloat** — the same fact in multiple files; regrown
+   append-logs; backlogs re-describing shipped work.
+3. **Archivable content** — completed plans, superseded audits, history.
+4. **Backlog gaps** — untracked TODOs, known-but-unfiled issues.
+5. **Currency & status drift** — claims that rot with zero repo changes;
+   quickstart commands, badges, links, external gates.
+6. **Showcase-doc lag** — stamp-vs-git-log diff; numeric/superlative claims.
+7. **Standing-instruction budget & placement** — measure the always-loaded
+   set against the adapter's `contextBudget` (defaults in hunts.md) and apply
+   the placement rules (prime directive · thin pointers · cache stability ·
+   leaf files · load-when precision).
 
-Litmus tests:
-- *"Would an agent that loaded only this file be misled?"* → drift, or it needs a
-  pointer.
-- *"Is this fact already derivable from the code, git history, or CLAUDE.md?"* → it
-  probably shouldn't be repeated in docs or stored in memory.
-- *"If two files disagree, which is authoritative?"* → that one stays; the other
-  defers to it.
+Litmus tests: *"Would an agent that loaded only this file be misled?"* →
+drift, or it needs a pointer. *"Is this fact derivable from the code, git
+history, or the onboarding doc?"* → don't repeat it. *"If two files disagree,
+which is authoritative?"* → that one stays; the other defers.
 
 ### 3 — Plan + sign-off
 
-Present findings grouped (drift / bloat / archive / backlog / showcase), each with a
-**concrete fix** and a recommendation. Use a question prompt for the genuine
-decisions only, e.g. how aggressively to slim, whether to add each proposed backlog
-item, archive vs delete for borderline content. Wait for sign-off before editing —
-unless the run was pre-authorized (see principles), in which case take the
-recommended option and say so in the report.
+Present findings grouped (drift / bloat / archive / backlog / showcase), each
+with a **concrete fix** and a recommendation. Ask about the genuine decisions
+only (how aggressively to slim, archive vs delete for borderline content).
+Wait for sign-off unless pre-authorized — then take the recommended option and
+say so in the report.
 
 ### 4 — Execute
 
-- **Fix drift first** — point every stale claim at what the code actually does.
-- **Slim hot-path files** — remove duplicated prose; keep a compact, scannable
-  record (one line per item); move the verbose detail **verbatim** into an
-  archive/history file. Then refresh any index / map / "where docs live" files so
-  they still describe reality.
-- **Enforce budget & placement fixes** — relocate volatile status facts to the
-  status doc; split an oversized context doc along its heading seams into a
-  per-topic directory, leaving the original as a thin index/redirect so inbound
-  links keep resolving; trim tool-specific files back to thin pointers; restate
-  the write-time rule (budgets + "one clause on an existing line, not a new
-  paragraph") in the memory index header so prevention outlives the pass.
-- **Add the agreed backlog items.**
-- **Refresh showcase docs in-register.** Fold newly shipped work into the right
-  chapter/slide in the doc's own voice: a plain-English guide defines every term at
-  first use and never leaks jargon from the technical docs; a deck updates its
-  numbers everywhere they appear (prose, stat blocks, the closing pitch). Keep HTML
-  edits surgical. Then **stamp the set** ("Current as of <date>, commit
-  <short-sha>") so the next audit can diff cheaply from that point.
-- **Repair memory** — collapse per-step changelogs into a short high-level pointer
-  that defers to the living docs; keep only durable, non-derivable facts; delete
-  ones that are now wrong; fix cross-links. Preserve each file's frontmatter; keep
-  one fact per file; convert relative dates to absolute.
+Fix drift first → slim hot-path files (move verbose detail **verbatim** to the
+archive; refresh index/map files) → enforce budget & placement fixes → add the
+agreed backlog items → refresh showcase docs in-register and stamp the set →
+repair memory (collapse per-step changelogs into pointers; keep only durable
+non-derivable facts; fix cross-links). Per-fix patterns are in hunts.md.
 
 ### 5 — Verify
 
-- Confirm internal links/anchors resolve (the targets exist; heading anchors match).
-- Confirm the change scope is exactly what you intended (`git status`); no code
-  touched unless intended. **Local-only files never show there** — re-list the ones
-  you touched and confirm content/mtime directly.
-- Report the measured savings (before → after) and the showcase claims you updated.
-- If anything code-adjacent changed, run the project's gate (lint · type-check ·
-  build). Markdown is usually outside the lint gate — the link/scope/measurement
-  checks above are the real verification.
-- **Commit/push only when asked**, following the repo's branching convention.
-  Local-only showcase docs are saved, never committed.
+- Internal links/anchors resolve; `git status` scope is exactly what you
+  intended (local-only files never show there — re-list them directly).
+- Report measured savings (before → after) and the showcase claims updated.
+- Anything code-adjacent changed → run the project's gate. Markdown is usually
+  outside it — the link/scope/measurement checks are the real verification.
+- **Commit/push only when asked.** Local-only showcase docs are saved, never
+  committed.
 
 ## Notes & gotchas
 
 - **Budgets come from the adapter** — `.claude/ai-dev-kit.config.json` →
-  `contextBudget` overrides hunt 7's defaults; where absent, use the defaults
-  and say so. Sign-off cadence: plan → sign-off → build; sign-off may be
-  pre-authorized by the invoking request (see operating principles).
+  `contextBudget` overrides the defaults in hunts.md; where absent, use the
+  defaults and say so.
 - **Agent memory lives outside the repo** (typically
   `~/.claude/projects/<project-slug>/memory/` with a `MEMORY.md` index). It is
-  **not** in git — edit it directly; it won't appear in `git status`. The index is
-  loaded every session; individual files are recalled on relevance, so the index
-  line and each file's `description` must stay accurate.
-- **The biggest recurring win** is a status/handoff file — or a persistent-memory
-  file — that has quietly regrown a verbose per-step log. The fix pattern: keep a
-  compact build-progress table as the record, move the prose into the history
-  archive, and (re)state the rule "don't reintroduce the append-log."
-- **Dual-home rule:** this skill's canonical source lives in the ai-dev-kit repo
-  (github.com/jrittelmeyer/ai-dev-kit → `skills/doc-audit/`); the project copy
-  (`.claude/skills/doc-audit/`) and the global copy (`~/.claude/skills/doc-audit/`)
-  are both installer output — edit the kit source in a clone and re-run
-  `node install.mjs --global --dest <project-root>`, never edit
-  the installed copies (`install.mjs --check` guards against drift). Project-specific
-  designations — *which* files form the showcase set, where they live — belong in
-  that project's memory, not in this file.
-- **Never name a project's local-only docs inside committed files** (including the
-  in-repo copy of this skill). The exclusion usually exists precisely to keep them
-  out of a public repo; the project's memory carries the pointer.
+  not in git — edit it directly; the index is loaded every session, so its
+  lines and each file's `description` must stay accurate.
+- **The biggest recurring win** is a status/handoff or memory file that has
+  quietly regrown a verbose per-step log — keep a compact record, move prose
+  to the archive, restate the "no append-log" rule where it'll be seen.
+- **Dual-home rule:** this skill's canonical source is the ai-dev-kit repo's
+  `skills/doc-audit/`; the project copy (`.claude/skills/doc-audit/`) and the
+  global copy (`~/.claude/skills/doc-audit/`) are both installer output — edit
+  kit source in a clone and re-run its installer per the kit README (installed
+  versions: `.claude/ai-dev-kit.installed.json`), never edit the installed
+  copies (`install.mjs --check` guards drift). Project-specific designations —
+  *which* files form the showcase set, where they live — belong in that
+  project's memory, not in this file.
+- **Never name a project's local-only docs inside committed files** (including
+  the in-repo copy of this skill) — the exclusion exists to keep them out of a
+  public repo; the project's memory carries the pointer.

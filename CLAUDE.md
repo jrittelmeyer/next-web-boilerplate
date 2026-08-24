@@ -10,7 +10,10 @@ Claude-Code-specific notes:
   why-layer: the kit's `docs/PLAYBOOK.md`). Never edit `.claude/skills/` or
   `.claude/hooks/ai-dev-kit/` — edit a kit clone, then
   `node <clone>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json
-  --dest <this repo> --global --hooks`; `install.mjs --check` guards drift.
+  --dest <this repo> --global`; `install.mjs --check` guards drift. **`--hooks` is
+  deliberately omitted** — the wiring is already current, and re-adding it would wire a
+  hook whose text points at files `init-app --slim` deletes; installer-route only (no
+  marketplace plugin). Both: [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
 - Run `/checkpoint` at each step boundary. `.claude/hooks/checkpoint-autorun.mjs`
   (Stop hook) automates this: if the tree is dirty/unpushed when a session goes idle,
   it forces one more turn that runs `checkpoint` fully autonomously (commit, push,

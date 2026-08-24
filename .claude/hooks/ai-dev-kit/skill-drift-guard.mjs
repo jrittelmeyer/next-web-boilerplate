@@ -13,7 +13,11 @@ import { readFileSync } from "node:fs";
 
 let input = null;
 try {
-  input = JSON.parse(readFileSync(0, "utf8"));
+  let raw = readFileSync(0, "utf8");
+  // PowerShell 5.1 pipes BOM-prefix stdin — strip it, or a live event dies
+  // into the malformed-input exit below as a false "silent".
+  if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
+  input = JSON.parse(raw);
 } catch {
   process.exit(0); // malformed harness event — advise-only, exit silently
 }
