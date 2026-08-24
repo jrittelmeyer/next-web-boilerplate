@@ -53,7 +53,8 @@
     "agentsMdMaxLines": 150,
     "contextDocSplitTokens": 3000,
     "memoryIndexMaxTokens": 700,
-    "memoryFileMaxTokens": 1500
+    "memoryFileMaxTokens": 1500,
+    "skillDescriptionMaxTokens": 909
   },
   "init": {
     "scaffold": "node scripts/init-app.mjs --slim --name {name}",

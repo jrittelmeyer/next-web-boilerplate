@@ -777,8 +777,8 @@ declaring the ledger clear):
 
 ## Periodic audit cadence
 
-Two review passes keep docs and code from drifting — run them on real need (a big
-upgrade, a batch of merged Renovate PRs) rather than on a calendar:
+Three review passes keep docs and code from drifting — run them on real need (a
+big upgrade, a batch of merged Renovate PRs) rather than on a calendar:
 
 - **Doc audit** — sweep for code↔doc drift: claims in `docs/` that no longer match
   the code, duplication on the hot path, stale detail to archive — plus **currency
@@ -789,11 +789,17 @@ upgrade, a batch of merged Renovate PRs) rather than on a calendar:
   prioritized backlog of gaps — including, post-launch, the **public-template
   surface** (on-ramp truth, community files, automation actually alive) and a
   re-check of externally-gated watch rows.
+- **Harness audit** — re-run when the installed `ai-dev-kit` version bumps
+  (`.claude/ai-dev-kit.installed.json`), not on a calendar cadence: a quarterly
+  nudge fires against unchanged state, while a kit release is what actually
+  stales the harness inventory (skills, hooks, `CONVENTIONS.md` → Agent tooling).
+  Needs network access to check upstream; stamps PARTIAL without it.
 
-Both audits ship as committed agent skills (`.claude/skills/project-audit/` and
-`.claude/skills/doc-audit/`, alongside the checkpoint/tidy helpers — all installed
-from the [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) skill library);
-each SKILL.md is a plain-markdown procedure a human — or any agent tooling — can
+All three ship as committed agent skills (`.claude/skills/project-audit/`,
+`.claude/skills/doc-audit/`, and `.claude/skills/harness-audit/`, alongside the
+checkpoint/tidy helpers — all installed from the
+[ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) skill library); each
+SKILL.md is a plain-markdown procedure a human — or any agent tooling — can
 follow directly. Past audit reports live in [`archive/`](archive/) as worked
 examples.
 
