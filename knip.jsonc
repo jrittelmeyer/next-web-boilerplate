@@ -22,6 +22,9 @@
         // Claude Code hooks, never imported, so knip can't see them on the import
         // graph and would flag them as unused files.
         ".claude/hooks/ai-dev-kit/*.mjs",
+        // Kit skill scripts (installed copies, e.g. harness-audit inventory.mjs):
+        // invoked by the skill via node, never imported.
+        ".claude/skills/*/scripts/*.mjs",
         // Repo-owned hook handlers (hand-maintained; NOT installer output — see
         // CONVENTIONS.md → Agent tooling for why they sit at the top level). Same
         // stdin→stdout shape, but referenced from `.claude/settings.json`, which knip
