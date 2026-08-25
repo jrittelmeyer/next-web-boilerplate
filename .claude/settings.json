@@ -30,7 +30,9 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/live-verify-reminder.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/live-verify-reminder.mjs"
+            ],
             "if": "Bash(git *)",
             "timeout": 10,
             "statusMessage": "ai-dev-kit: live-verify reminder"
@@ -45,7 +47,9 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/dep-check-nudge.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/dep-check-nudge.mjs"
+            ],
             "timeout": 10,
             "statusMessage": "ai-dev-kit: dep-check nudge"
           }
@@ -57,16 +61,29 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/skill-drift-guard.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/skill-drift-guard.mjs"
+            ],
             "timeout": 10,
             "statusMessage": "ai-dev-kit: skill-drift guard"
           },
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/context-guard.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/context-guard.mjs"
+            ],
             "timeout": 10,
             "statusMessage": "ai-dev-kit: context guard"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/banned-api-guard.mjs"
+            ],
+            "timeout": 10,
+            "statusMessage": "ai-dev-kit: banned-api guard"
           }
         ]
       }
@@ -79,6 +96,44 @@
             "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/checkpoint-autorun.mjs\"",
             "timeout": 15,
             "statusMessage": "checkpoint: autorun check"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/stop-gate.mjs"
+            ],
+            "timeout": 300,
+            "statusMessage": "ai-dev-kit: stop gate"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/checkpoint-autorun.mjs"
+            ],
+            "timeout": 30,
+            "statusMessage": "ai-dev-kit: checkpoint autorun"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/compact-reorient.mjs"
+            ],
+            "timeout": 10,
+            "statusMessage": "ai-dev-kit: compact reorient"
           }
         ]
       }

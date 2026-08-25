@@ -137,14 +137,20 @@ plugin's own wiring file, so a repo that already carries installer-form entries 
 `settings.json` would fire **every kit hook twice**, from two files, with no local artifact
 explaining it. The installer's ownership marker cannot help — it only sees `settings.json`.
 
-**`compact-reorient.mjs` is installed but deliberately NOT wired.** The kit's install command
-here omits `--hooks`, so the handler sits inert on disk. Its injected text hardcodes "re-open
-the status doc and the current backlog row", but `scripts/init-app.mjs --slim` — the documented
-scaffold command — deletes `docs/PROJECT_STATUS.md` and `docs/BACKLOG.md` while leaving
-`.claude/` verbatim, so in a generated project the nudge would point at two files that do not
-exist, on every compaction, forever. Advise-only hooks never error, so it would fail silently.
-**Don't "fix" this by adding `--hooks`** — the fix is kit-side (have the handler resolve the
-adapter's `docs.status`/`docs.backlog` and stat them first); adopt the wiring after that lands.
+**`--hooks` is adopted as of kit 0.23.1** (2026-08-25). It was deliberately omitted while
+`compact-reorient.mjs`'s injected text pointed at docs `scripts/init-app.mjs --slim` deletes
+(`docs/PROJECT_STATUS.md`/`docs/BACKLOG.md`) while shipping `.claude/` verbatim — a generated
+project would have gotten a nudge at nonexistent files on every compaction, silently, forever.
+Kit 0.23.1 landed the recorded condition: the handler now stats the adapter's
+`docs.status`/`docs.backlog` and names only files that exist, so the wiring is safe in
+generated projects too. The install command is
+`node <clone>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json --dest <repo>
+--global --hooks`. The kit's Stop-event handlers (`stop-gate`, `checkpoint-autorun`) and
+`banned-api-guard` wire with it but are **inert here by design**: this repo's tracked adapter
+config carries no `enforcement` block, and must not — `.claude/**` is template surface, and
+`enforcement.checkpointAutorun` would ship autonomous-push consent into every generated
+project. This repo's checkpoint automation stays the repo-owned, identity-guarded
+`.claude/hooks/checkpoint-autorun.mjs`.
 
 **`settings.json` survives a kit install** — it is not regenerated. The installer mutates
 only its `hooks` key, and within each event strips only entries carrying the literal marker
@@ -167,11 +173,12 @@ after repo-owned ones); it is idempotent thereafter. `pnpm docs:sanity` asserts 
 repo-owned handler is still wired, so a bad hand-merge fails a gate instead of silently
 disarming the hook.
 
-⚠️ **That assertion only covers shell-form entries.** `docs-sanity.mjs` reads each hook's
-`command` string; for an exec-form entry that string is just `"node"`, so **kit hooks are
-invisible to both the wiring check and the anchor check below**. Repo-owned handlers are
-shell-form and stay covered — which is the case the gate exists for — but don't read a green
-`docs:sanity` as proof the kit wiring is intact. Widening it is a backlog row.
+Since 2026-08-25 `docs-sanity.mjs` reads **both** wiring forms (shell-form `command` strings
+and exec-form `args` entries) and additionally asserts the kit-marker entries in
+`settings.json` agree with `.claude/hooks/ai-dev-kit/hooks.json` (event/matcher/handler/
+if/timeout) — the check that would have caught `compact-reorient` sitting installed but
+unwired. A green `docs:sanity` now does cover the kit wiring; fix disagreements by re-running
+the installer with `--hooks`, not by hand-editing.
 
 **Every handler path must be anchored on `${CLAUDE_PROJECT_DIR}`, braced and double-quoted:**
 

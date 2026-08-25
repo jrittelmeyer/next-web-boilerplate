@@ -9,6 +9,7 @@
 - JVM (Maven Central)
 - Ruby (RubyGems) · PHP (Composer/Packagist)
 - Game-engine asset stores
+- Advisory-suppression hygiene (dated discharges)
 
 Substitute the project's package manager; `{pkg}` is the package name. Each
 recipe answers: current stable version · tag/channel landscape · publish date.
@@ -76,3 +77,18 @@ shift, the policy (age window, maintenance, record-the-decision) does not:
   Godot version; prefer assets with a git repo you can pin by tag/commit.
 - **Unreal (Fab/Marketplace):** check supported-engine-versions and last
   update on the listing; vendor into the repo and record the source version.
+
+## Advisory-suppression hygiene (dated discharges)
+
+Ignoring a security advisory (`pnpm audit` ignores, `cargo audit` ignores,
+`pip-audit --ignore-vuln`, GHSA allowlists) is a standing hold like any other —
+undated suppressions rot into permanent blind spots. Consumer-proven pattern
+(civicmatch's CI-enforced `check-audit-ignores`):
+
+- Every suppression entry carries an inline dated discharge comment:
+  `# discharge YYYY-MM-DD -- <action>` — the date a decision is due and what
+  resolves it (fix released upstream, dependency dropped, risk re-accepted).
+- When dep-check touches the dependency surface, sweep existing suppressions:
+  a past-due discharge date is a finding to surface, not silently renew.
+- Prefer failing closed in CI: a checker that rejects undated, duplicate, or
+  unknown-package suppressions turns the convention into machinery.

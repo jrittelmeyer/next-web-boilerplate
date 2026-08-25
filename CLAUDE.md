@@ -6,14 +6,12 @@ Claude-Code-specific notes:
 
 - Skill library: installed from
   [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) (versions:
-  `.claude/ai-dev-kit.installed.json` · params: `.claude/ai-dev-kit.config.json` ·
-  why-layer: the kit's `docs/PLAYBOOK.md`). Never edit `.claude/skills/` or
-  `.claude/hooks/ai-dev-kit/` — edit a kit clone, then
+  `.claude/ai-dev-kit.installed.json` · params: `.claude/ai-dev-kit.config.json`).
+  Never edit `.claude/skills/` or `.claude/hooks/ai-dev-kit/` — edit a kit clone, then
   `node <clone>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json
-  --dest <this repo> --global`; `install.mjs --check` guards drift. **`--hooks` is
-  deliberately omitted** — the wiring is already current, and re-adding it would wire a
-  hook whose text points at files `init-app --slim` deletes; installer-route only (no
-  marketplace plugin). Both: [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
+  --dest <this repo> --global --hooks`; `install.mjs --check` guards drift.
+  Installer-route only (no marketplace plugin); enforcement hooks stay unconfigured
+  here (template surface): [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
 - Run `/checkpoint` at each step boundary. `.claude/hooks/checkpoint-autorun.mjs`
   (Stop hook) automates this: if the tree is dirty/unpushed when a session goes idle,
   it forces one more turn that runs `checkpoint` fully autonomously (commit, push,
@@ -55,12 +53,6 @@ Claude-Code-specific notes:
     turns dissent into agreement. Require at least one finding it verified itself,
     and hand over the plan **before** its outcome log exists — a resolved plan is
     the strongest anchor there is.
-  - **If `contrarian` is not in the subagent registry, it is the surface, not the
-    file.** Fall back to `claude --agent contrarian -p "<prompt>"`, which reads
-    `.claude/agents/` directly. Reloading does *not* fix it. Detail:
-    [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
-  - `.claude/hooks/contrarian-nudge.mjs` fires on `ExitPlanMode`, but a `PreToolUse`
-    hook's context lands *next to the tool result* — after the plan is on screen —
-    and plans here are usually files, not `ExitPlanMode` calls. It is a **next-turn
-    safety net; this policy is the mechanism.** Wiring and kit-boundary rules:
+  - Registry-fallback (`claude --agent contrarian -p`) and the nudge-hook timing
+    caveat live in
     [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).

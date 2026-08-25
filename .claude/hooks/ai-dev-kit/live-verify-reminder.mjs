@@ -21,10 +21,12 @@ try {
 }
 const command = String(input?.tool_input?.command ?? "");
 
-// Match `git … commit` within one command segment (not across | & ;), so
-// `git log | grep commit` doesn't fire but `git -c x=y commit` and the commit
-// segment of a compound command do.
-if (!/\bgit\b[^|&;]*\bcommit\b/.test(command)) process.exit(0);
+// Match `git … commit` within one command segment (not across | & ; or a
+// newline), so `git log | grep commit` doesn't fire, `git -c x=y commit` and
+// the commit segment of a compound command do, and a multi-line command whose
+// `git` and `commit` land on different lines (e.g. `gh run list --commit`
+// followed by an unrelated `git …` line) doesn't false-fire across the break.
+if (!/\bgit\b[^|&;\n\r]*\bcommit\b/.test(command)) process.exit(0);
 
 const additionalContext =
   "ai-dev-kit live-verify: a git commit is about to run. If it includes product source (not " +

@@ -100,36 +100,99 @@ const hooksDir = join(root, ".claude", "hooks");
 const handlers = existsSync(hooksDir)
   ? readdirSync(hooksDir).filter((f) => f.endsWith(".mjs"))
   : [];
-const commands = existsSync(settingsPath)
-  ? Object.values(JSON.parse(readFileSync(settingsPath, "utf8")).hooks ?? {})
-      .flat()
-      .flatMap((entry) => entry?.hooks ?? [])
-      .map((hook) => String(hook?.command ?? ""))
+// Both wiring forms are read: shell form (handler path inside the `command`
+// string) and exec form (`command: "node"` + the path as an args entry, the
+// form kit ≥0.11 installs) — exec-form entries used to be invisible here,
+// which is how an installed-but-unwired kit handler slipped through.
+const settingsHooks = existsSync(settingsPath)
+  ? Object.entries(JSON.parse(readFileSync(settingsPath, "utf8")).hooks ?? {}).flatMap(
+      ([event, entries]) =>
+        (entries ?? []).flatMap((entry) =>
+          (entry?.hooks ?? []).map((hook) => ({
+            event,
+            matcher: entry.matcher ?? "",
+            command: String(hook?.command ?? ""),
+            args: Array.isArray(hook?.args) ? hook.args.map(String) : [],
+            if: hook?.if ?? "",
+            timeout: hook?.timeout ?? null,
+          })),
+        ),
+    )
   : [];
+const wiringStrings = settingsHooks.map((h) => [h.command, ...h.args].join(" "));
 
 for (const handler of handlers) {
-  if (!commands.some((c) => c.includes(`.claude/hooks/${handler}`))) {
+  if (!wiringStrings.some((c) => c.includes(`.claude/hooks/${handler}`))) {
     failures.push(
       `.claude/hooks/${handler} is a repo-owned handler that nothing runs — either restore its wiring in .claude/settings.json, or delete the orphaned handler`,
     );
   }
 }
 
-for (const command of commands) {
-  const referenced = command.match(/\.claude\/hooks\/[\w./-]+\.mjs/)?.[0];
-  if (referenced && !existsSync(join(root, referenced))) {
+for (const hook of settingsHooks) {
+  const isExecForm = hook.args.length > 0;
+  const haystack = [hook.command, ...hook.args].join(" ");
+  const referenced = haystack.match(/\.claude\/hooks\/[\w./-]+\.mjs/)?.[0];
+  if (!referenced) continue;
+  if (!existsSync(join(root, referenced))) {
     failures.push(`.claude/settings.json runs "${referenced}" — no such file`);
   }
   // Hooks are spawned with the SESSION cwd, not the project root, so a repo-relative
   // handler path resolves against whatever subdirectory the session last cd'd into and
   // dies with MODULE_NOT_FOUND. That failure is invisible — only exit 2 blocks a hook,
   // these advise, and the existsSync check above passes either way — so it cost this repo
-  // 14 silently-lost runs and a consumer 274 before anyone noticed. Braced and quoted are
-  // both load-bearing: bare $CLAUDE_PROJECT_DIR is $null under the PowerShell hook shell,
-  // and an unquoted path word-splits under bash when the project path has a space.
-  if (referenced && !command.includes(`"\${CLAUDE_PROJECT_DIR}/${referenced}"`)) {
+  // 14 silently-lost runs and a consumer 274 before anyone noticed. The correct anchor
+  // differs by form: shell form needs braces AND quotes (bare $CLAUDE_PROJECT_DIR is
+  // $null under the PowerShell hook shell; an unquoted path word-splits under bash when
+  // the path has a space); exec form must be UNQUOTED — no shell strips the quotes, so
+  // they'd be literal argv bytes.
+  const anchored = isExecForm
+    ? hook.args.some((a) => a === `\${CLAUDE_PROJECT_DIR}/${referenced}`)
+    : hook.command.includes(`"\${CLAUDE_PROJECT_DIR}/${referenced}"`);
+  if (!anchored) {
     failures.push(
-      `.claude/settings.json runs "${referenced}" on a path relative to the session cwd — it will silently fail from any subdirectory. Write it as node "\${CLAUDE_PROJECT_DIR}/${referenced}" (braced and double-quoted). For ai-dev-kit/ handlers, fix hooks/installer-hooks.json in the kit and reinstall — an edit here is reverted by the next install. (Since kit 0.17.0 hooks/hooks.json is the plugin-form file, which the installer never reads.)`,
+      `.claude/settings.json runs "${referenced}" on a path relative to the session cwd — it will silently fail from any subdirectory. Shell form: node "\${CLAUDE_PROJECT_DIR}/${referenced}" (braced, double-quoted). Exec form: args ["\${CLAUDE_PROJECT_DIR}/${referenced}"] (unquoted). For ai-dev-kit/ handlers, fix hooks/installer-hooks.json in the kit and reinstall — an edit here is reverted by the next install.`,
+    );
+  }
+}
+
+// Kit-wiring parity: the entries carrying the .claude/hooks/ai-dev-kit/ marker must
+// describe exactly what .claude/hooks/ai-dev-kit/hooks.json (the installer's shipped
+// record of its own wiring) declares — same event/matcher/handler/if/timeout set.
+// This is the check that would have caught compact-reorient sitting installed but
+// unwired from 0.16.0 until the 2026-08-25 fleet audit found it by hand.
+const kitMarker = ".claude/hooks/ai-dev-kit/";
+const kitWiringPath = join(root, ".claude", "hooks", "ai-dev-kit", "hooks.json");
+const kitWired = settingsHooks.filter((h) => [h.command, ...h.args].join(" ").includes(kitMarker));
+if (existsSync(kitWiringPath) && (kitWired.length > 0 || existsSync(settingsPath))) {
+  const shape = (event, matcher, path, ifClause, timeout) =>
+    JSON.stringify([event, matcher, path.match(/([\w-]+\.mjs)$/)?.[1] ?? path, ifClause, timeout]);
+  const want = Object.entries(JSON.parse(readFileSync(kitWiringPath, "utf8")).hooks ?? {})
+    .flatMap(([event, entries]) =>
+      (entries ?? []).flatMap((entry) =>
+        (entry?.hooks ?? []).map((hook) =>
+          shape(
+            event,
+            entry.matcher ?? "",
+            String(hook?.args?.[0] ?? hook?.command ?? ""),
+            hook?.if ?? "",
+            hook?.timeout ?? null,
+          ),
+        ),
+      ),
+    )
+    .sort();
+  const got = kitWired
+    .map((h) => shape(h.event, h.matcher, [h.command, ...h.args].join(" "), h.if, h.timeout))
+    .sort();
+  if (JSON.stringify(want) !== JSON.stringify(got)) {
+    const missing = want.filter((w) => !got.includes(w));
+    const extra = got.filter((g) => !want.includes(g));
+    failures.push(
+      `.claude/settings.json kit-hook wiring disagrees with .claude/hooks/ai-dev-kit/hooks.json` +
+        (missing.length ? ` — missing: ${missing.join(", ")}` : "") +
+        (extra.length ? ` — extra: ${extra.join(", ")}` : "") +
+        `. Re-run the kit installer with --hooks rather than hand-editing.`,
     );
   }
 }

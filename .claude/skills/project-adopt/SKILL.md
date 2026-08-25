@@ -184,8 +184,12 @@ conventions:
 
 ## 8. Sign-off gate → the pipeline begins
 
-Per the shared conventions — with the adopt-specific opening: present **in
-plain language what stays yours, what each replacement buys (its named
+Before presenting: check every disposition-map row's evidence label
+(side-by-side flow drive / deployed-URL comparison / checklist +
+verified-by-inspection) actually matches the reference grade recorded at
+intake (§1) — flag and correct any mismatch rather than presenting it as-is.
+Then per the shared conventions — with the adopt-specific opening: present
+**in plain language what stays yours, what each replacement buys (its named
 improvement), what lights up, what's dropped and why**, then the inventory
 summary, the disposition map, the migration plan's shape, and the top B1
 rows. On sign-off the parity check becomes the standing live-verify mode for

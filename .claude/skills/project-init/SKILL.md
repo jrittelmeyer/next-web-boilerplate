@@ -29,11 +29,13 @@ writes no product code.**
 
 ## 1. Intake
 
-- Read every provided plan document fully; restate an inline idea in your own
-  words. Neither provided → ask for one (the only unconditional stop).
 - Re-run safety: if the product brief already exists, this is a
-  resume/revision — diff the new input against it and confirm scope with the
-  user instead of starting over.
+  resume/revision — diff any new input against it and confirm scope with the
+  user instead of starting over; a bare re-run with no new input resumes
+  from the existing brief.
+- Otherwise (no existing brief): read every provided plan document fully;
+  restate an inline idea in your own words. Neither provided → ask for one
+  (the only unconditional stop).
 - **Scaffold guard** — per the shared conventions.
 
 ## 2. Discovery (extended thinking)

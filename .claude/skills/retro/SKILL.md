@@ -35,7 +35,8 @@ session that needs it:
   seeds, gotchas). Cheapest; no repo change.
 - **Instruction file** (`AGENTS.md`/`CLAUDE.md`) — only rules every future
   session must hold; respect the budget (the context-economy skill polices
-  it).
+  it); a single incident, however memorable, is Drop territory (below)
+  unless it recurs or generalizes into a statable rule.
 - **Adapter field** — a mechanical per-project parameter a skill should read
   instead of re-deriving.
 - **Skill edit** — the procedure itself was wrong or incomplete (route to

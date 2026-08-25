@@ -16,3 +16,4 @@ itself a finding.
 | Plugin / marketplace packaging (distribution channel) | https://code.claude.com/docs/en/plugin-marketplaces | fetched | 2026-08-23 |
 | MCP server landscape (official servers + registry) | https://github.com/modelcontextprotocol/servers | search-confirmed | 2026-08-23 |
 | Official example skills (patterns worth borrowing) | https://github.com/anthropics/skills | fetched (structure) | 2026-08-23 |
+| Plugin auto-discovery + version management (the packaging route B4 rows depend on) | https://code.claude.com/docs/en/plugins-reference | fetched | 2026-08-24 |

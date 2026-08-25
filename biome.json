@@ -16,7 +16,10 @@
       "!**/coverage",
       "!**/playwright-report",
       "!**/test-results",
-      "!**/drizzle"
+      "!**/drizzle",
+      "!.claude/skills",
+      "!.claude/hooks/ai-dev-kit",
+      "!.claude/settings.json"
     ]
   },
   "formatter": {

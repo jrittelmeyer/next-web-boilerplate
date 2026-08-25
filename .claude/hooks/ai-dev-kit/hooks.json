@@ -58,6 +58,33 @@
             "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/context-guard.mjs"],
             "timeout": 10,
             "statusMessage": "ai-dev-kit: context guard"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/banned-api-guard.mjs"],
+            "timeout": 10,
+            "statusMessage": "ai-dev-kit: banned-api guard"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/stop-gate.mjs"],
+            "timeout": 300,
+            "statusMessage": "ai-dev-kit: stop gate"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/checkpoint-autorun.mjs"],
+            "timeout": 30,
+            "statusMessage": "ai-dev-kit: checkpoint autorun"
           }
         ]
       }
