@@ -92,7 +92,7 @@ and destructive — so the editing screen says so before you submit, not after.
 
 Date maths is the kind of code easily tested *against your own assumptions*,
 which proves nothing, because the assumptions are the bug. So the engine was
-checked against a separate, independently written implementation across **528
+checked against a separate, independently written implementation across **568
 recurrence rules**. Three details make that more than a box-tick:
 
 - **The answer key was written before the engine was**, so it cannot have been

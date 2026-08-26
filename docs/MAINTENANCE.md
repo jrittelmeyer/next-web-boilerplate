@@ -422,7 +422,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
   - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — ~~**superseded 2026-08-14,
     take `next` 16.3.1 instead**~~ — **16.3.1 TAKEN then REVERTED 2026-08-22, defer
-    to `next` 16.3.2 (ages in 2026-08-28).** 16.3.0 is aged and due, but a plan →
+    to `next` 16.3.2 (ages in 2026-08-28) — and the retake target has moved again:
+    `next` 16.3.3 (published 2026-08-25T15:32Z, registry-verified 2026-08-26) is
+    Vercel's August security release (two critical CVEs per its advisory post);
+    it ages in ~2026-09-01, or qualifies for the age gate's security-only
+    exception routes. Owner call, plan → sign-off; the 16.3.2 retake plan below
+    (riders, order-dependent verification, the Docker standalone check) applies
+    to 16.3.3 unchanged.** 16.3.0 is aged and due, but a plan →
     contrarian pass the same day found a live regression: `next/image`'s optimizer
     calls `sharp.block()` and only selectively unblocks raster formats, not SVG (the
     block/unblock registry is process-global), so any `next/image` optimization

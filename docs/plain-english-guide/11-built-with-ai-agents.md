@@ -97,12 +97,14 @@ This repository is *built around* that craft:
   above, the tech-stack summary, the commands, and the map of the repository.
   Every agent session starts by absorbing it. (`CLAUDE.md` is a thin
   tool-specific wrapper pointing at the same file.)
-- **Fourteen focused context documents** (`docs/context/`) — one per domain:
-  the database, authentication, the API layer, state, UI, testing, security,
-  internationalization, deployment, services, conventions, architecture, the
-  stack, and the decision log met in [Chapter 1](01-the-big-picture.md). The
-  index instructs: *load the file relevant to your task* — an agent doing email
-  work loads the services doc, not all fourteen. Precisely briefed, per task,
+- **Thirty-six focused context documents** (`docs/context/`) — fourteen
+  top-level files, one per domain: the database, authentication, the API layer,
+  state, UI, testing, security, internationalization, deployment, services,
+  conventions, architecture, the stack, and the decision log met in
+  [Chapter 1](01-the-big-picture.md) — plus three topic folders (authentication,
+  the connected services, and the calendar) that split the deepest domains into
+  per-topic files. The index instructs: *load the file relevant to your task* —
+  an agent doing email work loads the services doc, not all thirty-six. Precisely briefed, per task,
   every time — like giving a contractor the wiring diagram for the room they're
   working on, not the deed history of the whole building.
 - **Each doc says when to load it** — the index maps task → document, so
@@ -131,7 +133,7 @@ Three more mechanisms, briefly, because they show how mature this practice has
 become:
 
 - **Skills** — reusable, checked-in procedures the agent can invoke by name
-  (they live in the repository like code). This repo ships eight: a
+  (they live in the repository like code). This repo ships ten: a
   *checkpoint* skill (commit and push work safely at each step boundary — since
   August 2026 it also fires automatically when a session goes idle with unpushed
   work), a
@@ -145,7 +147,11 @@ become:
   there, maps it honestly against this foundation (what to keep, what this
   template already does better), and produces a migration plan instead of a
   from-scratch one. Two doors into the same disciplined process, depending on
-  whether you're starting fresh or migrating something that already runs.
+  whether you're starting fresh or migrating something that already runs. The
+  two newest, added as the kit grew: a *harness-audit* skill (checks that the
+  agent tooling itself — skills, hooks, context files — is still current
+  against the moving ecosystem) and a *retro* skill (turns a painful session
+  into durable process improvements instead of a repeated mistake).
   Think of them as standard operating procedures — the difference between an
   organization that has process and one that has habits. And in July 2026 the
   whole set graduated into its own open-source project:
@@ -167,8 +173,8 @@ become:
 
 ## The audit loop: AI checking AI, with receipts
 
-The quality scores from [Chapter 1](01-the-big-picture.md) (fifteen passes,
-93 → 100 → 99.3, against a "best imaginable starter kit" bar) come from the audit
+The quality scores from [Chapter 1](01-the-big-picture.md) (sixteen passes,
+93 → 100 → 99.4, against a "best imaginable starter kit" bar) come from the audit
 skill above: a full sweep that re-verifies documentation claims against actual
 code, scores every feature area, and emits a prioritized backlog — which was
 then worked to completion through the same plan → sign-off → build loop, and

@@ -33,7 +33,7 @@ ceiling.
 | tailwindcss | ^4.3.1 | v4: config in CSS, no tailwind.config.js |
 | drizzle-orm | ^0.45.2 | |
 | drizzle-kit | ^0.31.10 | CLI for migrations and Drizzle Studio (devDep of `@repo/db`) |
-| better-auth | ^1.6.25 | also a direct dep of apps/web (route handler + proxy); floor raised 2026-07-27 to 1.6.23 for GHSA-qq9h-g4jm-xgf3 (account takeover — see MAINTENANCE.md → Watch items), then to 1.6.25 on 2026-07-30 (not advisory-driven, no migration) |
+| better-auth | 1.6.30 (exact) | also a direct dep of apps/web (route handler + proxy); floor raised 2026-07-27 to 1.6.23 for GHSA-qq9h-g4jm-xgf3 (account takeover — see MAINTENANCE.md → Watch items); **exact-pinned (no caret) since 2026-08-26** — `^1.6.30` silently resolved to the breaking 1.7.1 once 1.7.x existed in-range (see CHANGELOG); bump in lockstep with `@better-auth/passkey` |
 | @trpc/server + @trpc/client | ^11.18.0 | verified latest 2026-06-22 |
 | @trpc/tanstack-react-query | ^11.18.0 | tRPC v11's recommended TanStack integration (`useTRPC()` + `queryOptions`), replacing the older `@trpc/react-query` `createTRPCReact` adapter |
 | @tanstack/react-query | ^5.101.0 | |

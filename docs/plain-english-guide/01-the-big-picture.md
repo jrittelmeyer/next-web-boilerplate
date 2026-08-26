@@ -117,11 +117,11 @@ new-employee onboarding a project can have. The same pages serve both.
 
 ## How good is it, really? (The audit trail)
 
-Quality claims are cheap, so this project measures itself. Fifteen separate audit
+Quality claims are cheap, so this project measures itself. Sixteen separate audit
 passes were run against a deliberately harsh standard — "how does this compare to
 the best available starter kit imaginable?" — scoring every feature area out of
 100. The scores across the audits ran **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 →
-99.35 → 100 → 100 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3**, with each gap found feeding a to-do
+99.35 → 100 → 100 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4**, with each gap found feeding a to-do
 list that was then worked to completion. The audit reports themselves are
 preserved in the repository.
 
@@ -153,9 +153,12 @@ Two honest footnotes, because credibility matters more than a round number:
   fourteenth (6 August) verified five of its headline issues fixed within two
   days and recovered **99.3**, and the fifteenth (13 August) held that score
   while confirming the fixes genuine, its only new findings being two slips in
-  the delivery pipeline rather than the product, both fixed the next day. That
-  is the caveat working exactly as advertised: the number tracks reality, and
-  reality includes upkeep.
+  the delivery pipeline rather than the product, both fixed the next day. The
+  sixteenth (19 August) verified those pipeline fixes landed on schedule and
+  edged the score to **99.4**; its one new find — a breaking new release of a
+  core dependency that no watch entry was tracking yet — became a dated watch
+  entry the same day. That is the caveat working exactly as advertised: the
+  number tracks reality, and reality includes upkeep.
 
 The project is **feature-complete as a starting point**: the "path to 100" effort
 is finished and verified, and nothing is added to the *foundation* without a

@@ -138,9 +138,10 @@ like a single factory with well-organized departments.
 
 This project is a monorepo with a deliberate layout: one `apps/web` (the
 application), plus internal packages for the database (`db`), sign-in system
-(`auth`), email (`email`), background jobs (`jobs`), shared screen components
-(`ui`), shared validation rules (`validators`), and monitoring configuration
-(`observability`) — plus shared tooling configuration. The boundaries force clean
+(`auth`), the calendar's date arithmetic (`calendar`), email (`email`),
+background jobs (`jobs`), shared screen components (`ui`), shared validation
+rules (`validators`), and monitoring configuration (`observability`) — plus
+shared tooling configuration. The boundaries force clean
 separation (the database package knows nothing about screens; the email package
 can be lifted out whole), while everything still moves together in one history —
 one change can update the database *and* the screens *and* the tests atomically.

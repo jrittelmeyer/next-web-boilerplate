@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-19 (sixteenth audit pass: **99.4/100** — report in the archive; better-auth 1.6.30 dated take added, 1.7.x plan-gated)._
+_Last updated: 2026-08-26 (doc audit; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — report in the archive)._
 
 ## Where we are
 
@@ -155,7 +155,8 @@ Per-program summary (Rows = archived row count; full rows →
 | Audit — 2026-08-19 | 1 | Sixteenth pass: **99.4** — 08-14 executions verified (F5 closed → Security 100; `main` green → Testing 99); checkpoint hook reviewed clean (anti-F2 process); found the better-auth watch gap (breaking 1.7 untracked) → dated take added; zero new rows | [report](archive/PROJECT_AUDIT_2026-08-19.md) |
 | `next` 16.3.1 taken then REVERTED — 2026-08-22 | 1 | Passed the gate + CI E2E + `:3100` live-verify, but CI's Docker job caught a boot-crashing `@swc/helpers` regression `next start` never exercises. Fix is in 16.3.2; reverted rather than bypass the age gate — `main` restored to 16.2.12 | [CHANGELOG](../CHANGELOG.md) |
 | Doc audit — 2026-08-26 | 1 | Kit-version currency fix (STATUS/CHANGELOG/BACKLOG caught up to the 0.23.1 fleet-upgrade `32dd92a` never looped back to) | [CHANGELOG](../CHANGELOG.md) |
-| `better-auth` 1.6.30 — 2026-08-26 | 1 | Routine bump; caught `^1.6.30` silently resolving to breaking `1.7.1` on install — switched to an exact pin (now the rule for this dependency); schema-diffed clean across the full surface (only `.d.mts` types + one unused re-export changed); live-verified: 2FA challenge, org invite/accept, admin set-role + ban, session cleanup on delete (2/2 sessions + the user row itself gone) | [CHANGELOG](../CHANGELOG.md) |
+| `better-auth` 1.6.30 — 2026-08-26 | 1 | Routine bump; `^1.6.30` silently resolved to breaking `1.7.1` — exact pin is now the standing rule for this dep; schema-diff clean across the full surface (types-only delta); live-verified 2FA, org invite/accept, admin ban, delete session-cleanup | [CHANGELOG](../CHANGELOG.md) |
+| Doc audit — 2026-08-26 (full pass) | 1 | Showcase catches up to the sixteenth pass (deck 16th point, 99.4; skills 8→10; corpus 528→568; `packages/calendar` in README/ch03); STACK better-auth exact-pin row; watch → 16.3.3 supersession; 4 template-surface finds → one B3 row | [BACKLOG.md](BACKLOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -172,9 +173,11 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each
 landed item. Open now, and nothing else: **Renovate PR delivery FAILED** (zero
 `renovate/*` branches ever — re-checked 2026-08-19, every Monday window through 08-17
-empty; the Mend-side diagnosis is BACKLOG B1) · the **`next` 16.3.1 dated take**
-(16.3.0 superseded 2026-08-14 over a live `sharp`/SVG regression; 16.3.1 ages in
-~2026-08-20T22:45 UTC — plan, riders and the order-dependent verification live in
+empty; the Mend-side diagnosis is BACKLOG B1) · the **`next` dated take**
+(16.3.1 taken then reverted 2026-08-22 over a Docker-only `@swc/helpers` regression;
+the 16.3.2 retake is superseded by **16.3.3, Vercel's August security release** —
+published 2026-08-25, ages in ~2026-09-01 or via the age gate's security-only
+exception routes; plan, riders and the order-dependent verification live in
 MAINTENANCE → Dated dependency takes). ⚠️ **`better-auth` 1.7.x is a breaking
 minor** (`latest` since 2026-08-18) — plan → sign-off, not a routine take; no
 advisory forces the move. Ledger clear as of 2026-08-26: `nanoid` 3.3.18 +

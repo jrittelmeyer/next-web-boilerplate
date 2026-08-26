@@ -123,6 +123,7 @@ pnpm cache:prune  # evict oldest Turbo-cache entries to the size cap (default 20
 apps/web/            — the Next.js application (src/ layout)
 packages/db/         — Drizzle schema, migrations, client (@repo/db)
 packages/auth/       — Better Auth config + session helpers (@repo/auth)
+packages/calendar/   — calendar civil-time + recurrence engine (@repo/calendar)
 packages/email/      — React Email templates + Resend client (@repo/email)
 packages/jobs/       — pg-boss background-jobs worker + enqueue helper (@repo/jobs)
 packages/observability/ — BetterStack dashboards-as-code, dev/CI-only (@repo/observability)
