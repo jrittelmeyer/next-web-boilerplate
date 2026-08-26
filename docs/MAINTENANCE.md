@@ -503,17 +503,36 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     touched this repo's DB — caught by cross-checking the listener PID's command
     line and confirming rows actually landed in `nwb-postgres`/`appdb`, not by
     the response shape alone.
-  - **2026-08-24 ~19:11 UTC — `better-auth` 1.6.30** ages in (published
-    2026-08-17T19:11Z) — the routine successor take. **Added 2026-08-19 by the
-    sixteenth audit pass**, which found the line had moved with no bullet
-    tracking it (1.6.27 aged in 08-18 unnoticed — the F1 channel cost again).
-    Registry re-verify at take time (five releases shipped in the week after
-    1.6.26); none of 1.6.27–1.7.1 carries a security fix (release notes
-    checked 2026-08-19). Rides the standing rules: schema-diff the installed
-    artifacts across the FULL surface (`better-auth` plugin `schema.mjs`
-    files, `@better-auth/core` `dist/db/`, passkey inline — the leaf rule as
-    widened 2026-08-14) and bump `@better-auth/passkey` in exact lockstep.
-    ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18) is NOT a routine
+  - ~~**2026-08-24 ~19:11 UTC — `better-auth` 1.6.30** ages in~~ — **TAKEN
+    2026-08-26.** Registry re-verified fresh at take time: 1.6.30 (published
+    2026-08-17T19:11Z) is still the newest 1.6.x — `latest` moved to 1.7.1
+    (2026-08-18), confirmed a breaking minor per the 1.7.x guard below, not a
+    supersession. None of 1.6.27–1.6.30 carries a CVE; the one access-control
+    fix in the window (SSO org auto-assignment trusting an unverified provider
+    domain, 1.6.29) is scoped to `@better-auth/sso`, which this repo doesn't
+    use. Bumped `better-auth` `^1.6.26` → **exact `1.6.30`** in both
+    `apps/web/package.json` and `packages/auth/package.json` — **not** a caret
+    range: `^1.6.30` let `pnpm install` silently resolve to `1.7.1` (now that
+    1.7.x exists in-range), pulling in `@better-auth/core@1.7.1` transitively
+    and defeating the whole point of staying on 1.6.x. Exact-pinning is now the
+    rule for this dependency going forward, matching `@better-auth/passkey`'s
+    existing exact pin (`1.6.26` → `1.6.30`, lockstep peer confirmed via the
+    registry). **Schema-diffed the installed 1.6.30 artifacts against 1.6.26
+    across the full surface** (`better-auth` plugin `schema.mjs` files,
+    `@better-auth/core`'s `dist/db/`, passkey's inline schema): every runtime
+    `.mjs` schema file byte-identical; only `.d.mts` type declarations and one
+    unused re-export (`organization/schema.mjs` dropped `invitationStatus`/
+    `roleSchema` from its exports, neither referenced in this repo) changed.
+    **No migration needed.** Full gate green (lint/type-check/build). Live-verified
+    on a fresh prod build (`:3100`, email blanked): sign-up, sign-in, full 2FA
+    enrollment + challenge round-trip (the repo's own `totp.ts` algorithm,
+    reimplemented in the verify script), an organization invite-and-accept
+    round-trip, admin set-role + ban (confirmed the banned user can no longer
+    sign in), and deleting an account with 2 active sessions — confirmed both
+    gone from `session`, and the `user` row itself gone, not just the deleting
+    session. Port 3100 was free this time (no orphaned squatter). Throwaway
+    `verify-*@example.com` users cleaned from `appdb` after verification.
+    ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18) is still NOT a routine
     take**: a breaking minor — 15 breaking changes incl. account identity
     scoped by issuer (requires migration), captcha paths needing explicit
     wildcards (this repo wires CAPTCHA), SCIM/MCP extractions. Plan →

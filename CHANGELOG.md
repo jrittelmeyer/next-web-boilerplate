@@ -13,6 +13,24 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **2026-08-26: `better-auth` 1.6.26 → 1.6.30** (+ `@better-auth/passkey` 1.6.26 →
+  1.6.30, exact-pinned in lockstep). Routine bug-fix run (1.6.27–1.6.30), no CVE;
+  the one access-control fix in the window (SSO org auto-assignment trusting an
+  unverified provider domain, 1.6.29) is scoped to `@better-auth/sso`, unused
+  here. **Switched `better-auth` itself from a caret range to an exact pin**:
+  `^1.6.30` let `pnpm install` silently resolve to `1.7.1` — now that a breaking
+  1.7.x exists in-range, a caret on a 1.x version no longer holds the line — and
+  it pulled in `@better-auth/core@1.7.1` transitively. Exact-pinning `better-auth`
+  going forward matches the existing `@better-auth/passkey` pin. **Schema-diffed
+  the installed 1.6.30 artifacts against 1.6.26 across the full surface**
+  (`better-auth` plugin `schema.mjs` files, `@better-auth/core`'s `dist/db/`,
+  passkey's inline schema): every runtime `.mjs` schema byte-identical, only
+  `.d.mts` types and one unused re-export changed — **no migration needed**.
+  Live-verified on a fresh prod build (`:3100`, email blanked): sign-up, sign-in,
+  full 2FA enrollment + challenge round-trip, an organization invite-and-accept
+  round-trip, admin set-role + ban (banned user can no longer sign in), and
+  deleting a test account with 2 active sessions confirmed both gone from
+  `session` — and the `user` row itself gone, not just the deleting session.
 - **2026-08-25: ai-dev-kit 0.18.0 → 0.23.1, `--hooks` adopted** — the recorded blocker
   (compact-reorient pointing at `docs/PROJECT_STATUS.md`/`BACKLOG.md`, which
   `init-app --slim` deletes) landed kit-side in 0.23.1, so SessionStart/compact wiring
