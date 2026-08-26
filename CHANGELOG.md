@@ -13,6 +13,18 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **2026-08-25: ai-dev-kit 0.18.0 → 0.23.1, `--hooks` adopted** — the recorded blocker
+  (compact-reorient pointing at `docs/PROJECT_STATUS.md`/`BACKLOG.md`, which
+  `init-app --slim` deletes) landed kit-side in 0.23.1, so SessionStart/compact wiring
+  is live for the first time since 0.16.0. Stop/banned-api handlers wire but stay
+  inert — no enforcement block in the tracked adapter config, deliberately, since
+  template surface must not ship push-consent to generated projects. `docs-sanity.mjs`
+  check 4 now reads both hook-wiring forms (exec-form args included) and asserts
+  `settings.json` kit-marker entries agree with `.claude/hooks/ai-dev-kit/hooks.json`
+  (closes the "kit hooks invisible" backlog row). `biome.json` excludes
+  installer-owned paths (`.claude/skills`, `.claude/hooks/ai-dev-kit`,
+  `.claude/settings.json`) so the consumer formatter can never reformat kit output
+  (closes the B1 kit-gate Biome defect, consumer-side).
 - **2026-08-23: ai-dev-kit 0.13.0 → 0.18.0** — the kit's four-phase modernization line plus
   its eval release: skill-lint CI gate, any-project portability (skill bodies became
   domain-neutral skeletons with per-domain `references/`), the new `harness-audit` and
