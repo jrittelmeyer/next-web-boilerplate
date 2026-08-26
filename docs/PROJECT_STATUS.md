@@ -157,6 +157,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Doc audit — 2026-08-26 | 1 | Kit-version currency fix (STATUS/CHANGELOG/BACKLOG caught up to the 0.23.1 fleet-upgrade `32dd92a` never looped back to) | [CHANGELOG](../CHANGELOG.md) |
 | `better-auth` 1.6.30 — 2026-08-26 | 1 | Routine bump; `^1.6.30` silently resolved to breaking `1.7.1` — exact pin is now the standing rule for this dep; schema-diff clean across the full surface (types-only delta); live-verified 2FA, org invite/accept, admin ban, delete session-cleanup | [CHANGELOG](../CHANGELOG.md) |
 | Doc audit — 2026-08-26 (full pass) | 1 | Showcase catches up to the sixteenth pass (deck 16th point, 99.4; skills 8→10; corpus 528→568; `packages/calendar` in README/ch03); STACK better-auth exact-pin row; watch → 16.3.3 supersession; 4 template-surface finds → one B3 row | [BACKLOG.md](BACKLOG.md) |
+| `next` 16.3.3 taken — 2026-08-26 | 1 | August 2026 security release, age-gate route (2) exception (9 lockstep packages, exact-scoped — a `contrarian` pass caught an undersized first draft); AVIF-decode RCE via `sharp`/libheif reachable through Uploadthing uploads, Windows-RCE CVE not applicable (no Pages Router); full gate + 607 tests/coverage green; Docker standalone check outstanding — host memory exhaustion, not a code issue, CI's own Docker job covers it on push | [CHANGELOG](../CHANGELOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -171,19 +172,18 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each
-landed item. Open now, and nothing else: **Renovate PR delivery FAILED** (zero
+landed item. Open now: **Renovate PR delivery FAILED** (zero
 `renovate/*` branches ever — re-checked 2026-08-19, every Monday window through 08-17
-empty; the Mend-side diagnosis is BACKLOG B1) · the **`next` dated take**
-(16.3.1 taken then reverted 2026-08-22 over a Docker-only `@swc/helpers` regression;
-the 16.3.2 retake is superseded by **16.3.3, Vercel's August security release** —
-published 2026-08-25, ages in ~2026-09-01 or via the age gate's security-only
-exception routes; plan, riders and the order-dependent verification live in
-MAINTENANCE → Dated dependency takes). ⚠️ **`better-auth` 1.7.x is a breaking
+empty; the Mend-side diagnosis is BACKLOG B1) · the **`next` 16.3.3 Docker
+standalone follow-up** (taken 2026-08-26 on full gate + `:3100` live-verify; the
+Docker check itself blocked on local host memory exhaustion, not a code issue —
+CI's own Docker image job covers it on the next push, tracked in MAINTENANCE →
+Watch as belt-and-suspenders, not a live gap). ⚠️ **`better-auth` 1.7.x is a breaking
 minor** (`latest` since 2026-08-18) — plan → sign-off, not a routine take; no
 advisory forces the move. Ledger clear as of 2026-08-26: `nanoid` 3.3.18 +
-`better-auth` 1.6.30 taken (exact-pinned, not caret — see the row above), `main`
-green, `auditConfig.ignoreGhsas` `[]`, `pnpm audit` zero vulnerabilities / zero
-ignored. The verbatim history this paragraph used to carry:
+`better-auth` 1.6.30 + `next` 16.3.3 taken (exact-pinned where the dep warrants it
+— see the rows above), `main` green, `auditConfig.ignoreGhsas` `[]`, `pnpm audit`
+zero vulnerabilities / zero ignored. The verbatim history this paragraph used to carry:
 [archive/PHASE_HISTORY.md → Archived 2026-08-19](archive/PHASE_HISTORY.md#archived-2026-08-19-status-watch-and-overrides-history).
 
 ## Fresh project on-ramp (clone → build a real app)

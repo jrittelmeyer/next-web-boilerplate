@@ -481,6 +481,31 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     ("is this security-relevant") was the wrong question; "does it fix a known
     regression in what I'm about to pin" is the one that would have caught this
     before CI did.
+    **16.3.3 TAKEN 2026-08-26** (August 2026 security release, two critical CVEs
+    — full triage + verification in [CHANGELOG](../CHANGELOG.md) 2026-08-26):
+    CVE-2026-75604/GHSA-p293-qw3h-jr36 (Windows-hosted-server RCE) doesn't apply
+    (no Pages Router); GHSA-2xp9-vwfh-vxw4/GHSA-g89c-p67h-r497 (AVIF-decode RCE
+    via libheif in `sharp`) does — reachable through this repo's Uploadthing
+    upload surface — and justified the age gate's route (2) exception (ages in
+    naturally 2026-09-01). Exclude scoped to all 9 lockstep packages this time
+    (`next` + `@next/env` + 8 `@next/swc-*`), not just bare `next` — the exact
+    gap a `contrarian` pass caught before taking it. `sharp: 0.35.3` override
+    **removed** — its removal condition ("next's own sharp pin reaches
+    >=0.35.0") is met by 16.3.3's own `^0.35.3` floor; the lockfile resolves
+    `sharp@0.35.3` naturally without it (confirmed by a no-op reinstall). Full
+    gate + 607 tests/coverage/knip/docs:sanity green, lockfile diff surgical.
+    **Open follow-up: the Docker standalone (`output: 'standalone'`) check —
+    the exact lane that caught the 16.3.1 regression — could not be completed
+    this session.** Three build attempts failed on host memory exhaustion
+    (0.8 GB free of 16 GB, `vmmem` at 9.4 GB) causing Turbopack subprocess
+    timeouts, not a code regression; owner decision was to ship on the strength
+    of full gate + a `:3100` live-verify (health, icon/apple-icon/opengraph-image
+    all 200, `/_next/image` responding cleanly) rather than block the security
+    fix on local resource pressure. **Action:** once host memory is available,
+    run `docker build -f docker/Dockerfile --target runner .` and `--target
+    worker .`, `docker run` + `/api/health` for both — CI's own Docker image job
+    will also exercise this on the next push, so this is belt-and-suspenders,
+    not a live gap in coverage.
   - ~~**2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in~~ — **TAKEN
     2026-08-14.** Registry-verified over `latest` (1.6.28, published
     2026-08-13T22:40Z) and 1.6.27 (2026-08-11T17:59Z) — both still inside the

@@ -13,6 +13,50 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Added
 
+- **2026-08-26: `next` 16.2.12 → 16.3.3 (August 2026 security release), age-gate
+  exception.** Two critical CVEs shipped in 16.3.3: **CVE-2026-75604 /
+  GHSA-p293-qw3h-jr36** (unauthenticated RCE needing both Pages Router and App
+  Router on a Windows-hosted server) does **not** apply here — no Pages Router
+  anywhere in this repo, independent of OS/deploy target. **GHSA-2xp9-vwfh-vxw4 /
+  GHSA-g89c-p67h-r497** (unauthenticated RCE via a libheif flaw in `sharp` when
+  Next.js's Image Optimization API decodes an attacker-controlled AVIF/HEIF
+  source image) **does apply**: `apps/web/src/lib/uploadthing.ts`'s
+  `imageUploader`/`avatarUploader` accept the generic Uploadthing `image` type
+  with no codec allowlist, gated only by an authenticated session (any account,
+  not admin-only), and `next.config.ts`'s `images.remotePatterns` routes
+  `*.ufs.sh` uploads through `/_next/image` — so any signed-up account could
+  upload a crafted AVIF avatar/upload, and the server decodes it the moment
+  any visitor's browser renders it, no auth needed for the trigger request
+  itself. The patched release disables AVIF *decode* entirely (an input-side
+  guard in Next's own code, not a `sharp` version bump) until libheif ships an
+  upstream fix. Waiting the ~6 days for the 7-day `minimumReleaseAge` gate to
+  clear naturally meant knowingly carrying an unpatched RCE, so route (2)
+  applied: a dated, exact-version-scoped `minimumReleaseAgeExclude` in
+  `pnpm-workspace.yaml` for `next@16.3.3` + its 9 lockstep siblings
+  (`@next/env` + 8 `@next/swc-*` platform binaries — `pnpm install` surfaced
+  the missing `@next/env` entry on the first attempt, the age gate enforces
+  every lockstep package independently). Reviewed by `contrarian` (mandatory —
+  `pnpm-workspace.yaml` is template surface): first draft wrongly claimed the
+  `sharp: 0.35.3` override no longer existed (it did) and undersized the
+  exclude scope to bare `next` only; both folded in before taking the bump.
+  The override's stated removal condition — "next's own sharp pin reaches
+  >=0.35.0" — is now met (`next@16.3.3` pins `^0.35.3`), so it's **removed**
+  in this change; the lockfile still resolves `sharp@0.35.3` naturally off
+  `next`'s own floor (confirmed by a no-op reinstall after dropping it).
+  **Full gate green** (lint · type-check · build · 607 tests
+  with coverage thresholds intact · knip · docs:sanity), lockfile diff verified
+  surgical (only the `next` family moved). **Docker standalone verify
+  (`output: 'standalone'`, the exact check that caught the 16.3.1 boot-crash
+  regression) could not be completed this session** — three build attempts
+  failed on host memory exhaustion (0.8 GB free / 16 GB total, `vmmem` alone at
+  9.4 GB) causing Turbopack subprocess timeouts unrelated to the code itself,
+  not a 16.3.3 regression. Owner decision: ship without it, tracked as an
+  outstanding follow-up in MAINTENANCE → Watch. **Live-verified instead on a
+  fresh prod build (`:3100`, email blanked)**: `/api/health` (database up),
+  `/icon` and `/apple-icon` (200, `image/png` — the `ImageResponse`/satori/
+  sharp path both the 16.3.0 and 16.3.1 regressions hit), `/opengraph-image`
+  (200, 42 KB PNG), and `/_next/image` responding cleanly (404, not a crash)
+  for a well-formed remote-pattern request.
 - **2026-08-26: `better-auth` 1.6.26 → 1.6.30** (+ `@better-auth/passkey` 1.6.26 →
   1.6.30, exact-pinned in lockstep). Routine bug-fix run (1.6.27–1.6.30), no CVE;
   the one access-control fix in the window (SSO org auto-assignment trusting an

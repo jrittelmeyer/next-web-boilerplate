@@ -183,13 +183,13 @@ overrides:
   # vulnerable copies; remove once a routine bump naturally carries the
   # lockfile past 3.3.18 (the key is inert from that moment).
   "nanoid@<3.3.18": 3.3.18
-  # sharp <0.35.0 (GHSA-f88m-g3jw-g9cj — inherited libvips CVE-2026-33327/33328/
-  # 35590/35591, HIGH), via next@16.2.11's own EXACT `^0.34.5` optionalDependency
-  # pin, which excludes the fix (Next.js's built-in image-optimization engine —
-  # a real runtime path, not build tooling). 0.35.3 clears the age gate
-  # (published 2026-07-01) and ships prebuilt binaries for every platform this
-  # repo targets. Remove when next's own sharp pin reaches >=0.35.0.
-  sharp: 0.35.3
+  # ——— sharp <0.35.0 (GHSA-f88m-g3jw-g9cj — inherited libvips CVE-2026-33327/
+  # 33328/35590/35591, HIGH) was overridden here 2026-08-14 because
+  # next@16.2.11's own EXACT `^0.34.5` optionalDependency pin excluded the fix.
+  # REMOVED 2026-08-26 (the `next` 16.3.3 take): next's own `sharp` pin is now
+  # `^0.35.3` — the stated removal condition ("next's own sharp pin reaches
+  # >=0.35.0") is met, so the tree resolves the fix naturally without an
+  # override. Verified in the same lockfile diff that took 16.3.3.
   # ——— Advisory batch #5 (2026-08-04, closed issue #41): nine advisories landed
   # 08-03/04 across five packages — all transitive, every path build/dev/test tooling.
   # brace-expansion 5.0.9 (above) was taken separately on 08-03 (PR #38); postcss and
@@ -258,8 +258,39 @@ overrides:
 #      why it is low-risk here, and no expiry to promise.
 # (`docs/MAINTENANCE.md` → Dependency policy carries the same three; keep them in step.)
 minimumReleaseAge: 10080 # 7 days
+# TEMPORARY security exception (2026-08-26): `next` 16.3.3 (published
+# 2026-08-25T15:32Z) patches GHSA-2xp9-vwfh-vxw4 / GHSA-g89c-p67h-r497 — an
+# unauthenticated RCE via a libheif flaw in `sharp` when Next.js's Image
+# Optimization API decodes an attacker-controlled AVIF/HEIF source image. This
+# repo's `imageUploader`/`avatarUploader` (apps/web/src/lib/uploadthing.ts) accept
+# the generic Uploadthing `image` type with no codec allowlist, gated only by an
+# authenticated session (any account, not admin-only) — a real, reachable path,
+# not a theoretical one. Waiting the ~6 days for the 7-day gate to clear naturally
+# means knowingly carrying an unpatched RCE, so route (2) applies. (The release's
+# other CVE, CVE-2026-75604/GHSA-p293-qw3h-jr36, a Windows-hosted-server RCE
+# needing both Pages Router and App Router, does NOT apply here — no Pages Router
+# anywhere in this repo — but ships in the same release regardless.)
+# Scoped exact-version per route (2)'s rule (never a bare name/glob — see the
+# 2026-07-23 precedent below, superseded 2026-08-03 for exactly that reason): the
+# 8 `@next/swc-*` platform binaries are `next`'s own lockstep optionalDependencies,
+# same release, same publish timestamp, so each inherits `next`'s "published fix
+# exists" reasoning directly. `@next/eslint-plugin-next` is untouched (declared
+# separately in tooling/eslint/package.json, not part of this security fix).
+# REMOVE once 16.3.3 ages past the gate (2026-09-01) — tracked in
+# docs/MAINTENANCE.md → Watch items.
+minimumReleaseAgeExclude:
+  - next@16.3.3
+  - "@next/env@16.3.3"
+  - "@next/swc-darwin-arm64@16.3.3"
+  - "@next/swc-darwin-x64@16.3.3"
+  - "@next/swc-linux-arm64-gnu@16.3.3"
+  - "@next/swc-linux-arm64-musl@16.3.3"
+  - "@next/swc-linux-x64-gnu@16.3.3"
+  - "@next/swc-linux-x64-musl@16.3.3"
+  - "@next/swc-win32-arm64-msvc@16.3.3"
+  - "@next/swc-win32-x64-msvc@16.3.3"
 # The 2026-08-03 `minimumReleaseAgeExclude` for brace-expansion@5.0.9 — route (2)'s one
-# use, above — was REMOVED 2026-08-06 on schedule: 5.0.9 (published 2026-07-30T10:00:32Z)
+# prior use, above — was REMOVED 2026-08-06 on schedule: 5.0.9 (published 2026-07-30T10:00:32Z)
 # cleared the 7-day gate at 10:00:32Z that day, so the version-scoped entry had gone
 # inert. The gate is unconditional again, with zero exclusions — verified by a frozen
 # install against the existing lockfile.
