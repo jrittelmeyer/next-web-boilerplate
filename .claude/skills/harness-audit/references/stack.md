@@ -7,7 +7,10 @@ per-session context cost, so the default set stays small and everything else
 is documented, not wired. Entries carry the date they were last verified
 against the live ecosystem.
 
-## Baseline tool servers (dev projects) — verified 2026-08-23
+Landscape source: **registry.modelcontextprotocol.io** (the servers repo's
+third-party list was retired 2026-04-14; verified 2026-08-25).
+
+## Baseline tool servers (dev projects) — verified 2026-08-23, re-confirmed 2026-08-25
 
 - **Forge server** (GitHub MCP or the forge's equivalent) — PRs, issues, CI
   from the conversation. Skip when the `gh`/`glab` CLI already covers the

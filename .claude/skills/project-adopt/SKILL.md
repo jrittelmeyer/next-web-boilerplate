@@ -1,6 +1,6 @@
 ---
 name: project-adopt
-description: Adopt an existing codebase onto a template/boilerplate foundation — survey it into a parity contract and an honest theirs-vs-foundation disposition map, converge a product brief + migration map, and regenerate the living docs into a port program. Use to adopt/port/migrate an app onto a template or boilerplate, merge/upgrade it with a template's features, or when source code lands in the intake dir.
+description: Adopt an existing codebase onto a template foundation — survey it into a parity contract and theirs-vs-foundation map, converge a product brief + migration map, then regenerate docs into a port program. Use to adopt, port, or migrate onto a template, add features, or when source code lands in the intake dir.
 ---
 
 # project-adopt

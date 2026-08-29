@@ -1,6 +1,6 @@
 ---
 name: harness-audit
-description: Audit a project's agent harness — skills, hooks, context files, MCP servers, permissions, packaging — against the current ecosystem: re-fetch pinned authoritative specs, run current-dated searches, diff, and emit a dated scored report plus proposed backlog rows. Use for a quarterly modernization pass, after major harness releases, or when asked if the agent setup is still current.
+description: Audit a project's agent harness — skills, hooks, context, MCP servers, permissions, packaging — against the current ecosystem: re-fetch pinned specs, run dated searches, diff, emit a scored report + backlog rows. Use for a quarterly pass, after major harness releases, or when asked if the setup is current.
 ---
 
 # harness-audit

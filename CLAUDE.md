@@ -53,6 +53,7 @@ Claude-Code-specific notes:
     turns dissent into agreement. Require at least one finding it verified itself,
     and hand over the plan **before** its outcome log exists — a resolved plan is
     the strongest anchor there is.
-  - Registry-fallback (`claude --agent contrarian -p`) and the nudge-hook timing
-    caveat live in
-    [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
+  - Registry-fallback (`claude --agent contrarian -p`) lives in
+    [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude);
+    the nudge-hook timing caveat lives in its own header comment,
+    `.claude/hooks/contrarian-nudge.mjs`.

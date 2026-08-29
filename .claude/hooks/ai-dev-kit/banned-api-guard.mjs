@@ -19,6 +19,12 @@
  * preserving line numbers, `//` tails removed) — a banned name in a comment
  * never fires; a banned name in a string still does (accepted tradeoff, same
  * as the consumer originals).
+ *
+ * A rule whose `pattern` doesn't compile as a RegExp is skipped (not the
+ * whole guard) and named once on stderr per matching invocation — silent
+ * skip would make a broken blocking rule look like a clean pass forever.
+ * `install.mjs --check` also flags a non-compiling pattern in the installed
+ * config as an advisory, and rejects one pre-write via `--adapter`.
  */
 import { readFileSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
@@ -56,6 +62,7 @@ const underPrefix = (prefix) => {
 let content = null;
 let stripped = null;
 const violations = [];
+const brokenPatterns = [];
 let hit = null;
 
 for (const group of groups) {
@@ -83,8 +90,14 @@ for (const group of groups) {
     let re;
     try {
       re = new RegExp(rule.pattern);
-    } catch {
-      continue; // invalid pattern in user config — skip the rule, not the guard
+    } catch (e) {
+      // Invalid pattern in user config — skip the rule, not the guard, but
+      // note it once so a broken blocking rule doesn't read as "nothing to
+      // report" (it would otherwise be silently inert forever).
+      brokenPatterns.push(
+        `  ${group?.name ?? "(unnamed group)"}: pattern "${rule.pattern}" — ${e.message}`,
+      );
+      continue;
     }
     stripped.forEach((line, i) => {
       if (re.test(line)) {
@@ -96,6 +109,13 @@ for (const group of groups) {
     hit = group;
     break;
   }
+}
+
+if (brokenPatterns.length > 0) {
+  console.error(
+    `ai-dev-kit banned-api-guard: ${brokenPatterns.length} non-compiling pattern(s) in ` +
+      `enforcement.bannedApis — these rule(s) are inert, not blocking:\n${brokenPatterns.join("\n")}`,
+  );
 }
 
 if (violations.length > 0) {

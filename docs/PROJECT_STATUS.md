@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-26 (doc audit; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — report in the archive)._
+_Last updated: 2026-08-29 (B3 doc-audit leftovers closed, kit 0.23.1→0.23.11; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — report in the archive)._
 
 ## Where we are
 
@@ -158,6 +158,7 @@ Per-program summary (Rows = archived row count; full rows →
 | `better-auth` 1.6.30 — 2026-08-26 | 1 | Routine bump; `^1.6.30` silently resolved to breaking `1.7.1` — exact pin is now the standing rule for this dep; schema-diff clean across the full surface (types-only delta); live-verified 2FA, org invite/accept, admin ban, delete session-cleanup | [CHANGELOG](../CHANGELOG.md) |
 | Doc audit — 2026-08-26 (full pass) | 1 | Showcase catches up to the sixteenth pass (deck 16th point, 99.4; skills 8→10; corpus 528→568; `packages/calendar` in README/ch03); STACK better-auth exact-pin row; watch → 16.3.3 supersession; 4 template-surface finds → one B3 row | [BACKLOG.md](BACKLOG.md) |
 | `next` 16.3.3 taken — 2026-08-26 | 1 | August 2026 security release, age-gate route (2) exception (9 lockstep packages, exact-scoped — a `contrarian` pass caught an undersized first draft); AVIF-decode RCE via `sharp`/libheif reachable through Uploadthing uploads, Windows-RCE CVE not applicable (no Pages Router); full gate + 607 tests/coverage green; Docker standalone check outstanding — host memory exhaustion, not a code issue, CI's own Docker job covers it on push | [CHANGELOG](../CHANGELOG.md) |
+| B3 doc-audit leftovers — 2026-08-29 | 1 | `contrarian`-reviewed: real `clean` scripts (web/jobs); dangling CLAUDE.md pointer fixed; Playwright rule covers package `tests/`; kit 0.23.1→0.23.11 (drift found, `exactPin`+`better-auth`); skill budget re-measured, under cap | [CHANGELOG](../CHANGELOG.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·

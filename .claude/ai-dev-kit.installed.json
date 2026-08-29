@@ -1,5 +1,5 @@
 {
-  "kit": "0.23.1",
+  "kit": "0.23.11",
   "skills": {
     "checkpoint": "0.4.1",
     "doc-audit": "0.3.0",
@@ -8,8 +8,8 @@
     "dep-check": "0.2.2",
     "live-verify": "0.2.0",
     "project-init": "0.3.1",
-    "project-adopt": "0.5.1",
-    "harness-audit": "0.1.3",
+    "project-adopt": "0.5.2",
+    "harness-audit": "0.1.5",
     "retro": "0.1.1"
   }
 }

@@ -443,6 +443,34 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Changed
 
+- **2026-08-29: B3 doc-audit 2026-08-26 leftovers closed (template surface,
+  `contrarian`-reviewed).** Five small currency defects: (a) `pnpm clean` was a
+  silent no-op (`turbo.json` declared the task, no package defined the script) —
+  added real `clean` scripts to the two packages that actually produce build
+  output (`apps/web` → `.next`, `packages/jobs` → `dist`, via `node -e
+  fs.rmSync`, no new dependency) and reworded AGENTS.md's claim to name them
+  specifically instead of "package `dist`/`.next` outputs" generically; (b)
+  CLAUDE.md's contrarian nudge-hook timing-caveat pointer targeted
+  CONVENTIONS.md → Agent tooling, where that caveat never lived (only in
+  `.claude/hooks/contrarian-nudge.mjs`'s header comment) — repointed the pointer
+  at the hook file directly rather than copying the prose into a second
+  location (contrarian flagged the copy as recreating the same
+  second-source-of-truth risk the hook's own comment warns against); (c)
+  AGENTS.md's Playwright-location rule omitted `packages/ui/tests/visual.spec.ts`
+  — reworded to cover a package's own `tests/` alongside `apps/web/e2e/`; (d)
+  the ai-dev-kit adapter's `depPolicy.exactPin` gained `better-auth` (standing
+  rule since the 1.6.30 exact-pin take) — surfaced that the kit clone had
+  drifted 0.23.1 → 0.23.11 since the last install (10 versions of unrelated
+  upstream work: `.claude/ai-dev-kit.config.json` additions,
+  `banned-api-guard.mjs`/`stop-gate.mjs` hardening, `harness-audit`/
+  `project-adopt` doc-currency fixes), reviewed the ~51-line delta, and took the
+  full reinstall rather than cherry-picking one field and deferring the drift;
+  (e) skill-description budget re-measured at ~853 tokens (chars/4 heuristic,
+  all 10 installed skills) against the 909 cap — **under budget**, no
+  re-baseline or trim needed; the backlog row's ~938 reading came from a
+  different measurement pass, and the 0.23.11 currency polish already trimmed
+  `harness-audit`/`project-adopt`'s descriptions further.
+
 - **2026-08-22: `next` 16.2.12 → 16.3.1 taken, then REVERTED same day** (commit
   `1bd8d1d773b57f947fdc57c1d691a4489a252393`, briefly on `main`). Passed the full
   gate, both E2E CI lanes, `pnpm audit`, and a manual `:3100` `next start` live-verify

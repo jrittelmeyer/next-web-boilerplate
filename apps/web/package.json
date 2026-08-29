@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "dotenv -e ../../.env -- playwright test",
-    "size": "size-limit"
+    "size": "size-limit",
+    "clean": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

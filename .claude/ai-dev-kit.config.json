@@ -46,7 +46,8 @@
       "@sentry/*",
       "posthog-*",
       "react-email",
-      "@axe-core/playwright"
+      "@axe-core/playwright",
+      "better-auth"
     ]
   },
   "contextBudget": {

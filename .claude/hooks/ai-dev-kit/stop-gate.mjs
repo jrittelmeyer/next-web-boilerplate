@@ -44,7 +44,9 @@ try {
 }
 const commands = Array.isArray(gate?.commands) ? gate.commands.filter(Boolean) : [];
 if (commands.length === 0) process.exit(0);
-const timeoutMs = (Number.isInteger(gate?.timeoutSeconds) ? gate.timeoutSeconds : 150) * 1000;
+const timeoutMs =
+  (Number.isInteger(gate?.timeoutSeconds) && gate.timeoutSeconds > 0 ? gate.timeoutSeconds : 150) *
+  1000;
 
 const tail = (s, n = 3000) => (s.length > n ? `…${s.slice(-n)}` : s);
 

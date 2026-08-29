@@ -50,9 +50,11 @@ Full list: root `package.json` scripts. Gate = `pnpm lint` · `pnpm type-check` 
 Non-obvious:
 
 - `pnpm lint` = Biome + ESLint (`@next/eslint-plugin-next` only).
-- `pnpm clean` clears package `dist`/`.next` outputs — **not** the Turbo cache
-  (`.turbo/cache`, ~3.5 GB per build, no native cap). `pnpm cache:prune` evicts it
-  to the cap (also runs on `pre-push`); `pnpm cache:size` reports it.
+- `pnpm clean` clears `apps/web/.next` and `packages/jobs/dist` — the only two
+  packages with build output; every other package ships as TS source and has no
+  `clean` script. Does **not** touch the Turbo cache (`.turbo/cache`, ~3.5 GB per
+  build, no native cap). `pnpm cache:prune` evicts it to the cap (also runs on
+  `pre-push`); `pnpm cache:size` reports it.
 
 ## Layout
 
@@ -75,8 +77,9 @@ Full rationale, naming table, and file-structure map:
   (`/** @public — why */` exempts deliberate API surface).
 - Server Components by default; `"use client"` at the lowest node; React Compiler
   is ON — no manual `useMemo`/`useCallback`/`React.memo`.
-- Vitest = `*.test.*` co-located; Playwright = `*.spec.*` under `apps/web/e2e/` —
-  never mix the suffixes.
+- Vitest = `*.test.*` co-located; Playwright = `*.spec.*` under `apps/web/e2e/`
+  or a package's own `tests/` (e.g. `packages/ui/tests/visual.spec.ts`) — never
+  mix the suffixes.
 - Server Actions return `ActionResult<T>` (`@repo/validators`); tRPC procedures
   throw `TRPCError`; never swallow errors.
 - No comments unless the WHY is genuinely non-obvious.
