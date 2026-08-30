@@ -58,6 +58,16 @@ FROM deps AS jobs-build
 WORKDIR /app
 RUN pnpm --filter @repo/jobs build
 
+# ---- patched: node:${NODE_VERSION} with the latest libssl3/libcrypto3 ----
+# Alpine's OpenSSL packages patch faster than the upstream node:*-alpine tags get
+# rebuilt, so `apk upgrade` here (not a version pin — Alpine's live repo, whatever
+# it currently serves) keeps the runtime images ahead of known CVEs between base-
+# image bumps. Shared by `worker` and `runner` below so a fix/removal never has to
+# be duplicated across both. `--no-cache` refreshes the repo index itself and skips
+# writing /var/cache/apk, so no separate `apk update` or cache cleanup is needed.
+FROM node:${NODE_VERSION} AS patched
+RUN apk upgrade --no-cache libssl3 libcrypto3
+
 # ---- worker: the pg-boss background-jobs worker (D7) ----
 # A SEPARATE long-lived process from the web server — the consumer half of the
 # jobs story (the web app enqueues; this drains the queues). Unlike the old
@@ -67,7 +77,7 @@ RUN pnpm --filter @repo/jobs build
 # transpiler). DATABASE_URL is provided at runtime (compose env / --env-file), like
 # the web app. Optional: if you never run this service, enqueued jobs simply wait
 # in the `pgboss` schema until a worker starts — the app is unaffected.
-FROM node:${NODE_VERSION} AS worker
+FROM patched AS worker
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -82,7 +92,7 @@ USER node
 CMD ["node", "worker.js"]
 
 # ---- runner: minimal production image ----
-FROM node:${NODE_VERSION} AS runner
+FROM patched AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

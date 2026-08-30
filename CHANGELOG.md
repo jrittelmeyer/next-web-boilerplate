@@ -312,6 +312,26 @@ Shipped on `main` after the `v1.1.0` tag; not yet cut into a tagged milestone.
 
 ### Fixed
 
+- **2026-08-30: CVE-2026-14456 (`libssl3`/`libcrypto3`, Docker Trivy gate).** CI's
+  "Docker image (build · smoke · scan · SBOM)" job had been red since 2026-08-26/27,
+  two runs before the `next` 16.3.3 commit below — that commit's CHANGELOG entry
+  characterized it as "host memory exhaustion, not a code issue," which was a
+  mischaracterization; the actual captured failure was this Trivy scan, corrected
+  here. `node:24-alpine` ships `libssl3`/`libcrypto3` 3.5.7-r0, vulnerable to a HIGH
+  OpenSSL DoS (unbounded memory), fixed upstream in 3.5.8-r0 — no new base-image tag
+  carries the fix yet, but `apk upgrade --no-cache` resolves it from Alpine's live
+  repo. `docker/Dockerfile`'s `runner` and `worker` stages each built `FROM
+  node:${NODE_VERSION}` directly (neither inherited the `base` stage), so the fix
+  needed applying to both; added a shared `patched` stage between them instead of
+  duplicating the `apk upgrade` line, so a future fix/removal can't drift between the
+  two. Verified locally: both images build, `apk info -v` confirms 3.5.8-r0 on both,
+  and the `runner` image boots against a throwaway Postgres with `/api/health`
+  returning `200 {"status":"ok"}`. `contrarian`-reviewed (`docker/Dockerfile` is
+  template surface) — findings folded in: the shared-stage structure, an explicit
+  reproducibility trade-off note (unpinned `apk upgrade` tracks Alpine's live repo,
+  not a fixed version), and scoping the "build stages don't need patching" reasoning
+  to this DoS-class CVE rather than asserting it as a general rule.
+
 - **2026-08-14: `main` un-reds — kit-output Biome formatting.** The 2026-08-12
   un-gated ai-dev-kit 0.8.0 → 0.13.0 reinstall (see Changed) left
   `.claude/settings.json`'s hook `args` arrays multi-line where Biome's formatter
