@@ -1,0 +1,52 @@
+name: Renovate
+
+# Self-hosted fallback for the Mend-hosted Renovate GitHub App. Diagnosis
+# (docs/archive/renovate-b1-diagnosis-plan.md, BACKLOG.md B1): the Mend App is
+# installed, in Interactive mode, and authenticates fine — a manual trigger at
+# developer.mend.io (job ea8d7e50, 2026-08-31) proved the scheduler/config are
+# both healthy (the job's own log shows "Matches schedule on monday"), but the
+# job was killed mid-run with no error logged while generating a pnpm lockfile
+# update — consistent with a resource ceiling on Mend's Community/Free tier for
+# a 14-package monorepo. Every scheduled Monday window since 2026-07-22 has
+# produced zero renovate/* branches. This workflow reuses the already-committed
+# .github/renovate.json unchanged — only the execution host changes.
+#
+# Requires a repo secret RENOVATE_TOKEN: a classic PAT with `repo` + `workflow`
+# scope (`workflow` is required because .github/renovate.json extends
+# helpers:pinGitHubActionDigests, which writes to .github/workflows/*.yml —
+# see https://github.com/renovatebot/github-action#special-token-requirements-when-using-the-github-actions-manager).
+# Do NOT use the ambient GITHUB_TOKEN: it cannot trigger downstream CI runs on
+# PRs it opens (GitHub's anti-recursion guard), which would let renovate/* PRs
+# merge-eligible-looking with zero CI — this repo's dependency discipline
+# depends on every PR passing the full gate.
+#
+# Do not run this alongside an active Mend App installation on this repo — two
+# bots can each fail to find the existing Dependency Dashboard issue and open a
+# duplicate. Disable/uninstall the Mend App before this workflow's first live
+# run.
+#
+# Third-party actions are pinned to full commit SHAs (same policy as ci.yml).
+
+on:
+  schedule:
+    # Mondays 12:00 UTC (07:00-08:00 America/New_York, matching the intent of
+    # .github/renovate.json's "on monday" schedule) — Renovate re-evaluates its
+    # own schedule against "now" in the configured timezone regardless of when
+    # this cron fires, so this is a trigger, not the authoritative gate.
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read # RENOVATE_TOKEN (not GITHUB_TOKEN) performs every write
+
+jobs:
+  renovate:
+    name: Self-hosted Renovate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@e09d604f8f803bb527bd8321ed5be06c460b8682 # v46.2.2
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}

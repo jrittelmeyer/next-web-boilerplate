@@ -66,16 +66,27 @@ The full per-dependency record (versions, pin style, and *why*) is
 
 GitHub repo settings don't travel with a template copy. On your own repo:
 
-- **Install the Renovate (Mend) GitHub App** — without it, no update PRs ever arrive.
-  Because `.github/renovate.json` is already committed, there's no onboarding PR —
-  Renovate goes straight to the Dependency Dashboard issue and scheduled update PRs.
-  Choose **"Only selected repositories"** when installing: an "All repositories"
-  install defaults the Mend org to **Silent** mode (it scans but never creates
-  issues or PRs), and changing the GitHub-side repository access afterward does
-  *not* clear it — flip the mode to Interactive at
-  [developer.mend.io](https://developer.mend.io) if the dashboard issue never
-  appears. Validate config edits with
+- **Renovate dependency updates run via `.github/workflows/renovate.yml`**, a
+  self-hosted `renovatebot/github-action` cron reusing the committed
+  `.github/renovate.json` unchanged. Needs a repo secret `RENOVATE_TOKEN` — a
+  classic PAT with `repo` + `workflow` scope (`workflow` is required because
+  the config extends `helpers:pinGitHubActionDigests`, which writes to
+  `.github/workflows/*.yml`; the ambient `GITHUB_TOKEN` can't be used — it
+  can't trigger downstream CI on PRs it opens). Validate config edits with
   `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
+  Superseded the **Mend GitHub App** 2026-08-31 (`BACKLOG.md` B1): Mend was
+  confirmed installed, Interactive-mode, and schedule-healthy, but every
+  scheduled Monday window since 2026-07-22 produced zero `renovate/*`
+  branches — a manual trigger's own job log showed the run get killed
+  mid-lockfile-generation with no error emitted, consistent with a
+  Community/Free-tier resource ceiling for this monorepo's size. Full
+  diagnosis: `docs/archive/renovate-b1-diagnosis-plan.md`. A fork that wants
+  the Mend App instead: choose **"Only selected repositories"** when
+  installing (an "All repositories" install defaults the org to **Silent**
+  mode — scans but never creates issues/PRs — and changing GitHub-side repo
+  access afterward doesn't clear it; flip to Interactive at
+  [developer.mend.io](https://developer.mend.io) if the dashboard issue never
+  appears), and remove `renovate.yml`.
 - **Re-create the CI gate variables** (they're repo variables, not workflow content):
   `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, and optionally
   `ENABLE_PERF` / `ENABLE_GHCR_PUBLISH`. Unset, those lanes *skip silently* — they

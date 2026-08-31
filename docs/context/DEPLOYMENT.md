@@ -621,11 +621,23 @@ Automated dependency updates tuned to the repo's posture:
   `commit-msg` hook isn't a Conventional-Commits enforcer), a weekly
   schedule to batch PRs, `@types/*` grouped, and **major bumps gated behind
   Dependency-Dashboard approval**.
-- **Setup:** Renovate runs via the **Renovate GitHub App** (install it on the repo
-  from the GitHub Marketplace). Because this config file is already committed it
-  skips the onboarding PR and goes straight to the "Dependency Dashboard" issue +
-  scheduled update PRs (onboarding PRs only appear on repos with no Renovate
-  config). Validate config changes locally with
+- **Setup:** Renovate runs via a **self-hosted `.github/workflows/renovate.yml`**
+  (`renovatebot/github-action`, SHA-pinned like every other workflow action;
+  weekly `schedule` + `workflow_dispatch`), not the hosted Mend GitHub App —
+  switched 2026-08-31 after the Mend App was confirmed installed and healthy
+  (Interactive mode, correct schedule evaluation in its own job log) but every
+  scheduled run since 2026-07-22 produced zero `renovate/*` branches; a manual
+  trigger's job log showed the run killed mid-`pnpm update` with no error
+  emitted, consistent with a Community/Free-tier resource ceiling for a
+  14-package monorepo. Full diagnosis:
+  `docs/archive/renovate-b1-diagnosis-plan.md`. Needs a repo secret
+  `RENOVATE_TOKEN` (classic PAT, `repo` + `workflow` scope — `workflow` is
+  required for the `github-actions` manager this repo's
+  `helpers:pinGitHubActionDigests` preset relies on; the ambient
+  `GITHUB_TOKEN` won't work, since it can't trigger downstream CI on the PRs
+  it opens). Because `.github/renovate.json` is already committed there's no
+  onboarding PR — Renovate goes straight to the "Dependency Dashboard" issue +
+  scheduled update PRs. Validate config changes locally with
   `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
 
 > **Two-layer release-age enforcement.** The 7-day gate holds at both layers.
