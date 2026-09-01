@@ -99,7 +99,7 @@ The CI `verify` lane in one place, plus the dev tools that are wired but not par
 - [ ] **Dashboards-as-code validate** — `pnpm --filter @repo/observability check`
   - _Expect:_ `[observability] config OK` + lists 1 monitor (`app-health`) + 1 heartbeat (`jobs-worker`). No creds needed.
 - [ ] **Email templates render** — `pnpm --filter @repo/email exec email export --dir ./src/templates --outDir $env:TEMP/email-export --pretty`
-  - _Expect:_ "Successfully exported emails" — 8 HTML files (welcome, verify-email, reset-password, change-email, verify-new-email, email-changed-notice, delete-account, organization-invitation).
+  - _Expect:_ "Successfully exported emails" — 13 HTML files (welcome, verify-email, reset-password, change-email, verify-new-email, email-changed-notice, delete-account, organization-invitation, magic-link, calendar-invitation, calendar-event-updated, calendar-event-cancelled, calendar-reminder).
 - [ ] **Email preview server** _(starts a server; Ctrl-C to stop)_ — `pnpm --filter @repo/email preview` → open http://localhost:3001 and click through the templates.
 - [ ] **Storybook gallery** _(starts a server)_ — `pnpm storybook` → http://localhost:6006; toggle the dark-mode theme switch; the `ThemeToggle` story's menu works.
 - [ ] **Bundle analysis** — `pnpm --filter web analyze` (interactive treemap on :4000) or `pnpm --filter web analyze:output` (writes a static report under `apps/web/.next/diagnostics/analyze`).
@@ -383,7 +383,7 @@ All are optional and independent; the app keeps building/running if you skip any
 > **blanked back out** after the check — Upstash is the *multi-instance-only* driver, and
 > local dev keeps the shipped in-memory default. The two guarded tRPC procedures are
 > `post.list` + `search.search` (`rateLimitedProcedure`, **20 req / 60 s** per IP per path —
-> [trpc.ts:118](../apps/web/src/server/trpc/trpc.ts#L118)). Full record:
+> [trpc.ts:119](../apps/web/src/server/trpc/trpc.ts#L119)). Full record:
 > [archive/VERIFICATION_PROVENANCE.md → Upstash](archive/VERIFICATION_PROVENANCE.md#upstash-redis-distributed-rate-limiting).
 >
 > ✅ **The tRPC 429 now carries the standard `RateLimit-*` + `Retry-After` headers** (Tier-4

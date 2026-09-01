@@ -308,7 +308,7 @@ The calendar suite is the other worked example, and it exists because the *obvio
 version of it is a tautology. A test that recomputes `deriveEventInstants()` for every
 row and compares it to rows written by `deriveEventInstants()` cannot fail — it asserts a
 function equals itself. This repo has shipped exactly that shape before
-(`MAINTENANCE.md:198` — a `docs:sanity` wiring assertion that failed *open*).
+([MAINTENANCE.md → Watch → the `contrarian` evaluation](../MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) — a `docs:sanity` wiring assertion that failed *open*).
 
 So every negative case there writes through **raw `db.execute(sql...)` that bypasses the
 application writer**, carrying a deliberately wrong instant, and asserts the database

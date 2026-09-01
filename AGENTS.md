@@ -72,14 +72,17 @@ Full rationale, naming table, and file-structure map:
 
 - TypeScript `strict`; no `@ts-ignore`/`as any`; no enums (use `as const` /
   literal unions); no `baseUrl`; `paths` never in a shared tsconfig.
-- Named exports everywhere (default only where a framework requires); one React
-  component per file; kebab-case filenames; dead code is CI-gated by knip
-  (`/** @public — why */` exempts deliberate API surface).
+- Named exports everywhere (default only where a framework requires); one
+  **exported** React component per file (two exceptions: shadcn compound primitives
+  in `@repo/ui`, and unexported helper components beside their parent); kebab-case
+  filenames; dead code is CI-gated by knip (`/** @public — why */` exempts
+  deliberate API surface).
 - Server Components by default; `"use client"` at the lowest node; React Compiler
   is ON — no manual `useMemo`/`useCallback`/`React.memo`.
-- Vitest = `*.test.*` co-located; Playwright = `*.spec.*` under `apps/web/e2e/`
-  or a package's own `tests/` (e.g. `packages/ui/tests/visual.spec.ts`) — never
-  mix the suffixes.
+- Vitest = `*.test.*` co-located (DB-backed integration suites live in a package's
+  own `__tests__/integration/`, run only via `test:integration`); Playwright =
+  `*.spec.*` under `apps/web/e2e/` or a package's own `tests/` (e.g.
+  `packages/ui/tests/visual.spec.ts`) — never mix the suffixes.
 - Server Actions return `ActionResult<T>` (`@repo/validators`); tRPC procedures
   throw `TRPCError`; never swallow errors.
 - No comments unless the WHY is genuinely non-obvious.

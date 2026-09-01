@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-31 (harness audit — first pass on the agent harness, **93.9/100** baseline, four rows seeded and contrarian-folded, all behind sign-off; same-day doc audit — Renovate B1 built, and the Mend App's first scheduled PR landed: host choice pending; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — reports in the archive)._
+_Last updated: 2026-09-01 (seventeenth `/project-audit` pass: **99.3/100** — the 08-26 takes, the CVE fix and v1.2.0 verified at their seams; three new rows — the fork-safe `renovate.yml` gate (B1), the month-boundary e2e fix (B2), two draft releases (B3) — and STACK.md caught stale by a reference sweep; contrarian 13/13 folded. 08-31: harness audit **93.9/100** baseline + doc audit; reports in the archive)._
 
 ## Where we are
 
@@ -43,15 +43,16 @@ _Last updated: 2026-08-31 (harness audit — first pass on the agent harness, **
   creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
   record.
 - **Every locally-buildable Tier-4 row SHIPPED (2026-07-07 → 13)**, incl. A23–A32 + A13.
-  Sixteen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
-  (latest: [PROJECT_AUDIT_2026-08-19.md](archive/PROJECT_AUDIT_2026-08-19.md) — the
-  sixteenth pass verified the fifteenth's prescriptions all executed on schedule
-  (`main` green since 08-14, the nanoid closure, F5's ranged key → Security 100,
-  Testing 99) and the checkpoint Stop hook clean with full process compliance;
-  its one find — the better-auth line moved to a breaking 1.7 `latest` with no
-  watch bullet — became a MAINTENANCE dated take; F1 — Renovate delivery — remains
-  the standing tooling deduction; the 08-31 turn is in the watch paragraph below).
+  Seventeen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4 → 99.3/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
+  (latest: [PROJECT_AUDIT_2026-09-01.md](archive/PROJECT_AUDIT_2026-09-01.md) — the
+  seventeenth pass verified the 08-26 `next`/`better-auth` takes, the CVE-2026-14456
+  fix and the v1.2.0 cut at their seams (product code byte-identical since 08-19),
+  then priced three never-scored findings — `renovate.yml` fails red weekly in every
+  generated project (B1), a deterministic month-boundary e2e red diagnosed but tracked
+  nowhere (B2), two milestone releases still drafts (B3) — and a reference sweep that
+  found STACK.md's version table left stale by both takes; F1 — Renovate delivery —
+  remains the standing deduction, one owner action from closing).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
@@ -163,6 +164,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Renovate B1 — 2026-08-31 | 1 | Self-hosted `renovate.yml` (renovatebot action) shipped after the Mend diagnosis; its first cron run failed — `RENOVATE_TOKEN` unset. Same morning the Mend App opened its first-ever scheduled PR (#56, CI green). Host choice is the owner's call | [BACKLOG.md](BACKLOG.md) |
 | Doc audit — 2026-08-31 | 1 | Renovate reality reconciled across STATUS/BACKLOG/MAINTENANCE/DEPLOYMENT; v1.2.0 row struck; Docker follow-up closed; archive index +2 (its rule slipped a 3rd time); kit 0.23.11 currency; `next` 16.3.4 dated; showcase re-stamped; 9 memory repairs | [archive/README.md](archive/README.md) |
 | Harness audit — 2026-08-31 | 1 | First agent-harness pass (kit 0.23.11 · CC 2.1.251): 16 authorities re-fetched, with/without eval sample (live-verify 3/3 skill-only), **93.9** baseline; template allowlist `winget`/`docker exec` grants, legacy `prodVerify` adapter, 0.23.13 `disable-model-invocation` ↔ Stop-hook clash; 4 rows, contrarian-folded | [report](archive/HARNESS_AUDIT_2026-08-31.md) |
+| Audit — 2026-09-01 | 1 | Seventeenth pass: **99.3** — 08-26 takes, CVE fix, v1.2.0 verified; new: fork-red `renovate.yml` (B1), month-boundary e2e red tracked (B2), draft releases (B3), STACK.md stale after both takes (fixed); 14 drift fixes; contrarian 13/13 folded | [report](archive/PROJECT_AUDIT_2026-09-01.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -181,7 +183,11 @@ landed item. Open now: **Renovate — host choice pending (2026-08-31)**: the
 self-hosted `renovate.yml` shipped (BACKLOG B1) but its first cron run failed at
 startup — the `RENOVATE_TOKEN` secret is not set — while the Mend App opened the
 first scheduled `renovate/*` PR in the repo's history the same morning (#56,
-`actions/checkout` 7.0.1, every lane green). Pick one host, then merge/close #56 ·
+`actions/checkout` 7.0.1, every lane green). Pick one host, then merge/close #56;
+`renovate.yml` needs its `ENABLE_RENOVATE` gate regardless (B1, 2026-09-01 — generated
+projects inherit a weekly failing run until then) · **e2e month-boundary red**
+(`3e68733` attempt 1, 09-01: deterministic 00:00–04:00Z on the 1st of each month — B2
+fix due before 10-01; MAINTENANCE Watch (c)) ·
 **`next` 16.3.4** (published 2026-08-31T20:00Z, untriaged) ages in 2026-09-07; the
 16.3.3 `minimumReleaseAgeExclude` goes inert 2026-09-01 and is due for deletion.
 The 16.3.3 Docker-standalone follow-up **closed 2026-08-30** (the CVE-2026-14456 fix

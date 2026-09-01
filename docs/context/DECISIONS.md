@@ -28,7 +28,7 @@
   in `next.config.ts` — the modern Next 16 rendering model: data/IO is **dynamic by
   default**, you opt INTO caching with `"use cache"` (`cacheLife`/`cacheTag`), and every
   route is **Partial-Prerendered** (a static shell + server-streamed dynamic holes). It
-  composes here because `app/loading.tsx` gives every route the Suspense boundary a
+  composes here because `app/[locale]/loading.tsx` gives every route the Suspense boundary a
   prerender fallback needs, and `next build` stays **green with the DB down** (request data
   deferred behind Suspense; the one cached DB read caches a `null` sentinel at build and
   self-heals at runtime). Showcase: **/posts** — a `"use cache"` count plus streamed feed;
@@ -339,8 +339,8 @@ written; the probe results are what changed three of them.
   `@custom-variant dark (&:is(.dark *))` (class-based dark mode), `@theme`/`@theme inline`
   mappings, `:root`/`.dark` CSS variables, the base layer, and the `tw-animate-css` import
   (so the design layer is self-contained; `tw-animate-css` is a dep of `@repo/tailwind-config`).
-  `apps/web/globals.css` = `@import "tailwindcss"` + `@import "@repo/tailwind-config/base"`.
-- **Tailwind v4 only auto-scans the importing app's own sources**, so `apps/web/globals.css`
+  `apps/web/src/app/globals.css` = `@import "tailwindcss"` + `@import "@repo/tailwind-config/base"`.
+- **Tailwind v4 only auto-scans the importing app's own sources**, so `apps/web/src/app/globals.css`
   adds `@source "../../../../packages/ui/src/**/*.{ts,tsx}";` — without it, class names used
   only inside `@repo/ui` components produce no utilities. Verified live: `bg-primary`/
   `text-muted-foreground` appear in the compiled CSS.

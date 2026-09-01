@@ -74,6 +74,12 @@ GitHub repo settings don't travel with a template copy. On your own repo:
   `.github/workflows/*.yml`; the ambient `GITHUB_TOKEN` can't be used — it
   can't trigger downstream CI on PRs it opens). Validate config edits with
   `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
+  ⚠️ **Until the fork-safe gate lands (`BACKLOG.md` B1, filed 2026-09-01), this is
+  the one workflow that *fails* rather than skips when unconfigured** — a project
+  generated from the template inherits a Renovate run that fails at startup every
+  Monday until its owner adds the secret or deletes the file (a private repo never
+  hits GitHub's 60-day schedule auto-disable). Forks are unaffected: GitHub disables
+  `schedule` in forks by default.
   Superseded the **Mend GitHub App** 2026-08-31 (`BACKLOG.md` B1): Mend was
   confirmed installed, Interactive-mode, and schedule-healthy, but every
   scheduled Monday window since 2026-07-22 produced zero `renovate/*`
@@ -89,8 +95,9 @@ GitHub repo settings don't travel with a template copy. On your own repo:
   appears), and remove `renovate.yml`.
 - **Re-create the CI gate variables** (they're repo variables, not workflow content):
   `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, and optionally
-  `ENABLE_PERF` / `ENABLE_GHCR_PUBLISH`. Unset, those lanes *skip silently* — they
-  don't fail. → [`context/DEPLOYMENT.md → CI/CD`](context/DEPLOYMENT.md#cicd-github-actions)
+  `ENABLE_PERF` / `ENABLE_GHCR_PUBLISH` — and, once the B1 gate row lands,
+  `ENABLE_RENOVATE` for the self-hosted Renovate workflow. Unset, those lanes *skip
+  silently* — they don't fail. → [`context/DEPLOYMENT.md → CI/CD`](context/DEPLOYMENT.md#cicd-github-actions)
 - Optional: a `CODECOV_TOKEN` secret (coverage upload is skipped cleanly when unset).
 
 ## Watch items (known, tracked, deliberately not done)
@@ -208,10 +215,11 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (Its sibling — a day-before reminder crossing a DST transition fires an hour off in local
     terms — is argued in [`context/DECISIONS.md`](context/DECISIONS.md) and stays accepted.)
 
-- **Two distinct e2e flakes — and the lane went red once, 2026-08-03.** PR #34 attempt 1:
-  **1 failed · 9 flaky · 56 passed**. The single "e2e signup flake" row this replaces
-  conflated two unrelated defects, and the red was *not* the one it named — read the run
-  log, not the label, before acting on either.
+- **Three distinct e2e defects — and the lane has gone red twice: 2026-08-03 and
+  2026-09-01.** PR #34 attempt 1 (08-03): **1 failed · 9 flaky · 56 passed**; `3e68733`
+  attempt 1 (09-01): the month-boundary defect, **(c)** below. The single "e2e signup
+  flake" row this replaces conflated two unrelated defects, and the 08-03 red was *not*
+  the one it named — read the run log, not the label, before acting on any of them.
   - **(a) The signup hang — DIAGNOSED 2026-08-03: a pre-hydration click, fixed in
     `e2e/support/auth.ts`.** All 9 flaky were this, and every one recovered on retry.
     `page.goto` resolves on **`load`**, which fires before React hydrates, and Playwright's
@@ -250,6 +258,28 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     non-2xx now fails on status instead of hanging) and gave every Playwright lane a
     report + traces. *Removal condition:* a recurrence is diagnosed from its uploaded
     trace, or 20 consecutive green runs of the e2e lane.
+  - **(c) The month-boundary defect — DIAGNOSED 2026-09-01, fix pending
+    ([`BACKLOG.md`](BACKLOG.md) B2).** `3e68733` attempt 1 (2026-09-01 02:37Z) failed
+    in `e2e/calendar-invitations.spec.ts:165` — the "Standup" chip never appeared.
+    `dayInThisMonth()` (`:54-58`) derives the event's month from the **runner's** clock
+    (`new Date().getMonth()` → September, UTC) while the organizer's stored zone is
+    `America/New_York` (`:73`) and `/calendar` opens on *today in the stored zone*
+    (`calendar/page.tsx` → `instantToCivil(Date.now(), preferences.timeZone)`) — still
+    22:37 on 08-31, so the grid showed August with nothing to click. **Deterministic**,
+    not flaky: every push, heartbeat or rerun landing in **00:00–04:00 UTC on the 1st
+    of each month** (to 05:00 in EST — the Thursday 04:30Z heartbeat is inside that
+    window whenever a winter 1st is a Thursday) goes red; attempt 2 at 04:18Z went
+    green as predicted. `a11y.spec.ts:157`'s UTC-month seed is safe
+    (`DEFAULT_TIME_ZONE = "UTC"`, `lib/user-preferences.ts`; the a11y user stores no
+    zone), and no other spec derives a month from the runner clock. `apps/web/e2e`
+    ships to generated projects, so their lanes inherit the window. *Fix (test-only,
+    S):* derive the day in `EVENT_ZONE` (`Intl.DateTimeFormat("en-CA", { timeZone })`)
+    and make `now` injectable so the discrimination proof runs on any day — **not**
+    `calendar.spec.ts`'s fixed-date + `gotoMonth` pattern: this spec visits `/calendar`
+    six times and ~7 arrow presses per visit would trip the 20/min `calendar.range` cap
+    its header already works around. ⚠️ This red reset the 20-consecutive-green
+    counter that (a) and (b) share. *Removal condition:* the fix merges and the
+    2026-10-01 window passes green.
   - ⚠️ **Why this was invisible for so long:** all three Playwright lanes ran a
     report-less CI reporter while `ci.yml` uploaded a report directory that was never
     created, and `if-no-files-found` defaulted to `warn` — an annotation nobody read. The
@@ -419,7 +449,9 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   on Mend's tier. Either way, merge or close #56 first (touching
   `.github/workflows/*` needs the `workflow` scope), and the row closes when a
   scheduled `renovate/*` PR from the *chosen* host merges. *Removal condition:* that
-  merge.
+  merge. Independent of the choice, the workflow needs its `vars.ENABLE_RENOVATE`
+  gate before it is template-safe (BACKLOG B1, filed 2026-09-01 by the seventeenth
+  audit — generated projects inherit a weekly failing run until then).
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
@@ -524,7 +556,7 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (no Pages Router); GHSA-2xp9-vwfh-vxw4/GHSA-g89c-p67h-r497 (AVIF-decode RCE
     via libheif in `sharp`) does — reachable through this repo's Uploadthing
     upload surface — and justified the age gate's route (2) exception (ages in
-    naturally 2026-09-01). Exclude scoped to all 9 lockstep packages this time
+    naturally 2026-09-01). Exclude scoped to all 10 lockstep packages this time
     (`next` + `@next/env` + 8 `@next/swc-*`), not just bare `next` — the exact
     gap a `contrarian` pass caught before taking it. `sharp: 0.35.3` override
     **removed** — its removal condition ("next's own sharp pin reaches
@@ -544,13 +576,27 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     "host memory exhaustion" framing described the local build, not the lane.
   - **2026-09-01 ~15:32 UTC — the `next` 16.3.3 `minimumReleaseAgeExclude` goes inert**
     (16.3.3, published 2026-08-25T15:32Z, clears the 7-day gate unaided) — delete the
-    nine-package exclude block from `pnpm-workspace.yaml` on schedule and prove it with
-    a frozen install, as the 07-28 and 08-06 removals did.
+    **ten**-entry exclude block (`next` + `@next/env` + 8 `@next/swc-*`; the 16.3.3 entry
+    below said "all 9" — a miscount the 2026-09-01 audit's contrarian caught) from
+    `pnpm-workspace.yaml` on schedule and prove it with a frozen install, as the 07-28
+    and 08-06 removals did. Same edit: correct that file's `vite` comment ("we never
+    import vite directly" — `packages/ui` declares `vite: 8.0.16` as a devDep for
+    Storybook's builder; the override still pins every transitive copy).
   - **2026-09-07 ~20:00 UTC — `next` 16.3.4** ages in (published 2026-08-31T20:00:51Z,
-    registry-checked the same day; no advisory known). **Untriaged:** per Dependency
-    policy rule 6, read its notes for anything touching the subsystems 16.3.3 moved
-    (image optimizer/`sharp`, standalone output) before deciding between a routine
-    take and a deliberate skip — that is the question the 16.3.1 incident taught.
+    registry-checked the same day; no advisory known). **Pre-triaged 2026-09-01
+    (Dependency-policy rule 6, seventeenth audit):** the release *re-enables AVIF Image
+    Optimization* (vercel/next.js#97949 — the other half of the 16.3.3 mitigation, i.e.
+    exactly the subsystem the security take moved) and raises
+    `optionalDependencies.sharp` `^0.35.3` → **`^0.35.4`** (`sharp` 0.35.4 published
+    2026-08-26T09:42Z, ages in 09-02 — clear by the take; the lockfile moves `sharp`
+    too); three backports (testmode passthrough recursion #97691, a TS-alias build error
+    #97997, Turbopack `crossOrigin` #97930); nothing touches `output: 'standalone'`.
+    Take-plan riders: (a) rule 6's Docker build + boot + `/api/health` for **both**
+    images; (b) drive `/_next/image` with an **AVIF** source first, *then* the OG/icon
+    routes (order-dependent, per the 16.3.0 lesson); (c) confirm the libheif floor in
+    `sharp` 0.35.4's vendored libvips; (d) bump `@next/eslint-plugin-next` in lockstep
+    (`tooling/eslint`, its own `pnpm add` — it has resolved 16.2.12 since the 16.3.3
+    take left it outside the exclude). Plan → sign-off.
   - ~~**2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in~~ — **TAKEN
     2026-08-14.** Registry-verified over `latest` (1.6.28, published
     2026-08-13T22:40Z) and 1.6.27 (2026-08-11T17:59Z) — both still inside the
@@ -657,7 +703,7 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   signal** (checking Dependabot alone would have missed a HIGH on `sharp`, which sits
   in Next's image-optimization path). Remove each when its upstream moves, then
   `pnpm install` + the full gate:
-  - `brace-expansion: 5.0.9` → the 5.0.8 raise of 2026-07-30 (which also dropped the
+  - `"brace-expansion@<5.0.9": 5.0.9` (ranged since 2026-08-14) → the 5.0.8 raise of 2026-07-30 (which also dropped the
     `GHSA-mh99-v99m-4gvg` ignore; allowlist empty again) was **superseded 2026-08-03**:
     GHSA-rgw5-rvv9-x895 showed nested arrays bypass the mitigation 5.0.8 was taken
     for, so 5.0.9 was taken 4 days old under a dated, version-scoped
@@ -668,10 +714,10 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     naturally carries the lockfile past 5.0.9" — is **unsatisfiable while the key
     is bare** (a bare key pins every future resolution to its own value; the
     identical defect the 2026-08-12 exit PR diagnosed and fixed for fast-uri and
-    dompurify, missed on this third key — fifteenth audit, F5). Convert to the
-    ranged `"brace-expansion@<5.0.9": 5.0.9` (riding the 2026-08-14 nanoid take),
-    after which the condition becomes real: the key goes inert once the tree
-    resolves past 5.0.9.
+    dompurify, missed on this third key — fifteenth audit, F5). **Converted** to the
+    ranged `"brace-expansion@<5.0.9": 5.0.9` on 2026-08-14 (riding the nanoid take),
+    so the condition is now real: the key goes inert once the tree resolves past
+    5.0.9.
   - `"dompurify@<3.4.13": 3.4.13` (ranged since the 2026-08-12 park exit) → 3.4.12
     **fell vulnerable in turn 2026-08-07** (GHSA-55q2-fjhq-7xh7, moderate — parked
     route (1), owner-signed; **exited 2026-08-12**, due 08-10 ~14:16 UTC). ⚠️ The
@@ -681,12 +727,15 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     the lockfile past it. The ranged key is what makes the condition real: it goes
     inert once posthog-js resolves >=3.4.13 — which is also the moment the real fix
     lands, this edge being audit-only (see the posthog-js Watch line above).
-  - `sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
-    still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22).
-    Its `/_next/image` runtime path is e2e-covered since 2026-07-22
+  - ~~`sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
+    still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22)~~ —
+    **REMOVED 2026-08-26 with the `next` 16.3.3 take**: 16.3.3 pins `^0.35.3`, so the
+    condition is met and the lockfile resolves `sharp@0.35.3` unaided (confirmed by a
+    no-op reinstall). This bullet was left reading as active until the 2026-09-01
+    audit's sweep caught it. Its `/_next/image` runtime path stays e2e-covered since 2026-07-22
     (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that installs but no
     longer transforms turns the e2e lane red instead of passing silently.
-  - `fast-uri: 3.1.5` → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
+  - `"fast-uri@<3.1.5": 3.1.5` (ranged since 2026-08-12) → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
     the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
     `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. **Reopened 2026-08-04 (batch #5):
     3.1.4 was itself vulnerable to GHSA-7p8r-x3mc-p8w7** (`<3.1.5`, high — the third
@@ -700,6 +749,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     dompurify/nanoid park exit — the bare key shared their unsatisfiable-removal
     defect; the conversion itself moved nothing). Remove the
     override once a routine bump naturally carries the lockfile past 3.1.5.
+  - `"nanoid@<3.3.18": 3.3.18` → GHSA-2v37-7h3g-55p8 (HIGH; audit-edge only — postcss
+    calls plain `nanoid(6)`, the vulnerable custom-generator functions are never
+    invoked here). Added 2026-08-12 as `<3.3.17`, promoted to `<3.3.18` on 2026-08-14
+    when the advisory widened; the park/exit story is in the dated-take entries above
+    (this one-liner added 2026-09-01 so every live override key has a bullet here).
+    Remove once a routine bump naturally carries the lockfile past 3.3.18 (ranged key
+    — inert from that moment).
 - **Advisory batch 2026-07-27** (closed [#10](https://github.com/jrittelmeyer/next-web-boilerplate/issues/10),
   red since 2026-07-25) — three highs, one of them a **direct** dependency:
   - **`better-auth` 1.6.20 → 1.6.23** (with `@better-auth/passkey` in lockstep).

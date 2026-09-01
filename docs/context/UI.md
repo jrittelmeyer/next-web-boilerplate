@@ -284,7 +284,7 @@ avoids its monorepo dep-move/reformat follow-ups).
 
 **Route-level vs component-level loading** — two complementary patterns:
 
-- **Route-level** — `app/loading.tsx` (a spinner) is streamed in by the App Router during
+- **Route-level** — `app/[locale]/loading.tsx` (a spinner) is streamed in by the App Router during
   navigation / the initial render, covering the *whole route*.
 - **Component-level** — a `<Suspense fallback={…}>` (or a client query's `isPending` branch) around
   *one region*, with a skeleton that **mirrors the shape of the content it stands in for** so the
@@ -345,7 +345,7 @@ on every push that touches `packages/ui/`, via `.github/workflows/pages.yml`. Se
   `turbo.json`, and CI doesn't run it by default → no prod weight (the opt-in `visual`
   regression job below is the one exception — gated on `ENABLE_VISUAL`, which this repo
   sets). One
-  guard makes this airtight: `apps/web/globals.css`
+  guard makes this airtight: `apps/web/src/app/globals.css`
   scans `packages/ui/src`, so it adds `@source not "…/packages/ui/src/**/*.stories.tsx"`
   to keep story-only utility classes **out of the production stylesheet**. When you add a
   new primitive, drop a `*.stories.tsx` beside it.

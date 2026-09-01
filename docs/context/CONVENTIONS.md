@@ -32,7 +32,7 @@
 ## Exports
 
 - Named exports everywhere. Default exports only where a framework/tool requires: page files, layout files, route handlers, `next.config.ts`, and tool config files (`vitest.config.ts`, `playwright.config.ts` — they `export default defineConfig(...)`).
-- One React component per file.
+- One **exported** React component per file. Two deliberate exceptions, recorded 2026-09-01 after sixteen audits had graded the practice without the rule saying so: shadcn compound primitives in `packages/ui/src/components/` ship every part from one file (`dialog.tsx`, `dropdown-menu.tsx`, `select.tsx`, `table.tsx`, `card.tsx`, `form.tsx`, `avatar.tsx` — upstream's distribution shape, which `shadcn add` re-creates), and an **unexported** helper component may live beside the one component that uses it (`login-form.tsx`'s challenge/passkey/magic-link sub-forms are the pattern). knip polices the boundary: an exported second component is either consumed elsewhere — then it gets its own file — or dead.
 - Index barrel files (`index.ts`) at package roots only — not within `apps/web`.
 - **Dead code is gated by knip** (`pnpm knip`, root `knip.jsonc`; CI `verify` lane, A27): an unused file, an export no other file imports, or an unused/undeclared dependency fails CI. When it flags your change, prefer deleting the orphan. An export kept deliberately as boilerplate API surface (not yet consumed in-repo) gets a `/** @public — why */` JSDoc tag on the declaration — knip skips `@public`-tagged exports (`tags: ["-public"]`), and the reason lives next to the code. Exports a file itself uses are always allowed (`ignoreExportsUsedInFile`). A `knip.jsonc` ignore is the last resort and must carry its reason.
 
