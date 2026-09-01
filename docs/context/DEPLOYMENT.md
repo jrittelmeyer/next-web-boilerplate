@@ -630,7 +630,11 @@ Automated dependency updates tuned to the repo's posture:
   trigger's job log showed the run killed mid-`pnpm update` with no error
   emitted, consistent with a Community/Free-tier resource ceiling for a
   14-package monorepo. Full diagnosis:
-  `docs/archive/renovate-b1-diagnosis-plan.md`. Needs a repo secret
+  `docs/archive/renovate-b1-diagnosis-plan.md`. **Status 2026-08-31: committed but
+  not yet live** — the first scheduled run failed at startup because the
+  `RENOVATE_TOKEN` secret has not been added, and the Mend App (still installed)
+  opened PR #56 that same morning; which host stays is an open owner decision
+  (`BACKLOG.md` B1 · `MAINTENANCE.md` → Watch). Never run both. Needs a repo secret
   `RENOVATE_TOKEN` (classic PAT, `repo` + `workflow` scope — `workflow` is
   required for the `github-actions` manager this repo's
   `helpers:pinGitHubActionDigests` preset relies on; the ambient

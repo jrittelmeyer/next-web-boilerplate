@@ -385,8 +385,8 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   diagnosis job, not a wait** — next stop is the Mend app side (run logs / mode /
   cadence at developer.mend.io); owner's call on when to run it. Fallback if the
   app side won't cooperate: self-hosted Renovate via `renovatebot/github-action`
-  on a cron, reusing the committed config — tracked as a B1 row in
-  [`BACKLOG.md`](BACKLOG.md). The 7 approved majors merged 2026-07-18;
+  on a cron, reusing the committed config — **built 2026-08-31 as
+  `.github/workflows/renovate.yml`** (B1 in [`BACKLOG.md`](BACKLOG.md); see below). The 7 approved majors merged 2026-07-18;
   typescript-v7 stays held per the TS7 gate above; `actions/setup-node v7` is a new
   pending-approval major, and `@testing-library/jest-dom v7` sits age-gated in the
   dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The
@@ -394,6 +394,32 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   branches, 37 Awaiting Schedule. **Re-checked 2026-08-19** (doc audit): still zero
   `renovate/*` branches ever — every Monday window through 2026-08-17 has passed
   empty; the B1 diagnosis row remains the open path.
+  **2026-08-30 → 31 — diagnosed, built, and then the picture moved.** The Mend side
+  was checked at developer.mend.io: App installed, Interactive mode, schedule
+  evaluating correctly (its own job log says "Matches schedule on monday"), and a
+  manual trigger (job `ea8d7e50`) died mid-`pnpm update` with no error emitted —
+  a Community/Free-tier resource ceiling for this monorepo, not a config defect
+  (full write-up: [archive/renovate-b1-diagnosis-plan.md](archive/renovate-b1-diagnosis-plan.md)).
+  The self-hosted fallback shipped the same morning (`renovate.yml`, see Automation
+  on a fork above). **Then two things happened on 2026-08-31 that the plan did not
+  predict:** (1) the Mend App opened
+  [PR #56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56) at 10:57 UTC
+  — `actions/checkout` v7.0.0 → v7.0.1, every CI lane green, `renovate/stability-days`
+  passing — **the first scheduled `renovate/*` branch in the repo's history**. So Mend
+  *does* deliver the update class that needs no lockfile generation (the
+  github-actions manager runs before the pnpm work that gets killed); the Dependency
+  Dashboard issue's `updatedAt` is still 2026-07-22, consistent with the run never
+  reaching its end. (2) The self-hosted cron's first run (18:28 UTC) **failed at
+  startup** — `'token' MUST be passed using its input or the 'RENOVATE_TOKEN'
+  environment variable`; `gh secret list` shows no repo secret yet. ⚠️ Two hosts are
+  now configured against one repo and the workflow header's dual-run warning is live.
+  **Owner decision, not a build row:** (a) add `RENOVATE_TOKEN` and uninstall the
+  Mend App — the plan, and what the diagnosis supports for lockfile-bearing PRs; or
+  (b) keep Mend, delete `renovate.yml`, and accept that npm-manager PRs may keep dying
+  on Mend's tier. Either way, merge or close #56 first (touching
+  `.github/workflows/*` needs the `workflow` scope), and the row closes when a
+  scheduled `renovate/*` PR from the *chosen* host merges. *Removal condition:* that
+  merge.
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
@@ -505,18 +531,26 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     >=0.35.0") is met by 16.3.3's own `^0.35.3` floor; the lockfile resolves
     `sharp@0.35.3` naturally without it (confirmed by a no-op reinstall). Full
     gate + 607 tests/coverage/knip/docs:sanity green, lockfile diff surgical.
-    **Open follow-up: the Docker standalone (`output: 'standalone'`) check —
-    the exact lane that caught the 16.3.1 regression — could not be completed
-    this session.** Three build attempts failed on host memory exhaustion
-    (0.8 GB free of 16 GB, `vmmem` at 9.4 GB) causing Turbopack subprocess
-    timeouts, not a code regression; owner decision was to ship on the strength
-    of full gate + a `:3100` live-verify (health, icon/apple-icon/opengraph-image
-    all 200, `/_next/image` responding cleanly) rather than block the security
-    fix on local resource pressure. **Action:** once host memory is available,
-    run `docker build -f docker/Dockerfile --target runner .` and `--target
-    worker .`, `docker run` + `/api/health` for both — CI's own Docker image job
-    will also exercise this on the next push, so this is belt-and-suspenders,
-    not a live gap in coverage.
+    **The Docker standalone (`output: 'standalone'`) check — the exact lane that
+    caught the 16.3.1 regression — could not be completed in the take session**
+    (three local builds died on host memory pressure; the owner shipped on full
+    gate + a `:3100` live-verify — health, icon/apple-icon/opengraph-image all 200,
+    `/_next/image` clean). **CLOSED 2026-08-30:** the CVE-2026-14456 fix
+    ([archive/plan-cve-2026-14456.md](archive/plan-cve-2026-14456.md)) built,
+    booted and health-checked **both** `runner` and `worker` images locally on
+    16.3.3, and CI's Docker image job has been green since (`e5e99f0`, `c69eb6e`,
+    PR #56). Correction recorded there too: that job had been red since 08-27 on
+    the base image's `libssl3`/`libcrypto3` CVE, not on memory — the 16.3.3 row's
+    "host memory exhaustion" framing described the local build, not the lane.
+  - **2026-09-01 ~15:32 UTC — the `next` 16.3.3 `minimumReleaseAgeExclude` goes inert**
+    (16.3.3, published 2026-08-25T15:32Z, clears the 7-day gate unaided) — delete the
+    nine-package exclude block from `pnpm-workspace.yaml` on schedule and prove it with
+    a frozen install, as the 07-28 and 08-06 removals did.
+  - **2026-09-07 ~20:00 UTC — `next` 16.3.4** ages in (published 2026-08-31T20:00:51Z,
+    registry-checked the same day; no advisory known). **Untriaged:** per Dependency
+    policy rule 6, read its notes for anything touching the subsystems 16.3.3 moved
+    (image optimizer/`sharp`, standalone output) before deciding between a routine
+    take and a deliberate skip — that is the question the 16.3.1 incident taught.
   - ~~**2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in~~ — **TAKEN
     2026-08-14.** Registry-verified over `latest` (1.6.28, published
     2026-08-13T22:40Z) and 1.6.27 (2026-08-11T17:59Z) — both still inside the

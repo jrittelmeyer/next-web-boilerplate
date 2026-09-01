@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-30 (CVE-2026-14456 Docker Trivy gate fixed; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — report in the archive)._
+_Last updated: 2026-08-31 (doc audit — Renovate B1 built, and the Mend App's first scheduled PR landed the same day: host choice pending; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — report in the archive)._
 
 ## Where we are
 
@@ -50,8 +50,8 @@ _Last updated: 2026-08-30 (CVE-2026-14456 Docker Trivy gate fixed; latest scorin
   (`main` green since 08-14, the nanoid closure, F5's ranged key → Security 100,
   Testing 99) and the checkpoint Stop hook clean with full process compliance;
   its one find — the better-auth line moved to a breaking 1.7 `latest` with no
-  watch bullet — became a MAINTENANCE dated take; F1 — Renovate delivery,
-  Mend-side — remains the standing tooling deduction).
+  watch bullet — became a MAINTENANCE dated take; F1 — Renovate delivery — remains
+  the standing tooling deduction; the 08-31 turn is in the watch paragraph below).
 - **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
   deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
   "Deploy / live-verify closes" summary row below.
@@ -72,8 +72,8 @@ _Last updated: 2026-08-30 (CVE-2026-14456 Docker Trivy gate fixed; latest scorin
   licensed the change):
   [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
-  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (**kit 0.23.1**,
-  reinstalled here 2026-08-25 — the 0.18–0.23 modernization line adds `--hooks` adoption
+  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (**kit 0.23.11**,
+  reinstalled here 2026-08-29; 0.23.1 on 08-25 brought the 0.18–0.23 modernization line: `--hooks` adoption
   (SessionStart/compact wiring live for the first time since 0.16.0; Stop/banned-api
   handlers wire but stay inert, deliberately, per template-surface rules) and a
   docs-sanity kit-wiring parity check); this repo consumes the installed `.claude/`
@@ -160,6 +160,8 @@ Per-program summary (Rows = archived row count; full rows →
 | `next` 16.3.3 taken — 2026-08-26 | 1 | August 2026 security release, age-gate route (2) exception (9 lockstep packages, exact-scoped — a `contrarian` pass caught an undersized first draft); AVIF-decode RCE via `sharp`/libheif reachable through Uploadthing uploads, Windows-RCE CVE not applicable (no Pages Router); full gate + 607 tests/coverage green | [CHANGELOG](../CHANGELOG.md) |
 | B3 doc-audit leftovers — 2026-08-29 | 1 | `contrarian`-reviewed: real `clean` scripts (web/jobs); dangling CLAUDE.md pointer fixed; Playwright rule covers package `tests/`; kit 0.23.1→0.23.11 (drift found, `exactPin`+`better-auth`); skill budget re-measured, under cap | [CHANGELOG](../CHANGELOG.md) |
 | CVE-2026-14456 fix — 2026-08-30 | 1 | Docker Trivy gate was red since 08-27 on `libssl3`/`libcrypto3` 3.5.7-r0 in `node:24-alpine` (the 16.3.3 row's "host memory exhaustion" note was a mischaracterization — corrected here). `contrarian`-reviewed: a shared `patched` stage (`apk upgrade --no-cache`) feeds both `runner`/`worker` instead of duplicating the RUN; local build+boot+health-check verified on both images at 3.5.8-r0 | [CHANGELOG](../CHANGELOG.md) |
+| Renovate B1 — 2026-08-31 | 1 | Self-hosted `renovate.yml` (renovatebot action) shipped after the Mend diagnosis; its first cron run failed — `RENOVATE_TOKEN` unset. Same morning the Mend App opened its first-ever scheduled PR (#56, CI green). Host choice is the owner's call | [BACKLOG.md](BACKLOG.md) |
+| Doc audit — 2026-08-31 | 1 | Renovate reality reconciled across STATUS/BACKLOG/MAINTENANCE/DEPLOYMENT; v1.2.0 row struck; Docker follow-up closed; archive index +2 (its rule slipped a 3rd time); kit 0.23.11 currency; `next` 16.3.4 dated; showcase re-stamped; 9 memory repairs | [archive/README.md](archive/README.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -174,15 +176,18 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each
-landed item. Open now: **Renovate PR delivery FAILED** (zero
-`renovate/*` branches ever — re-checked 2026-08-19, every Monday window through 08-17
-empty; the Mend-side diagnosis is BACKLOG B1) · the **`next` 16.3.3 Docker
-standalone follow-up** (taken 2026-08-26 on full gate + `:3100` live-verify; the
-Docker check itself blocked on local host memory exhaustion, not a code issue —
-CI's own Docker image job covers it on the next push, tracked in MAINTENANCE →
-Watch as belt-and-suspenders, not a live gap). ⚠️ **`better-auth` 1.7.x is a breaking
-minor** (`latest` since 2026-08-18) — plan → sign-off, not a routine take; no
-advisory forces the move. Ledger clear as of 2026-08-26: `nanoid` 3.3.18 +
+landed item. Open now: **Renovate — host choice pending (2026-08-31)**: the
+self-hosted `renovate.yml` shipped (BACKLOG B1) but its first cron run failed at
+startup — the `RENOVATE_TOKEN` secret is not set — while the Mend App opened the
+first scheduled `renovate/*` PR in the repo's history the same morning (#56,
+`actions/checkout` 7.0.1, every lane green). Pick one host, then merge/close #56 ·
+**`next` 16.3.4** (published 2026-08-31T20:00Z, untriaged) ages in 2026-09-07; the
+16.3.3 `minimumReleaseAgeExclude` goes inert 2026-09-01 and is due for deletion.
+The 16.3.3 Docker-standalone follow-up **closed 2026-08-30** (the CVE-2026-14456 fix
+built, booted and health-checked both images locally; CI's Docker lane green since).
+⚠️ **`better-auth` 1.7.x is a breaking minor** (`latest` since 2026-08-18, 1.7.2 now)
+— plan → sign-off, not a routine take; no advisory forces the move. Ledger clear as
+of 2026-08-26: `nanoid` 3.3.18 +
 `better-auth` 1.6.30 + `next` 16.3.3 taken (exact-pinned where the dep warrants it
 — see the rows above), `main` green, `auditConfig.ignoreGhsas` `[]`, `pnpm audit`
 zero vulnerabilities / zero ignored. The verbatim history this paragraph used to carry:

@@ -173,3 +173,54 @@ memory directory, not repo files.)
   (`ctx.request.post("/api/auth/sign-in/email", {headers:{Origin:BASE}})`); the notifications
   page holds an open SSE stream → `networkidle` NEVER settles (use `domcontentloaded`); after
   a soft nav, wait on a DOM element, not `waitForURL`.
+
+## One-liner index as it stood in memory on 2026-08-31
+
+The `project-state` memory carried this compact per-item index (each line a pointer
+into the sections above) until the 2026-08-31 doc audit collapsed it to a single
+pointer at this file. Preserved verbatim; some clauses — e.g. the `CI=true` reporter
+note — appear only here.
+
+- #11 billing-org: :3100 post-checkout redirect refuses (success_url=:3000) — assert by
+  goto; Drizzle puts the violated-constraint name on `error.cause`; live-key billing e2e
+  asserts either-outcome; Better Auth org-delete nulls only the deleter's activeOrganizationId.
+- #4b tunnel proof: cloudflared quick tunnel + standing account worked; /uploads Delete
+  needs `click({force:true})` under the ConsentBanner.
+- E2E baseline: signup-family flaky-but-retry-passes; a local admin-pagination red = DB
+  accumulation of `@example.com` users (mass DELETE needs John's OK); CI is the arbiter;
+  nonce-mode e2e is a separate tiny suite; **`CI=true` selects the `github` reporter,
+  which prints only failures** — a passing NEW spec leaves no trace, so confirm one by
+  re-running it alone under the default reporter.
+- OTel: OTLP default flush ~5s — wait before reading collector logs; `OTEL_*` genuinely runtime.
+- Owner-items sweep 2026-07-14→15 all closed (Fly · Renovate · PayPal funding · Codecov
+  skip · Dependabot overrides); uploadthing's exact effect pins are deps, not peers.
+- Admin plugin: ban/unban = fresh-gated DIRECT DB writes; impersonation MUST use the
+  plugin (cookie swap; just-promoted admin re-signs-in first); UI full-nav to load the swap.
+- i18n: `git mv <dir>` blocked by VSCode watchers — file-by-file `git mv`, then delete empty dirs.
+- Passkeys: Playwright substring-name collision → `exact: true`; run the FULL e2e suite
+  before pushing; CDP virtual-authenticator recipe in the archive.
+- A23 SSE reconnect: stream-scoped `hasConnected` closure; drive the drop via
+  `page.route`/`route.fulfill`, not `setOffline`.
+- A24 unread badge: INVALIDATE, don't optimistically `++` (sender's own tab gets the NOTIFY too).
+- A25 infinite-query: SSE dedupe across all pages; `setQueryData` key = `infiniteQueryKey({limit})`;
+  banner-covered button → `.dispatchEvent("click")`; `-g` needs a direct playwright run.
+- Consent/data-export: `get_explicit_consent_status()`; keyless REBUILD from bash for full local e2e.
+- 2FA: remount controlled inputs across forms (distinct types + `key`); the FIRST
+  `verifyTotp` activates; serve on :3000 (CSRF 403s otherwise).
+- Orgs: re-base the `@repo/ui` floor on a first-CI breach; DropdownMenu-opens-dialog must
+  not `preventDefault()` its `onSelect`.
+- Visual regression: kill stale Storybook first; regenerate linux baselines by TAR-copying
+  into the Playwright container; keep image tag in lockstep; `--update-snapshots=missing`.
+- Perf: measure emitted files (build table no longer prints First Load JS); prove a
+  dormant lane via an empty trigger commit, then reset before merge.
+- SBOM: Trivy via ghcr.io + `MSYS_NO_PATHCONV=1`; the image SBOM inventories node_modules
+  only — bundled app deps are correctly absent.
+- Slim worker: zero esbuild externals except `pg-native`; alias `server-only` → stub;
+  final stage stays named `worker`.
+- DB rate-limit storage: cross-restart proof = trip → 429 → restart → STILL 429.
+- A12 CAPTCHA: [[better-auth-conditional-plugin-tuple]]; Cloudflare dummy test keys in AUTH.md.
+- A13 cancel-on-delete: the D7 job pattern, NOT inline in the auth hook;
+  `subscriptions.id` IS the Stripe `sub_…` id.
+- A27–A32: knip auto-installs on package.json change; typedRoutes is a silent no-op under
+  this tsconfig (probe with typo'd hrefs); timeZone SSR mismatch invisible on one machine;
+  browser-drive via the context request jar; an open SSE stream never networkidle-settles.

@@ -9,6 +9,15 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
+### Added
+
+- **Self-hosted Renovate workflow** — `.github/workflows/renovate.yml`
+  (`renovatebot/github-action`, SHA-pinned, Monday cron + `workflow_dispatch`,
+  reusing `.github/renovate.json` unchanged) as the fallback for the Mend-hosted
+  App, whose scheduled runs had produced no PRs since 2026-07-22. Needs a
+  `RENOVATE_TOKEN` repo secret and is not yet live — the host decision is tracked
+  in [`docs/MAINTENANCE.md` → Watch](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
+
 ## [1.2.0] — 2026-08-30
 
 Everything shipped on `main` since v1.1.0 — the calendar feature (Phases 1–5,
@@ -157,5 +166,6 @@ against real services before release ([`docs/VERIFICATION.md`](docs/VERIFICATION
 - **Docs** — `FEATURES` (what + why), `GETTING_STARTED`, `MAINTENANCE`, `AGENTS.md`
   agent onboarding, 14 per-area context docs, decision log, verification checklist.
 
+[1.2.0]: https://github.com/jrittelmeyer/next-web-boilerplate/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/jrittelmeyer/next-web-boilerplate/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jrittelmeyer/next-web-boilerplate/releases/tag/v1.0.0

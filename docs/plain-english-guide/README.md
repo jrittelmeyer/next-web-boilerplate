@@ -102,7 +102,7 @@ in any browser.
 
 ---
 
-*Current as of 2026-08-26. The audit score stands at 99.4 — it peaked at a
+*Current as of 2026-08-31. The audit score stands at 99.4 — it peaked at a
 perfect 100 across sixteen passes; the calendar feature that entered at 85 now
 sits at 95.5, and the newest pass's only new find was a bookkeeping gap (a
 breaking new release of one building block that nothing was tracking yet),
@@ -121,8 +121,9 @@ chance. It now has a chapter of its own —
 [**12. The Calendar**](12-the-calendar.md) — which walks the newest room in the
 house properly, including the doors it deliberately hasn't opened yet.*
 
-*Also recent: the framework was updated twice, and a documentation
-review found — and fixed — a set of instructions that had quietly fallen out of
+*Also recent: a third tagged release (`v1.2.0`) bundled the calendar with the
+summer's security work; the framework was updated again for a security release;
+and a documentation review found — and fixed — a set of instructions that had quietly fallen out of
 step with the code, including a removal guide that would have left broken pieces
 behind. Earlier: a high-severity sign-in vulnerability (an account-takeover path
 in the authentication library) fixed the day the daily security watch surfaced
