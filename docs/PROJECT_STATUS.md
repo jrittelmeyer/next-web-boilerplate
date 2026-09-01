@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-08-31 (doc audit — Renovate B1 built, and the Mend App's first scheduled PR landed the same day: host choice pending; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — report in the archive)._
+_Last updated: 2026-08-31 (harness audit — first pass on the agent harness, **93.9/100** baseline, four rows seeded and contrarian-folded, all behind sign-off; same-day doc audit — Renovate B1 built, and the Mend App's first scheduled PR landed: host choice pending; latest scoring pass 2026-08-19, the sixteenth: **99.4/100** — reports in the archive)._
 
 ## Where we are
 
@@ -162,6 +162,7 @@ Per-program summary (Rows = archived row count; full rows →
 | CVE-2026-14456 fix — 2026-08-30 | 1 | Docker Trivy gate was red since 08-27 on `libssl3`/`libcrypto3` 3.5.7-r0 in `node:24-alpine` (the 16.3.3 row's "host memory exhaustion" note was a mischaracterization — corrected here). `contrarian`-reviewed: a shared `patched` stage (`apk upgrade --no-cache`) feeds both `runner`/`worker` instead of duplicating the RUN; local build+boot+health-check verified on both images at 3.5.8-r0 | [CHANGELOG](../CHANGELOG.md) |
 | Renovate B1 — 2026-08-31 | 1 | Self-hosted `renovate.yml` (renovatebot action) shipped after the Mend diagnosis; its first cron run failed — `RENOVATE_TOKEN` unset. Same morning the Mend App opened its first-ever scheduled PR (#56, CI green). Host choice is the owner's call | [BACKLOG.md](BACKLOG.md) |
 | Doc audit — 2026-08-31 | 1 | Renovate reality reconciled across STATUS/BACKLOG/MAINTENANCE/DEPLOYMENT; v1.2.0 row struck; Docker follow-up closed; archive index +2 (its rule slipped a 3rd time); kit 0.23.11 currency; `next` 16.3.4 dated; showcase re-stamped; 9 memory repairs | [archive/README.md](archive/README.md) |
+| Harness audit — 2026-08-31 | 1 | First agent-harness pass (kit 0.23.11 · CC 2.1.251): 16 authorities re-fetched, with/without eval sample (live-verify 3/3 skill-only), **93.9** baseline; template allowlist `winget`/`docker exec` grants, legacy `prodVerify` adapter, 0.23.13 `disable-model-invocation` ↔ Stop-hook clash; 4 rows, contrarian-folded | [report](archive/HARNESS_AUDIT_2026-08-31.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
