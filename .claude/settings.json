@@ -1,14 +1,37 @@
 {
   "permissions": {
     "allow": [
-      "Bash(winget install *)",
-      "Bash(pnpm --filter @repo/db db:migrate)",
-      "Bash(docker exec *)",
+      "Bash(pnpm lint *)",
       "Bash(pnpm type-check *)",
       "Bash(pnpm build *)",
-      "Bash(pnpm --filter web add -D dotenv-cli@^11.0.0)",
-      "Bash(git -c core.safecrlf=false commit -q -m ' *)",
-      "Bash(git check-ignore *)"
+      "Bash(pnpm test *)",
+      "Bash(pnpm knip *)",
+      "Bash(pnpm lint:deps *)",
+      "Bash(pnpm docs:sanity *)",
+      "Bash(pnpm --filter @repo/db db:migrate)",
+      "Bash(git check-ignore *)",
+      "PowerShell(pnpm lint *)",
+      "PowerShell(pnpm type-check *)",
+      "PowerShell(pnpm build *)",
+      "PowerShell(pnpm test *)",
+      "PowerShell(pnpm knip *)",
+      "PowerShell(pnpm lint:deps *)",
+      "PowerShell(pnpm docs:sanity *)",
+      "PowerShell(pnpm --filter @repo/db db:migrate)",
+      "PowerShell(git check-ignore *)"
+    ],
+    "ask": ["Read(.env)", "Read(.env.local)", "Read(.env.*.local)"],
+    "deny": [
+      "Bash(git push *--force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git push *+*)",
+      "PowerShell(git push *--force*)",
+      "PowerShell(git push -f *)",
+      "PowerShell(git push * -f)",
+      "PowerShell(git push * -f *)",
+      "PowerShell(git push *+*)"
     ]
   },
   "hooks": {

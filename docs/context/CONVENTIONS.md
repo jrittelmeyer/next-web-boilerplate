@@ -176,6 +176,59 @@ config carries no `enforcement` block, and must not — `.claude/**` is template
 project. This repo's checkpoint automation stays the repo-owned, identity-guarded
 `.claude/hooks/checkpoint-autorun.mjs`.
 
+### Permissions in the tracked `settings.json`
+
+`permissions` ships verbatim into every generated project, so it is written for a
+**stranger's repo**, not this machine. Least-privilege pass 2026-09-02; every claim below
+was verified by running it in a throwaway project, not read off the docs.
+
+- **Rules are prefixed per shell tool, and `Bash(...)` does not reach `PowerShell(...)`.**
+  There is a separate `PowerShell(...)` prefix with the same shape (aliases canonicalized,
+  case-insensitive). PowerShell is the primary shell on Windows hosts, so every allow entry
+  is listed **twice**. Before this pass all eight tracked entries were `Bash(...)` only —
+  i.e. inert for the shell the harness actually reached for, since the 2026-07-14 release.
+- **Removed as over-broad:** `Bash(winget install *)` (arbitrary machine-wide install) and
+  `Bash(docker exec *)` (arbitrary exec in any container) — both auto-approved in every
+  generated project. The DB-assertion recipes that grew the latter belong in the owner's
+  untracked `settings.local.json`. Also removed: a one-off `dotenv-cli` install grant and a
+  literal-commit grant, both dead (this repo commits via `git commit -F <file>`).
+- **`deny` beats everything, from every scope** — including `--allowedTools`,
+  `settings.local.json`, and `bypassPermissions`. Verified: a `Read` deny blocked an edit
+  *while running under `--permission-mode bypassPermissions`*. There is no session-level
+  lift, which is exactly why the env rules below are **`ask`, not `deny`**.
+- ⚠️ **A `Read` DENY also blocks Edit and Write on the same path** — *"File is covered by a
+  Read deny rule in your permission settings and cannot be edited."* `scripts/init-app.mjs`
+  prints `Edit .env` as Next Step 1 of every generated project, so a tracked
+  `deny: Read(.env)` would brick the on-ramp it ships with. Hence `ask`: an interactive
+  session prompts (the right tripwire for a secrets file) and the edit still happens.
+- ⚠️ **`ask` is not free headlessly.** In a non-interactive `claude -p` run there is nobody
+  to answer, so an `ask` behaves as a refusal (*"requested permissions to read … but you
+  haven't granted it yet"*) — including under `bypassPermissions`. A headless agent that
+  must read `.env` uses the subprocess form (`pnpm exec dotenv -e .env -- <cmd>`), which no
+  `Read` rule reaches.
+- **Which shell reads a `Read` rule actually intercepts** (tested against a denied file):
+  `cat` **blocked** · `grep` **blocked** (it is *not* in the documented example list —
+  assume the recognized set is wider than the docs enumerate) · `set -a; . ./.env`
+  **not blocked** (shell builtin) · `node -e "fs.readFileSync(...)"` **not blocked**
+  (arbitrary subprocess). So the repo's `grep | cut` env recipe is the one that would
+  break under a deny; the sourcing and `dotenv` forms survive either way.
+- **Force-push denial is a tripwire, not a wall.** Wildcards are valid at any position, so
+  five patterns per shell cover every spelling — verified blocked: `--force`, `-f`,
+  `origin main --force`, `origin main -f`, `--force-with-lease`, and the refspec form
+  `origin +main`; a plain `git push origin main` is unaffected. **Known gaps, deliberate:**
+  the rules anchor on `git push`, so `git -c … push --force` slips past, and `--no-verify`
+  bypasses any hook. A git `pre-push` hook is *not* the answer either — it receives refs on
+  stdin and the remote name/URL as argv, and **cannot see the flags at all**; detecting a
+  force there means an ancestry test (`git merge-base --is-ancestor`), not a flag grep. The
+  only real wall is branch protection, which `main` still lacks (an owner decision, tracked
+  in BACKLOG).
+- `ask: Bash(git push *)` was considered and **rejected**: it would prompt the autonomous
+  checkpoint push that `DECISIONS.md` standing-authorizes.
+- Bare-command matching under `PowerShell(...)` is **undocumented** (the "a trailing ` *`
+  also matches the bare command" rule is stated for Bash only) and was not verified, so a
+  first bare `pnpm knip` may prompt once under PowerShell. Listing no-arg twins to dodge
+  that was rejected as exactly the accretion this pass reverses.
+
 **The skill-description budget is two figures, not one.** The adapter's
 `contextBudget.skillDescriptionMaxTokens: 909` is a *measured* baseline (contrarian's call
 over a padded 1000), and it counts the **portable** cost — every skill description, ≈855

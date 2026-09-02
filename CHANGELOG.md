@@ -9,6 +9,31 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
+### Security
+
+- **Least-privilege pass on the tracked `.claude/settings.json`.** It ships verbatim
+  into every generated project, so it is now written for a stranger's repo.
+  `Bash(winget install *)` (arbitrary machine-wide install) and `Bash(docker exec *)`
+  (arbitrary exec in any container) are **removed**, along with two dead grants; the
+  gate and verify-lane commands are added. New `deny` tripwire: five force-push
+  patterns per shell, each spelling verified blocked — `--force`, `-f`, the
+  flag-after-remote orders, `--force-with-lease`, and the refspec form `origin +main`;
+  a plain `git push origin main` is unaffected. `deny` beats every scope including
+  `bypassPermissions` (verified by running it).
+- ⚠️ **Permission rules are prefixed per shell tool, and `Bash(...)` does not reach the
+  PowerShell tool** — there is a separate `PowerShell(...)` prefix. Every allow entry is
+  now listed twice. Before this pass all eight entries were `Bash(...)` only, i.e. inert
+  for the primary shell on Windows hosts since the 2026-07-14 release commit.
+- **Env files are `ask`, not `deny`** — a `Read` *deny* rule also blocks Edit and Write
+  on the same path, and `scripts/init-app.mjs` prints `Edit .env` as Next Step 1 of
+  every generated project, so a deny would have bricked the on-ramp the template ships
+  with. Recorded alongside it in
+  [`CONVENTIONS.md`](docs/context/CONVENTIONS.md#agent-tooling-claude): `ask` behaves as
+  a refusal in headless `claude -p` runs; `grep` **is** intercepted by `Read` rules
+  despite being absent from the documented list, while shell sourcing and
+  `node fs.readFileSync` are not; and a git `pre-push` hook cannot police force-pushes
+  at all, since it never sees the flags.
+
 ### Changed
 
 - **ai-dev-kit 0.23.11 → 0.23.16** (13 drifted files reconciled; `install.mjs --check`
