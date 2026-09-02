@@ -5,7 +5,7 @@ choice. Treat it as two things at once: a pitch (what you get by starting here i
 of `create-next-app`) and a decision record (why each piece is the right default in
 2026, so you can re-evaluate honestly as the ecosystem moves).
 
-_Current as of 2026-08-31. Numeric claims here (audit score, surface and doc counts) are
+_Current as of 2026-09-02. Numeric claims here (audit score, surface and doc counts) are
 re-checked by the `/doc-audit` pass; if this stamp is old, trust the code._
 
 Every claim below is backed by a deeper doc — each section links to the
@@ -63,8 +63,9 @@ not just list it. React Compiler and Cache Components are on by default with wor
 examples (`/posts` renders a static shell while a `"use cache"` post-count, the
 session-aware composer, and the paginated feed each stream in), so the out-of-the-box
 posture is the current one — manual `useMemo` and route-segment `dynamic` exports are
-the exception, not the rule. TS 6 rather than TS 7 is deliberate: TS 7's Go compiler
-GA'd without the JS Compiler API that `next build` needs (tracked in
+the exception, not the rule. TS 6 rather than TS 7 is deliberate: TS 7 ships no `tsserver`,
+so the editor would check with a different compiler than the build — a language service is
+what a cutover needs (tracked in
 [`BACKLOG.md`](BACKLOG.md)). → [`context/STACK.md`](context/STACK.md)
 
 ## Database & data safety
@@ -244,7 +245,7 @@ URLs for SEO for free. Cookie/header-based locales force every route dynamic.
 new applications, and every wrong version looks right in the developer's own time zone.
 The corpus that guards it includes a 30-minute DST shift, a two-hour one, a 24-hour gap,
 a +13:45 offset, and an 1885 local-mean-time reading — each one breaks a *different*
-plausible implementation. Delete it in twelve steps if you don't want it:
+plausible implementation. Delete it in fifteen steps if you don't want it:
 → [`context/calendar/`](context/calendar/model.md) ·
 [attendees](context/calendar/attendees.md) ·
 [invitations](context/calendar/invitations.md) ·
@@ -381,8 +382,8 @@ shipped. The full record is [`context/DECISIONS.md`](context/DECISIONS.md); high
   recipe rather than wired.~~ **Wired 2026-07-16** (path-to-100 #2): the hydration-safe
   shape (`skipHydration` + post-paint `<StoreRehydration/>`) ships live on `ui-store`,
   with unit + e2e proof. See STATE.md → Middleware decision.
-- **TS 7** — GA'd, but ships no JS Compiler API yet, so `next build` can't use it;
-  the cutover is a tracked backlog item gated on Next.js support.
+- **TS 7** — GA'd, but ships no `tsserver` yet, so the editor and the `next` tsserver plugin
+  would lose their language service; the cutover is a tracked backlog item re-gated on TS 7.1.
 - **Client-side Stripe SDK, org teams/dynamic roles, seat-quantity billing, Turbo
   remote cache** — all documented as deliberate one-step upgrades, kept out of the
   default surface to stay lean.
@@ -400,17 +401,21 @@ building and running, not by assuming**:
   deploy with managed Postgres serving a healthy `/api/health`.
 - CI runs the same gates on every push; four independent audit passes scored the repo
   against a best-available-boilerplate bar before launch (reports in
-  [`archive/`](archive/)). **Sixteen** passes have now run in total — the score peaked at
-  **100.0/100** and stands at **99.4**: the thirteenth pass (2026-08-04) widened the bar to
+  [`archive/`](archive/)). **Seventeen** passes have now run in total — the score peaked at
+  **100.0/100** and stands at **99.3**: the thirteenth pass (2026-08-04) widened the bar to
   score the new calendar program for the first time (it entered at 85), the fourteenth
   (2026-08-06) verified all five of its headline fixes shipped within two days, lifting
   the calendar to 95.5, the fifteenth (2026-08-13) held 99.3 with its only new
   findings in the delivery pipeline rather than the product (both fixed the next day),
-  and the sixteenth (2026-08-19) verified those closures executed on schedule and edged
-  the score to 99.4, its one find — a breaking upstream release no watch entry tracked
-  yet — closed the same day as a dated watch entry
-  — the one standing deduction still sits in an external service rather than in
-  this code.
+  the sixteenth (2026-08-19) verified those closures executed on schedule and edged
+  the score to 99.4, and the seventeenth (2026-09-01) settled to 99.3 — it verified the
+  summer's security work landed as recorded, then priced four things nobody had scored: a
+  scheduled dependency-update job that failed every Monday in every project generated from
+  the template (fixed the next day), a calendar test that fails deterministically for four
+  hours on the 1st of each month (fix scheduled before October), two milestone release notes
+  never published, and — a first — a code deduction, five places where the code breaks one
+  of its own stated rules without a recorded exception. The oldest open deduction still sits
+  in an external service (dependency-update delivery) rather than in this code.
 
 If you want the guided tour from `git clone` to your first deployed feature, start
 with [`GETTING_STARTED.md`](GETTING_STARTED.md).

@@ -9,7 +9,8 @@ first month of wiring up a serious app.
 
 > **Status:** feature-complete and maintained. It boots with **two env vars** (every
 > integration degrades gracefully when unconfigured), and every feature — auth with
-> 2FA/passkeys/orgs, Stripe, email, uploads, search, jobs, i18n, observability — has
+> 2FA/passkeys/orgs, Stripe, email, uploads, search, jobs, i18n, observability, a full
+> calendar with recurrence and invitations — has
 > been **verified end-to-end against real services**, deploy included. What's inside
 > and why: [`docs/FEATURES.md`](docs/FEATURES.md). The dated proof:
 > [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
@@ -51,6 +52,7 @@ gated app shell — captured from a real keyless run (just the two required env 
 | Payments | Stripe (hosted Checkout + webhooks) |
 | Observability | Sentry · BetterStack · PostHog |
 | Uploads / Search | Uploadthing · Meilisearch |
+| Scheduling | `@repo/calendar` — zero-dependency civil-time + RRULE recurrence engine; calendars, events, invitations, reminders |
 | Tooling | Biome + ESLint (Next plugin) · Vitest · Playwright |
 | Deployment | Docker (multi-stage, platform-agnostic) |
 
@@ -143,7 +145,7 @@ docker/              — Dockerfile + docker-compose for local dev
 | [`docs/plain-english-guide/`](docs/plain-english-guide/) | **The zero-jargon tour.** A 13-chapter plain-English explainer (no technical background needed) + a pitch deck — what this is, why each piece was chosen, and how it was built with AI agents. |
 | [`AGENTS.md`](AGENTS.md) | **Agent-assisted development.** Onboarding for coding agents (and a great human overview): working agreements + the per-task context-doc index. |
 | [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md) | **Keeping it current.** Dependency policy, Renovate, upgrade runbook, watch items. |
-| [`docs/context/`](docs/context/) | **Deep dives**, loaded on demand: `STACK`, `ARCHITECTURE`, `CONVENTIONS`, `DATABASE`, `AUTH`, `API`, `STATE`, `UI`, `I18N`, `TESTING`, `SERVICES`, `SECURITY`, `DEPLOYMENT`, `DECISIONS`. |
+| [`docs/context/`](docs/context/) | **Deep dives**, loaded on demand: `STACK`, `ARCHITECTURE`, `CONVENTIONS`, `DATABASE`, `AUTH`, `API`, `STATE`, `UI`, `I18N`, `TESTING`, `SERVICES`, `SECURITY`, `DEPLOYMENT`, `DECISIONS`, plus the `auth/`, `services/` and `calendar/` topic directories. |
 | [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) · [`CHANGELOG.md`](CHANGELOG.md) | What's built + verified, and the release record. |
 
 ## Support this project

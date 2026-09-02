@@ -122,7 +122,7 @@ Map it in five moves:
 2. **Author `.dark`, don't invert.** Dark `--background` is the brand hue at low
    lightness (not pure black); `--primary` usually needs a **lighter** variant of the
    brand color to hold contrast on dark surfaces; keep slate's translucent-white
-   `--border`/`--input` (`oklch(1 0 0 / 10%)`) unless the sheet ships real dark-mode
+   `--border` (`oklch(1 0 0 / 10%)`) / `--input` (`/ 15%`) unless the sheet ships real dark-mode
    line colors. Adopted apps are often light-only — then `.dark` is an *authored
    extension*: derive it from the brand hue and record it as an assumption in the
    migration map.
@@ -348,7 +348,8 @@ on every push that touches `packages/ui/`, via `.github/workflows/pages.yml`. Se
   guard makes this airtight: `apps/web/src/app/globals.css`
   scans `packages/ui/src`, so it adds `@source not "…/packages/ui/src/**/*.stories.tsx"`
   to keep story-only utility classes **out of the production stylesheet**. When you add a
-  new primitive, drop a `*.stories.tsx` beside it.
+  new primitive, drop a `*.stories.tsx` beside it (today `select` and `form` still lack one —
+  BACKLOG B3 — so they sit outside the visual-regression net).
 
 ## Visual regression (`@repo/ui`, opt-in)
 
@@ -371,7 +372,7 @@ pnpm --filter @repo/ui test:visual:update  # rebase baselines (after an intended
   `#storybook-root` element (not the full page: `layout: "centered"` makes a small
   component a sliver of a 1280×720 frame, which would dilute a real change below the
   threshold) in **both themes** (`?globals=theme:light|dark`). The interactive **Dialog**
-  is opened before capture (`Default` + `TallContent` at a short 640×620 viewport — the
+  is opened before capture (`Default` at the default viewport + `TallContent` at a short 640×620 one — the
   tall-content regression surface).
 - **Determinism** is the whole game: Chromium launch flags
   (`--font-render-hinting=none --disable-lcd-text --disable-gpu --force-color-profile=srgb

@@ -175,7 +175,7 @@ Notes:
 The active theme (light/dark/system) is genuinely **ephemeral client/UI state** by the
 table above — each tab can legitimately differ, it's never persisted to the DB. By the
 default rule that would make it a Zustand store. It deliberately **isn't**: it's owned by
-**`next-themes`** (mounted as `ThemeProvider` in the root layout — see UI.md).
+**`next-themes`** (mounted as `ThemeProvider` in `app/[locale]/layout.tsx` — see UI.md).
 
 This is the one client preference where a purpose-built library beats a store, because a
 persisted theme hits exactly the **SSR hydration-mismatch** problem the `persist` note

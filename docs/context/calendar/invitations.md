@@ -229,7 +229,7 @@ The e2e asserts both halves: the button comes up pressed, and the stored status 
 `needs-action`.
 
 `respondByToken` lives in its own file, `server/actions/calendar-rsvp.ts`, because every
-export in the 1,600-line `server/actions/calendar.ts` opens with `requireSession()`; the one
+export in the ~1,800-line `server/actions/calendar.ts` opens with `requireSession()`; the one
 function that must not would read as an oversight beside them. It deliberately does **not**
 stamp `user_id`: a session proves who the caller is, a token proves only that whoever holds
 the link was sent it, and those are not the same fact.
@@ -318,8 +318,8 @@ destroyed.** `removeAttendees` hard-deletes inside the write transaction, so a c
 job handed only ids would find nothing and complete silently. (`welcomeEmailPayload` already
 denormalises `to` for the same reason.)
 
-Minting also has to happen here: `@repo/jobs` depends on `@repo/db` and `@repo/email` only,
-cannot reach the token module, and `BETTER_AUTH_SECRET` is validated in `apps/web`'s env
+Minting also has to happen here: `@repo/jobs` depends on `@repo/db`, `@repo/email`,
+`@repo/calendar` and `@repo/validators` — never `apps/web` — so it cannot reach the token module, and `BETTER_AUTH_SECRET` is validated in `apps/web`'s env
 schema alone — a worker holding a different secret would sign a **wrong** link rather than
 fail to boot. Signing stays in one process. The minted URL does land in `pgboss.job.data`;
 anyone who can read that table can already `UPDATE` the RSVP directly, so it grants nothing

@@ -109,8 +109,9 @@ boundaries only — they don't appear in the URL. (Since i18n, both groups live 
   `safeRedirectPath` (`lib/auth-redirect.ts`, unit-tested + coverage-gated) accepts only a
   same-origin absolute path — absolute URLs, protocol-relative `//`, and the backslash
   variant `/\` (WHATWG parsing normalizes `\` → `/`) all fall back to `/dashboard`.
-- `app/[locale]/(auth)/signup` → `/signup` — sign up. `force-dynamic` so it reads the email env at
-  request time: with email configured (verification required) it shows a "check your inbox"
+- `app/[locale]/(auth)/signup` → `/signup` — sign up. It reads the email env **after `await
+  searchParams`** so the read lands in the per-request scope (`cacheComponents` bans `dynamic`
+  segment config): with email configured (verification required) it shows a "check your inbox"
   state; with email unset (the default) Better Auth creates a session and it redirects in.
   The check-your-inbox state carries a **"Resend verification email"** button — see
   [Email verification](#email-verification) below.

@@ -109,8 +109,10 @@ nested in Profile is `AvatarCard` — [../services/uploadthing.md](../services/u
     UI can't drift from what the server did.
   - **Post-delete:** the endpoint clears the session cookie and `internalAdapter.deleteUser`
     removes sessions + accounts + the user row (belt-and-braces over the DB cascades — every
-    user-FK table cascades and is FK-indexed: `session`, `account`, `posts`, `uploads`,
-    `subscriptions`). The immediate flow then does a **full navigation** to `/goodbye`
+    user FK is indexed and cascades — `session`, `account`, `posts`, `uploads`, `subscriptions`,
+    `two_factor`, `passkey`, `member`/`invitation`, `user_preferences`, `notifications`,
+    `calendars`, `calendar_event_reminders` — except the two history columns that `set null`
+    instead: `post_revisions.author_id` and `calendar_event_attendees.user_id`). The immediate flow then does a **full navigation** to `/goodbye`
     (`window.location.assign` — clears all client state; never gate on `router.refresh()`).
     `afterDelete` emits `console.info("[auth] account.deleted", { userId })` — the audit
     posture, IDs only.

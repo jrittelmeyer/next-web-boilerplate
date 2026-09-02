@@ -165,7 +165,7 @@ messages are untouched). The submit button stays disabled until the widget yield
 the form calls the widget's `reset()` after a failed submit (Turnstile tokens are single-use).
 
 **CSP.** `https://challenges.cloudflare.com` is allowlisted in **`script-src`** (the `api.js`)
-and **`frame-src`** (the widget iframe) in `next.config.ts` — a static directive, harmless when
+and **`frame-src`** (the widget iframe) in `apps/web/src/lib/csp.ts` — a static directive, harmless when
 the widget is unused. WebAuthn-style same-origin doesn't apply here; the widget is a real
 cross-origin embed. See [SECURITY.md](../SECURITY.md#content-security-policy).
 

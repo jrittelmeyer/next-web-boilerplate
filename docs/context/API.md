@@ -255,8 +255,8 @@ The `post` router + actions are the copy-me template for a real entity:
   re-indexes), `deletePost` (same authz — deletes + de-indexes), and `reindexPosts`
   (bulk-rebuilds the index from the DB; this is what
   the `/search` demo's button now calls — rate-limited 3/min per user, tighter than
-  create/update's 10/min because it's a full-table scan + bulk index write; a real app
-  would `requireAdmin()` it, see [services/meilisearch.md](services/meilisearch.md)). Indexing
+  create/update's 10/min because it's a full-table scan + bulk index write; admin-gated via
+  `requireAdmin()`, see [services/meilisearch.md](services/meilisearch.md)). Indexing
   is best-effort: a search outage logs but never fails the DB write. See
   [services/meilisearch.md](services/meilisearch.md) and [DATABASE.md](DATABASE.md).
 

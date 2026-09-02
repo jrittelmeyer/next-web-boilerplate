@@ -128,7 +128,7 @@ layers, with different ownership:
 | Path | Owner | Rule |
 | --- | --- | --- |
 | `.claude/skills/`, `.claude/hooks/ai-dev-kit/` | ai-dev-kit (installer output) | Never edit in place — edit a kit clone and re-run `install.mjs`; `install.mjs --check` guards drift. Includes `hooks/ai-dev-kit/hooks.json` (since kit 0.17.0) — a **record** of the kit's wiring, not live config; `settings.json` is what actually runs. |
-| `.claude/agents/`, `.claude/hooks/*.mjs` (top level) | this repo | Hand-maintained; edit directly. Add each to `knip.jsonc`'s root `entry` list — nothing imports them, so knip reports them as dead files otherwise. |
+| `.claude/agents/`, `.claude/hooks/*.mjs` (top level) | this repo | Hand-maintained; edit directly. `knip.jsonc`'s root `entry` glob `.claude/hooks/*.mjs` already covers a new top-level hook (nothing imports them, so knip would otherwise report a dead file); agent `.md` files are not knip inputs. |
 | `.claude/settings.json` | this repo, merged by the installer | See below. |
 
 **This repo is installer-route — do not also install the kit's marketplace plugin.** The kit
@@ -220,8 +220,10 @@ was verified by running it in a throwaway project, not read off the docs.
   bypasses any hook. A git `pre-push` hook is *not* the answer either — it receives refs on
   stdin and the remote name/URL as argv, and **cannot see the flags at all**; detecting a
   force there means an ancestry test (`git merge-base --is-ancestor`), not a flag grep. The
-  only real wall is branch protection, which `main` still lacks (an owner decision, tracked
-  in BACKLOG).
+  server-side wall already exists: `main`'s repository ruleset blocks non-fast-forward pushes
+  and branch deletion (verified 2026-09-02 via `gh api …/rules/branches/main`), so the deny is
+  belt-and-braces; what `main` still lacks is a **required status check** (an owner decision,
+  tracked in BACKLOG).
 - `ask: Bash(git push *)` was considered and **rejected**: it would prompt the autonomous
   checkpoint push that `DECISIONS.md` standing-authorizes.
 - Bare-command matching under `PowerShell(...)` is **undocumented** (the "a trailing ` *`
@@ -263,16 +265,22 @@ disarming the hook.
 
 Since 2026-08-25 `docs-sanity.mjs` reads **both** wiring forms (shell-form `command` strings
 and exec-form `args` entries) and additionally asserts the kit-marker entries in
-`settings.json` agree with `.claude/hooks/ai-dev-kit/hooks.json` (event/matcher/handler/
-if/timeout) — the check that would have caught `compact-reorient` sitting installed but
+`settings.json` agree with `.claude/hooks/ai-dev-kit/hooks.json` — **every** key, deep-compared
+with basenames and key order normalized (since 2026-09-02; the earlier five-field
+`event/matcher/handler/if/timeout` compare let kit 0.23.12's `asyncRewake` through silently) —
+the check that would have caught `compact-reorient` sitting installed but
 unwired. A green `docs:sanity` now does cover the kit wiring; fix disagreements by re-running
 the installer with `--hooks`, not by hand-editing.
 
 **Every handler path must be anchored on `${CLAUDE_PROJECT_DIR}`, braced and double-quoted:**
 
 ```json
-"command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/dep-check-nudge.mjs\""
+"command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/contrarian-nudge.mjs\""
 ```
+
+The exec-form twin — how the kit wires `dep-check-nudge.mjs` in `settings.json` — is
+`"command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/dep-check-nudge.mjs"]`:
+braced, and unquoted (see below).
 
 Hooks are spawned with the **session cwd, not the project root**, so a repo-relative
 `node .claude/hooks/…` resolves against whatever subdirectory the session last `cd`'d into
@@ -282,8 +290,9 @@ advise, and every gate stayed green — it cost this repo 14 silently-lost runs 
 reads as `$null` under the PowerShell hook shell (Windows without Git Bash), and an
 **unquoted** path word-splits under bash when the project path contains a space. The official
 hooks-guide examples use the bare form — they are POSIX-only, don't copy them here.
-`pnpm docs:sanity` fails on an un-anchored command (shell form only, per the warning above),
-and the kit's `smoke-hooks.mjs` asserts the same over **both** its wiring files —
+`pnpm docs:sanity` fails on an un-anchored handler in **either** form (a shell-form `command`
+must carry the braced, quoted anchor; an exec-form `args` entry must equal
+`${CLAUDE_PROJECT_DIR}/<path>`, unquoted), and the kit's `smoke-hooks.mjs` asserts the same over **both** its wiring files —
 `installer-hooks.json` against `${CLAUDE_PROJECT_DIR}` and the plugin-form `hooks.json`
 against `${CLAUDE_PLUGIN_ROOT}` — plus structural parity between them.
 
@@ -299,7 +308,7 @@ to warn about is gone.
 **Repo-owned handlers stay shell form** for a reason that has not changed: on an adopter build
 predating `args` support, an exec-form entry runs bare `node` with no arguments, while the
 shell form degrades to precisely the prior behaviour. It is a harness version floor, not a
-marker consequence — and `docs:sanity` only polices shell form anyway (above). Do **not** reach
+marker consequence (`docs:sanity` polices both forms, so the check is not the reason). Do **not** reach
 for `"shell": "bash"` for determinism either — it hard-throws on Windows without Git Bash.
 
 Residual limit: `CLAUDE_PROJECT_DIR` is the **launch cwd**, not the git root, so starting

@@ -22,7 +22,8 @@ refusal's RFC attribution is wrong; the combination is valid). `YEARLY;BYMONTHDA
 (audit F8), and the frozen corpus samples the unpaired family since the same change.
 
 **Refused, explicitly, rather than silently mis-expanded:** `BYWEEKNO`, `BYYEARDAY`,
-`BYHOUR` / `BYMINUTE` / `BYSECOND`, sub-daily `FREQ`, `EXRULE`, RFC 7529 `RSCALE`.
+`BYHOUR` / `BYMINUTE` / `BYSECOND`, sub-daily `FREQ`, RFC 7529 `RSCALE` and `SKIP` (`EXRULE`,
+which RFC 5545 deprecated, is rejected as an unknown part rather than named).
 Dropping an unsupported part would render *wrong* dates, which is worse than rendering
 fewer. `parseRRule` throws; on ICS import (Phase 6) the rule is parked verbatim and the
 event imports as non-recurring, with the import report saying so.

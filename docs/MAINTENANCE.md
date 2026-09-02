@@ -32,7 +32,10 @@ The full per-dependency record (versions, pin style, and *why*) is
      the three-route rule stated at `minimumReleaseAge` in `pnpm-workspace.yaml`:
      default is route (1), park the GHSA in `auditConfig.ignoreGhsas` until the fix
      ages in; a dated `minimumReleaseAgeExclude` is route (2), a bounded exception
-     (HIGH+ or reachable by untrusted input in a configured deploy).
+     (HIGH+ or reachable by untrusted input in a configured deploy). When an exclude is
+     removed on schedule, **the proof is CI's frozen install, not the local one** — pnpm
+     reads publish times from registry metadata that can be cached locally, so a local
+     green is the weaker signal.
 3. **Exact-pin frequent publishers** (`stripe`, `@sentry/nextjs`, `posthog-*`, `knip`,
    `pg-boss`, …): with a caret range, a near-daily publisher re-trips the age gate on
    every resolve. Renovate's `rangeStrategy: "auto"` preserves each dependency's pin
@@ -80,7 +83,8 @@ GitHub repo settings don't travel with a template copy. On your own repo:
   takes **two** actions, the secret **and** `gh variable set ENABLE_RENOVATE --body
   true`; see the dated liveness check in Watch items below, which exists because a
   forgotten variable would make the workflow silently dead rather than loudly broken.
-  Superseded the **Mend GitHub App** 2026-08-31 (`BACKLOG.md` B1): Mend was
+  The fallback to the **Mend GitHub App**, built 2026-08-31 (`BACKLOG.md` B1; which host
+  stays is the owner's call — see Watch items): Mend was
   confirmed installed, Interactive-mode, and schedule-healthy, but every
   scheduled Monday window since 2026-07-22 produced zero `renovate/*`
   branches — a manual trigger's own job log showed the run get killed
@@ -94,7 +98,8 @@ GitHub repo settings don't travel with a template copy. On your own repo:
   [developer.mend.io](https://developer.mend.io) if the dashboard issue never
   appears), and remove `renovate.yml`.
 - **Re-create the CI gate variables** (they're repo variables, not workflow content):
-  `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, `ENABLE_RENOVATE`
+  `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, `ENABLE_CSP_NONCE` (the
+  nonce-mode e2e twin), `ENABLE_RENOVATE`
   (the self-hosted Renovate workflow — set it **with** the `RENOVATE_TOKEN` secret,
   never one without the other), and optionally `ENABLE_PERF` / `ENABLE_GHCR_PUBLISH`.
   Unset, those lanes *skip silently* — they don't fail. → [`context/DEPLOYMENT.md → CI/CD`](context/DEPLOYMENT.md#cicd-github-actions)
@@ -116,7 +121,8 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   file, so the untrusted-`browserslist-stats.json` vector has no artifact to hit.
   *Removal condition:* remove once `next`'s own resolution and the natural tree
   both carry `browserslist` past `4.28.6` unaided (a no-op reinstall confirms it —
-  same check used for the `sharp` override's removal above).
+  the same check that retired the `sharp` override on 2026-08-26, see
+  [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26)).
 
 - **Calendar offset drift** — `calendar_events.start_offset_minutes` /
   `end_offset_minutes` are a snapshot of what the IANA database said when the row was
@@ -306,299 +312,67 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   `relativeTime` yet**. *Removal condition:* add it alongside the first route that does, or
   the server and client will disagree on "5 minutes ago" across a hydration boundary.
 
-- **TypeScript 7 cutover** — **GA'd as `typescript@7.0.2` (2026-07-08)** but not yet
-  adoptable here (proven by a 2026-07-13 cutover attempt — owner-approved age-gate
-  override; repo undeployed → no prod risk): TS 7's package IS the native **Go**
-  compiler and **ships no JS Compiler API** — its `typescript` module exposes only
-  `version` (`createProgram`/`readConfigFile`/`sys`/`transpileModule` gone, no
-  `lib/typescript.js`; the programmatic API moved to `./unstable/*`), so `next build`
-  fails at its TS-detection step (Next 16 stable embeds the classic API). Every
-  library-API consumer (Next, webpack loaders, Vue/Svelte/Astro/MDX/Angular) stays on
-  TS 6 until the stable programmatic API returns in **TS 7.1 (~Q4 2026)**. Upstream
-  moved 2026-07-10: Next merged **experimental TS7 support into canary**
-  ([#95639](https://github.com/vercel/next.js/pull/95639) — offers
-  `experimental.useTypeScriptCli`, shelling out to the CLI instead of the JS API),
-  closing tracking issue
-  [#95490](https://github.com/vercel/next.js/issues/95490)
-  ([#95633](https://github.com/vercel/next.js/discussions/95633) remains the
-  discussion). The `tsc` CLI itself is clean and **~3.6× faster** (monorepo
-  type-check 20.5s → 5.7s, cache-bypassed), so the win is real. Mechanics learned:
-  pnpm's age gate re-validates the whole lockfile on every `pnpm run`/frozen
-  install, not just `pnpm install`. That cost a `minimumReleaseAgeExclude` in July;
-  **it no longer would** — `7.0.2` and all **20** `@typescript/typescript-<os>-<arch>`
-  platform optional deps published 2026-07-08, ~25 days clear of the 7-day gate as of
-  2026-08-02. ⚠️ But the gate binds what a range **resolves to**, not the version you
-  had in mind, and the TS train publishes daily (`dist-tags.next` was
-  `7.1.0-dev.20260802.1`), so a cutover should pin **exactly**, not `^7.x`.
-
-  **⇒ THE NEXT-SIDE RE-GATE LIFTED 2026-08-02 — met by its literal terms, at three
-  named costs.** The condition as written was *"TS7 support reaching a stable Next
-  release (`useTypeScriptCli` or its auto-detect successor)"*. Verified **in the
-  installed artifact**, not from a changelog: `apps/web` resolves `next@16.2.12`
-  (`dist-tags.latest`), which carries `useTypeScriptCli` across 40 files including
-  `dist/build/type-check.js`, `dist/build/load-jsconfig.js` and its own shipped docs
-  page. Read that page (`dist/docs/…/useTypeScriptCli.md`) before planning a cutover —
-  it is the primary source and it names what the flag costs:
-  - **It is opt-in, not auto-detected.** *"Next.js does not select the CLI checker
-    automatically"* — TS7 installed without the flag makes `next build` exit with
-    instructions. The gate's disjunction is satisfied by `useTypeScriptCli`; the
-    auto-detect successor this file expected before stable **did not** arrive.
-  - **It widens what gets type-checked** — *"The complete project selected by the
-    configured `tsconfig` is checked, including test files"*, and
-    `--debug-build-paths` **cannot** narrow it. ⚠️ **This was overstated here until
-    2026-08-02:** it is not new exposure for *this* repo. `apps/web` already runs
-    `tsc --noEmit` over a tsconfig that includes `**/*.ts(x)`, so the 47 co-located
-    tests and 29 `e2e/*.spec.ts` are checked **today**. The scope is unchanged; only
-    the checker would be. The one genuinely-new surface is `.next/types/**/*.ts`,
-    which `pnpm type-check` cannot see (turbo scopes it to `dependsOn: ["^build"]`,
-    upstream builds only) — so `next build`, not `type-check`, is what would test it.
-  - **Diagnostics degrade.** Next-specific code frames and error rewriting are not
-    applied; `typescript.ignoreBuildErrors` skips the CLI checker too.
-
-  **⇒ BUT THE BINDING CONSTRAINT IS NOT THE ONE THIS ENTRY TRACKED. Re-gated
-  2026-08-02 on a fact no cutover trial could have surfaced:** ⚠️ **TS 7 ships no
-  `tsserver`.** Verified at the registry — `typescript@6.0.3` declares
-  `bin: { tsc, tsserver }`; `typescript@7.0.2` declares `bin: { tsc }`. The 20
-  platform packages are compiler binaries. So bumping the workspace `typescript`
-  leaves the editor's "Use Workspace Version" with no server, and the **`next`
-  tsserver plugin** (`tooling/typescript/nextjs.json` → `plugins: [{ name: "next" }]`,
-  the one `knip.jsonc` carries a dedicated ignore for) with no host. Either the editor
-  falls back to its own bundled TypeScript — **a different checker from the build**,
-  the classic green-in-editor / red-in-CI split, on the daily loop — or `"use client"`
-  boundary violations and invalid metadata exports stop surfacing while typing.
-  **No lane in `ci.yml` runs an editor**, which is exactly why the previous "run a
-  trial" re-gate was the wrong instrument: a fully green trial would not have licensed
-  the cutover.
-
-  **Two further costs, both landing on the template surface** (`scripts/init-app.mjs`
-  ships this tree verbatim into every generated project): TS 7 is a native Go binary
-  published for **20 platform tuples with no musl variant**, while the repo's own
-  builder is `node:24-alpine` (`docker/Dockerfile`) — TS 6 is pure JS and runs
-  anywhere Node does, so a cutover trades away a portability guarantee an adopter
-  currently has. And `next.config.ts` would need care: `experimental` exists **only**
-  in nonce mode there (`...(cspMode === "nonce" ? { experimental: { useCache: true } }
-  : {})`), so adding `useTypeScriptCli` as a *sibling* key silently drops one side —
-  before the spread the flag is lost (TS7 without it makes `next build` exit ⇒ the
-  CSP-nonce e2e lane goes red), after it `useCache` is lost (`"use cache"` stops
-  caching). It must be **merged into one object**, not stacked.
-
-  **The dependency blocker, restated from inspection rather than enumeration:**
-  `react-docgen-typescript@2.4.0` is real — `lib/parser.js:22` does
-  `require("typescript")` and then uses `ts.SyntaxKind` (16×), `ts.displayPartsToString`
-  (6×), `ts.SymbolFlags` (6×), `ts.TypeFlags`, `ts.isIdentifier` … i.e. deep classic
-  Compiler API, while TS 7's module exposes only `version`. Reached via
-  `@storybook/react-vite` from `packages/ui/.storybook/main.ts`; **it gates the
-  visual-regression lane, not `next build`.** ⚠️ Its peer is `>= 4.3.x`, which TS 7
-  *satisfies* — so `pnpm install` would neither fail nor warn; the break is at
-  Storybook build time. Escape hatch if ever needed: `typescript: { reactDocgen:
-  "react-docgen" }` (AST-based, no Compiler API) or `false`. That costs autodocs
-  prop-table fidelity but **no visual baselines** — `packages/ui/tests/visual.spec.ts`
-  filters `entry.type === "story"` and autodocs pages index as `type: "docs"`, so none
-  is screenshotted.
-  The enumeration that found it (packages declaring `typescript` as a dependency or
-  required peer) still cannot see a bare `require("typescript")` under an *optional* or
-  undeclared peer — treat it as the floor. **A worked example of that blind spot, and
-  of its inverse:** `next-intl@4.13.1` also resolves against `(typescript@6.0.3)` in
-  the lockfile and looks like a second blocker. It is not — `typescript` is an
-  **optional peer with no version range** there (only `next`/`react` are in
-  `peerDependencies`) and `next-intl/dist` imports `typescript` nowhere. Cleared by the
-  same sweep: knip (oxc), drizzle-kit/vitest (esbuild), biome (Rust), zero
-  `typescript-eslint` anywhere; `@trpc/*`'s `typescript >=5.7.2` peer is types-only
-  inference, not an API consumer.
-
-  ***Removal condition (replaces "run a cutover trial"):*** `typescript@7.1.x` stable
-  **and** it ships a language service (or the `next` tsserver plugin has a documented
-  TS 7 story) **and** `react-docgen-typescript` resolves against it. Each is checkable
-  without building anything. Until then **hold Renovate's `typescript` v7 major** — now
-  for a recorded reason rather than a pending experiment. Costs no audit points.
-- **Maintenance-only (Tier 3 G) — the standing state** — the honest "we're done"
-  option: let Renovate drive deps, keep docs current, add steps as real needs surface.
-  Standing 2026-07-12 → 2026-07-15; superseded 2026-07-15 by the path-to-100 program
-  (owner decision; [archive/PATH_TO_100_2026-07-15.md](archive/PATH_TO_100_2026-07-15.md));
-  **RESUMED 2026-07-17** — the program shipped all 11 rows and the eighth scoring pass
-  verified it at **100.0/100**
-  ([archive/PROJECT_AUDIT_2026-07-17.md](archive/PROJECT_AUDIT_2026-07-17.md)). The
-  scheduled Renovate batch had **not opened as of 2026-07-22**, and the 2026-07-22
-  audit found it **blocked, not waiting** — the scheduled lane has never produced a PR
-  (0 `renovate/*` branches ever; all 7 merged PRs came from manual dashboard-approval
-  clicks). The widening fix **SHIPPED 2026-07-22** — and **the proof FAILED anyway: the
-  2026-07-27 Monday window passed with still zero `renovate/*` branches ever
-  opened** (`git ls-remote --heads origin 'refs/heads/renovate/*'` → empty; all 7
-  merged Renovate PRs came from manual dashboard clicks). **This is now a
-  diagnosis job, not a wait** — next stop is the Mend app side (run logs / mode /
-  cadence at developer.mend.io); owner's call on when to run it. Fallback if the
-  app side won't cooperate: self-hosted Renovate via `renovatebot/github-action`
-  on a cron, reusing the committed config — **built 2026-08-31 as
-  `.github/workflows/renovate.yml`** (B1 in [`BACKLOG.md`](BACKLOG.md); see below). The 7 approved majors merged 2026-07-18;
-  typescript-v7 stays held per the TS7 gate above; `actions/setup-node v7` is a new
-  pending-approval major, and `@testing-library/jest-dom v7` sits age-gated in the
-  dashboard's Pending Status Checks (surfaces for approval once aged; 22B). The
-  same-day 22B re-check confirmed the picture unchanged: still 0 `renovate/*`
-  branches, 37 Awaiting Schedule. **Re-checked 2026-08-19** (doc audit): still zero
-  `renovate/*` branches ever — every Monday window through 2026-08-17 has passed
-  empty; the B1 diagnosis row remains the open path.
-  **2026-08-30 → 31 — diagnosed, built, and then the picture moved.** The Mend side
-  was checked at developer.mend.io: App installed, Interactive mode, schedule
-  evaluating correctly (its own job log says "Matches schedule on monday"), and a
-  manual trigger (job `ea8d7e50`) died mid-`pnpm update` with no error emitted —
-  a Community/Free-tier resource ceiling for this monorepo, not a config defect
-  (full write-up: [archive/renovate-b1-diagnosis-plan.md](archive/renovate-b1-diagnosis-plan.md)).
-  The self-hosted fallback shipped the same morning (`renovate.yml`, see Automation
-  on a fork above). **Then two things happened on 2026-08-31 that the plan did not
-  predict:** (1) the Mend App opened
-  [PR #56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56) at 10:57 UTC
-  — `actions/checkout` v7.0.0 → v7.0.1, every CI lane green, `renovate/stability-days`
-  passing — **the first scheduled `renovate/*` branch in the repo's history**. So Mend
-  *does* deliver the update class that needs no lockfile generation (the
-  github-actions manager runs before the pnpm work that gets killed); the Dependency
-  Dashboard issue's `updatedAt` is still 2026-07-22, consistent with the run never
-  reaching its end. (2) The self-hosted cron's first run (18:28 UTC) **failed at
-  startup** — `'token' MUST be passed using its input or the 'RENOVATE_TOKEN'
-  environment variable`; `gh secret list` shows no repo secret yet. ⚠️ Two hosts are
-  now configured against one repo and the workflow header's dual-run warning is live.
-  **Owner decision, not a build row:** (a) add `RENOVATE_TOKEN` and uninstall the
-  Mend App — the plan, and what the diagnosis supports for lockfile-bearing PRs; or
-  (b) keep Mend, delete `renovate.yml`, and accept that npm-manager PRs may keep dying
-  on Mend's tier. Either way, merge or close #56 first (touching
-  `.github/workflows/*` needs the `workflow` scope), and the row closes when a
-  scheduled `renovate/*` PR from the *chosen* host merges. *Removal condition:* that
-  merge. Independent of the choice, the workflow needs its `vars.ENABLE_RENOVATE`
-  gate before it is template-safe (BACKLOG B1, filed 2026-09-01 by the seventeenth
-  audit — generated projects inherit a weekly failing run until then).
+- **TypeScript 7 cutover — HOLD, re-gated on TS 7.1.** `typescript@7.0.2` GA'd 2026-07-08 as
+  the native Go compiler; the Next-side blocker lifted 2026-08-02 (`experimental.useTypeScriptCli`
+  in stable `next` 16.2.12+), but **that is not the binding constraint.** What still blocks it,
+  each checkable without building:
+  - **TS 7 ships no `tsserver`** (registry `bin`: 6.0.3 → `{tsc, tsserver}`, 7.0.2 → `{tsc}`).
+    Bumping the workspace `typescript` leaves the editor's "Use Workspace Version" with no
+    server and the `next` tsserver plugin (`tooling/typescript/nextjs.json`) with no host — the
+    editor would check with a different compiler than the build, and **no `ci.yml` lane runs an
+    editor**, which is why the earlier "run a cutover trial" gate was the wrong instrument.
+  - **Two template-surface costs** (`scripts/init-app.mjs` ships this tree verbatim): TS 7 is a
+    native binary for 20 platform tuples with **no musl variant** (the builder is
+    `node:24-alpine`; TS 6 is pure JS); and `next.config.ts`'s `experimental` key exists **only**
+    in nonce mode, so `useTypeScriptCli` must be **merged** into that object — added as a sibling
+    key it silently drops one side (before the spread: the flag is lost and the CSP-nonce e2e lane
+    reddens; after it: `useCache` is lost and `"use cache"` stops caching).
+  - **`react-docgen-typescript@2.4.0` uses the classic Compiler API** (`lib/parser.js`) that TS 7
+    no longer exposes; its peer `>= 4.3.x` is *satisfied* by TS 7, so `pnpm install` neither fails
+    nor warns — it breaks at Storybook build time (the visual lane, not `next build`). Escape
+    hatch: `typescript: { reactDocgen: "react-docgen" | false }` — costs autodocs prop tables,
+    **no visual baselines** (`visual.spec.ts` screenshots `type: "story"` entries only).
+  - **Cutover mechanics when the day comes:** `useTypeScriptCli` is opt-in, not auto-detected
+    (TS 7 without it makes `next build` exit with instructions); the bump is **10** specifiers
+    (`packages/calendar` included; `manypkg` catches a 9-of-10); **pin exactly** — the age gate
+    binds what a range resolves to and the TS train publishes daily; no `minimumReleaseAgeExclude`
+    is needed (7.0.2 and its 20 platform packages are long aged); the checker's scope is unchanged
+    (`apps/web` already type-checks its tests and e2e specs) except `.next/types`, which
+    `next build` sees and `pnpm type-check` cannot; Next-specific diagnostics degrade. The CLI is
+    ~3.6× faster here (20.5 s → 5.7 s), so the win is real.
+  *Removal condition:* `typescript@7.1.x` stable **and** it ships a language service (or the
+  `next` tsserver plugin has a documented TS 7 story) **and** `react-docgen-typescript` resolves
+  against it. Until then **hold Renovate's `typescript` v7 major**. Costs no audit points. The full
+  entry as it stood — the 07-13 attempt, the lifted-gate verification, the dependency sweep — is
+  preserved verbatim in [archive/WATCH_HISTORY.md#typescript-7-cutover-full-entry-as-of-2026-09-02](archive/WATCH_HISTORY.md#typescript-7-cutover-full-entry-as-of-2026-09-02).
+- **Maintenance-only (Tier 3 G) — the standing state; Renovate delivery is the open owner
+  decision.** Standing since 2026-07-17 (path-to-100 verified at 100.0). Renovate's scheduled lane
+  produced zero `renovate/*` branches from 2026-07-22 until 2026-08-31, when two things happened
+  the same day: the Mend App opened the first scheduled PR in the repo's history
+  ([#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56), `actions/checkout`
+  7.0.1, every lane green — Mend *does* deliver the no-lockfile class; the Dependency Dashboard's
+  `updatedAt` is still 2026-07-22, so its pnpm run still never finishes), and the self-hosted
+  `renovate.yml` fallback's first cron run failed at startup for want of the `RENOVATE_TOKEN`
+  secret. Two hosts are configured against one repo and the workflow header's dual-run warning is
+  live. **Owner decision, not a build row:** (a) add `RENOVATE_TOKEN` **and** set
+  `ENABLE_RENOVATE` (the fork-safe gate shipped 2026-09-02 — see Automation on a fork), then
+  uninstall the Mend App; or (b) keep Mend, delete `renovate.yml`, and accept that npm-manager
+  PRs may keep dying on Mend's tier. Never both. Either way, merge or close #56 first (touching
+  `.github/workflows/*` needs the `workflow` scope). *Removal condition:* a scheduled
+  `renovate/*` PR from the *chosen* host merges. The full narrative (the 07-22 widening fix, the
+  empty Monday windows, the Mend-side diagnosis) is preserved verbatim in
+  [archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02](archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02); the diagnosis itself is
+  [archive/renovate-b1-diagnosis-plan.md](archive/renovate-b1-diagnosis-plan.md).
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
-  - ~~**2026-08-10 — the `nanoid` 3.3.17 + `dompurify` 3.4.13 park exits**~~ —
-    **EXITED 2026-08-12, two days late** (each was due when its fix aged in on
-    08-10: nanoid ~10:39 UTC, dompurify ~14:16 UTC; the gap carried no exposure —
-    both edges are audit-only and the daily security lane ran green 08-10/11/12).
-    One PR per the 2026-08-07 signed spec: registry re-verified at take time
-    (3.4.13 = `latest`, no newer release; **3.3.17 taken over 3.3.18** — npm's
-    `legacy` tag, an unrelated React-Native fix with no advisory delta, so the
-    aged advisory floor won per the postcss 8.5.23 precedent), the bare
-    `dompurify:` key promoted to the ranged `"dompurify@<3.4.13": 3.4.13`,
-    `"nanoid@<3.3.17": 3.3.17` added (in-range for postcss's `^3.3.16` —
-    fix-forward), and the signed rider converted `fast-uri: 3.1.5` to its ranged
-    form (same bare-key defect; the conversion moved nothing). Allowlist back to
-    `[]` — `pnpm audit` zero vulnerabilities, **zero ignored**; the lockfile moved
-    exactly two packages; Dependabot #25 + #26 auto-close. Removal conditions now
-    live on the ranged keys in `pnpm-workspace.yaml`. The advisory detail this
-    entry used to carry lives on those keys' comments (nanoid: GHSA-2v37-7h3g-55p8,
-    HIGH, functions never invoked here; dompurify: GHSA-55q2-fjhq-7xh7, moderate,
-    audit-ledger-only edge — the real fix channel is the posthog-js Watch line
-    below).
-  - ~~**2026-08-14 ~16:41 UTC — `nanoid` 3.3.18** ages in~~ — **TAKEN 2026-08-14
-    ~17:08 UTC**, on schedule. **GHSA-2v37-7h3g-55p8 WIDENED 2026-08-13T15:43Z** —
-    the 3.x vulnerable range moved to `<3.3.18` (first-patched 3.3.18), so the
-    08-12 exit's 3.3.17 was inside it again and the tree re-flagged HIGH. Parked
-    (route 1) ~14:10 UTC the same day (3.3.18 was ~2.5h short of the age gate at
-    that point); registry re-verified at take time (3.3.18 published
-    2026-08-07T16:41Z — gate cleared). The ranged override promoted
-    `"nanoid@<3.3.17": 3.3.17"` → `"nanoid@<3.3.18": 3.3.18` and the
-    `auditConfig.ignoreGhsas` entry was deleted in the same change (back to `[]`).
-    `pnpm audit` — zero vulnerabilities, zero ignored. Exposure analysis
-    unchanged throughout (postcss's sole edge calls plain `nanoid(6)`; the
-    vulnerable custom-generator functions are never invoked here). **Rider —
-    DONE 2026-08-14:** the bare `brace-expansion: 5.0.9` key converted to its
-    ranged form in the earlier same-day change (audit F5 — same file, same
-    unsatisfiable-removal class the 08-12 PR fixed for fast-uri).
-  - ~~**2026-08-10 ~20:34 UTC — `next` 16.3.0** ages in~~ — ~~**superseded 2026-08-14,
-    take `next` 16.3.1 instead**~~ — **16.3.1 TAKEN then REVERTED 2026-08-22, defer
-    to `next` 16.3.2 (ages in 2026-08-28) — and the retake target has moved again:
-    `next` 16.3.3 (published 2026-08-25T15:32Z, registry-verified 2026-08-26) is
-    Vercel's August security release (two critical CVEs per its advisory post);
-    it ages in ~2026-09-01, or qualifies for the age gate's security-only
-    exception routes. Owner call, plan → sign-off; the 16.3.2 retake plan below
-    (riders, order-dependent verification, the Docker standalone check) applies
-    to 16.3.3 unchanged.** 16.3.0 is aged and due, but a plan →
-    contrarian pass the same day found a live regression: `next/image`'s optimizer
-    calls `sharp.block()` and only selectively unblocks raster formats, not SVG (the
-    block/unblock registry is process-global), so any `next/image` optimization
-    request permanently blocks SVG decoding for the rest of the process — breaking
-    `next/og`'s `ImageResponse` (satori renders JSX → SVG, sharp rasterizes it).
-    Verified against Next.js's own PR (`vercel/next.js#96733`, merged into the
-    `next-16-3` branch 2026-08-06 — three days *after* 16.3.0 shipped — whose own
-    verification note reproduces the break via `test/e2e/og-api/index.test.ts`)
-    rather than taken on the contrarian's word alone. This repo has three files on
-    that exact surface: `opengraph-image.tsx`, `icon.tsx`, `apple-icon.tsx` (all
-    `ImageResponse`, confirmed by grep). `next` 16.3.1 was the first stable release
-    carrying the fix, and was taken 2026-08-22 (full gate, both E2E CI lanes, a
-    manual `:3100` `next start` live-verify, `sharp` override removed per its met
-    removal condition) — **but CI's Docker image job caught a SECOND, independent
-    regression**: `output: 'standalone'`'s runtime (the code path only the Docker
-    build exercises, never `next start`) crashed at boot,
-    `Cannot find module '.../@swc/helpers/esm/_interop_require_default.js'`. Root
-    cause: 16.3.1 bumped bundled `@swc/helpers` `0.5.15`→`0.5.23`, whose `exports`
-    map added a `module-sync` condition that build-time file tracing (resolves
-    `default`→`cjs/`) and Node ≥22.12's runtime resolver (resolves `module-sync`→
-    `esm/`) disagree about under pnpm's `.pnpm` virtual store — matches
-    vercel/next.js#97356/97358/97547/97597/97598/97599 exactly. Already fixed
-    upstream (PR #97372, backported as #97453) and **that fix is one of the six PRs
-    in `next` 16.3.2's own release notes** — confirmed via the GitHub compare API
-    that #97453's merge commit sits in the `v16.3.1...v16.3.2` range. **Reverted the
-    16.3.1 take rather than bypass the 7-day age gate for 16.3.2** (a `contrarian`
-    pass on that bypass plan flagged it would need all 9 lockstep packages
-    enumerated — `next` + 8 `@next/swc-*` platform binaries — plus a rewrite of the
-    age-gate's authoritative rule text, since its three documented exception routes
-    are security-only): `16.2.12` predates 16.3.0 entirely, so it never had the
-    SVG-blocking regression in the first place, and nothing is lost waiting the
-    ~6 remaining days for 16.3.2 to clear the gate normally. Full incident record:
-    [CHANGELOG](../CHANGELOG.md) 2026-08-22.
-    **Rider, found by the 2026-08-06 audit, applies again to the 16.3.2 retake**
-    (re-verify at build time): pins `sharp ^0.35.3` and `postcss 8.5.23` identically
-    to 16.3.1 (registry-confirmed 2026-08-22), so the take plan should again
-    **remove the `sharp: 0.35.3` override** (its removal condition — next's own pin
-    ≥0.35.0 — is met) and re-check the postcss override's second condition (natural
-    tree resolution ≥8.5.23 — already true, independent of the bump).
-    **Verification must be order-dependent**: exercise a `next/image` optimization
-    first, then hit the OG/icon routes — testing them in isolation would not have
-    caught 16.3.0's bug. **New for the retake, learned from the 16.3.1 revert:**
-    (a) exercise `output: 'standalone'` locally — an actual `docker build` +
-    `docker run` + `/api/health` hit, for both the `web` and `worker` Dockerfile
-    targets — before pushing, not just `next start` on `:3100`; the two code paths
-    diverge and CI's Docker job is the only lane that exercises the standalone
-    runtime; (b) skim the *very next* patch version's changelog for anything
-    touching the subsystem just bumped, independent of whether it's flagged as
-    security content — the disqualifying test applied to 16.3.2 the first time
-    ("is this security-relevant") was the wrong question; "does it fix a known
-    regression in what I'm about to pin" is the one that would have caught this
-    before CI did.
-    **16.3.3 TAKEN 2026-08-26** (August 2026 security release, two critical CVEs
-    — full triage + verification in [CHANGELOG](../CHANGELOG.md) 2026-08-26):
-    CVE-2026-75604/GHSA-p293-qw3h-jr36 (Windows-hosted-server RCE) doesn't apply
-    (no Pages Router); GHSA-2xp9-vwfh-vxw4/GHSA-g89c-p67h-r497 (AVIF-decode RCE
-    via libheif in `sharp`) does — reachable through this repo's Uploadthing
-    upload surface — and justified the age gate's route (2) exception (ages in
-    naturally 2026-09-01). Exclude scoped to all 10 lockstep packages this time
-    (`next` + `@next/env` + 8 `@next/swc-*`), not just bare `next` — the exact
-    gap a `contrarian` pass caught before taking it. `sharp: 0.35.3` override
-    **removed** — its removal condition ("next's own sharp pin reaches
-    >=0.35.0") is met by 16.3.3's own `^0.35.3` floor; the lockfile resolves
-    `sharp@0.35.3` naturally without it (confirmed by a no-op reinstall). Full
-    gate + 607 tests/coverage/knip/docs:sanity green, lockfile diff surgical.
-    **The Docker standalone (`output: 'standalone'`) check — the exact lane that
-    caught the 16.3.1 regression — could not be completed in the take session**
-    (three local builds died on host memory pressure; the owner shipped on full
-    gate + a `:3100` live-verify — health, icon/apple-icon/opengraph-image all 200,
-    `/_next/image` clean). **CLOSED 2026-08-30:** the CVE-2026-14456 fix
-    ([archive/plan-cve-2026-14456.md](archive/plan-cve-2026-14456.md)) built,
-    booted and health-checked **both** `runner` and `worker` images locally on
-    16.3.3, and CI's Docker image job has been green since (`e5e99f0`, `c69eb6e`,
-    PR #56). Correction recorded there too: that job had been red since 08-27 on
-    the base image's `libssl3`/`libcrypto3` CVE, not on memory — the 16.3.3 row's
-    "host memory exhaustion" framing described the local build, not the lane.
-  - ~~**2026-09-01 ~15:32 UTC — the `next` 16.3.3 `minimumReleaseAgeExclude` goes
-    inert**~~ — **DONE 2026-09-02, on schedule.** The **ten**-entry block (`next` +
-    `@next/env` + 8 `@next/swc-*`; the 16.3.3 entry below said "all 9" — a miscount the
-    2026-09-01 audit's contrarian caught) is deleted from `pnpm-workspace.yaml`, and
-    that file's `vite` comment is corrected in the same edit ("we never import vite
-    directly" was wrong — `packages/ui/package.json:53` declares `vite: 8.0.16` as a
-    devDep for Storybook's `@storybook/react-vite` builder; the comment now says the
-    override keeps that direct pin and every transitive copy in lockstep). The gate is
-    unconditional again with zero exclusions. **Proof is CI's frozen install, not the
-    local one** — pnpm reads publish times from registry metadata that can be cached
-    locally, so a local green is the weaker signal (a refinement on the 07-28/08-06
-    removals, which leaned on the local run).
+  - ~~**Landed takes, 2026-08-10 → 2026-09-02**~~ — `nanoid` 3.3.17 then 3.3.18 (08-12, 08-14) ·
+    `next` 16.3.0 superseded, 16.3.1 taken-and-reverted (08-22, the standalone boot crash that
+    became Dependency-policy rule 6), 16.3.3 taken (08-26) with its Docker standalone check
+    closed 08-30 · the 16.3.3 age-exclude deleted on schedule (09-02) · `better-auth` 1.6.26
+    (08-14) and 1.6.30 (08-26). Every take is in [CHANGELOG](../CHANGELOG.md); the verbatim
+    dated entries are in [archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02](archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02) and
+    [archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26](archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26).
   - **NEW 2026-09-02 — Renovate liveness, 14 days after `RENOVATE_TOKEN` is set.**
     Enabling the self-hosted workflow now takes **two** owner actions (the secret *and*
     `gh variable set ENABLE_RENOVATE --body true`), because the fork-safe gate that
@@ -623,69 +397,12 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `sharp` 0.35.4's vendored libvips; (d) bump `@next/eslint-plugin-next` in lockstep
     (`tooling/eslint`, its own `pnpm add` — it has resolved 16.2.12 since the 16.3.3
     take left it outside the exclude). Plan → sign-off.
-  - ~~**2026-08-11 ~21:20 UTC — `better-auth` 1.6.26** ages in~~ — **TAKEN
-    2026-08-14.** Registry-verified over `latest` (1.6.28, published
-    2026-08-13T22:40Z) and 1.6.27 (2026-08-11T17:59Z) — both still inside the
-    7-day gate at take time, and their release notes carried nothing over 1.6.26
-    worth jumping the gate for (Suspense/CLI/type fixes only, no advisories).
-    Bumped `better-auth` `^1.6.25` → `^1.6.26` in both `apps/web/package.json`
-    and `packages/auth/package.json`, plus `@better-auth/passkey` `1.6.25` →
-    `1.6.26` (exact pin, its `peerDependencies.better-auth` registry-confirmed
-    `^1.6.26` first). **Schema-diffed the installed 1.6.26 artifacts against
-    1.6.25 before building** (`packages/auth/AGENTS.md`'s standing rule): a
-    contrarian pass on the plan found the diff procedure itself was incomplete —
-    it only covered `better-auth`'s own `dist/plugins/*/schema.mjs` files, missing
-    that the `user`/`session`/`account`/`verification` core tables live in the
-    separate `@better-auth/core` package and that `@better-auth/passkey`'s table
-    is inline, not a separate file. Both were independently diffed too (also
-    byte-identical) and the leaf rule corrected for future bumps. **No migration
-    needed.** Full gate + `@repo/auth`'s 38-test unit suite green. Live-verified
-    on a fresh prod build (`:3100`, email blanked): sign-up, sign-in, full 2FA
-    enrollment + challenge round-trip (via the repo's own `totp.ts` helper), an
-    organization invite-and-accept round-trip, admin set-role + ban, and —
-    1.6.26's own behavioral change — deleting an account with 4 active sessions
-    confirmed all 4 gone from `session` in the same request. One gotcha hit and
-    fixed mid-verify: port 3100 was held by an unrelated project's orphaned
-    server from a prior session (`civicmatch`, running since 08-12) answering
-    health checks and auth calls with plausible-looking responses that never
-    touched this repo's DB — caught by cross-checking the listener PID's command
-    line and confirming rows actually landed in `nwb-postgres`/`appdb`, not by
-    the response shape alone.
-  - ~~**2026-08-24 ~19:11 UTC — `better-auth` 1.6.30** ages in~~ — **TAKEN
-    2026-08-26.** Registry re-verified fresh at take time: 1.6.30 (published
-    2026-08-17T19:11Z) is still the newest 1.6.x — `latest` moved to 1.7.1
-    (2026-08-18), confirmed a breaking minor per the 1.7.x guard below, not a
-    supersession. None of 1.6.27–1.6.30 carries a CVE; the one access-control
-    fix in the window (SSO org auto-assignment trusting an unverified provider
-    domain, 1.6.29) is scoped to `@better-auth/sso`, which this repo doesn't
-    use. Bumped `better-auth` `^1.6.26` → **exact `1.6.30`** in both
-    `apps/web/package.json` and `packages/auth/package.json` — **not** a caret
-    range: `^1.6.30` let `pnpm install` silently resolve to `1.7.1` (now that
-    1.7.x exists in-range), pulling in `@better-auth/core@1.7.1` transitively
-    and defeating the whole point of staying on 1.6.x. Exact-pinning is now the
-    rule for this dependency going forward, matching `@better-auth/passkey`'s
-    existing exact pin (`1.6.26` → `1.6.30`, lockstep peer confirmed via the
-    registry). **Schema-diffed the installed 1.6.30 artifacts against 1.6.26
-    across the full surface** (`better-auth` plugin `schema.mjs` files,
-    `@better-auth/core`'s `dist/db/`, passkey's inline schema): every runtime
-    `.mjs` schema file byte-identical; only `.d.mts` type declarations and one
-    unused re-export (`organization/schema.mjs` dropped `invitationStatus`/
-    `roleSchema` from its exports, neither referenced in this repo) changed.
-    **No migration needed.** Full gate green (lint/type-check/build). Live-verified
-    on a fresh prod build (`:3100`, email blanked): sign-up, sign-in, full 2FA
-    enrollment + challenge round-trip (the repo's own `totp.ts` algorithm,
-    reimplemented in the verify script), an organization invite-and-accept
-    round-trip, admin set-role + ban (confirmed the banned user can no longer
-    sign in), and deleting an account with 2 active sessions — confirmed both
-    gone from `session`, and the `user` row itself gone, not just the deleting
-    session. Port 3100 was free this time (no orphaned squatter). Throwaway
-    `verify-*@example.com` users cleaned from `appdb` after verification.
-    ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18) is still NOT a routine
-    take**: a breaking minor — 15 breaking changes incl. account identity
-    scoped by issuer (requires migration), captcha paths needing explicit
-    wildcards (this repo wires CAPTCHA), SCIM/MCP extractions. Plan →
-    sign-off when there's a reason to move; no advisory forces it.
-    `@better-auth/passkey` 1.7.1 exists for lockstep when that day comes.
+  - ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18, 1.7.2 now) is NOT a routine take** — a
+    breaking minor: 15 breaking changes incl. account identity scoped by issuer (requires a
+    migration), captcha paths needing explicit wildcards (this repo wires CAPTCHA), SCIM/MCP
+    extractions. Plan → sign-off when there is a reason to move; no advisory forces it.
+    `@better-auth/passkey` 1.7.x exists for lockstep. **Exact-pinning is the standing rule for
+    this dependency** — a caret let `^1.6.30` silently resolve to 1.7.1 ([STACK.md](context/STACK.md)).
 - **posthog-js rebuild bump — the real GHSA-55q2-fjhq-7xh7 fix channel** — the
   dompurify override is **audit-edge only**: the vulnerable `IN_PLACE` caller is
   posthog-js's remotely-loaded product-tours chunk, which vendors its own dompurify
@@ -753,14 +470,9 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     the lockfile past it. The ranged key is what makes the condition real: it goes
     inert once posthog-js resolves >=3.4.13 — which is also the moment the real fix
     lands, this edge being audit-only (see the posthog-js Watch line above).
-  - ~~`sharp: 0.35.3` → remove when **next**'s own sharp pin reaches >=0.35.0 (16.2.11
-    still pins `^0.34.5`, excluding the libvips CVE fix — re-checked 2026-07-22)~~ —
-    **REMOVED 2026-08-26 with the `next` 16.3.3 take**: 16.3.3 pins `^0.35.3`, so the
-    condition is met and the lockfile resolves `sharp@0.35.3` unaided (confirmed by a
-    no-op reinstall). This bullet was left reading as active until the 2026-09-01
-    audit's sweep caught it. Its `/_next/image` runtime path stays e2e-covered since 2026-07-22
-    (`apps/web/e2e/image-optimization.spec.ts`) — a sharp that installs but no
-    longer transforms turns the e2e lane red instead of passing silently.
+  - ~~`sharp: 0.35.3`~~ → **REMOVED 2026-08-26** with the `next` 16.3.3 take: its condition
+    (next's own sharp pin ≥0.35.0) is met by 16.3.3's `^0.35.3`, and a no-op reinstall confirmed
+    the lockfile resolves `sharp@0.35.3` unaided. Record → [archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26](archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26).
   - `"fast-uri@<3.1.5": 3.1.5` (ranged since 2026-08-12) → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
     the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
     `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. **Reopened 2026-08-04 (batch #5):
@@ -782,41 +494,14 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (this one-liner added 2026-09-01 so every live override key has a bullet here).
     Remove once a routine bump naturally carries the lockfile past 3.3.18 (ranged key
     — inert from that moment).
-- **Advisory batch 2026-07-27** (closed [#10](https://github.com/jrittelmeyer/next-web-boilerplate/issues/10),
-  red since 2026-07-25) — three highs, one of them a **direct** dependency:
-  - **`better-auth` 1.6.20 → 1.6.23** (with `@better-auth/passkey` in lockstep).
-    GHSA-qq9h-g4jm-xgf3 (CVSS 8.3, account takeover via pre-account) was **live-exposed
-    here**, not transitive: its four preconditions — version `<1.6.22`, the magic-link
-    or email-OTP plugin, email+password with open registration, and an account
-    pre-existing at the address — all hold whenever `isEmailConfigured()` is true, which
-    is the intended production path and is inherited by every derived project. 1.6.23 is
-    the newest patched release clearing the 7-day gate. **Follow-up CLOSED 2026-07-30 —
-    1.6.25 installed** (with `@better-auth/passkey` in lockstep) once it cleared the
-    gate at 15:48:12Z. Not advisory-driven and **no migration**: the 1.6.23→1.6.25 model
-    definitions were diffed against the installed artifacts and every difference is
-    cosmetic. See the CHANGELOG **Security** entry for the 1.6.24 `Origin`-enforcement
-    behaviour change on the magic-link / email-OTP send endpoints.
-  - postcss + brace-expansion: see the retargeted override bullets above.
-  - **The 2026-07-26 daily audit's green was a false green** — the advisory endpoint
-    returned invalid JSON and `--ignore-registry-errors` turned that into exit 0, so
-    the run never audited and left #10 untouched. **Both** lanes now assert the
-    "…vulnerabilities found" trailer a completed report always emits, mirroring the
-    guard `security-triage-issue.sh` already applied before closing the issue:
-    `ci.yml`'s merge gate (so a PR can't merge on an unaudited tree) and
-    `security-audit.yml`'s **Propagate audit status** (which previously gated only on
-    a non-zero exit, so an outage skipped it and the run concluded *success*). Issue
-    state was never wrong — the script's guard held — but the **run conclusion** was,
-    and that is what a human reads in `gh run list`. A genuine npm outage now turns
-    both lanes red and needs a re-run; that is the safe direction to fail.
-- **Advisory batch 2026-08-04 (#5** — closed
-  [#41](https://github.com/jrittelmeyer/next-web-boilerplate/issues/41), red since
-  2026-08-03/04**)** — nine advisories (4 high, 5 moderate) across five packages, every
-  path build/dev/test tooling; `brace-expansion` 5.0.9 (the ninth) merged separately as
-  PR #38. The batch's lesson: **two of the nine were against our own previous
-  remediation pins** (fast-uri 3.1.4, postcss 8.5.20) — an override is a standing
-  liability, and `pnpm audit` re-judging pinned values live is exactly how both
-  surfaced. New overrides, both RANGED deliberately (a bare key pins every future
-  resolution so its own removal condition can never fire, and would force a future
+- ~~**Advisory batch 2026-07-27**~~ — closed ([#10](https://github.com/jrittelmeyer/next-web-boilerplate/issues/10)):
+  `better-auth` 1.6.20 → 1.6.23 (GHSA-qq9h-g4jm-xgf3, live-exposed on the default config) →
+  1.6.25 on 07-30 with no migration; the postcss + brace-expansion retargets (their live keys are
+  above); and both audit lanes made to fail **closed** after the 2026-07-26 false green (the
+  advisory endpoint returned invalid JSON and `--ignore-registry-errors` turned that into exit 0).
+  Record → [archive/WATCH_HISTORY.md#advisory-batch-2026-07-27](archive/WATCH_HISTORY.md#advisory-batch-2026-07-27).
+- **Batch #5 overrides (added 2026-08-04)** — both RANGED deliberately (a bare key pins every
+  future resolution so its own removal condition can never fire, and would force a future
   undici@8 copy cross-major *down*; a ranged key self-neutralizes and leaves new copies
   for `pnpm audit` to judge loudly):
   - `"undici@<7.29.0": 7.29.0` → five advisories at once (GHSA-4cwx-7wf7-3272, high,
@@ -827,10 +512,11 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     memory exhaustion), via react-email's dev preview server. In-range for socket.io's
     own `~4.2.4` — the lockfile's 4.2.6 simply predated the fix. Remove when the
     react-email chain re-resolves >=4.2.7.
-  - postcss (second retarget) + fast-uri (parked GHSA — **exited on schedule
-    2026-08-07**, the override now 3.1.5): see their bullets above.
-  Dependabot alerted on **only the undici five**; `pnpm audit` caught all nine — the
-  authoritative-gate ranking holds.
+- ~~**Advisory batch 2026-08-04 (#5)**~~ — closed ([#41](https://github.com/jrittelmeyer/next-web-boilerplate/issues/41)):
+  nine advisories (4 high), every path build/dev/test tooling; two were against our own previous
+  remediation pins (an override is a standing liability — `pnpm audit` re-judging pinned values
+  live is how both surfaced). Its two new keys (undici, socket.io-parser) are the live bullet
+  above. Record → [archive/WATCH_HISTORY.md#advisory-batch-2026-08-04-5](archive/WATCH_HISTORY.md#advisory-batch-2026-08-04-5).
 - **`contrarian` subagent — evaluated 2026-07-28; both open items now closed.**
   - **The acceptance test RAN and passed its pre-committed bar.** It produced findings
     absent from both the plan and the PR body, each citing a file:line it read itself —
@@ -862,43 +548,12 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   self-imposed discipline with no machine backstop. Owner decision whether to add it; not a
   build row, and CI changes can't substitute (they turn a lane red, they can't stop a merge).
 - ~~**`minimumReleaseAgeExclude` for `next` + `@next/*`**~~ — **CLOSED 2026-07-28, on
-  schedule.** 16.2.11 (published 2026-07-21T16:00:01Z) cleared the 7-day gate that day;
-  every `@next/*` entry in the lockfile is either 16.2.11 (published ~2 minutes *earlier*)
-  or `@next/eslint-plugin-next@16.2.9`, so nothing still needed the bypass and a frozen
-  install could not break. Proven falsifiably rather than assumed: `pnpm --filter web add
-  next@16.2.12 --lockfile-only` is **refused on age grounds with the exclude removed**
-  (exit 1, naming `next` and all eight `@next/swc-*` siblings) and **succeeds with it
-  restored** (exit 0). Note the removal is a **no-op at install** — `apps/web` declares
-  `^16.2.11`, which the lockfile already satisfies, so a lockfile-driven install never
-  consults the registry; the gate re-arms at the next *resolution* (Renovate, `pnpm add`).
-  16.2.12 becomes admissible 2026-08-01.
-- ~~**`next` 16.2.12 admissible but not taken**~~ — **TAKEN 2026-08-02**, with
-  `@next/eslint-plugin-next` in lockstep. Registry-verified at the time: `dist-tags.latest`,
-  published 2026-07-25T20:45:53Z (8 days, past the 7-day gate), **no 16.2.13**. Contents are a
-  docs backport plus the TypeScript-7 cherry-picks (vercel/next.js#95831 → #92277, #95639,
-  #95692, #95753).
-  - **Neither override retires.** 16.2.12 still pins `dependencies.postcss` exactly `8.4.31`
-    (below the 8.5.18 key floor) and `optionalDependencies.sharp` `^0.34.5` (below the 0.35.0
-    condition). Read off the published manifest, not inferred — `pnpm-workspace.yaml` is
-    byte-unchanged.
-  - **`@next/eslint-plugin-next` needs its own `pnpm add`.** It lives in `tooling/eslint`, so
-    `pnpm --filter web add next@…` does not move it, and `manypkg` cannot flag the drift
-    because its old `^16.0.0` range diverged from nothing. That is exactly why it sat three
-    patches behind the framework it lints. Declared range is now `^16.2.12`.
-  - **The verification that mattered was the alias path.** #92277 rewrites `load-jsconfig.ts`
-    (+58/−20) to compute an effective base URL for `paths` declared **without** `baseUrl` —
-    this repo's hard rule, and what `apps/web/tsconfig.json` does (`@/*` → `./src/*`). Only
-    the Next app root's tsconfig is exposed (`packages/jobs` is a standalone worker Next never
-    builds; `packages/ui` reaches the app via `transpilePackages`). Proven both ways: `next
-    build` re-ran for 71 s — **not** a `FULL TURBO` replay, which on a lockfile change would
-    have meant the graph never rebuilt — and `/calendar` rendered real DB rows on a `:3100`
-    prod build; **and** `next dev --turbopack` first-compiled clean on `:3106`. The dev check
-    is not ceremony: `load-jsconfig` feeds `next dev` too, and the gate never starts a dev
-    server, so a dev-only alias regression would reach every consumer unobserved.
-  - **This bump lifted the TypeScript-7 re-gate above** — `experimental.useTypeScriptCli` is now
-    in a *stable* release. **Corrected 2026-08-02** in its own pass with its own evidence (the
-    installed artifact + the flag's shipped docs page), deliberately not inherited from this
-    entry: see the TS7 Watch item above for what the flag costs and what still blocks a cutover.
+  schedule** (16.2.11 aged in; proven falsifiably — the exclude removed is refused on age grounds,
+  restored it succeeds). Record → [archive/WATCH_HISTORY.md#age-exclude-for-next-16211-closed-2026-07-28](archive/WATCH_HISTORY.md#age-exclude-for-next-16211-closed-2026-07-28).
+- ~~**`next` 16.2.12**~~ — **TAKEN 2026-08-02** with `@next/eslint-plugin-next` in lockstep
+  (it lives in `tooling/eslint` and needs its own `pnpm add`); neither override retired; the
+  `paths`-without-`baseUrl` alias path proven in both `next build` and `next dev`; this is the
+  bump that lifted the TS7 Next-side gate. Record → [archive/WATCH_HISTORY.md#next-16212-taken-2026-08-02](archive/WATCH_HISTORY.md#next-16212-taken-2026-08-02).
 - **Ship a real derived product end-to-end** (intent-level driver, owner-driven) — a
   real app built to completion on the template is the strongest validation of the
   "verified end-to-end" claim, **unlocks the gated B1 intake-drop row** (BACKLOG →

@@ -4,7 +4,7 @@
 
 - SDKs: `posthog-js` (client), `posthog-node` (server).
 - **Client provider:** `apps/web/src/components/observability/posthog-provider.tsx`
-  (`"use client"`), mounted in the root layout. Guarded `posthog.init()` (only when
+  (`"use client"`), mounted in `app/[locale]/layout.tsx`. Guarded `posthog.init()` (only when
   `NEXT_PUBLIC_POSTHOG_KEY` is set) and renders `children` straight through, so it's a
   transparent passthrough when unconfigured and **does not widen the RSC boundary**
   (see [../STATE.md](../STATE.md)).
@@ -77,5 +77,5 @@ that proxy `/ingest/*` → the PostHog ingestion host and `/ingest/static/*` →
 4. `pnpm --filter web remove posthog-js posthog-node`.
 5. Remove from `.env.example` + `env.ts`: `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`
    (`client` entries + `experimental__runtimeEnv` lines).
-6. Trim the CSP `connect-src` in `next.config.ts`: drop `https://*.posthog.com`. Then grep for any
+6. Trim the CSP `connect-src` in `apps/web/src/lib/csp.ts`: drop `https://*.posthog.com`. Then grep for any
    `getPostHogServer()` / `isPostHogConfigured()` feature-flag call sites and remove them.

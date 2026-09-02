@@ -26,8 +26,8 @@ The index backs the real `posts` entity: `POSTS_INDEX = "posts"`, and the
 `PostDocument` interface (`{ id, title, content }`) is a projection of a `posts` row.
 
 **Read/write split** (per [../API.md](../API.md)):
-- **Searching is a READ → tRPC.** `searchRouter.search` (`publicProcedure`, input
-  `{ query }`) in `server/trpc/routers/search.ts` returns
+- **Searching is a READ → tRPC.** `searchRouter.search` (`rateLimitedProcedure`, 20/min per IP
+  → 429; input `{ query }`, max 200 chars) in `server/trpc/routers/search.ts` returns
   `{ configured: boolean; hits: PostDocument[] }`. It degrades to empty hits —
   never a 500 — when search is unconfigured, and treats a not-yet-created index
   (`index_not_found`) as an expected empty state; any other engine error becomes a

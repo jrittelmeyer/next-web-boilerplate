@@ -117,11 +117,11 @@ new-employee onboarding a project can have. The same pages serve both.
 
 ## How good is it, really? (The audit trail)
 
-Quality claims are cheap, so this project measures itself. Sixteen separate audit
+Quality claims are cheap, so this project measures itself. Seventeen separate audit
 passes were run against a deliberately harsh standard — "how does this compare to
 the best available starter kit imaginable?" — scoring every feature area out of
 100. The scores across the audits ran **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 →
-99.35 → 100 → 100 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4**, with each gap found feeding a to-do
+99.35 → 100 → 100 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4 → 99.3**, with each gap found feeding a to-do
 list that was then worked to completion. The audit reports themselves are
 preserved in the repository.
 
@@ -157,8 +157,15 @@ Two honest footnotes, because credibility matters more than a round number:
   sixteenth (19 August) verified those pipeline fixes landed on schedule and
   edged the score to **99.4**; its one new find — a breaking new release of a
   core dependency that no watch entry was tracking yet — became a dated watch
-  entry the same day. That is the caveat working exactly as advertised: the
-  number tracks reality, and reality includes upkeep.
+  entry the same day. The seventeenth (1 September) settled to **99.3**: it verified
+  the summer's security work landed as recorded, then priced four things nobody had
+  scored — a scheduled dependency-update job that failed every Monday in every project
+  generated from the kit (fixed the next day), a calendar test that fails for four hours
+  on the first of each month (fix scheduled before October), two milestone release notes
+  never published, and, for the first time, a deduction in the code itself: five places
+  where it breaks one of its own written rules without a recorded exception. The oldest
+  open deduction is still an outside service. That is the caveat working exactly as
+  advertised: the number tracks reality, and reality includes upkeep.
 
 The project is **feature-complete as a starting point**: the "path to 100" effort
 is finished and verified, and nothing is added to the *foundation* without a

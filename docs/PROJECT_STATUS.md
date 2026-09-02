@@ -12,7 +12,7 @@
 >
 > **New shipped work: one ≤250-char row in the summary here; full prose goes to
 > docs/archive/PHASE_HISTORY.md in the same commit. Never re-expand rows — this is
-> the seventh compaction; the append-log must not regrow.**
+> the eighth compaction; the append-log must not regrow.**
 >
 > The cap is **prospective — it binds new rows only, and never licenses rewriting a
 > historical one.** Raised 200 → 250 on 2026-08-02: 200 was set before a one-row
@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-09-02 (`browserslist` scoped override `<4.28.7`→`4.28.8` — two NEW HIGH advisories, pure advisory-database drift on an unchanged lockfile, build-tooling-only, `pnpm audit` 0 after. Also: least-privilege pass on the tracked `.claude/settings.json` — `winget install`/`docker exec` gone, `PowerShell(...)` twins added after finding the whole allowlist was inert for the primary shell, env files as `ask` because a `Read` deny also blocks Edit/Write, force-push deny verified per spelling. Also: ai-dev-kit 0.23.11 → 0.23.16 installed from a tagged worktree — 13 drifted files → 0, seven skills now `disable-model-invocation`, adapter on the `verify` block with its command string proven by running it, `docs:sanity` parity widened to deep-equality and red-proven; new standing rule: install from a tag, never a working tree. Also: fork-safe `ENABLE_RENOVATE` gate shipped — `renovate.yml` now skips silently instead of failing in generated projects, with a dated 14-day liveness check; the `next` 16.3.3 ten-entry `minimumReleaseAgeExclude` deleted on schedule. Previously: 2026-09-01, seventeenth `/project-audit` pass: **99.3/100** — the 08-26 takes, the CVE fix and v1.2.0 verified at their seams; three new rows — the fork-safe `renovate.yml` gate (B1), the month-boundary e2e fix (B2), two draft releases (B3) — and STACK.md caught stale by a reference sweep; contrarian 13/13 folded. 08-31: harness audit **93.9/100** baseline + doc audit; reports in the archive)._
+_Last updated: 2026-09-02 — doc audit (this pass), after the four 2026-09-02 commits; see the 2026-09-02 rows below and the [CHANGELOG](../CHANGELOG.md)._
 
 ## Where we are
 
@@ -32,52 +32,27 @@ _Last updated: 2026-09-02 (`browserslist` scoped override `<4.28.7`→`4.28.8` �
   CodeQL, vulnerability alerts, and a `main` ruleset that blocks force-pushes and
   branch deletion. Donation link live 2026-07-15: `.github/FUNDING.yml` + README
   point at the owner's PayPal.Me.
-- **Phases 1–2 complete & verified** — full-stack breadth (Steps 1–16) hardened to the
-  100/100 production bar (Steps 17–29); the read-only Phase B audit found **no must-fix
-  correctness bugs** ([archive/PHASE_B_AUDIT.md](archive/PHASE_B_AUDIT.md)).
-- **Phase 3 (feature depth) + the 100/100 audit backlog complete & on `main`** — Tier 0 ·
-  C1–C4 · D1–D11 · M1–M7 · P0–P3 (one compact row per group below; full prose →
-  [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md)).
-- **Phase 4 (live SaaS) COMPLETE 2026-07-05 → 07** and **Stripe (Phase 5, test mode)
-  COMPLETE 2026-07-13** — every integration in the starter is proven live against real
-  creds; the per-section provenance banners in [VERIFICATION.md](VERIFICATION.md) are the
-  record.
-- **Every locally-buildable Tier-4 row SHIPPED (2026-07-07 → 13)**, incl. A23–A32 + A13.
-  Seventeen `/project-audit` passes: **93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4 → 99.3/100** — detail: `docs/archive/PROJECT_AUDIT_*.md`
-  (latest: [PROJECT_AUDIT_2026-09-01.md](archive/PROJECT_AUDIT_2026-09-01.md) — the
-  seventeenth pass verified the 08-26 `next`/`better-auth` takes, the CVE-2026-14456
-  fix and the v1.2.0 cut at their seams (product code byte-identical since 08-19),
-  then priced three never-scored findings — `renovate.yml` fails red weekly in every
-  generated project (B1), a deterministic month-boundary e2e red diagnosed but tracked
-  nowhere (B2), two milestone releases still drafts (B3) — and a reference sweep that
-  found STACK.md's version table left stale by both takes; F1 — Renovate delivery —
-  remains the standing deduction, one owner action from closing).
-- **Real host deploy PROVEN live on Fly.io 2026-07-13** and **production email domain +
-  deliverability VERIFIED 2026-07-14** (hop-2 email-change delivery gap closed) —
-  "Deploy / live-verify closes" summary row below.
+- **Feature-complete; maintenance-only is the standing state** — since 2026-07-17, when the
+  path-to-100 program was verified at 100.0/100 ([per-row analysis](archive/PATH_TO_100_2026-07-15.md)
+  · [the verifying pass](archive/PROJECT_AUDIT_2026-07-17.md)). Phases 1–5, every Tier-4 row, the
+  live-SaaS + Stripe verification (2026-07-05 → 13; provenance banners in
+  [VERIFICATION.md](VERIFICATION.md)) and a proven Fly.io deploy (07-13) are all on `main`; the
+  per-program table below is the record. The TS7 cutover stays outside maintenance — re-gated on
+  TS 7.1: [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
+- **Seventeen `/project-audit` passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4 → 99.3/100** — reports in
+  `docs/archive/PROJECT_AUDIT_*.md`; latest
+  [PROJECT_AUDIT_2026-09-01.md](archive/PROJECT_AUDIT_2026-09-01.md) (the 2026-09-02 rows below
+  closed two of its three seeded rows; the standing deductions are B2/B3 rows plus the external
+  Renovate delivery).
 - **CI is green** (`verify` · `audit` · `e2e` · `csp-nonce` · `docker-image` · `visual`,
-  plus the variable-gated `perf` lane, deliberately unset here — the visual
-  lane is live since A28). **CodeQL is live** — `ENABLE_CODEQL` is set on the public
-  repo (code scanning is free once public); the variable gate stays so private forks
-  don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
-- **The path-to-100 program (owner decision, 2026-07-15) is BUILD-COMPLETE and VERIFIED
-  at 100.0/100** by the eighth audit pass — all 11 rows plus the #4b live Uploadthing
-  tunnel proof, closed 2026-07-17. The 13 points behind the 99.35 plateau were all
-  won't-fix/deferred classifications, re-litigated and all recoverable
-  ([per-row analysis](archive/PATH_TO_100_2026-07-15.md) ·
-  [the verifying pass](archive/PROJECT_AUDIT_2026-07-17.md)). **Maintenance-only is the
-  standing state again** — 100 is a state to maintain, and later passes re-run the
-  currency checks. The TS7 cutover stays outside it — **re-gated 2026-08-02 on TS 7.1**
-  (TS 7 ships no `tsserver`, and a cutover trial runs no editor, so it could never have
-  licensed the change):
-  [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
+  plus the variable-gated `perf` lane, deliberately unset here). **CodeQL is live** —
+  `ENABLE_CODEQL` is set on the public repo (code scanning is free once public); the variable
+  gate stays so private forks don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
-  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (**kit 0.23.11**,
-  reinstalled here 2026-08-29; 0.23.1 on 08-25 brought the 0.18–0.23 modernization line: `--hooks` adoption
-  (SessionStart/compact wiring live for the first time since 0.16.0; Stop/banned-api
-  handlers wire but stay inert, deliberately, per template-surface rules) and a
-  docs-sanity kit-wiring parity check); this repo consumes the installed `.claude/`
+  standalone [ai-dev-kit repo](https://github.com/jrittelmeyer/ai-dev-kit) (**kit 0.23.16**,
+  installed here 2026-09-02 from a **tagged worktree** — the standing rule since that day:
+  install from a tag, never a clone's working tree). This repo consumes the installed `.claude/`
   output (edit a clone, re-install — never the copies) and is **installer-route**
   ([CONVENTIONS.md → Agent tooling](context/CONVENTIONS.md#agent-tooling-claude)). Kit story:
   the kit repo's CHANGELOG + [archive/PHASE_HISTORY.md](archive/PHASE_HISTORY.md).
@@ -165,6 +140,10 @@ Per-program summary (Rows = archived row count; full rows →
 | Doc audit — 2026-08-31 | 1 | Renovate reality reconciled across STATUS/BACKLOG/MAINTENANCE/DEPLOYMENT; v1.2.0 row struck; Docker follow-up closed; archive index +2 (its rule slipped a 3rd time); kit 0.23.11 currency; `next` 16.3.4 dated; showcase re-stamped; 9 memory repairs | [archive/README.md](archive/README.md) |
 | Harness audit — 2026-08-31 | 1 | First agent-harness pass (kit 0.23.11 · CC 2.1.251): 16 authorities re-fetched, with/without eval sample (live-verify 3/3 skill-only), **93.9** baseline; template allowlist `winget`/`docker exec` grants, legacy `prodVerify` adapter, 0.23.13 `disable-model-invocation` ↔ Stop-hook clash; 4 rows, contrarian-folded | [report](archive/HARNESS_AUDIT_2026-08-31.md) |
 | Audit — 2026-09-01 | 1 | Seventeenth pass: **99.3** — 08-26 takes, CVE fix, v1.2.0 verified; new: fork-red `renovate.yml` (B1), month-boundary e2e red tracked (B2), draft releases (B3), STACK.md stale after both takes (fixed); 14 drift fixes; contrarian 13/13 folded | [report](archive/PROJECT_AUDIT_2026-09-01.md) |
+| Maintenance — 2026-09-02 (1/3) | 1 | Kit 0.23.11 → **0.23.16** from a tagged worktree (13 drifted files → 0; seven skills `disable-model-invocation`); adapter on the `verify` block, its command proven by running it; `docs:sanity` parity deep-equal, red-proven; new rule: install from a tag | [CHANGELOG](../CHANGELOG.md) |
+| Maintenance — 2026-09-02 (2/3) | 1 | `.claude/settings.json` least-privilege (`winget`/`docker exec` gone, `PowerShell(...)` twins, env files `ask`, force-push deny) · fork-safe `ENABLE_RENOVATE` gate (B1 closed) · `next` 16.3.3 age-exclude deleted on schedule | [CHANGELOG](../CHANGELOG.md) |
+| Advisory — 2026-09-02 (3/3) | 1 | `browserslist` `<4.28.7` → 4.28.8 for two NEW HIGH advisories — advisory-DB drift on an unchanged lockfile, build-tooling-only, no age-exclude needed; `pnpm audit` 0 after. Contrarian caught two draft errors pre-implementation | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Doc audit — 2026-09-02 | 1 | ~85 drift fixes across 27 docs (five verifier clusters, ~1,900 claims); MAINTENANCE's landed Watch → new `archive/WATCH_HISTORY.md` (78K → 51K chars); STATUS/BACKLOG compacted; showcase at 17 passes/99.3; 12 memory repairs; contrarian 13/13 folded | [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -178,29 +157,14 @@ deliberate cuts and *why* each was cut — including why invitations are a list 
 Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
-is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each
-landed item. Open now: **Renovate — host choice pending (2026-08-31)**: the
-self-hosted `renovate.yml` shipped (BACKLOG B1) but its first cron run failed at
-startup — the `RENOVATE_TOKEN` secret is not set — while the Mend App opened the
-first scheduled `renovate/*` PR in the repo's history the same morning (#56,
-`actions/checkout` 7.0.1, every lane green). Pick one host, then merge/close #56. The
-`ENABLE_RENOVATE` gate **shipped 2026-09-02**, so generated projects no longer inherit
-a weekly failing run — but enabling here is now a two-action close (secret **and**
-variable) with a dated 14-day liveness check · **e2e month-boundary red**
-(`3e68733` attempt 1, 09-01: deterministic 00:00–04:00Z on the 1st of each month — B2
-fix due before 10-01; MAINTENANCE Watch (c)) ·
-**`next` 16.3.4** (published 2026-08-31T20:00Z, untriaged) ages in 2026-09-07; the
-16.3.3 `minimumReleaseAgeExclude` was **deleted on schedule 2026-09-02** (gate
-unconditional again, zero exclusions).
-The 16.3.3 Docker-standalone follow-up **closed 2026-08-30** (the CVE-2026-14456 fix
-built, booted and health-checked both images locally; CI's Docker lane green since).
-⚠️ **`better-auth` 1.7.x is a breaking minor** (`latest` since 2026-08-18, 1.7.2 now)
-— plan → sign-off, not a routine take; no advisory forces the move. Ledger clear as
-of 2026-08-26: `nanoid` 3.3.18 +
-`better-auth` 1.6.30 + `next` 16.3.3 taken (exact-pinned where the dep warrants it
-— see the rows above), `main` green, `auditConfig.ignoreGhsas` `[]`, `pnpm audit`
-zero vulnerabilities / zero ignored. The verbatim history this paragraph used to carry:
-[archive/PHASE_HISTORY.md → Archived 2026-08-19](archive/PHASE_HISTORY.md#archived-2026-08-19-status-watch-and-overrides-history).
+is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each landed
+item. Open now: **Renovate host choice** (owner — `RENOVATE_TOKEN` + `ENABLE_RENOVATE` and
+drop the Mend App, or keep Mend and delete `renovate.yml`; then merge/close #56) · **e2e
+month-boundary red** (B2 — deterministic 00:00–04:00Z on the 1st; fix due before 2026-10-01) ·
+**`next` 16.3.4** ages in 2026-09-07 (pre-triaged, four riders) · **`better-auth` 1.7.x** is
+a breaking minor — plan → sign-off, no advisory forces it. Ledger clear: `ignoreGhsas` `[]`,
+`minimumReleaseAgeExclude` empty since 2026-09-02, `pnpm audit` zero. The paragraph this
+replaces is preserved in [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md#project_status-date-gated-watch-paragraph-as-of-2026-09-02).
 
 ## Fresh project on-ramp (clone → build a real app)
 

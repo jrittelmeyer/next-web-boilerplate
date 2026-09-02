@@ -9,6 +9,65 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
+### Added
+
+- **Self-hosted Renovate workflow** — `.github/workflows/renovate.yml`
+  (`renovatebot/github-action`, SHA-pinned, Monday cron + `workflow_dispatch`,
+  reusing `.github/renovate.json` unchanged) as the fallback for the Mend-hosted
+  App, whose scheduled runs had produced no PRs since 2026-07-22. Needs a
+  `RENOVATE_TOKEN` repo secret and is not yet live — the host decision is tracked
+  in [`docs/MAINTENANCE.md` → Watch](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
+
+### Changed
+
+- **ai-dev-kit 0.23.11 → 0.23.16** (13 drifted files reconciled; `install.mjs --check`
+  13 → 0). Seven workflow skills — `checkpoint`, `harness-audit`, `project-adopt`,
+  `project-audit`, `project-init`, `retro`, `tidy` — now carry
+  `disable-model-invocation`, so an agent invokes them by **reading
+  `.claude/skills/<name>/SKILL.md`**; `/name` is still the user form and `doc-audit`,
+  `dep-check`, `live-verify` are unflagged. `stop-gate` gained `asyncRewake` (inert
+  here — this repo sets no `enforcement` keys, deliberately). Both
+  `checkpoint-autorun.mjs` hooks, repo-owned and kit-owned, had their reason text
+  rewritten: they instructed an action the flag makes impossible.
+- **Install from a TAG, never the kit clone's working tree** — new standing rule in
+  [`CONVENTIONS.md` → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude),
+  adopted after the clone moved 0.23.16 → 0.23.17 *mid-session* while this bump was
+  being planned against it. `install.mjs --check` diffs against whatever the source
+  currently is, so a drifting clone makes the drift gate green by construction. A
+  `git worktree` at the tag fixes it, since `install.mjs:36` derives its kit root from
+  the script's own location. Two rehearsal rules land with it: the scratch install must
+  **omit `--global`** (that flag writes to `~/.claude/skills/`, a path not derived from
+  `--dest`), and dual-home skills need their own diff.
+- **Adapter migrated to the schema's `verify` block**, with the command string
+  **verified by running it** rather than reasoned about:
+  `pnpm --filter web start -- --port 3100` forwards the `--` literally into the
+  script's argv, and `next start` then reads `--port` as the project directory
+  (*"Invalid project directory provided"*). The no-`--` form serves on :3100 with
+  `/api/health` returning `database: up`. The broken string — which a real
+  with-skill run copied verbatim on 2026-08-31 — is corrected in `prodVerify` too
+  rather than left as the fallback. `harnessAudit.kitSourcePath` deliberately **not**
+  added: its only legal value is a machine-local absolute path, and the adapter is
+  tracked template surface.
+- **`docs:sanity`'s kit-wiring parity check now deep-compares every key** instead of an
+  enumerated `event/matcher/handler/if/timeout` list, which had let kit 0.23.12's new
+  `asyncRewake` through silently. Red-proven: deleting that key fails the check.
+  Naming it as a sixth field would have repeated the defect for the seventh.
+- **`renovate.yml` is fork-safe** — the job is gated on `ENABLE_RENOVATE`
+  (job-level `if`, the `ENABLE_CODEQL`/`ENABLE_VISUAL` convention). It was the one
+  workflow that *failed* rather than skipped when unconfigured: `scripts/init-app.mjs`
+  ships it verbatim, so every project generated from the template inherited a Renovate
+  run that died at startup for want of `RENOVATE_TOKEN` every Monday — forever in a
+  private repo, which never hits GitHub's 60-day schedule auto-disable. Unset, the lane
+  now skips silently. Enabling takes **two** actions (the secret *and*
+  `gh variable set ENABLE_RENOVATE --body true`), so a dated 14-day liveness check
+  ships alongside it in [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md) — a forgotten
+  variable would otherwise reproduce the same silent zero-PR observable that hid the
+  Mend failure for six weeks.
+- **`pnpm-workspace.yaml`'s `vite` comment corrected** — it claimed "we never import
+  vite directly", but `packages/ui` declares `vite: 8.0.16` as a devDependency for
+  Storybook's `@storybook/react-vite` builder. The override is what keeps that direct
+  pin and every transitive copy in lockstep; both sites bump together.
+
 ### Security
 
 - **`browserslist` scoped override, `<4.28.7` → `4.28.8`** — two NEW HIGH advisories
@@ -47,75 +106,12 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   despite being absent from the documented list, while shell sourcing and
   `node fs.readFileSync` are not; and a git `pre-push` hook cannot police force-pushes
   at all, since it never sees the flags.
-
-### Changed
-
-- **ai-dev-kit 0.23.11 → 0.23.16** (13 drifted files reconciled; `install.mjs --check`
-  13 → 0). Seven workflow skills — `checkpoint`, `harness-audit`, `project-adopt`,
-  `project-audit`, `project-init`, `retro`, `tidy` — now carry
-  `disable-model-invocation`, so an agent invokes them by **reading
-  `.claude/skills/<name>/SKILL.md`**; `/name` is still the user form and `doc-audit`,
-  `dep-check`, `live-verify` are unflagged. `stop-gate` gained `asyncRewake` (inert
-  here — this repo sets no `enforcement` keys, deliberately). Both
-  `checkpoint-autorun.mjs` hooks, repo-owned and kit-owned, had their reason text
-  rewritten: they instructed an action the flag makes impossible.
-- **Install from a TAG, never the kit clone's working tree** — new standing rule in
-  [`CONVENTIONS.md` → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude),
-  adopted after the clone moved 0.23.16 → 0.23.17 *mid-session* while this bump was
-  being planned against it. `install.mjs --check` diffs against whatever the source
-  currently is, so a drifting clone makes the drift gate green by construction. A
-  `git worktree` at the tag fixes it, since `install.mjs:36` derives its kit root from
-  the script's own location. Two rehearsal rules land with it: the scratch install must
-  **omit `--global`** (that flag writes to `~/.claude/skills/`, a path not derived from
-  `--dest`), and dual-home skills need their own diff.
-- **Adapter migrated to the schema's `verify` block**, with the command string
-  **verified by running it** rather than reasoned about:
-  `pnpm --filter web start -- --port 3100` forwards the `--` literally into the
-  script's argv, and `next start` then reads `--port` as the project directory
-  (*"Invalid project directory provided"*). The no-`--` form serves on :3100 with
-  `/api/health` returning `database: up`. The broken string — which a real
-  with-skill run copied verbatim on 2026-08-31 — is corrected in `prodVerify` too
-  rather than left as the fallback. `harnessAudit.kitSourcePath` deliberately **not**
-  added: its only legal value is a machine-local absolute path, and the adapter is
-  tracked template surface.
-- **`docs:sanity`'s kit-wiring parity check now deep-compares every key** instead of an
-  enumerated `event/matcher/handler/if/timeout` list, which had let kit 0.23.12's new
-  `asyncRewake` through silently. Red-proven: deleting that key fails the check.
-  Naming it as a sixth field would have repeated the defect for the seventh.
-
-- **`renovate.yml` is fork-safe** — the job is gated on `ENABLE_RENOVATE`
-  (job-level `if`, the `ENABLE_CODEQL`/`ENABLE_VISUAL` convention). It was the one
-  workflow that *failed* rather than skipped when unconfigured: `scripts/init-app.mjs`
-  ships it verbatim, so every project generated from the template inherited a Renovate
-  run that died at startup for want of `RENOVATE_TOKEN` every Monday — forever in a
-  private repo, which never hits GitHub's 60-day schedule auto-disable. Unset, the lane
-  now skips silently. Enabling takes **two** actions (the secret *and*
-  `gh variable set ENABLE_RENOVATE --body true`), so a dated 14-day liveness check
-  ships alongside it in [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md) — a forgotten
-  variable would otherwise reproduce the same silent zero-PR observable that hid the
-  Mend failure for six weeks.
-- **`pnpm-workspace.yaml`'s `vite` comment corrected** — it claimed "we never import
-  vite directly", but `packages/ui` declares `vite: 8.0.16` as a devDependency for
-  Storybook's `@storybook/react-vite` builder. The override is what keeps that direct
-  pin and every transitive copy in lockstep; both sites bump together.
-
-### Security
-
 - **`minimumReleaseAgeExclude` emptied on schedule** — the ten-entry dated exception
   taken 2026-08-26 for `next` 16.3.3 (+ `@next/env` and the 8 `@next/swc-*` lockstep
   binaries), covering the AVIF-decode RCE GHSA-2xp9-vwfh-vxw4 / GHSA-g89c-p67h-r497, is
   removed: 16.3.3 (published 2026-08-25T15:32Z) cleared the 7-day gate unaided at
   15:32Z on 2026-09-01. The install-time age gate is unconditional again with zero
   exclusions. Third use of the park/exit machinery, third clean exit on schedule.
-
-### Added
-
-- **Self-hosted Renovate workflow** — `.github/workflows/renovate.yml`
-  (`renovatebot/github-action`, SHA-pinned, Monday cron + `workflow_dispatch`,
-  reusing `.github/renovate.json` unchanged) as the fallback for the Mend-hosted
-  App, whose scheduled runs had produced no PRs since 2026-07-22. Needs a
-  `RENOVATE_TOKEN` repo secret and is not yet live — the host decision is tracked
-  in [`docs/MAINTENANCE.md` → Watch](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
 
 ## [1.2.0] — 2026-08-30
 

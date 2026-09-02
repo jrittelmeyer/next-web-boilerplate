@@ -112,8 +112,8 @@ explicit per-calendar visibility setting rather than on membership alone.
 
 ## There is no platform-admin override, and that is the decision
 
-Every sibling authority module has one — `lib/rbac`'s `requireAdmin`, the documented
-one-liner in `deletePost` — so silence here would read as a gap for someone to helpfully
+Sibling authority surfaces have one — `lib/rbac`'s `requireAdmin` (reached for by
+`reindexPosts`), the org-admin arm in `deletePost` — so silence here would read as a gap for someone to helpfully
 fill in. It is stated in the code, in `schema/calendars.ts`, and again here for the same
 reason.
 

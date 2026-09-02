@@ -150,7 +150,8 @@ become:
   whether you're starting fresh or migrating something that already runs. The
   two newest, added as the kit grew: a *harness-audit* skill (checks that the
   agent tooling itself — skills, hooks, context files — is still current
-  against the moving ecosystem) and a *retro* skill (turns a painful session
+  against the moving ecosystem; its first run, at the end of August 2026, scored this
+  repository's tooling 93.9 out of 100 and seeded four improvements) and a *retro* skill (turns a painful session
   into durable process improvements instead of a repeated mistake).
   Think of them as standard operating procedures — the difference between an
   organization that has process and one that has habits. And in July 2026 the
@@ -173,8 +174,8 @@ become:
 
 ## The audit loop: AI checking AI, with receipts
 
-The quality scores from [Chapter 1](01-the-big-picture.md) (sixteen passes,
-93 → 100 → 99.4, against a "best imaginable starter kit" bar) come from the audit
+The quality scores from [Chapter 1](01-the-big-picture.md) (seventeen passes,
+93 → 100 → 99.3, against a "best imaginable starter kit" bar) come from the audit
 skill above: a full sweep that re-verifies documentation claims against actual
 code, scores every feature area, and emits a prioritized backlog — which was
 then worked to completion through the same plan → sign-off → build loop, and
@@ -190,8 +191,10 @@ held 100 days later, but the tenth and eleventh (later that month) settled to
 99.65 — not from any regressed code (the product was byte-for-byte identical) but
 because the moving bar caught up with four maintenance gaps, all closed the same
 week. The twelfth pass verified three of them shut and recovered the score to
-**99.9**, leaving one open deduction that is a fault in an outside service rather
-than in the code. The score tracks reality rather than flattering it — which is
+**99.9**; the oldest deduction still open today is that same outside service, and the
+seventeenth pass (September 2026) added the first deduction against the code itself —
+five places where it breaks one of its own written rules without a recorded exception.
+The score tracks reality rather than flattering it — which is
 the whole point. Yes, it's the same AI
 tooling grading its own homework — [Chapter 1](01-the-big-picture.md) flags
 that honestly — but each pass is *evidence-based* (claims checked against

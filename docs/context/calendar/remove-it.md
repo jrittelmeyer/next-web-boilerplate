@@ -74,7 +74,7 @@ the first deploy.
 7. **Delete the E2E**: `e2e/calendar.spec.ts`, `e2e/calendar-invites.spec.ts`,
    **`e2e/calendar-invitations.spec.ts`**, the calendar helpers at the bottom of
    `e2e/support/db.ts` (`setUserTimeZone`, `seedCalendar`, `seedEvents`, `seedAttendee`,
-   `getAttendeeStatus`, **`getEventIdByTitle`**, **`getInvitationJobs`**,
+   `getAttendeeStatus`, `getAttendeeUserId`, **`getEventIdByTitle`**, **`getInvitationJobs`**,
    **`deleteInvitationJobs`**, **`getEventReminders`** (Phase 5),
    `deleteCalendarFixtures`), and the calendar block inside
    `a11y.spec.ts`'s signed-in test (it was added **in place** rather than as a new `test()`,

@@ -16,7 +16,8 @@ pattern**, not the older bare `sentry.client.config.ts` trio. All files live und
 - `instrumentation.ts` — `register()` dynamically imports the server/edge config by
   `process.env.NEXT_RUNTIME`; exports `onRequestError = Sentry.captureRequestError`
   (captures errors in RSCs / route handlers / Server Actions).
-- `next.config.ts` — wrapped with `withSentryConfig(nextConfig, {...})`.
+- `next.config.ts` — the export is `withSentryConfig(withNextIntl(nextConfig), {...})`: Sentry
+  wraps the next-intl-wrapped config.
 
 **Graceful when unconfigured:** every `Sentry.init` passes
 `dsn: process.env.NEXT_PUBLIC_SENTRY_DSN` + `enabled: Boolean(dsn)`. With the DSN unset
@@ -28,7 +29,7 @@ the `@sentry/cli` binary — the build succeeds without observability creds.
 > **Turbopack note:** Next 16's `next build` uses Turbopack. The Sentry SDK's
 > *runtime* instrumentation works regardless of bundler, and source-map **upload now
 > works under Turbopack too** — supported and on by default since
-> `@sentry/nextjs@10.13` and `next@15.4.1` (this repo: 10.59 / 16.2.12), via Next's
+> `@sentry/nextjs@10.13` and `next@15.4.1` (this repo: 10.59 / 16.3.3), via Next's
 > `runAfterProductionCompile` hook, so **no webpack build is needed**. The boilerplate
 > default uploads nothing (no
 > token); to enable upload, set `SENTRY_AUTH_TOKEN` (+ `SENTRY_ORG`/`SENTRY_PROJECT`)
@@ -47,12 +48,13 @@ the `@sentry/cli` binary — the build succeeds without observability creds.
 1. Delete (under `apps/web/src/`) `instrumentation-client.ts`, `instrumentation.ts` (Sentry is
    its only content), `sentry.server.config.ts`, `sentry.edge.config.ts`.
 2. Unwrap `next.config.ts`: remove the `import { withSentryConfig }` line and `export default
-   nextConfig` directly instead of `withSentryConfig(nextConfig, {…})`.
+   withNextIntl(nextConfig)` instead of `withSentryConfig(withNextIntl(nextConfig), {…})` — keep
+   the next-intl wrapper.
 3. `pnpm --filter web remove @sentry/nextjs`; optionally drop the `@sentry/cli` entry from
    `pnpm-workspace.yaml` `allowBuilds`.
 4. Remove from `.env.example` + `env.ts`: `NEXT_PUBLIC_SENTRY_DSN` (`client` entry +
    `experimental__runtimeEnv` line), `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`.
-5. Trim the CSP `connect-src` in `next.config.ts`: drop `https://*.sentry.io`.
+5. Trim the CSP `connect-src` in `apps/web/src/lib/csp.ts`: drop `https://*.sentry.io`.
 
 ## OpenTelemetry export (opt-in, path-to-100 #9)
 

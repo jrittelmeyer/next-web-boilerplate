@@ -155,8 +155,8 @@ gold-standard `script-src`, build with `CSP_MODE=nonce`** — locally
   `cacheComponents: false`, and enables `experimental.useCache` so the D4
   `"use cache"` showcase (`post-stats.tsx` + the `updateTag("posts")` busts)
   **keeps compiling and caching** — `useCache` merely *defaults from*
-  `cacheComponents`; an explicit `true` survives it being off (verified in the
-  installed Next 16.2.12). Nonce mode gives up the static/PPR posture, **not** the
+  `cacheComponents`; an explicit `true` survives it being off (verified on
+  Next 16.2.12 in 2026-07; unchanged through 16.3.3). Nonce mode gives up the static/PPR posture, **not** the
   function cache. It also bakes the resolved mode into every bundle via `env:
   { CSP_MODE: … }`.
 
@@ -211,7 +211,7 @@ endpoint: https://o<org>.ingest.<region>.sentry.io/api/<projectId>/security/?sen
 
 Optional `&sentry_environment=…` / `&sentry_release=…` query params tag the events.
 
-### The recipe (`next.config.ts`)
+### The recipe (`lib/csp.ts` + `next.config.ts`)
 
 Ship **both** reporting mechanisms — that's deliberate, not redundancy:
 
@@ -225,53 +225,71 @@ Browsers that support `report-to` **ignore** `report-uri`, so nothing
 double-reports. And **no `connect-src` change is needed**: violation reports are
 exempt from the page's own CSP by spec (observed live — see below).
 
-```diff
- const isDev = process.env.NODE_ENV !== "production";
+The directive list lives in `apps/web/src/lib/csp.ts` (one list for the static header
+and `proxy.ts`'s nonce policy), so the reporting directive goes **there** — it then
+reaches both modes — while the `Reporting-Endpoints` response header stays in
+`next.config.ts`'s `securityHeaders` (emitted in both modes; only the CSP entry is
+mode-gated). `csp.ts` must stay dependency-free (it is bundled into the Edge proxy),
+so the endpoint derivation reads `process.env.NEXT_PUBLIC_SENTRY_DSN` directly — a
+`NEXT_PUBLIC_*` value, inlined at build time exactly like `CSP_MODE`.
 
+```diff
+ // apps/web/src/lib/csp.ts
+ export const cspMode: CspMode = process.env.CSP_MODE === "nonce" ? "nonce" : "static";
++
 +// CSP violation reporting (opt-in, Sentry): derive the project's security
 +// endpoint from the DSN — https://<key>@o<org>.ingest.<region>.sentry.io/<proj>
 +// → <origin>/api/<proj>/security/?sentry_key=<key>. Violation reports are
 +// exempt from the page's own CSP, so connect-src needs no change. Unset DSN →
-+// null → the CSP below stays byte-identical to the no-reporting build.
-+const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
-+let cspReportEndpoint: string | null = null;
-+if (sentryDsn) {
++// null → the policy below stays byte-identical to the no-reporting build.
++export const cspReportEndpoint: string | null = (() => {
++  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
++  if (!dsn) return null;
 +  try {
-+    const dsn = new URL(sentryDsn);
-+    const projectId = dsn.pathname.slice(1);
-+    if (dsn.username && projectId) {
-+      cspReportEndpoint = `${dsn.protocol}//${dsn.host}/api/${projectId}/security/?sentry_key=${dsn.username}`;
-+    }
++    const url = new URL(dsn);
++    const projectId = url.pathname.slice(1);
++    return url.username && projectId
++      ? `${url.protocol}//${url.host}/api/${projectId}/security/?sentry_key=${url.username}`
++      : null;
 +  } catch {
-+    // Malformed DSN — env.ts (z.url()) fails the boot before this is reachable.
++    return null; // malformed DSN — env.ts (z.url()) fails the boot before this is reachable
 +  }
-+}
++})();
 ```
 
 ```diff
-   "object-src 'none'",
-+  // Both reporting mechanisms: report-uri for pre-2026 Safari/Firefox,
-+  // report-to (+ the Reporting-Endpoints header below) for modern browsers —
-+  // browsers that support report-to ignore report-uri, so nothing double-reports.
-+  ...(cspReportEndpoint ? [`report-uri ${cspReportEndpoint}`, "report-to csp-endpoint"] : []),
-   ...(isDev ? [] : ["upgrade-insecure-requests"]),
- ].join("; ");
+ // apps/web/src/lib/csp.ts — inside buildCsp()
+     "object-src 'none'",
++    // Both reporting mechanisms: report-uri for pre-2026 Safari/Firefox,
++    // report-to (+ the Reporting-Endpoints header in next.config.ts) for modern
++    // browsers — browsers that support report-to ignore report-uri, so nothing
++    // double-reports.
++    ...(cspReportEndpoint ? [`report-uri ${cspReportEndpoint}`, "report-to csp-endpoint"] : []),
+     ...(isDev ? [] : ["upgrade-insecure-requests"]),
+   ].join("; ");
 ```
 
 ```diff
+ // apps/web/next.config.ts
+-import { buildCsp, cspMode } from "./src/lib/csp";
++import { buildCsp, cspMode, cspReportEndpoint } from "./src/lib/csp";
+ …
  const securityHeaders = [
-   { key: "Content-Security-Policy", value: contentSecurityPolicy },
-+  // Names the "csp-endpoint" group the CSP's report-to directive references.
+   ...(cspMode === "nonce" ? [] : [{ key: "Content-Security-Policy", value: buildCsp() }]),
++  // Names the "csp-endpoint" group the CSP's report-to directive references —
++  // emitted in both modes, since proxy.ts's nonce policy references it too.
 +  ...(cspReportEndpoint
 +    ? [{ key: "Reporting-Endpoints", value: `csp-endpoint="${cspReportEndpoint}"` }]
 +    : []),
    { key: "X-Frame-Options", value: "DENY" },
 ```
 
-With `NEXT_PUBLIC_SENTRY_DSN` unset both spreads contribute nothing — the built
+With `NEXT_PUBLIC_SENTRY_DSN` unset all three spreads contribute nothing — the built
 header set is **byte-identical** to the shipped one (verified by diffing
-`.next/routes-manifest.json` between builds), the same graceful-degradation
-posture as every other integration.
+`.next/routes-manifest.json` between builds, 2026-07), the same graceful-degradation
+posture as every other integration. *Recipe retargeted at the `lib/csp.ts` split and
+type-checked 2026-09-02; the runtime verification below is the 2026-07 record — the
+mechanism is unchanged, only the file the directive list lives in moved.*
 
 > ✅ **Verified** 2026-07-05 (local prod build, both wire formats) · 2026-07-06→07 (live against a real Sentry DSN — delivery 200 + report→event confirmed). Full log incl. the re-verifier gotchas (Sentry silently drops localhost-page reports; the modern `report-to` uploader never fires under browser automation; a self-hosted/non-`sentry.io` DSN also needs a `connect-src` entry): [VERIFICATION_PROVENANCE.md](../archive/VERIFICATION_PROVENANCE.md#securitymd--csp-violation-reporting-verification-archived-2026-07-23).
 
@@ -356,8 +374,9 @@ Rate limiting is **two layers**, by design — don't conflate them:
    Postgres** (`rateLimit.storage: "database"`, the `rate_limit` table) so they hold
    across instances / a restart. Canonical rules + caps: [auth/core.md](auth/core.md).
 2. **Everything else** — the broader **app-level** limiter in
-   `apps/web/src/lib/rate-limit.ts`, applied to the Stripe webhook, a
-   sample Server Action, and a tRPC middleware. This section covers (2).
+   `apps/web/src/lib/rate-limit.ts`, applied to the Stripe + Resend webhooks, every
+   state-changing Server Action, the upload middleware, the `/rsvp` read and two tRPC
+   procedure variants. This section covers (2).
 
 ### The utility
 
@@ -379,12 +398,19 @@ Prefix the identifier per surface (`webhook:${ip}`, `checkout:${userId}`,
 | Surface | File | Keyed by | Limit | On exceed |
 | --- | --- | --- | --- | --- |
 | Stripe webhook | `app/api/stripe/webhook/route.ts` | client IP (`webhook:noip` when unresolved) | 100 / min (**20 / min** for the `noip` bucket) | HTTP **429** + `RateLimit-*` / `Retry-After` (before signature work) |
+| Resend webhook | `app/api/resend/webhook/route.ts` | client IP (`resend-webhook:noip` when unresolved) | 100 / min (**20 / min** `noip`) | HTTP **429** + the same headers (before signature work) |
 | Checkout + billing-portal actions | `server/actions/billing.ts` | `session.user.id` | 5 / min each | typed `{ error }` (Server Actions can't set a 429 status) |
+| Data-export action | `server/actions/data-export.ts` | `userId` | 5 / min | typed `{ error }` |
 | Post create / update actions | `server/actions/post.ts` | `session.user.id` | 10 / min each | typed `{ error }` |
-| `reindexPosts` action | `server/actions/post.ts` | `session.user.id` | 3 / min (full-table scan + bulk index write — see [services/meilisearch.md](services/meilisearch.md)) | typed `{ error }` |
-| Upload middleware + `deleteUpload` action | `lib/uploadthing.ts` / `server/actions/uploads.ts` | `session.user.id` | 10 / min each | `UploadThingError` (surfaces in `onUploadError`) / typed `{ error }` |
+| `reindexPosts` action (admin) | `server/actions/post.ts` | `session.user.id` | 3 / min (full-table scan + bulk index write — see [services/meilisearch.md](services/meilisearch.md)) | typed `{ error }` |
+| Upload + avatar-upload middleware · `deleteUpload` · avatar-remove action | `lib/uploadthing.ts` · `server/actions/uploads.ts` · `server/actions/avatar.ts` | `session.user.id` | 10 / min each | `UploadThingError` (surfaces in `onUploadError`) / typed `{ error }` |
+| Preferences-update action · notification test action | `server/actions/user.ts` · `server/actions/notification.ts` | `session.user.id` | 20 / min · 10 / min | typed `{ error }` |
+| Calendar create / update / delete | `server/actions/calendar.ts` | `session.user.id` | 10 / min each | typed `{ error }` |
+| Calendar event create / update / respond / delete / recurrence-date | `server/actions/calendar.ts` | `session.user.id` | 20 / min each | typed `{ error }` |
+| External RSVP respond (`respondByToken`) | `server/actions/calendar-rsvp.ts` | client IP | 20 / min | typed `{ error }` |
+| `/rsvp` view read (`loadRsvpView`) | `server/calendar/rsvp.ts` | attendee id | 60 / min | `null` → the page's "unavailable" state, still HTTP 200 (a token never yields a status — see [calendar/invitations.md](calendar/invitations.md)) |
 | tRPC (`rateLimitedProcedure`) | the public reads — `post.list` (`routers/post.ts`) + `search.search` (`routers/search.ts`) | `trpc:${path}:${ip}` | 20 / min | `TRPCError TOO_MANY_REQUESTS` → HTTP **429** + `RateLimit-*` / `Retry-After` |
-| tRPC (`userRateLimitedProcedure`) | the authenticated abusable reads — `post.listMine` (`routers/post.ts`) | `trpc:${path}:user:${session.user.id}` | 20 / min | `TRPCError TOO_MANY_REQUESTS` → HTTP **429** + `RateLimit-*` / `Retry-After` |
+| tRPC (`userRateLimitedProcedure`) | the authenticated abusable reads — `post.listMine` (`routers/post.ts`), `calendar.list` / `range` / `byId` / `listInvites` (`routers/calendar.ts`) | `trpc:${path}:user:${session.user.id}` | 20 / min | `TRPCError TOO_MANY_REQUESTS` → HTTP **429** + `RateLimit-*` / `Retry-After` |
 
 The webhook limit is deliberately generous: genuine Stripe deliveries come from a
 small set of IPs and can burst, so 100/min passes normal traffic while capping a
@@ -392,7 +418,7 @@ spoofed flood.
 
 ### 429 response headers
 
-Every surface that returns an HTTP **429** from this limiter — the Stripe webhook and
+Every surface that returns an HTTP **429** from this limiter — the Stripe and Resend webhooks and
 the tRPC `rateLimitedProcedure` / `userRateLimitedProcedure` — emits the standard set
 via one helper, `rateLimitHeaders()` (`lib/rate-limit.ts`), so the contract is defined once:
 
@@ -409,7 +435,7 @@ The tRPC path can't set headers from the thrown `TRPCError`, so the middleware s
 the blocked bucket on `ctx.rateLimit.blocked` and the fetch handler's `responseMeta`
 (`app/api/trpc/[trpc]/route.ts`) translates it into headers after the batch resolves.
 
-The **Server-Action** surfaces (checkout / post / upload) return a typed `{ error }`
+The **Server-Action** surfaces (checkout / post / upload / calendar / preferences / export) return a typed `{ error }`
 rather than a 429 — a Server Action can't set a response status — so they carry no
 headers by design; the client renders the typed error.
 
@@ -433,8 +459,8 @@ which already emits its own **`X-Retry-After`** header on a 429 — not the
 
 **No CSP / allowlist change for Upstash:** the limiter's REST calls are
 **server-to-server** (the module is `server-only`), never browser fetches — CSP only
-governs browser content sources. This is why the app-level limiter touches no `next.config.ts` CSP
-directive. (If a future limiter ran in the *browser*, you'd add its origin to
+governs browser content sources. This is why the app-level limiter touches no CSP
+directive (`lib/csp.ts`). (If a future limiter ran in the *browser*, you'd add its origin to
 `connect-src` and to the per-SaaS table above.)
 
 **Failure mode:** if Upstash is unreachable the limiter **fails open** (allows the
@@ -451,7 +477,7 @@ exposes two resolvers:
   then `x-real-ip`, else `null`. Use it when the caller wants to branch on "no IP."
 - `clientKeyFromHeaders(headers): string` — best-effort; the IP, or the constant
   `"unknown"` when none. **Fail-safe**: an unknown source shares one bucket rather than
-  bypassing the limit. Used by the public tRPC reads.
+  bypassing the limit. Used by the public tRPC reads and the external RSVP action.
 
 **These headers are only reliable behind a proxy that sets (and sanitizes) them.** On
 the platforms you'd actually deploy this on, the edge/load-balancer sets them for you:

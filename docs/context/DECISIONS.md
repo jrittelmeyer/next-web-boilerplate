@@ -227,7 +227,8 @@ written; the probe results are what changed three of them.
 - **Auth schema is hand-maintained**, not CLI-generated: `@better-auth/cli` (1.4.x)
   lags `better-auth` core (1.6.x). The hand-written schema is validated by the live
   auth flow exercising every table.
-- **OAuth providers are env-gated:** GitHub + Google are wired in `auth.ts` but each
+- **OAuth providers are env-gated:** GitHub + Google are built by `socialProviders()` in
+  `packages/auth/src/config.ts` (consumed by `auth.ts`) and each
   registers only when its `*_CLIENT_ID`/`*_CLIENT_SECRET` pair is present, so the
   boilerplate runs on email/password alone.
 - **Next 16 renamed `middleware` → `proxy`:** the gate lives in `apps/web/src/proxy.ts`
@@ -280,7 +281,9 @@ written; the probe results are what changed three of them.
   dependency, and its published always-pass/always-fail dummy keys make the flow verifiable
   end-to-end locally with no account. **Conditional registration is mandatory, not
   stylistic** — the plugin registers only when `TURNSTILE_SECRET_KEY` is set (with an empty
-  secret it 500s the protected endpoints), **placed last before `nextCookies()`** (a
+  secret it 500s the protected endpoints), **placed after every inference-contributing
+  plugin** — the conditional `captcha()` spread is followed only by the conditional
+  `magicLink()` spread and then `nextCookies()` (a
   conditional spread erases later plugins' `$Infer` augmentations). The widget is a small
   hand-rolled wrapper over Cloudflare's `api.js` (no new dependency). Detail:
   [auth/factors.md](auth/factors.md) → Bot protection / CAPTCHA.
@@ -309,13 +312,17 @@ written; the probe results are what changed three of them.
   in [STATE.md](STATE.md); the litmus test is "if two tabs disagreed about this value, is
   that a bug?" → yes = server state, no = client state.
 - **Zustand has no provider** — stores are plain hooks (`apps/web/src/stores/*-store.ts`, one per
-  file, `use<Name>Store`). Nothing was added to `layout.tsx`; the only provider remains
-  `TRPCReactProvider`. Example store `useUiStore` holds `sidebarOpen` — deliberately generic
+  file, `use<Name>Store`). Nothing was added to the layout for it (at the time the only
+  provider was `TRPCReactProvider`; `app/[locale]/layout.tsx` has since gained
+  ThemeProvider → PostHogProvider → TRPCReactProvider → NextIntlClientProvider for other
+  features — none of them a store provider). Example store `useUiStore` holds `sidebarOpen` — deliberately generic
   scaffold, not app logic.
 - **Middleware decision:** `devtools` is wired but **dev-only** (`enabled: NODE_ENV ===
   "development"`), with action labels as the 3rd `set` arg; it ships in `zustand/middleware` (no
-  new dep). `persist` is **intentionally NOT wired** — `localStorage` rehydration causes an SSR
-  hydration mismatch — and is instead documented as an opt-in `skipHydration` recipe in STATE.md.
+  new dep). `persist` was **initially not wired** — `localStorage` rehydration causes an SSR
+  hydration mismatch — and documented as an opt-in `skipHydration` recipe; **superseded
+  2026-07-16 (path-to-100 #2):** `ui-store` now ships `persist` with `skipHydration: true`
+  and a post-paint `<StoreRehydration/>` (STATE.md → Middleware decision).
   `immer` not installed (optional peer); spread-`set` is enough for the scaffold.
 - **`create<UiState>()(...)` is curried on purpose** — the empty `()` after the type arg is
   required for middleware to infer state under `strict` (Zustand+TS quirk, noted in STATE.md).
@@ -420,9 +427,10 @@ written; the probe results are what changed three of them.
   `server-only`) so the preview/render tooling can import them, and carry a default export for
   the `email` CLI. Deps: `resend`, `@react-email/components`, `@react-email/render` (the last
   also satisfies resend's `@react-email/render: *` peer).
-- **Resend client constructs eagerly but lazily-safe** — `new Resend(process.env.RESEND_API_KEY)`
-  only warns (doesn't throw) on a missing key; failures surface on `.send()`. Same posture as the
-  `@repo/db` pool, so importing `@repo/email` for types/templates is cheap and key-free.
+- **Resend client is a lazy `getResend()` singleton** — `new Resend(undefined)` **throws** in
+  resend v6, so constructing at import time would break the keyless build; the client is built on
+  the first configured send and failures surface on `.send()` (`packages/email/src/client.ts`).
+  Importing `@repo/email` for types/templates stays cheap and key-free.
 - **Email env is optional, not required** (`RESEND_API_KEY`, `EMAIL_FROM` both `.optional()` in
   `env.ts`) — the boilerplate must build/run without an email provider, mirroring the env-gated
   OAuth providers. Packages read `process.env.*`; validation stays at the app boundary.
@@ -436,7 +444,7 @@ written; the probe results are what changed three of them.
   app-local server-only lazy guarded singleton (`apps/web/src/lib/search.ts`), **not** in
   `@repo/db` (kept pure) — same posture as `lib/stripe.ts`. Reads go through a **public tRPC
   query** (degrades to empty hits; since made `rateLimitedProcedure`); writes (indexing) go
-  through an **auth-gated Server Action**. Client class is `Meilisearch` (not `MeiliSearch`).
+  through an **admin-gated Server Action** (`requireAdmin()`, since 2026-07-16). Client class is `Meilisearch` (not `MeiliSearch`).
   **Superseded:** the original example indexed a hardcoded constant; the real `posts` entity
   now indexes its own rows on DB write (`server/actions/post.ts`). See
   [services/meilisearch.md](services/meilisearch.md).

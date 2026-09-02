@@ -82,7 +82,9 @@ A minimal demo lives at `/billing` (+ `/billing/success`), public scaffold like
 `/state`; delete it when a real billing surface lands.
 
 **Webhook handler** (`api/stripe/webhook/route.ts`):
-- `export const runtime = "nodejs"` — the sync `constructEvent` needs Node crypto.
+- Runs on the Node runtime by default — there is **no** `runtime` segment export
+  (`cacheComponents` bans segment config); the sync `constructEvent` needs Node crypto, so never
+  move this route to Edge.
 - Read the **raw body** with `await req.text()` (never the parsed JSON — the
   signature is computed over the exact bytes) and the `stripe-signature` header.
 - `getStripe().webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)` —
@@ -130,7 +132,7 @@ enqueues the same job with `organizationId` for the log line).
 meaningless and a userless-but-active subscription is a reconciliation hazard) and
 **keep the Stripe customer** (invoice/tax history survives). Both are one-line swaps —
 `subscriptions.update(id, { cancel_at_period_end: true })` for period-end,
-`customers.del(customerId)` to also delete the customer. See AUTH.md → Danger zone.
+`customers.del(customerId)` to also delete the customer. See [auth/account-page.md → Danger zone](../auth/account-page.md).
 
 **Entitlement gating — reading the table back.** The webhook
 *writes* the `subscriptions` table; `apps/web/src/lib/subscription.ts` *reads* it
@@ -180,7 +182,7 @@ Offline (no keys), the verification path can be exercised with
 4. Remove from `.env.example` + `env.ts`: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
    `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (drop both its `client` entry **and** its
    `experimental__runtimeEnv` line).
-5. Trim the CSP in `next.config.ts`: drop `https://js.stripe.com` (`script-src`),
+5. Trim the CSP in `apps/web/src/lib/csp.ts`: drop `https://js.stripe.com` (`script-src`),
    `https://js.stripe.com https://hooks.stripe.com` (`frame-src`), `https://api.stripe.com`
    (`connect-src`).
 6. Grep for links to `/billing` + `/premium` and remove them. Then unwire the

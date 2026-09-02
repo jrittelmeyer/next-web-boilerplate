@@ -85,8 +85,8 @@ above — not runtime instrumentation.)
 one helper. `lib/site.ts` (server-only) is the single source of truth — `siteUrl`
 (`SITE_URL ?? BETTER_AUTH_URL`, so the canonical public/SEO origin can differ from the
 app/auth origin; localhost fallback for `SKIP_ENV_VALIDATION` builds) and `siteConfig`
-(name/description/url) — consumed by the root `layout.tsx`
-metadata (`metadataBase`, title template, OpenGraph + Twitter cards) and the metadata
+(name/description/url) — consumed by `app/[locale]/layout.tsx`'s
+`generateMetadata` (`metadataBase`, title template, OpenGraph + Twitter cards) and the metadata
 routes: `robots.ts` (allow-all + sitemap pointer), `sitemap.ts`, `manifest.ts`
 (PWA manifest, slate `theme_color`), `opengraph-image.tsx` (a `next/og` `ImageResponse`
 1200×630 card — no font file, no binary asset), `twitter-image.tsx` (re-exports the OG
@@ -103,7 +103,7 @@ as they land.
 Drizzle schema definitions, database client, and migration files. Imported by `apps/web` and any future apps. No business logic — pure data access.
 
 ### `packages/auth` → `@repo/auth`
-Better Auth configuration, session type definitions, and auth utilities. The Next.js middleware lives in `apps/web` but imports session helpers from here. Imports `@repo/email` to send verification / password-reset / welcome emails from the Better Auth lifecycle callbacks (see [auth/core.md](auth/core.md)).
+Better Auth configuration, session type definitions, and auth utilities. The Next.js proxy (`apps/web/src/proxy.ts`) does **not** import from here — it reads the session cookie via `better-auth/cookies` (`getSessionCookie`) so the Edge bundle never pulls in the server config. Imports `@repo/email` to send verification / password-reset / welcome emails from the Better Auth lifecycle callbacks (see [auth/core.md](auth/core.md)).
 
 ### `packages/email` → `@repo/email`
 React Email templates plus the (lazy) Resend client and the send helpers. Imported server-side only. Templates are React components that render to HTML. Imports `@repo/db` for the suppression consult: `send()` checks `isEmailSuppressed()` before every configured send (see [services/resend.md](services/resend.md)).
@@ -164,7 +164,7 @@ signed-in and signed-out branches of each action are reachable.
 | `/billing` (+ `/billing/success`) | Stripe hosted Checkout via `createCheckoutSession` |
 | `/premium` | Subscription **gating** — `hasActiveSubscription(userId)` reads the local `subscriptions` table (no Stripe call); three states (signed-out → sign-in · unentitled → `/billing` · entitled → content) |
 | `/uploads` | Uploadthing `UploadButton` (auth-gated `imageUploader`) |
-| `/search` | Meilisearch read (tRPC `search.search`) + a "Reindex posts from database" write (`reindexPosts`) over the real `posts` index |
+| `/search` | Meilisearch read (tRPC `search.search`) + an admin-gated "Reindex posts from database" write (`reindexPosts`) over the real `posts` index |
 | `/observability` | Sentry capture · BetterStack log · PostHog event + server flag |
 | `/admin` | RBAC guard pattern — **gated** (not public), in the `(dashboard)` shell: proxy cookie-redirect + `requireAdmin()` authoritative check (404 for non-admins) + a user list whose roles are changed via the `setUserRole` Server Action (`RoleControl`, optimistic `useOptimistic`), behind an admin-only nav link |
 | `/posts` | The example domain entity end-to-end **and** the Cache Components / PPR showcase: a synchronous page renders the static card shell while `<PostStats>` (a `"use cache"` count — `cacheLife("minutes")`/`cacheTag("posts")`), the session-aware composer, and the cursor-paginated `post.list` feed (RSC-prefetched + hydrated, `useInfiniteQuery` + "Load more") each stream in behind their own `<Suspense>`. `createPost`/`updatePost`/`deletePost` index/de-index on write, do **optimistic** create/edit/delete + rollback, and `updateTag("posts")` to bust the cached count (read-your-own-writes) |
@@ -220,7 +220,8 @@ switcher** (`components/organization/org-switcher.tsx`) creates/switches orgs fr
 `(dashboard)` page. **`/accept-invitation/[id]`** (`app/[locale]/(auth)/accept-invitation/[id]/page.tsx`,
 rendered at that path — the `(auth)` group is a layout boundary only) is a **public**
 surface: it must work signed-out, so it is deliberately **not** under the `(dashboard)` gate
-or the proxy matcher. Both are driven by Better Auth's reactive org hooks; full walk-through
+or any `PROTECTED_PREFIXES` entry in `proxy.ts` (the matcher itself is next-intl's broad one and
+does see it — the prefix list is what keeps it public). Both are driven by Better Auth's reactive org hooks; full walk-through
 in [auth/organizations.md](auth/organizations.md).
 
 **The calendar is real, not scaffold** — the largest worked feature in the tree, and the
@@ -238,8 +239,8 @@ model to copy for a multi-table domain. Five routes, only three of them under th
 `/rsvp/[token]` is the repo's only **public, token-authenticated** surface: an external
 guest with no account ever answers there signed out. The handler exchanges the stateless
 HMAC token for an httpOnly cookie and redirects, so the token never reaches PostHog,
-Sentry, `Referer` or history — and it must stay outside the proxy matcher and the
-`(dashboard)` gate. Full model, ACL and API:
+Sentry, `Referer` or history — and it must stay outside `proxy.ts`'s `PROTECTED_PREFIXES` and the
+`(dashboard)` gate (the proxy's matcher does match it; the prefix list is what exempts it). Full model, ACL and API:
 [calendar/](calendar/model.md) · [acl](calendar/acl.md) · [invitations](calendar/invitations.md).
 
 **`/admin` and `/admin/audit`** (`[locale]/(dashboard)/admin/…`) are the RBAC surfaces —
@@ -261,10 +262,10 @@ Convention: Vitest owns `*.test.*`, Playwright owns `*.spec.*`. See
 
 - `apps/web` → can import from any `@repo/*` package
 - `packages/*` → can import from `@repo/validators` and `@repo/ui`; never from `apps/web`
-- `packages/db` → no other `@repo/*` imports (pure Drizzle + Postgres)
+- `packages/db` → no other `@repo/*` **runtime** imports (pure Drizzle + Postgres); its integration tests devDepend on `@repo/calendar` to prove the real `deriveEventInstants` output satisfies the CHECK (see `packages/db/AGENTS.md`)
 - `packages/auth` → may import from `@repo/db` (needs DB adapter), `@repo/email` (sends verification / reset emails from Better Auth callbacks), and `@repo/jobs` (enqueues the welcome email). One-directional: `@repo/email`/`@repo/jobs` never import `@repo/auth`, so there's no cycle.
-- `packages/email` → may import from `@repo/validators` (email data schemas) and `@repo/db` (the `email_suppressions` consult; acyclic — `@repo/db` imports no `@repo/*` package)
-- `packages/jobs` → may import `@repo/email` (job handlers send email); exposes only `enqueue()` + the job contract to the app. **Both `apps/web` and `@repo/auth` are producers** — the app one is the intended shape (the package's index names it), and it is one-directional, so still no cycle. It reaches `@repo/db`/`@repo/email` and nothing in `apps/web`, which is why anything needing the app's env (an RSVP signing key) is computed at **enqueue** time and travels in the payload
+- `packages/email` → may import from `@repo/validators` (email data schemas) and `@repo/db` (the `email_suppressions` consult; acyclic — `@repo/db` has no runtime `@repo/*` dependency)
+- `packages/jobs` → may import `@repo/email` (job handlers send email); exposes only `enqueue()` + the job contract to the app. **Both `apps/web` and `@repo/auth` are producers** — the app one is the intended shape (the package's index names it), and it is one-directional, so still no cycle. It reaches `@repo/db`, `@repo/email`, `@repo/calendar` and `@repo/validators` — and nothing in `apps/web`, which is why anything needing the app's env (an RSVP signing key) is computed at **enqueue** time and travels in the payload
 - `packages/observability` → no `@repo/*` imports; never imported by anything (standalone scripts)
 - `tooling/*` → no runtime imports; config files only
 

@@ -43,8 +43,9 @@ for its Server Actions + `lib/*` logic. The historical blocker was that importin
 most app modules pulls in `@/env`, which validates environment variables at import and
 throws without `DATABASE_URL`/`BETTER_AUTH_SECRET` — and the server-only `lib/*` modules
 import `server-only`, which throws on import outside a React Server build. The config
-clears both with two `resolve.alias` entries — `@/env` → a test stub (`src/test/env.stub.ts`)
-and `server-only` → an empty module (`src/test/empty.ts`) — so any app module can be
+clears both with `resolve.alias` entries — `@/env` → a test stub (`src/test/env.stub.ts`),
+`server-only` → an empty module (`src/test/empty.ts`), plus `next/navigation`, `next/link`
+and the `@/` path alias, with `next-intl` inlined via `server.deps.inline` — so any app module can be
 unit-tested; the individual tests additionally mock the heavy workspace deps (`@repo/db`,
 `@repo/auth`, search, rate-limit, `next/*`). Coverage is scoped to just the tested modules
 (see [Coverage](#coverage)). The app also owns the **E2E** tests (`apps/web/e2e/`).
@@ -65,7 +66,8 @@ The `@repo/ui` config has two extra settings worth knowing:
 | E2E (browser flows) | `apps/web/e2e/` | `*.spec.ts` | Playwright |
 
 The split is enforced by convention: **Vitest owns `*.test.*`**, **Playwright
-owns `*.spec.*`**. Each Vitest config `include`s only `src/**/*.test.*`, so the
+owns `*.spec.*`**. Each unit Vitest config `include`s only `src/**/*.test.*` (the db + jobs
+integration configs add `__tests__/integration/**/*.test.ts`), so the
 app's Playwright specs are never picked up by a unit run.
 
 ## What to Test
@@ -115,7 +117,7 @@ app's Playwright specs are never picked up by a unit run.
   `@react-email/render` calls the send path uses (`render(el)` / `render(el, { plainText:
   true })`), asserting non-empty output carrying the dynamic content (name, links). A
   companion `send.test.tsx` locks the graceful-degradation contract (unconfigured →
-  `{ error }`, never throws) across all eight helpers. Catches a broken template that
+  `{ error }`, never throws) across twelve of the thirteen `send*` helpers. Catches a broken template that
   would otherwise only surface via a manual `email export`.
 
 **Test with Playwright:**
@@ -157,7 +159,7 @@ app's Playwright specs are never picked up by a unit run.
   rather than through the helper. TOTP verify is stateless in the plugin (no used-code
   tracking), so replaying the same-window code across enroll and sign-in is safe.
 - Accessibility — `e2e/a11y.spec.ts`: the public pages (`/`, `/posts`, `/login`,
-  `/signup`) plus the signed-in `/account`, `/admin`, and `/admin/audit` surfaces (see
+  `/signup`) plus the signed-in `/account`, `/admin`, `/admin/audit` and `/calendar` surfaces (see
   [Accessibility](#accessibility-axe)).
 - Audit read UI — `e2e/admin-audit.spec.ts`: seeds a target user + a future-dated
   `role_changed` audit row, then asserts `/admin/audit` renders it with the `LEFT JOIN`-resolved
@@ -215,10 +217,11 @@ Each test-bearing package owns its `coverage` block (provider `v8`, reporters
 | Package | Thresholds | Why |
 | --- | --- | --- |
 | `@repo/validators` | 100% lines/functions/branches/statements | Pure logic — exactly what a coverage gate should hold, and the package already sits at 100%. A new untested schema fails the gate, which is the point. |
+| `@repo/calendar` | 100% lines/functions/branches/statements | `all: true` over `src/**/*.ts` — the zero-dependency time core is gated at 100 on all four metrics (`packages/calendar/AGENTS.md`); a new module joins the run automatically. |
 | `@repo/ui` | 11% lines/statements, 10% functions, 27% branches | A regression **floor**, not a target — most components are shadcn primitives we intentionally don't unit-test ("don't test trivial presentational UI", above), so the `all: true` aggregate sits low by design and each new untested primitive erodes it slightly. The floor tracks the value the `button`/`empty-state`/`theme-toggle`/`textarea` smokes hold, with a small margin; re-base it only on an actual breach (lowering a passing floor weakens the guard). |
-| `web` | 95% lines/functions/statements, 88% branches | Coverage `include` is an **explicit file list** in `apps/web/vitest.config.ts` (the source of truth — a scoped set of `server/actions/*` + `lib/*` + `server/notifications/create.ts` + `server/realtime/{sse,notification-bus}.ts` + `stores/ui-store.ts`, e.g. `auth-redirect`, `data-export`, `consent`, `audit-format`, `i18n-metadata`) — not all of `src/`, which would force a near-zero floor. ⚠️ **A newly-tested `lib/*` / `server/actions/*` file is NOT measured until its path is added to that list** (the tell: the coverage totals don't move). They sit at 100% statements/lines/functions and ~91% branches (the gap is defensive `?? fallback` paths a failed Zod parse / non-Error throw can't reach); the floor sits a few points under, so a real drop fails CI without churning on those. |
+| `web` | 95% lines/functions/statements, 88% branches | Coverage `include` is an **explicit file list** in `apps/web/vitest.config.ts` (the source of truth — a scoped set of `server/actions/*` + `lib/*` + `server/notifications/create.ts` + `server/realtime/{sse,notification-bus}.ts` + `server/calendar/{invitations,rsvp}.ts` + `stores/ui-store.ts`, e.g. `auth-redirect`, `data-export`, `consent`, `audit-format`, `i18n-metadata`) — not all of `src/`, which would force a near-zero floor. ⚠️ **A newly-tested `lib/*` / `server/actions/*` file is NOT measured until its path is added to that list** (the tell: the coverage totals don't move). They sit at 100% statements/lines/functions and ~91% branches (the gap is defensive `?? fallback` paths a failed Zod parse / non-Error throw can't reach); the floor sits a few points under, so a real drop fails CI without churning on those. |
 | `@repo/auth` | 90% lines/functions/statements, 80% branches | `include` is scoped to `src/config.ts` — the pure env-driven config helpers extracted from `auth.ts`, sitting at 100% on all four metrics under the house 90/90/80/90 floor. `auth.ts` itself is only the `betterAuth()` composition over DB/email/jobs wiring; every E2E auth flow exercises it, so it stays out of the unit gate. |
-| `@repo/email` | 95% lines/functions/statements, 90% branches | `include` is scoped to `src/templates/**` — the render smoke tests take every template to HTML **and** plain-text (both prop-set and default-prop passes), sitting at 100% on all four metrics; the floor sits a few points under so adding an untested template trips the gate. `send.tsx`/`client.ts` (the Resend + `server-only` bootstrap, the email analog of jobs' `boss.ts`) stay out of the `include` — smoke-tested only for graceful degradation. |
+| `@repo/email` | 95% lines/functions/statements, 90% branches | `include` is scoped to `src/templates/**/*.tsx` + `src/format.ts` — the render smoke tests take every template to HTML **and** plain-text (both prop-set and default-prop passes), sitting at 100% on all four metrics; the floor sits a few points under so adding an untested template trips the gate. `send.tsx`/`client.ts` (the Resend + `server-only` bootstrap, the email analog of jobs' `boss.ts`) stay out of the `include` — smoke-tested only for graceful degradation. |
 | `@repo/jobs` | 90% lines/functions/statements, 80% branches | `include` is scoped to the pure parts — `handlers/**` + `queues.ts` + `reminders/sweep.ts` (the job contract, handler logic and the pure sweep loop, `@repo/email` mocked); the pg-boss I/O bootstrap (`boss.ts`/`worker.ts`) is left to the `test:integration` round-trip in the `e2e` lane. |
 
 > ⚠️ **`pnpm test` does not run `@repo/db`'s integration suite** — that package has no
@@ -335,8 +338,8 @@ live tz database rather than blocking them — see
 [calendar/model.md](calendar/model.md#derived-instants-are-enforced-by-arithmetic-not-by-tzdata)
 for why blocking would be the wrong answer.
 
-⚠️ **`VACUUM (ANALYZE)` runs before the suppression query's `EXPLAIN`, and the comment
-says why.** Measured: on a freshly-inserted, `ANALYZE`d-but-not-`VACUUM`ed table the
+⚠️ **`VACUUM (ANALYZE)` runs before the suppression query's `EXPLAIN` (in
+`calendar-recurrence.test.ts`), and the comment says why.** Measured: on a freshly-inserted, `ANALYZE`d-but-not-`VACUUM`ed table the
 planner still chooses `Index Only Scan` — but reports **563 heap fetches instead of 0**,
 because the visibility map is unset. Without the `VACUUM` the assertion would pin a node
 type whose defining property is absent, which is worse than not asserting it. Buffer
@@ -426,7 +429,7 @@ adjudicate the divergence against RFC 5545 and record the citation in the fixtur
 **`@repo/jobs` follows the same split:**
 - **Unit** (`verify` lane, DB-free) — `vitest.config.ts` covers the pure parts: the job
   contract (`queues.ts`) and the handlers with their providers mocked (`@repo/email`,
-  `@sentry/node` for the DLQ consumer). Coverage is scoped to `handlers/**` + `queues.ts`;
+  `@sentry/node` for the DLQ consumer). Coverage is scoped to `handlers/**` + `queues.ts` + `reminders/sweep.ts`;
   the pg-boss I/O bootstrap is left to the integration tests.
 - **Integration** (`e2e` lane, real Postgres) — `vitest.integration.config.ts` (its own
   `test:integration` script, like `@repo/db`) spins up pg-boss against the DB in **isolated
@@ -606,9 +609,9 @@ expect(blocking).toEqual([]);
 ```
 
 It covers the public pages — the DB-free landing page, the form-bearing `/posts` page,
-`/login`, and `/signup` — plus the signed-in `/account`, `/admin`, and `/admin/audit`
+`/login`, and `/signup` — plus the signed-in `/account`, `/admin`, `/admin/audit` and `/calendar`
 surfaces. The signed-in test bootstraps ONE
-user (sign-up + out-of-band `promoteToAdmin`, the admin.spec pattern) and scans the three
+user (sign-up + out-of-band `promoteToAdmin`, the admin.spec pattern) and scans the four
 pages via full-page `goto`, keeping the file — which
 runs first alphabetically, ahead of the `account-*` signups — to a single hit on Better
 Auth's 5-per-60s sign-up limiter. `@axe-core/playwright` is pinned exact (`4.11.3`)

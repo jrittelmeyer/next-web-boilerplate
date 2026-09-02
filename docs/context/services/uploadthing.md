@@ -78,7 +78,7 @@ the worked **`next/image`** example — remote uploads render through the optimi
 `next.config.ts` allows the Uploadthing served host in `images.remotePatterns`
 (`{ protocol: "https", hostname: "*.ufs.sh", pathname: "/f/*" }` — files are served at
 `https://<appId>.ufs.sh/f/<key>`). The browser only loads the same-origin
-`/_next/image?url=…` proxy (`img-src 'self'`); Next fetches `ufs.sh` **server-side**, so
+`/_next/image?url=…` proxy (covered by `img-src 'self'`; the directive also allows `https:`); Next fetches `ufs.sh` **server-side**, so
 this needs **no CSP change** (see [../SECURITY.md](../SECURITY.md)). The thumbnail is a fixed
 40 px square, so it uses explicit `width`/`height` (a variable-size gallery would use
 `fill` + a sized container instead). Avatars stay on the `@repo/ui` `Avatar` primitive's
@@ -88,7 +88,8 @@ The optimizer itself is pinned keylessly by `e2e/image-optimization.spec.ts`: a
 committed `/public` fixture (a local asset needs no `remotePatterns` entry)
 must come back from `/_next/image` genuinely transformed — PNG→webp, an IHDR-verified
 resize, and a 400 for any non-allowlisted remote `url=` — so a green e2e lane proves the
-sharp engine (version currently forced by a pnpm override, see
+sharp engine (resolved naturally since the 2026-08-26 `next` 16.3.3 take — the earlier pnpm
+override was retired once next's own pin reached `^0.35.3`, see
 [MAINTENANCE.md → Watch items](../../MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done))
 still transforms, not merely installs.
 
@@ -137,8 +138,8 @@ gone; the worker calls `UTApi.deleteFiles(keys)` (idempotent — safe under
 pg-boss's at-least-once retries). **Graceful when unconfigured:** with no
 `UPLOADTHING_TOKEN` the handler completes with a "skipped — N file(s) left in
 storage" log instead of retrying forever (nothing a retry could fix; in practice
-files only exist if a previously-configured run wrote them). See AUTH.md → Danger
-zone.
+files only exist if a previously-configured run wrote them). See
+[auth/account-page.md → Danger zone](../auth/account-page.md).
 
 **Remove it** (self-contained — but note avatars ride on it):
 1. Delete (under `apps/web/src/`) `lib/uploadthing.ts`, `lib/uploadthing-client.ts`,
@@ -148,8 +149,8 @@ zone.
    `schema/index.ts`, then `db:generate` a drop migration.
 3. `pnpm --filter web remove uploadthing @uploadthing/react`.
 4. Remove `UPLOADTHING_TOKEN` from `.env.example` + `env.ts`.
-5. Trim `next.config.ts`: drop `https://*.uploadthing.com https://*.ingest.uploadthing.com` from
-   the CSP `connect-src`, **and** the `images.remotePatterns` `*.ufs.sh` entry.
+5. Trim `apps/web/src/lib/csp.ts`: drop `https://*.uploadthing.com https://*.ingest.uploadthing.com`
+   from the CSP `connect-src`; **and** in `next.config.ts` the `images.remotePatterns` `*.ufs.sh` entry.
 6. Unhook the cleanup job: remove the `delete-uploads` handler + queue entry in `@repo/jobs` and
    the `afterDelete` enqueue in `packages/auth/src/auth.ts`.
 7. **Avatars ride on this integration** (`avatarUploader`): also remove `server/actions/avatar.ts`,

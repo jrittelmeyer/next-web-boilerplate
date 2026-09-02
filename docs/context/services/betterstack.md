@@ -33,7 +33,8 @@ BetterStack creds. Example scaffold: `apps/web/src/server/actions/observability.
   dashboard (legacy `LOGTAIL_URL`). The logger needs **both** token and URL set.
 
 **Swap, don't delete — `log` is the app's logging façade.** `@logtail/next`'s `log` is imported
-across the server layer (`server/trpc/trpc.ts`, every `server/actions/*`, the Uploadthing router)
+across the server layer (`server/trpc/trpc.ts`, most `server/actions/*` — admin, avatar, billing,
+calendar, observability, post, uploads — and the Uploadthing router)
 and already **falls back to `console`** when the env is unset:
 1. **Just stop shipping logs:** leave `BETTER_STACK_SOURCE_TOKEN`/`BETTER_STACK_INGESTING_URL`
    unset (the default) — `log` is console-only. Nothing to remove.

@@ -293,8 +293,8 @@ The `@repo/jobs` worker is a **separate long-lived process**, not part of the we
   Nothing about deploying `web` requires the worker.
 - **Schema:** pg-boss creates + owns the `pgboss` schema itself — no Drizzle migration, no
   `db:migrate` step for it (see [DATABASE.md](DATABASE.md)).
-- **Recurring jobs:** the worker also registers a cron schedule on boot (the
-  `cleanup-expired-verifications` housekeeping job — see [services/jobs.md](services/jobs.md)). Run **one**
+- **Recurring jobs:** the worker also registers two cron schedules on boot (the
+  `cleanup-expired-verifications` housekeeping job and the `*/5` `calendar-reminder-sweep` — see [services/jobs.md](services/jobs.md)). Run **one**
   worker for scheduling: pg-boss's cron scheduler fires each tick once across all `supervise:true`
   workers (it's not per-instance), so multiple workers won't double-fire, but the schedule only
   advances while at least one worker is up.
@@ -629,7 +629,7 @@ Automated dependency updates tuned to the repo's posture:
   scheduled run since 2026-07-22 produced zero `renovate/*` branches; a manual
   trigger's job log showed the run killed mid-`pnpm update` with no error
   emitted, consistent with a Community/Free-tier resource ceiling for a
-  14-package monorepo. Full diagnosis:
+  12-package monorepo. Full diagnosis:
   `docs/archive/renovate-b1-diagnosis-plan.md`. **Status 2026-09-02: committed and
   gated, not live** — the lane is variable-gated on `ENABLE_RENOVATE` (job-level `if`,
   the `ENABLE_CODEQL` pattern), unset here and in every generated project, so it

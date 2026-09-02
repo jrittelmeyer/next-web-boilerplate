@@ -93,20 +93,28 @@ in any browser.
 > the whole repository is structured so that AI coding assistants can work on it as
 > effectively as human engineers — which is also how it was built, under human
 > direction and review, to a quality score that peaked at a perfect 100 out of 100
-> (passes 8–9) and stands at 99.4 across sixteen increasingly demanding audits, the
-> dip-and-recovery coming not from regressed code but from the bar widening — one
-> audit graded the brand-new calendar feature for the first time, found it good but
-> not yet perfect, and the next audit verified that five of the issues it raised were
-> fixed within two days — exactly the way the project says its own audits are allowed
-> to behave.
+> (passes 8–9) and stands at 99.3 across seventeen increasingly demanding audits, the
+> dips coming not from regressed code but from the bar widening — one audit graded the
+> brand-new calendar feature for the first time, found it good but not yet perfect, and
+> the next verified that five of the issues it raised were fixed within two days; the
+> latest priced a scheduled update job that failed in every copy of the kit, a test that
+> fails for four hours on the first of each month, and five places where the code breaks
+> one of its own written rules — exactly the way the project says its own audits are
+> allowed to behave.
 
 ---
 
-*Current as of 2026-08-31. The audit score stands at 99.4 — it peaked at a
-perfect 100 across sixteen passes; the calendar feature that entered at 85 now
-sits at 95.5, and the newest pass's only new find was a bookkeeping gap (a
-breaking new release of one building block that nothing was tracking yet),
-turned into a dated watch entry the same day.*
+*Current as of 2026-09-02. The audit score stands at 99.3 — it peaked at a
+perfect 100 across seventeen passes; the calendar feature that entered at 85 now
+sits at 95.5. The newest pass verified the summer's security work landed as recorded,
+then took a tenth of a point back for four things nobody had scored: a scheduled
+dependency-update job that failed every Monday in every project generated from the kit
+(fixed the next day), a calendar test that fails for four hours on the first of each
+month (fix scheduled before October), two milestone release notes never published, and —
+a first — five places where the code breaks one of its own written rules without a
+recorded exception. The oldest open deduction is still an outside service, not this code.
+The same week, a first audit of the AI tooling itself — the skills, hooks and context
+files the agent works from — scored it 93.9 out of 100 and seeded four improvements.*
 
 *The newest big piece is a **calendar**: the project grew a full
 scheduling feature, built and shipped in six planned stages. It handles the

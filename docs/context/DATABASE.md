@@ -39,7 +39,7 @@ packages/db/
 - Indexes: declared in the schema file (array-form third argument to `pgTable`).
   Postgres auto-indexes only PKs and `unique()` columns — FK referencing columns
   and query-shaped composites are on you (see "Indexes" under the posts example)
-- One domain per schema file; import and combine in `src/index.ts`
+- One domain per schema file; import and combine in `src/schema/index.ts` (re-exported by `src/index.ts`)
 
 ## Example Schema — `posts` (the copy-me entity, Step 28)
 
@@ -342,12 +342,13 @@ the client (redacted in the data export too). See
 
 `schema/audit-log.ts` is the queryable trail behind the security-relevant events that
 previously only emitted a fire-and-forget log line. Written by the shared, best-effort
-`recordAuditEvent()` helper (`@repo/db`) from four sites — an admin role change, and
+`recordAuditEvent()` helper (`@repo/db`) from eight sites — the five admin actions (role
+change, ban, unban, impersonate, stop impersonating) and the Better Auth lifecycle hooks for
 account deletion / email-change completion / sign-in (see
 [auth/rbac-admin.md](auth/rbac-admin.md) for the event table).
 
 - **`audit_log`** — `id` (uuid PK), `action` (text, typed to an `AuditAction` union in the
-  helper but **not** a `pgEnum`, same one-line-to-extend posture as `user.role`), `actor_id`
+  schema file (`schema/audit-log.ts`) but **not** a `pgEnum`, same one-line-to-extend posture as `user.role`), `actor_id`
   (who did it), `target_id` (who it happened to), `metadata` (**jsonb** — action-specific:
   `{ oldRole, newRole }`, `{ oldEmail, newEmail }`, `{ ip, userAgent }`), `created_at`.
 - **`actor_id` / `target_id` are FK-less `text` — deliberately.** An audit record must
@@ -378,7 +379,7 @@ See [services/resend.md](services/resend.md) (bounce & complaint handling).
 - **`email_suppressions`** — `id` (uuid PK), `email` (text, **NOT NULL UNIQUE**,
   stored lowercase — the helpers normalize, so the unique constraint doubles as the
   lookup index), `reason` (text, typed to the `SuppressionReason` union
-  `bounce | complaint | provider` in the helper but **not** a `pgEnum` — the
+  `bounce | complaint | provider` in the schema file but **not** a `pgEnum` — the
   `audit_log.action` posture), `detail` (the provider's message), `email_id` (the
   Resend send id), `created_at` (FIRST suppressed), `last_event_at` (latest event —
   the upsert refreshes reason/detail/email_id/last_event_at and keeps created_at).

@@ -247,7 +247,7 @@ them by accident.
 | `sequence` | every writer whose edit changes the emitted `.ics` | A conforming client **ignores** a re-import whose `UID` matches and whose `SEQUENCE` has not risen, so an update that does not bump ships an inert attachment |
 | `reask_at` | a time-or-recurrence change, and a `splitSeries` cut that moved the time | Lets "re-ask the guests" be a *derived* comparison (`responded_at < reask_at`) instead of a write that overwrites their stored answer and comment |
 
-Full rules, including which of the six writers owes which email:
+Full rules, including which of the seven writers owes which email:
 [invitations.md](invitations.md).
 
 ### Override integrity — one rule of three is enforced by the database

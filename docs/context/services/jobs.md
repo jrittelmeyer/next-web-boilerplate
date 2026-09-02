@@ -62,7 +62,7 @@ knowing before you copy either as a pattern:
   `boss.schedule` runs once at boot with no re-registration path, so the *first* reminder a
   deployment ever created would never fire until someone restarted the worker. The sweep's
   first statement is an `EXISTS` check that returns immediately, so an unused install pays a
-  trivial query per tick — ~288 `pgboss.job` rows/day, which pg-boss archives.
+  trivial query per tick — ~288 `pgboss.job` rows/day, which pg-boss's retention deletes on schedule.
 - **Its clock is Postgres's.** One `SELECT now()` per tick supplies every bound, so multiple
   workers agree and a host/container clock skew cannot shift the window.
 
@@ -109,13 +109,14 @@ policy** (`worker.ts` sets only `deadLetter` — see below) — verified against
 **Lifecycle / where they land:** `created → active → completed` on success; a throw goes to
 `retry` (attempts left) then **`failed`** (exhausted) — and, since the DLQ wiring below, an
 exhausted job is also **copied to the `failed-jobs` dead-letter queue**. Failed jobs are
-**not deleted** — they stay in `pgboss.job` (rolling into `pgboss.archive` after the ~14-day
-retention), so a failure is inspectable, never silent:
+**not deleted immediately** — they stay in `pgboss.job` for the queue's retention (`keep_until` =
+14 days by default; pg-boss 12 has **no archive table** — expired rows are deleted after a further
+`deleteAfterSeconds`, 7 days), so a failure is inspectable, never silent:
 ```sql
 -- recent failures (the worker console shows handler errors live; this is the durable record)
 SELECT name, state, retry_count, created_on, completed_on, output
 FROM pgboss.job WHERE state = 'failed' ORDER BY created_on DESC LIMIT 50;
--- older ones roll into pgboss.archive (same columns)
+-- rows past keep_until are removed by pg-boss's maintenance; export what you need before then
 ```
 `boss.getJobById(queue, id)` fetches one job's row/state programmatically.
 
@@ -154,7 +155,7 @@ the exhausted-job → DLQ round trip on real Postgres. To **reprocess** a dead-l
      three email helpers together.
 3. Remove the CI step `pnpm --filter @repo/jobs test:integration` from `.github/workflows/ci.yml`
    (e2e lane).
-4. Remove the `worker` service (+ its heartbeat env) from `docker/docker-compose.prod.yml`.
+4. Remove the `worker` service from `docker/docker-compose.prod.yml`.
 5. Optionally `DROP SCHEMA pgboss CASCADE` in your database (pg-boss created it). No env vars to
    remove — it reused `DATABASE_URL`.
 6. **Trade-off:** the welcome email + upload cleanup become **inline/synchronous** again — simpler,
