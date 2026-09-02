@@ -43,6 +43,20 @@ jobs:
   renovate:
     name: Self-hosted Renovate
     runs-on: ubuntu-latest
+    # Variable-gated, the ENABLE_CODEQL / ENABLE_VISUAL / ENABLE_PERF pattern (job-level
+    # `if`, same as codeql.yml and ci.yml's visual/perf/csp-nonce lanes) — UNSET here
+    # until the Renovate host decision lands, and unset in every generated project.
+    # Without the gate this is the ONE workflow that FAILS rather than skips when
+    # unconfigured: with no RENOVATE_TOKEN the action exits at startup, so a project
+    # created from this template inherits a red run every Monday until its owner adds a
+    # PAT or deletes this file (a private repo never hits GitHub's 60-day schedule
+    # auto-disable, so it fails forever). Forks are unaffected — GitHub disables
+    # `schedule` in forks by default. Unset, this lane skips silently; it does not fail.
+    # To enable, BOTH steps are required — add the secret, then:
+    #   gh variable set ENABLE_RENOVATE --body true
+    # `secrets` cannot be read in a job-level `if`, so the token itself can't be the
+    # condition — hence a variable. See MAINTENANCE.md → Automation on a fork / new repo.
+    if: ${{ vars.ENABLE_RENOVATE == 'true' }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 

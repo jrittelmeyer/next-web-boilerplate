@@ -9,6 +9,33 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
+### Changed
+
+- **`renovate.yml` is fork-safe** — the job is gated on `ENABLE_RENOVATE`
+  (job-level `if`, the `ENABLE_CODEQL`/`ENABLE_VISUAL` convention). It was the one
+  workflow that *failed* rather than skipped when unconfigured: `scripts/init-app.mjs`
+  ships it verbatim, so every project generated from the template inherited a Renovate
+  run that died at startup for want of `RENOVATE_TOKEN` every Monday — forever in a
+  private repo, which never hits GitHub's 60-day schedule auto-disable. Unset, the lane
+  now skips silently. Enabling takes **two** actions (the secret *and*
+  `gh variable set ENABLE_RENOVATE --body true`), so a dated 14-day liveness check
+  ships alongside it in [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md) — a forgotten
+  variable would otherwise reproduce the same silent zero-PR observable that hid the
+  Mend failure for six weeks.
+- **`pnpm-workspace.yaml`'s `vite` comment corrected** — it claimed "we never import
+  vite directly", but `packages/ui` declares `vite: 8.0.16` as a devDependency for
+  Storybook's `@storybook/react-vite` builder. The override is what keeps that direct
+  pin and every transitive copy in lockstep; both sites bump together.
+
+### Security
+
+- **`minimumReleaseAgeExclude` emptied on schedule** — the ten-entry dated exception
+  taken 2026-08-26 for `next` 16.3.3 (+ `@next/env` and the 8 `@next/swc-*` lockstep
+  binaries), covering the AVIF-decode RCE GHSA-2xp9-vwfh-vxw4 / GHSA-g89c-p67h-r497, is
+  removed: 16.3.3 (published 2026-08-25T15:32Z) cleared the 7-day gate unaided at
+  15:32Z on 2026-09-01. The install-time age gate is unconditional again with zero
+  exclusions. Third use of the park/exit machinery, third clean exit on schedule.
+
 ### Added
 
 - **Self-hosted Renovate workflow** — `.github/workflows/renovate.yml`

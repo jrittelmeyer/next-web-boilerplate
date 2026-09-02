@@ -630,11 +630,16 @@ Automated dependency updates tuned to the repo's posture:
   trigger's job log showed the run killed mid-`pnpm update` with no error
   emitted, consistent with a Community/Free-tier resource ceiling for a
   14-package monorepo. Full diagnosis:
-  `docs/archive/renovate-b1-diagnosis-plan.md`. **Status 2026-08-31: committed but
-  not yet live** — the first scheduled run failed at startup because the
-  `RENOVATE_TOKEN` secret has not been added, and the Mend App (still installed)
-  opened PR #56 that same morning; which host stays is an open owner decision
-  (`BACKLOG.md` B1 · `MAINTENANCE.md` → Watch). Never run both. Needs a repo secret
+  `docs/archive/renovate-b1-diagnosis-plan.md`. **Status 2026-09-02: committed and
+  gated, not live** — the lane is variable-gated on `ENABLE_RENOVATE` (job-level `if`,
+  the `ENABLE_CODEQL` pattern), unset here and in every generated project, so it
+  *skips silently* instead of failing at startup for want of the secret. Which host
+  stays is still an open owner decision (`BACKLOG.md` B1 · `MAINTENANCE.md` → Watch);
+  the Mend App remains installed and opened PR #56 on 2026-08-31. Never run both.
+  Enabling takes **two** actions — add the secret, then
+  `gh variable set ENABLE_RENOVATE --body true`; setting only the secret leaves the
+  lane skipping silently, which is why `MAINTENANCE.md` carries a dated 14-day
+  liveness check. Needs a repo secret
   `RENOVATE_TOKEN` (classic PAT, `repo` + `workflow` scope — `workflow` is
   required for the `github-actions` manager this repo's
   `helpers:pinGitHubActionDigests` preset relies on; the ambient

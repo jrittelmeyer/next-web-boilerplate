@@ -33,9 +33,13 @@ allowBuilds:
   sharp: true
 # Pin vite (pulled transitively by vitest) to an aged release. vitest@4's dep
 # range is vite ^6||^7||^8, which otherwise resolves to the newest 8.x — and the
-# current 8.1.0 was published hours ago. We never import vite directly (we use
-# vitest/config), so an override is the right tool: it keeps the test runner off
-# brand-new releases per the no-fresh-deps policy. Bump as newer 8.x ages out.
+# current 8.1.0 was published hours ago. No app or package code imports vite
+# directly (test configs use vitest/config), and the only direct declaration is
+# `packages/ui`'s `vite: 8.0.16` devDependency for Storybook's @storybook/react-vite
+# builder — pinned to this same version deliberately. The override is what keeps
+# every transitive copy in lockstep with it, so the test runner and the Storybook
+# builder never diverge, and neither lands on a brand-new release per the
+# no-fresh-deps policy. Bump BOTH sites together as newer 8.x ages out.
 overrides:
   vite: 8.0.16
   # ——— Dependabot remediation (2026-07-15): 3 transitive-only alerts with NO upstream
@@ -258,37 +262,21 @@ overrides:
 #      why it is low-risk here, and no expiry to promise.
 # (`docs/MAINTENANCE.md` → Dependency policy carries the same three; keep them in step.)
 minimumReleaseAge: 10080 # 7 days
-# TEMPORARY security exception (2026-08-26): `next` 16.3.3 (published
-# 2026-08-25T15:32Z) patches GHSA-2xp9-vwfh-vxw4 / GHSA-g89c-p67h-r497 — an
-# unauthenticated RCE via a libheif flaw in `sharp` when Next.js's Image
-# Optimization API decodes an attacker-controlled AVIF/HEIF source image. This
-# repo's `imageUploader`/`avatarUploader` (apps/web/src/lib/uploadthing.ts) accept
-# the generic Uploadthing `image` type with no codec allowlist, gated only by an
-# authenticated session (any account, not admin-only) — a real, reachable path,
-# not a theoretical one. Waiting the ~6 days for the 7-day gate to clear naturally
-# means knowingly carrying an unpatched RCE, so route (2) applies. (The release's
-# other CVE, CVE-2026-75604/GHSA-p293-qw3h-jr36, a Windows-hosted-server RCE
-# needing both Pages Router and App Router, does NOT apply here — no Pages Router
-# anywhere in this repo — but ships in the same release regardless.)
-# Scoped exact-version per route (2)'s rule (never a bare name/glob — see the
-# 2026-07-23 precedent below, superseded 2026-08-03 for exactly that reason): the
-# 8 `@next/swc-*` platform binaries are `next`'s own lockstep optionalDependencies,
-# same release, same publish timestamp, so each inherits `next`'s "published fix
-# exists" reasoning directly. `@next/eslint-plugin-next` is untouched (declared
-# separately in tooling/eslint/package.json, not part of this security fix).
-# REMOVE once 16.3.3 ages past the gate (2026-09-01) — tracked in
-# docs/MAINTENANCE.md → Watch items.
-minimumReleaseAgeExclude:
-  - next@16.3.3
-  - "@next/env@16.3.3"
-  - "@next/swc-darwin-arm64@16.3.3"
-  - "@next/swc-darwin-x64@16.3.3"
-  - "@next/swc-linux-arm64-gnu@16.3.3"
-  - "@next/swc-linux-arm64-musl@16.3.3"
-  - "@next/swc-linux-x64-gnu@16.3.3"
-  - "@next/swc-linux-x64-musl@16.3.3"
-  - "@next/swc-win32-arm64-msvc@16.3.3"
-  - "@next/swc-win32-x64-msvc@16.3.3"
+# The 2026-08-26 `minimumReleaseAgeExclude` for `next` 16.3.3 + its 9 lockstep
+# packages — route (2)'s second use, taken for GHSA-2xp9-vwfh-vxw4 /
+# GHSA-g89c-p67h-r497 (unauthenticated RCE via a libheif flaw in `sharp` when the
+# Image Optimization API decodes an attacker-controlled AVIF/HEIF source, reachable
+# through this repo's codec-allowlist-free Uploadthing image uploaders) — was
+# REMOVED 2026-09-02, on schedule: 16.3.3 (published 2026-08-25T15:32Z) cleared the
+# 7-day gate at 15:32Z on 2026-09-01, and `@next/env` + the 8 `@next/swc-*` platform
+# binaries are `next`'s own lockstep optionalDependencies published in the same
+# release at the same timestamp, so every entry had gone inert together. The block
+# was TEN entries, not the "all 9" the take's own note claimed — a miscount the
+# 2026-09-01 audit's contrarian pass caught. `@next/eslint-plugin-next` was never in
+# it (declared separately in tooling/eslint/package.json, resolved 16.2.12; it moves
+# with the `next` 16.3.4 take). The gate is unconditional again, with zero
+# exclusions — which bites at the next RESOLUTION (Renovate, `pnpm add`), not at a
+# lockfile-driven install.
 # The 2026-08-03 `minimumReleaseAgeExclude` for brace-expansion@5.0.9 — route (2)'s one
 # prior use, above — was REMOVED 2026-08-06 on schedule: 5.0.9 (published 2026-07-30T10:00:32Z)
 # cleared the 7-day gate at 10:00:32Z that day, so the version-scoped entry had gone

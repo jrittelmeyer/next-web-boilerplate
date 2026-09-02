@@ -74,12 +74,12 @@ GitHub repo settings don't travel with a template copy. On your own repo:
   `.github/workflows/*.yml`; the ambient `GITHUB_TOKEN` can't be used — it
   can't trigger downstream CI on PRs it opens). Validate config edits with
   `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
-  ⚠️ **Until the fork-safe gate lands (`BACKLOG.md` B1, filed 2026-09-01), this is
-  the one workflow that *fails* rather than skips when unconfigured** — a project
-  generated from the template inherits a Renovate run that fails at startup every
-  Monday until its owner adds the secret or deletes the file (a private repo never
-  hits GitHub's 60-day schedule auto-disable). Forks are unaffected: GitHub disables
-  `schedule` in forks by default.
+  **Gated on `ENABLE_RENOVATE` since 2026-09-02** (job-level `if`, the
+  `ENABLE_CODEQL`/`ENABLE_VISUAL` convention): unset — the state in this repo and in
+  every generated project — the lane *skips silently* rather than failing. Enabling
+  takes **two** actions, the secret **and** `gh variable set ENABLE_RENOVATE --body
+  true`; see the dated liveness check in Watch items below, which exists because a
+  forgotten variable would make the workflow silently dead rather than loudly broken.
   Superseded the **Mend GitHub App** 2026-08-31 (`BACKLOG.md` B1): Mend was
   confirmed installed, Interactive-mode, and schedule-healthy, but every
   scheduled Monday window since 2026-07-22 produced zero `renovate/*`
@@ -94,10 +94,10 @@ GitHub repo settings don't travel with a template copy. On your own repo:
   [developer.mend.io](https://developer.mend.io) if the dashboard issue never
   appears), and remove `renovate.yml`.
 - **Re-create the CI gate variables** (they're repo variables, not workflow content):
-  `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, and optionally
-  `ENABLE_PERF` / `ENABLE_GHCR_PUBLISH` — and, once the B1 gate row lands,
-  `ENABLE_RENOVATE` for the self-hosted Renovate workflow. Unset, those lanes *skip
-  silently* — they don't fail. → [`context/DEPLOYMENT.md → CI/CD`](context/DEPLOYMENT.md#cicd-github-actions)
+  `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, `ENABLE_RENOVATE`
+  (the self-hosted Renovate workflow — set it **with** the `RENOVATE_TOKEN` secret,
+  never one without the other), and optionally `ENABLE_PERF` / `ENABLE_GHCR_PUBLISH`.
+  Unset, those lanes *skip silently* — they don't fail. → [`context/DEPLOYMENT.md → CI/CD`](context/DEPLOYMENT.md#cicd-github-actions)
 - Optional: a `CODECOV_TOKEN` secret (coverage upload is skipped cleanly when unset).
 
 ## Watch items (known, tracked, deliberately not done)
@@ -574,14 +574,27 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     PR #56). Correction recorded there too: that job had been red since 08-27 on
     the base image's `libssl3`/`libcrypto3` CVE, not on memory — the 16.3.3 row's
     "host memory exhaustion" framing described the local build, not the lane.
-  - **2026-09-01 ~15:32 UTC — the `next` 16.3.3 `minimumReleaseAgeExclude` goes inert**
-    (16.3.3, published 2026-08-25T15:32Z, clears the 7-day gate unaided) — delete the
-    **ten**-entry exclude block (`next` + `@next/env` + 8 `@next/swc-*`; the 16.3.3 entry
-    below said "all 9" — a miscount the 2026-09-01 audit's contrarian caught) from
-    `pnpm-workspace.yaml` on schedule and prove it with a frozen install, as the 07-28
-    and 08-06 removals did. Same edit: correct that file's `vite` comment ("we never
-    import vite directly" — `packages/ui` declares `vite: 8.0.16` as a devDep for
-    Storybook's builder; the override still pins every transitive copy).
+  - ~~**2026-09-01 ~15:32 UTC — the `next` 16.3.3 `minimumReleaseAgeExclude` goes
+    inert**~~ — **DONE 2026-09-02, on schedule.** The **ten**-entry block (`next` +
+    `@next/env` + 8 `@next/swc-*`; the 16.3.3 entry below said "all 9" — a miscount the
+    2026-09-01 audit's contrarian caught) is deleted from `pnpm-workspace.yaml`, and
+    that file's `vite` comment is corrected in the same edit ("we never import vite
+    directly" was wrong — `packages/ui/package.json:53` declares `vite: 8.0.16` as a
+    devDep for Storybook's `@storybook/react-vite` builder; the comment now says the
+    override keeps that direct pin and every transitive copy in lockstep). The gate is
+    unconditional again with zero exclusions. **Proof is CI's frozen install, not the
+    local one** — pnpm reads publish times from registry metadata that can be cached
+    locally, so a local green is the weaker signal (a refinement on the 07-28/08-06
+    removals, which leaned on the local run).
+  - **NEW 2026-09-02 — Renovate liveness, 14 days after `RENOVATE_TOKEN` is set.**
+    Enabling the self-hosted workflow now takes **two** owner actions (the secret *and*
+    `gh variable set ENABLE_RENOVATE --body true`), because the fork-safe gate that
+    stops generated projects inheriting a weekly red also means a forgotten variable
+    leaves the lane skipping *silently*. That is the same observable that hid the Mend
+    failure for six weeks — zero `renovate/*` branches, no error anywhere. **So: within
+    14 days of adding the secret, confirm either a `renovate/*` branch or a Dependency
+    Dashboard `updatedAt` newer than 2026-07-22.** Neither ⇒ check
+    `gh variable list` first, before re-diagnosing anything upstream.
   - **2026-09-07 ~20:00 UTC — `next` 16.3.4** ages in (published 2026-08-31T20:00:51Z,
     registry-checked the same day; no advisory known). **Pre-triaged 2026-09-01
     (Dependency-policy rule 6, seventeenth audit):** the release *re-enables AVIF Image

@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-09-01 (seventeenth `/project-audit` pass: **99.3/100** — the 08-26 takes, the CVE fix and v1.2.0 verified at their seams; three new rows — the fork-safe `renovate.yml` gate (B1), the month-boundary e2e fix (B2), two draft releases (B3) — and STACK.md caught stale by a reference sweep; contrarian 13/13 folded. 08-31: harness audit **93.9/100** baseline + doc audit; reports in the archive)._
+_Last updated: 2026-09-02 (fork-safe `ENABLE_RENOVATE` gate shipped — `renovate.yml` now skips silently instead of failing in generated projects, with a dated 14-day liveness check; the `next` 16.3.3 ten-entry `minimumReleaseAgeExclude` deleted on schedule. Previously: 2026-09-01, seventeenth `/project-audit` pass: **99.3/100** — the 08-26 takes, the CVE fix and v1.2.0 verified at their seams; three new rows — the fork-safe `renovate.yml` gate (B1), the month-boundary e2e fix (B2), two draft releases (B3) — and STACK.md caught stale by a reference sweep; contrarian 13/13 folded. 08-31: harness audit **93.9/100** baseline + doc audit; reports in the archive)._
 
 ## Where we are
 
@@ -183,13 +183,15 @@ landed item. Open now: **Renovate — host choice pending (2026-08-31)**: the
 self-hosted `renovate.yml` shipped (BACKLOG B1) but its first cron run failed at
 startup — the `RENOVATE_TOKEN` secret is not set — while the Mend App opened the
 first scheduled `renovate/*` PR in the repo's history the same morning (#56,
-`actions/checkout` 7.0.1, every lane green). Pick one host, then merge/close #56;
-`renovate.yml` needs its `ENABLE_RENOVATE` gate regardless (B1, 2026-09-01 — generated
-projects inherit a weekly failing run until then) · **e2e month-boundary red**
+`actions/checkout` 7.0.1, every lane green). Pick one host, then merge/close #56. The
+`ENABLE_RENOVATE` gate **shipped 2026-09-02**, so generated projects no longer inherit
+a weekly failing run — but enabling here is now a two-action close (secret **and**
+variable) with a dated 14-day liveness check · **e2e month-boundary red**
 (`3e68733` attempt 1, 09-01: deterministic 00:00–04:00Z on the 1st of each month — B2
 fix due before 10-01; MAINTENANCE Watch (c)) ·
 **`next` 16.3.4** (published 2026-08-31T20:00Z, untriaged) ages in 2026-09-07; the
-16.3.3 `minimumReleaseAgeExclude` goes inert 2026-09-01 and is due for deletion.
+16.3.3 `minimumReleaseAgeExclude` was **deleted on schedule 2026-09-02** (gate
+unconditional again, zero exclusions).
 The 16.3.3 Docker-standalone follow-up **closed 2026-08-30** (the CVE-2026-14456 fix
 built, booted and health-checked both images locally; CI's Docker lane green since).
 ⚠️ **`better-auth` 1.7.x is a breaking minor** (`latest` since 2026-08-18, 1.7.2 now)
