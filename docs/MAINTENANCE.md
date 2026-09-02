@@ -105,6 +105,19 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 **This section is the canonical live Watch list** — full per-item detail and removal
 conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Currently:
 
+- **`browserslist` override (2026-09-02)** — `"browserslist@<4.28.7": 4.28.8` in
+  `pnpm-workspace.yaml`, taken for two NEW HIGH advisories (GHSA-c83g-rgw3-j3cx,
+  GHSA-73wf-gq98-2v4g) that surfaced as pure advisory-database drift against an
+  unchanged lockfile (proven: `pnpm-lock.yaml` was byte-identical across the prior
+  three commits, and the same audit lane was green on the commit before this one).
+  Build-tooling-only (`@babel/helper-compilation-targets`, `webpack` — reached via
+  Storybook's builder-vite and `@sentry/webpack-plugin`); this tree has no
+  `.browserslistrc`, no `package.json` `browserslist` field, and no custom stats
+  file, so the untrusted-`browserslist-stats.json` vector has no artifact to hit.
+  *Removal condition:* remove once `next`'s own resolution and the natural tree
+  both carry `browserslist` past `4.28.6` unaided (a no-op reinstall confirms it —
+  same check used for the `sharp` override's removal above).
+
 - **Calendar offset drift** — `calendar_events.start_offset_minutes` /
   `end_offset_minutes` are a snapshot of what the IANA database said when the row was
   written. That is deliberate: the CHECK guarding the derived instants is pure arithmetic

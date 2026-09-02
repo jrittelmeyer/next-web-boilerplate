@@ -223,6 +223,19 @@ overrides:
   # Same ranged-key reasoning as undici above. Remove when the react-email chain
   # re-resolves >=4.2.7 (key inert then).
   "socket.io-parser@<4.2.7": 4.2.7
+  # browserslist <=4.28.6 (GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g, both HIGH —
+  # uncaught crash / prototype write via untrusted browserslist-stats.json in
+  # normalizeStats). Reached via @babel/helper-compilation-targets and webpack
+  # (Storybook's builder-vite + @sentry/webpack-plugin) — build tooling only, and
+  # this tree has no .browserslistrc, no package.json browserslist field, and no
+  # custom stats file anywhere, so there's no artifact for the untrusted-stats
+  # vector to exploit even in principle. 4.28.7 (published 2026-07-21) is the true
+  # advisory floor; 4.28.8 (2026-08-08) is taken instead — same postcss
+  # 8.5.23-vs-8.5.24/25 precedent, no advisory delta over .7, both already aged
+  # past the 7-day gate. Ranged key so an already-safe >=4.28.7 copy is left
+  # alone. Remove once next's own resolution and the natural tree both carry
+  # browserslist past 4.28.6 unaided.
+  "browserslist@<4.28.7": 4.28.8
 # Supply-chain release-age gate (Step 26 · A11). Every Phase-1/2 dep note describes this
 # discipline ("let a release age before taking it; hours-old/days-old releases were
 # rejected, pins were chosen to clear the gate"). It is ENFORCED at two layers:

@@ -11,6 +11,20 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Security
 
+- **`browserslist` scoped override, `<4.28.7` → `4.28.8`** — two NEW HIGH advisories
+  (GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g: uncaught crash / prototype write via
+  untrusted `browserslist-stats.json` in `normalizeStats`), vulnerable `<=4.28.6`.
+  Reached only via `@babel/helper-compilation-targets` and `webpack` (Storybook's
+  builder-vite + `@sentry/webpack-plugin`) — build tooling only, and this tree has
+  no `.browserslistrc`, no `package.json` `browserslist` field, and no custom stats
+  file anywhere, so the untrusted-stats vector has no artifact to exploit even in
+  principle. `4.28.7` (2026-07-21) is the true advisory floor; `4.28.8` (2026-08-08)
+  is taken instead — no advisory delta over `.7`, same reasoning as the `postcss`
+  8.5.23-vs-8.5.24/25 precedent — and both clear the 7-day age gate, so no
+  `minimumReleaseAgeExclude` was needed. `pnpm audit`: 0 advisories after the bump;
+  lockfile diff touched only `browserslist` and its own bundled data packages
+  (`caniuse-lite`, `electron-to-chromium`, `node-releases`,
+  `update-browserslist-db`, `baseline-browser-mapping`).
 - **Least-privilege pass on the tracked `.claude/settings.json`.** It ships verbatim
   into every generated project, so it is now written for a stranger's repo.
   `Bash(winget install *)` (arbitrary machine-wide install) and `Bash(docker exec *)`
