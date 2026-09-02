@@ -1,6 +1,7 @@
 ---
 name: retro
 description: Harvest a finished milestone or painful session into durable harness improvements — corrections, surprises, and re-derived knowledge become candidate skill edits, hooks, adapter fields, or memory/instruction lines, each behind the normal sign-off gate. Use after a milestone, after repeated failed attempts, or on "retro" / "make sure this doesn't happen again".
+disable-model-invocation: true
 ---
 
 # retro

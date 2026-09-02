@@ -1,6 +1,7 @@
 ---
 name: tidy
 description: Local dev-machine hygiene — prune the project's unbounded build/engine cache to its size cap, report disk + cache size, then surface (not auto-run) the judgment-required cleanups (orphaned dev processes, stale test data, dangling container images). Use at a checkpoint boundary, when disk is low, or when the build cache "is huge" / "clean up the machine".
+disable-model-invocation: true
 ---
 
 # tidy

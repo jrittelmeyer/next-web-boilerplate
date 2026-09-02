@@ -1,6 +1,8 @@
 ---
 name: project-audit
 description: Deep audit of the whole repo — verify docs ↔ code alignment, score each feature group out of 100 against a best-available bar, and emit an exhaustive prioritized backlog that would bring every group to 100. Use when the user asks for a project audit, quality scores, "how good is this really", or "what's missing to make this perfect".
+disable-model-invocation: true
+effort: high
 ---
 
 # project-audit

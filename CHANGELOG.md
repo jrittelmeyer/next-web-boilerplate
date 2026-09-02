@@ -11,6 +11,39 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Changed
 
+- **ai-dev-kit 0.23.11 → 0.23.16** (13 drifted files reconciled; `install.mjs --check`
+  13 → 0). Seven workflow skills — `checkpoint`, `harness-audit`, `project-adopt`,
+  `project-audit`, `project-init`, `retro`, `tidy` — now carry
+  `disable-model-invocation`, so an agent invokes them by **reading
+  `.claude/skills/<name>/SKILL.md`**; `/name` is still the user form and `doc-audit`,
+  `dep-check`, `live-verify` are unflagged. `stop-gate` gained `asyncRewake` (inert
+  here — this repo sets no `enforcement` keys, deliberately). Both
+  `checkpoint-autorun.mjs` hooks, repo-owned and kit-owned, had their reason text
+  rewritten: they instructed an action the flag makes impossible.
+- **Install from a TAG, never the kit clone's working tree** — new standing rule in
+  [`CONVENTIONS.md` → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude),
+  adopted after the clone moved 0.23.16 → 0.23.17 *mid-session* while this bump was
+  being planned against it. `install.mjs --check` diffs against whatever the source
+  currently is, so a drifting clone makes the drift gate green by construction. A
+  `git worktree` at the tag fixes it, since `install.mjs:36` derives its kit root from
+  the script's own location. Two rehearsal rules land with it: the scratch install must
+  **omit `--global`** (that flag writes to `~/.claude/skills/`, a path not derived from
+  `--dest`), and dual-home skills need their own diff.
+- **Adapter migrated to the schema's `verify` block**, with the command string
+  **verified by running it** rather than reasoned about:
+  `pnpm --filter web start -- --port 3100` forwards the `--` literally into the
+  script's argv, and `next start` then reads `--port` as the project directory
+  (*"Invalid project directory provided"*). The no-`--` form serves on :3100 with
+  `/api/health` returning `database: up`. The broken string — which a real
+  with-skill run copied verbatim on 2026-08-31 — is corrected in `prodVerify` too
+  rather than left as the fallback. `harnessAudit.kitSourcePath` deliberately **not**
+  added: its only legal value is a machine-local absolute path, and the adapter is
+  tracked template surface.
+- **`docs:sanity`'s kit-wiring parity check now deep-compares every key** instead of an
+  enumerated `event/matcher/handler/if/timeout` list, which had let kit 0.23.12's new
+  `asyncRewake` through silently. Red-proven: deleting that key fails the check.
+  Naming it as a sixth field would have repeated the defect for the seventh.
+
 - **`renovate.yml` is fork-safe** — the job is gated on `ENABLE_RENOVATE`
   (job-level `if`, the `ENABLE_CODEQL`/`ENABLE_VISUAL` convention). It was the one
   workflow that *failed* rather than skipped when unconfigured: `scripts/init-app.mjs`

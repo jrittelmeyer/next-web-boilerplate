@@ -8,11 +8,24 @@ Claude-Code-specific notes:
   [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) (versions:
   `.claude/ai-dev-kit.installed.json` · params: `.claude/ai-dev-kit.config.json`).
   Never edit `.claude/skills/` or `.claude/hooks/ai-dev-kit/` — edit a kit clone, then
-  `node <clone>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json
+  install **from a tag, never from the clone's working tree**:
+  `git -C <clone> worktree add <wt> v<X.Y.Z>` then
+  `node <wt>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json
   --dest <this repo> --global --hooks`; `install.mjs --check` guards drift.
+  The tag rule is load-bearing — the installer's kit root is wherever `install.mjs`
+  itself lives (`install.mjs:36`), so a worktree diffs against the tag and leaves the
+  clone alone. Full rationale: [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
   Installer-route only (no marketplace plugin); enforcement hooks stay unconfigured
   here (template surface): [CONVENTIONS.md → Agent tooling](docs/context/CONVENTIONS.md#agent-tooling-claude).
-- Run `/checkpoint` at each step boundary. `.claude/hooks/checkpoint-autorun.mjs`
+- **Seven skills are `disable-model-invocation`** (`checkpoint` · `harness-audit` ·
+  `project-adopt` · `project-audit` · `project-init` · `retro` · `tidy`, since kit
+  0.23.13): the Skill tool refuses them, so invoke one by **reading
+  `.claude/skills/<name>/SKILL.md`** and following it — the flag does not affect
+  `Read`. `/<name>` remains the user form. `doc-audit`, `dep-check` and `live-verify`
+  are unflagged and invoke normally.
+- Run `/checkpoint` at each step boundary (or read
+  `.claude/skills/checkpoint/SKILL.md` — see the flag above).
+  `.claude/hooks/checkpoint-autorun.mjs`
   (Stop hook) automates this: if the tree is dirty/unpushed when a session goes idle,
   it forces one more turn that runs `checkpoint` fully autonomously (commit, push,
   watch CI, prune cache, write the resume-prompt handoff) — no confirmation prompt,

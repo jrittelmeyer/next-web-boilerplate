@@ -108,6 +108,7 @@
               "${CLAUDE_PROJECT_DIR}/.claude/hooks/ai-dev-kit/stop-gate.mjs"
             ],
             "timeout": 300,
+            "asyncRewake": true,
             "statusMessage": "ai-dev-kit: stop gate"
           },
           {

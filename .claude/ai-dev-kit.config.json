@@ -6,11 +6,17 @@
     "unit": "pnpm test",
     "e2e": "pnpm test:e2e"
   },
+  "verify": {
+    "build": "pnpm build",
+    "run": "pnpm --filter web start --port 3100",
+    "ready": { "kind": "http", "port": 3100 },
+    "notes": "Use the no-`--` form of `run` — verified 2026-09-02 by running both. `pnpm --filter web start -- --port 3100` forwards the `--` LITERALLY into the script's argv (`next start \"--\" \"--port\" \"3100\"`), and `next start` then reads `--port` as the project directory: 'Invalid project directory provided, no such directory: …/apps/web/--port'. The no-`--` form yields `next start \"--port\" \"3100\"` and serves on :3100. Root .env is loaded by the start script's dotenv wrapper (confirmed: /api/health returns database:up). Auth origin checks are exact — send an Origin header matching the served URL. Full recipes live in project memory."
+  },
   "prodVerify": {
     "build": "pnpm build",
-    "start": "pnpm --filter web start -- --port 3100",
+    "start": "pnpm --filter web start --port 3100",
     "port": 3100,
-    "notes": "Root .env is loaded by the start script (dotenv wrapper); auth origin checks are exact — send an Origin header matching the served URL. Full recipes live in project memory."
+    "notes": "v1 fallback, kept until the kit drops it. Same verified no-`--` command as `verify.run` — do NOT reintroduce `-- --port 3100`, which makes `next start` treat `--port` as the project directory."
   },
   "cache": {
     "size": "pnpm cache:size",

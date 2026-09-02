@@ -964,7 +964,12 @@ All three ship as committed agent skills (`.claude/skills/project-audit/`,
 checkpoint/tidy helpers — all installed from the
 [ai-dev-kit](https://github.com/jrittelmeyer/ai-dev-kit) skill library); each
 SKILL.md is a plain-markdown procedure a human — or any agent tooling — can
-follow directly. Past audit reports live in [`archive/`](archive/) as worked
+follow directly. ⚠️ Since kit 0.23.13, `project-audit`, `harness-audit` and `tidy`
+(with `checkpoint`, `project-init`, `project-adopt`, `retro`) carry
+`disable-model-invocation`, so an agent runs one by **reading its SKILL.md** rather
+than through the Skill tool; `/name` is still the user form, and `doc-audit` is
+unflagged. That is why "plain-markdown procedure" is load-bearing rather than
+decorative — see [`context/CONVENTIONS.md` → Agent tooling](context/CONVENTIONS.md#agent-tooling-claude). Past audit reports live in [`archive/`](archive/) as worked
 examples.
 
 ## Local disk hygiene

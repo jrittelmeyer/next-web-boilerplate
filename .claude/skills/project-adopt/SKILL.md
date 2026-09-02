@@ -1,6 +1,7 @@
 ---
 name: project-adopt
 description: Adopt an existing codebase onto a template foundation — survey it into a parity contract and theirs-vs-foundation map, converge a product brief + migration map, then regenerate docs into a port program. Use to adopt, port, or migrate onto a template, add features, or when source code lands in the intake dir.
+disable-model-invocation: true
 ---
 
 # project-adopt

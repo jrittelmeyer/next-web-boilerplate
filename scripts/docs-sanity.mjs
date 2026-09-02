@@ -115,6 +115,10 @@ const settingsHooks = existsSync(settingsPath)
             args: Array.isArray(hook?.args) ? hook.args.map(String) : [],
             if: hook?.if ?? "",
             timeout: hook?.timeout ?? null,
+            // The whole hook object, kept for the kit-wiring deep-equality check below.
+            // The named fields above are a normalized view for the other checks; this is
+            // the only thing that sees keys the kit adds later (e.g. `asyncRewake`).
+            raw: hook,
           })),
         ),
     )
@@ -158,33 +162,41 @@ for (const hook of settingsHooks) {
 
 // Kit-wiring parity: the entries carrying the .claude/hooks/ai-dev-kit/ marker must
 // describe exactly what .claude/hooks/ai-dev-kit/hooks.json (the installer's shipped
-// record of its own wiring) declares — same event/matcher/handler/if/timeout set.
-// This is the check that would have caught compact-reorient sitting installed but
-// unwired from 0.16.0 until the 2026-08-25 fleet audit found it by hand.
+// record of its own wiring) declares. This is the check that would have caught
+// compact-reorient sitting installed but unwired from 0.16.0 until the 2026-08-25
+// fleet audit found it by hand.
+//
+// DEEP EQUALITY on every key, deliberately — not an enumerated field list. The old
+// shape compared event/matcher/handler/if/timeout only, so kit 0.23.12's new
+// `asyncRewake: true` on the stop-gate entry passed through silently. Naming that key
+// as a sixth field would have repeated the defect for the seventh key; a drift gate
+// that only sees the keys someone remembered to list is not a drift gate. Paths are
+// normalized to the handler basename (the two files spell the prefix differently),
+// and key order is normalized, but nothing else is dropped.
 const kitMarker = ".claude/hooks/ai-dev-kit/";
 const kitWiringPath = join(root, ".claude", "hooks", "ai-dev-kit", "hooks.json");
 const kitWired = settingsHooks.filter((h) => [h.command, ...h.args].join(" ").includes(kitMarker));
 if (existsSync(kitWiringPath) && (kitWired.length > 0 || existsSync(settingsPath))) {
-  const shape = (event, matcher, path, ifClause, timeout) =>
-    JSON.stringify([event, matcher, path.match(/([\w-]+\.mjs)$/)?.[1] ?? path, ifClause, timeout]);
+  const basename = (v) => String(v).match(/([\w-]+\.mjs)$/)?.[1] ?? String(v);
+  const canonical = (value) => {
+    if (Array.isArray(value)) return value.map((v) => canonical(basename(v)));
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.entries(value)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => [k, canonical(v)]),
+      );
+    return typeof value === "string" ? basename(value) : value;
+  };
+  const shape = (event, matcher, hook) => JSON.stringify([event, matcher, canonical(hook)]);
   const want = Object.entries(JSON.parse(readFileSync(kitWiringPath, "utf8")).hooks ?? {})
     .flatMap(([event, entries]) =>
       (entries ?? []).flatMap((entry) =>
-        (entry?.hooks ?? []).map((hook) =>
-          shape(
-            event,
-            entry.matcher ?? "",
-            String(hook?.args?.[0] ?? hook?.command ?? ""),
-            hook?.if ?? "",
-            hook?.timeout ?? null,
-          ),
-        ),
+        (entry?.hooks ?? []).map((hook) => shape(event, entry.matcher ?? "", hook)),
       ),
     )
     .sort();
-  const got = kitWired
-    .map((h) => shape(h.event, h.matcher, [h.command, ...h.args].join(" "), h.if, h.timeout))
-    .sort();
+  const got = kitWired.map((h) => shape(h.event, h.matcher, h.raw)).sort();
   if (JSON.stringify(want) !== JSON.stringify(got)) {
     const missing = want.filter((w) => !got.includes(w));
     const extra = got.filter((g) => !want.includes(g));

@@ -1,21 +1,24 @@
 #!/usr/bin/env node
 /**
- * ai-dev-kit hook — stop-gate (Stop). OPT-IN BLOCKING.
+ * ai-dev-kit hook — stop-gate (Stop). OPT-IN, ASYNC REWAKE.
  *
- * The session may not end with the project's fast gate failing. Runs the
- * adapter's `enforcement.stopGate.commands` in order; any failure exits 2 so
- * the harness feeds the output back and the agent fixes it now, not the user
- * later. Generalized from the danger-noodles/smash-gods/wyrd stop-gate hooks
- * (consumer-proven before upstreaming).
+ * The session should not end with the project's fast gate failing, but the
+ * turn itself is not held open for it: this hook is wired with
+ * `asyncRewake: true`, so the turn ends immediately and the gate runs in the
+ * background. It runs the adapter's `enforcement.stopGate.commands` in order;
+ * any failure exits 2, and the harness wakes the agent one turn later with
+ * this process's stderr as a system reminder, so the fix lands next turn
+ * rather than mid-turn. Generalized from the danger-noodles/smash-gods/wyrd
+ * stop-gate hooks (consumer-proven before upstreaming).
  *
  * Inert by default: without `enforcement.stopGate.commands` in the user-owned
  * adapter config this handler exits 0 silently — the kit's advise-only default
- * is unchanged; blocking is the project's explicit, recorded choice. Keep the
+ * is unchanged; gating is the project's explicit, recorded choice. Keep the
  * commands fast (a typecheck + unit-test pair) — this runs at every session
  * end.
  *
  * Loop safety: `stop_hook_active` on stdin marks the Stop event that follows a
- * hook-forced turn — exit 0 there, or a persistently red gate blocks forever.
+ * hook-forced turn — exit 0 there, or a persistently red gate re-wakes forever.
  */
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";

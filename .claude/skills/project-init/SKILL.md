@@ -1,6 +1,7 @@
 ---
 name: project-init
 description: Initialize a new product — ingest plan docs or a raw idea, run discovery and competitive research, converge on a product brief, and regenerate the living docs into a build program targeting a 100 audit score. Use on a fresh scaffold from a template, when the user says "init this project" / "here's my idea for an app", or when they hand over plan documents.
+disable-model-invocation: true
 ---
 
 # project-init

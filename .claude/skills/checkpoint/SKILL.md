@@ -1,6 +1,7 @@
 ---
 name: checkpoint
 description: Commit and push pending work, then either continue to the next backlog step (context still healthy) or emit a paste-ready resume prompt plus a recommended relaunch model + reasoning effort for a fresh session (context tight). Use when the user says "checkpoint", "commit and continue", "wrap this step up", or asks whether to keep going vs. clear context.
+disable-model-invocation: true
 ---
 
 # checkpoint

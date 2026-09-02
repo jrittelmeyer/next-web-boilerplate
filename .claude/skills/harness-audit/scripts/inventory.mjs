@@ -70,7 +70,8 @@ function skillRows(skillsDir) {
   return rows;
 }
 
-/** Wired hook events from a single hooks.json-shaped file. */
+/** Wired hook events from a single hooks.json- or settings.json-shaped file
+ * (both nest `{ hooks: { EventName: [{ matcher, hooks: [...] }] } }`). */
 function hooksFromFile(path) {
   const rows = [];
   const parsed = JSON.parse(readFileSync(path, "utf8"));
@@ -82,7 +83,15 @@ function hooksFromFile(path) {
           [h.command ?? "", ...(Array.isArray(h.args) ? h.args : [])]
             .join(" ")
             .match(/([\w-]+\.mjs)\b/)?.[1] ?? "?";
-        rows.push({ event, matcher: entry.matcher ?? "*", handler, file: posix(relative(root, path)) });
+        rows.push({
+          event,
+          matcher: entry.matcher ?? "*",
+          handler,
+          type: h.type ?? "command",
+          if: h.if ?? "",
+          timeout: h.timeout ?? "",
+          file: posix(relative(root, path)),
+        });
       }
     }
   }
@@ -91,7 +100,12 @@ function hooksFromFile(path) {
 
 function findHookFiles() {
   const found = [];
-  for (const candidate of ["hooks/hooks.json", "hooks/installer-hooks.json"]) {
+  for (const candidate of [
+    "hooks/hooks.json",
+    "hooks/installer-hooks.json",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+  ]) {
     if (existsSync(join(root, candidate))) found.push(join(root, candidate));
   }
   const installedDir = join(root, ".claude/hooks");
@@ -120,18 +134,20 @@ function printSkillTable(rows) {
 function printHookTable(hookFiles) {
   console.log("\n## Hooks\n");
   if (hookFiles.length === 0) {
-    console.log("No hooks.json / installer-hooks.json found under the given root.");
+    console.log("No hooks.json / installer-hooks.json / settings.json found under the given root.");
     return;
   }
-  console.log("| event | matcher | handler | wiring file |");
-  console.log("|---|---|---|---|");
+  console.log("| event | matcher | handler | type | if | timeout | wiring file |");
+  console.log("|---|---|---|---|---|---:|---|");
   const seen = new Set();
   for (const file of hookFiles) {
     for (const row of hooksFromFile(file)) {
       const key = `${row.event}|${row.matcher}|${row.handler}|${row.file}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      console.log(`| ${row.event} | ${row.matcher} | ${row.handler} | ${row.file} |`);
+      console.log(
+        `| ${row.event} | ${row.matcher} | ${row.handler} | ${row.type} | ${row.if || "—"} | ${row.timeout || "—"} | ${row.file} |`,
+      );
     }
   }
 }

@@ -1,15 +1,15 @@
 {
-  "kit": "0.23.11",
+  "kit": "0.23.16",
   "skills": {
-    "checkpoint": "0.4.1",
+    "checkpoint": "0.4.2",
     "doc-audit": "0.3.0",
-    "project-audit": "0.2.0",
-    "tidy": "0.2.0",
+    "project-audit": "0.2.1",
+    "tidy": "0.2.1",
     "dep-check": "0.2.2",
     "live-verify": "0.2.0",
-    "project-init": "0.3.1",
-    "project-adopt": "0.5.2",
-    "harness-audit": "0.1.5",
-    "retro": "0.1.1"
+    "project-init": "0.3.2",
+    "project-adopt": "0.5.3",
+    "harness-audit": "0.1.8",
+    "retro": "0.1.2"
   }
 }

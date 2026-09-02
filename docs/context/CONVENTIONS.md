@@ -144,13 +144,48 @@ project would have gotten a nudge at nonexistent files on every compaction, sile
 Kit 0.23.1 landed the recorded condition: the handler now stats the adapter's
 `docs.status`/`docs.backlog` and names only files that exist, so the wiring is safe in
 generated projects too. The install command is
-`node <clone>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json --dest <repo>
---global --hooks`. The kit's Stop-event handlers (`stop-gate`, `checkpoint-autorun`) and
+`node <worktree>/install.mjs --adapter <clone>/adapters/next-web-boilerplate.json --dest <repo>
+--global --hooks`.
+
+⚠️ **Install from a TAG, never from the clone's working tree** (rule adopted 2026-09-02
+after a live incident: the clone moved 0.23.16 → 0.23.17 *mid-session*, unprompted, while a
+bump was being planned against it). `install.mjs --check` diffs the destination against
+whatever the kit source currently is, so a clone that drifts makes the drift gate **green by
+construction whatever you installed** — it cannot detect this, and nothing else in the pipeline
+looks. The fix is mechanical, because `install.mjs:36` derives its kit root from the script's
+own location (`dirname(fileURLToPath(import.meta.url))`), not from the clone:
+
+```
+git -C <clone> worktree add <worktree> v<X.Y.Z>
+node <worktree>/install.mjs --adapter <clone>/adapters/…json --dest <repo> --global --hooks
+```
+
+The worktree is an immutable tagged kit root; the clone is never touched, and the resulting
+`ai-dev-kit.installed.json` names a version that actually exists as a tag (which the B3
+kit-drift-gate row depends on). The **adapter** is passed by path and copied verbatim, so it
+correctly comes from the clone — it is not versioned payload. Two further rehearsal rules,
+both learned the same day: the scratch-dir rehearsal must **omit `--global`** (that flag
+writes to `~/.claude/skills/`, a path *not* derived from `--dest`, so a "rehearsal" carrying
+it performs the real, un-revertable home-directory write), and the dual-home skills must be
+diffed against `~/.claude/skills/` separately, since the `--dest` diff never sees them.
+
+The kit's Stop-event handlers (`stop-gate`, `checkpoint-autorun`) and
 `banned-api-guard` wire with it but are **inert here by design**: this repo's tracked adapter
 config carries no `enforcement` block, and must not — `.claude/**` is template surface, and
 `enforcement.checkpointAutorun` would ship autonomous-push consent into every generated
 project. This repo's checkpoint automation stays the repo-owned, identity-guarded
 `.claude/hooks/checkpoint-autorun.mjs`.
+
+**The skill-description budget is two figures, not one.** The adapter's
+`contextBudget.skillDescriptionMaxTokens: 909` is a *measured* baseline (contrarian's call
+over a padded 1000), and it counts the **portable** cost — every skill description, ≈855
+tokens across the ten. Since kit 0.23.13 the **charged** cost is much lower: the seven
+`disable-model-invocation` skills drop out of the always-loaded context, leaving ≈257 tokens
+(`doc-audit` + `dep-check` + `live-verify`). Read 909 as the portable ceiling; a generated
+project that re-enables model invocation on those seven pays the portable figure. This stays
+a **doc note deliberately** — `contextBudget` is `additionalProperties: false` in the kit's
+adapter schema and the installer validates before writing, so a second key would fail the
+install.
 
 **`settings.json` survives a kit install** — it is not regenerated. The installer mutates
 only its `hooks` key, and within each event strips only entries carrying the literal marker
@@ -233,7 +268,7 @@ most confusing thing about the directory. Verified 2026-07-28 against `contraria
 
 | Where | Registers? |
 | --- | --- |
-| `claude` CLI (v2.1.220) | **Yes** — appears in the Agent-tool registry, dispatchable by slug |
+| `claude` CLI (**≥2.1.220**; re-observed on 2.1.258, 2026-09-02) | **Yes** — appears in the Agent-tool registry, dispatchable by slug |
 | `claude --agent <slug> -p "…"` | **Yes** — reads the file directly; works everywhere |
 | Some hosted/desktop surfaces | **No** — `.claude/agents/` is never read; only built-ins resolve |
 | `--agents '<json>'` | **No** — does not inject into the Agent-tool registry |
