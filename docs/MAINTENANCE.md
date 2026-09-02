@@ -473,7 +473,7 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   - ~~`sharp: 0.35.3`~~ → **REMOVED 2026-08-26** with the `next` 16.3.3 take: its condition
     (next's own sharp pin ≥0.35.0) is met by 16.3.3's `^0.35.3`, and a no-op reinstall confirmed
     the lockfile resolves `sharp@0.35.3` unaided. Record → [archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26](archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26).
-  - `"fast-uri@<3.1.5": 3.1.5` (ranged since 2026-08-12) → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
+  - `"fast-uri@<3.1.6": 3.1.6` (ranged since 2026-08-12) → **CLOSED 2026-07-27**: 3.1.4 cleared the gate 2026-07-26, so
     the deferral became a real override and both GHSAs (`GHSA-v2hh-gcrm-f6hx`,
     `GHSA-4c8g-83qw-93j6`) left `ignoreGhsas`. **Reopened 2026-08-04 (batch #5):
     3.1.4 was itself vulnerable to GHSA-7p8r-x3mc-p8w7** (`<3.1.5`, high — the third
@@ -485,8 +485,22 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     the park was deleted in one change (allowlist empty — zero ignored). **Converted
     to the ranged `"fast-uri@<3.1.5": 3.1.5` on 2026-08-12** (signed rider on the
     dompurify/nanoid park exit — the bare key shared their unsatisfiable-removal
-    defect; the conversion itself moved nothing). Remove the
-    override once a routine bump naturally carries the lockfile past 3.1.5.
+    defect; the conversion itself moved nothing). **Reopened again 2026-09-02: 3.1.5
+    fell to four more HIGHs** (GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc,
+    GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp), fixed at 3.1.6 (published
+    2026-08-23T01:42:00Z), which had already cleared the gate by the time CI's
+    `pnpm audit` lane caught it — closed same-day, no park needed, override moved
+    3.1.5 → 3.1.6. **Same day, `3.1.7` (published 2026-09-02T11:06:41Z) turned out to
+    also be a security release**, fixing two more HIGHs (GHSA-qw65-cvwx-89v3,
+    GHSA-58mr-gqgx-xq4g) found via fast-uri's own release notes, **not yet in
+    `pnpm audit`'s feed at take time** — unlike every prior park here, this pair was
+    parked pre-emptively rather than CI-confirmed, so `ignoreGhsas` is not
+    guarding a live red for these two until the feed catches up. Promotes to
+    `"fast-uri@<3.1.7": 3.1.7` and drops both ignore entries once 3.1.7 ages in
+    **2026-09-09** — verify at that point that reverting the pair would actually turn
+    `pnpm audit` red on 3.1.6, confirming the suppression mechanism worked, before
+    trusting the close-out. Remove the override entirely once a routine bump
+    naturally carries the lockfile past whichever version is current.
   - `"nanoid@<3.3.18": 3.3.18` → GHSA-2v37-7h3g-55p8 (HIGH; audit-edge only — postcss
     calls plain `nanoid(6)`, the vulnerable custom-generator functions are never
     invoked here). Added 2026-08-12 as `<3.3.17`, promoted to `<3.3.18` on 2026-08-14

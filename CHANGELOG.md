@@ -112,6 +112,22 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   removed: 16.3.3 (published 2026-08-25T15:32Z) cleared the 7-day gate unaided at
   15:32Z on 2026-09-01. The install-time age gate is unconditional again with zero
   exclusions. Third use of the park/exit machinery, third clean exit on schedule.
+- **`fast-uri` scoped override, `<3.1.5` → `<3.1.6`** — four NEW HIGH advisories
+  (GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc: SSRF via malformed IPv6/repeated
+  percent-decoded hostname normalization; GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp:
+  host confusion via skipped IDN canonicalization/percent-encoded scheme
+  normalization), vulnerable `<3.1.6`. Same build-tooling-only path as prior fast-uri
+  batches (`@sentry/webpack-plugin` → `webpack` → `schema-utils` → `ajv` →
+  `fast-uri`). `3.1.6` (published 2026-08-23) cleared the 7-day gate 2026-08-30 and is
+  in-range for ajv's `^3.0.1`. `pnpm audit`: 0 advisories after the bump; lockfile
+  diff touched only `fast-uri`.
+  - ⚠️ Same-day `3.1.7` (published 2026-09-02, ages in 2026-09-09) is itself a
+    security release fixing two more HIGHs — GHSA-qw65-cvwx-89v3 (port injection in
+    `serialize()`), GHSA-58mr-gqgx-xq4g (IP-literal host confusion) — found via
+    fast-uri's own release notes, **not yet in `pnpm audit`'s feed** at take time.
+    Pre-emptively parked in `auditConfig.ignoreGhsas` rather than left to surface
+    unplanned once the feed catches up; promotes to a `3.1.7` override and drops both
+    ignore entries on 2026-09-09.
 
 ## [1.2.0] — 2026-08-30
 

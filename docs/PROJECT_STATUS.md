@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-09-02 — doc audit (this pass), after the four 2026-09-02 commits; see the 2026-09-02 rows below and the [CHANGELOG](../CHANGELOG.md)._
+_Last updated: 2026-09-02 — fast-uri advisory promotion, after the doc audit; see the 2026-09-02 rows below and the [CHANGELOG](../CHANGELOG.md)._
 
 ## Where we are
 
@@ -144,6 +144,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Maintenance — 2026-09-02 (2/3) | 1 | `.claude/settings.json` least-privilege (`winget`/`docker exec` gone, `PowerShell(...)` twins, env files `ask`, force-push deny) · fork-safe `ENABLE_RENOVATE` gate (B1 closed) · `next` 16.3.3 age-exclude deleted on schedule | [CHANGELOG](../CHANGELOG.md) |
 | Advisory — 2026-09-02 (3/3) | 1 | `browserslist` `<4.28.7` → 4.28.8 for two NEW HIGH advisories — advisory-DB drift on an unchanged lockfile, build-tooling-only, no age-exclude needed; `pnpm audit` 0 after. Contrarian caught two draft errors pre-implementation | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-09-02 | 1 | ~85 drift fixes across 27 docs (five verifier clusters, ~1,900 claims); MAINTENANCE's landed Watch → new `archive/WATCH_HISTORY.md` (78K → 51K chars); STATUS/BACKLOG compacted; showcase at 17 passes/99.3; 12 memory repairs; contrarian 13/13 folded | [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md) |
+| Advisory — 2026-09-02 | 1 | `fast-uri` `<3.1.5` → 3.1.6 for four NEW HIGH advisories, closed same-day (already aged in); `3.1.7`'s two more HIGHs pre-emptively parked in `ignoreGhsas` ahead of `pnpm audit`'s feed, exits 2026-09-09; `pnpm audit` 0 after. Contrarian: sound with caveats | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
