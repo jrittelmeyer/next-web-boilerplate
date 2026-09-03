@@ -177,19 +177,6 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   `packages/db/AGENTS.md`. *Removal condition:* Phase 6 lands a change-detection scheme
   that does not read `updated_at` on its own.
 
-- **`calendar.range` is 20 reads/min per user, and exceeding it renders a blank grid**
-  — every month-arrow press is one read and `/calendar` always opens on today, so
-  paging through two years (24 presses) trips `userRateLimitedProcedure` inside one
-  window. The 429 leaves `rangeQuery.data` undefined, the grid maps `?? []`, and the
-  user sees an **empty month with no message** — indistinguishable from "you have no
-  events". Found while writing the Phase-2 e2e flow, which hit it and took three runs
-  to diagnose for exactly that reason; the spec now asserts no tRPC call answered
-  non-200 so the next occurrence names itself. The cap is Phase-1 behaviour and is
-  deliberately **not** changed here — raising a rate limit is a security decision, not
-  a calendar one. *Removal condition:* either raise the bucket for this procedure, or
-  (better, and independent of the number) render the query's error state instead of an
-  empty grid — the blank-grid failure mode is the part worth fixing.
-
 - **Calendar range caps under real load** — `MAX_RANGE_ROWS` (2,000) now covers concrete
   rows *and* expanded occurrences merged into one stream, and `MAX_RANGE_SERIES` (200)
   bounds expansion work per request. A month that used to fit may now truncate. The merge

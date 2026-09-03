@@ -87,6 +87,14 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   asserts against it directly, so it discriminates the bug without waiting for
   or faking the real calendar date. Test-only. See
   [`docs/MAINTENANCE.md` → Watch (c)](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
+- **`calendar.range`'s error state** (`apps/web/src/components/calendar/calendar-workspace.tsx`)
+  — a 429 (the 20/min per-user bucket) or any other range-query failure left
+  `rangeQuery.data` undefined, mapping to an empty events array and rendering a
+  plain empty month grid indistinguishable from "no events this month". Now
+  renders a dedicated error message instead, mirroring the fix already applied
+  to `InvitesList` for `listInvites`. The bucket itself is unchanged — it's
+  deliberate, documented, and tested behaviour, not the bug. See
+  [`docs/context/calendar/api.md`](docs/context/calendar/api.md).
 
 ### Security
 

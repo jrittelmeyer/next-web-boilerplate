@@ -696,6 +696,7 @@
       "truncated": "Este mes tiene más eventos de los que se pueden mostrar. Oculta algunos calendarios para ver el resto.",
       "seriesTruncated": "Este mes tiene más eventos repetidos de los que se pueden mostrar. Oculta algunos calendarios para ver el resto.",
       "noCalendars": "Crea un calendario para empezar a añadir eventos.",
+      "rangeError": "No se han podido cargar los eventos de este mes. Inténtalo de nuevo.",
       "dayDescription": "Eventos de este día.",
       "dayEmpty": "Nada programado.",
       "addOnThisDay": "Añadir un evento este día",

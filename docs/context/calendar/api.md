@@ -179,7 +179,9 @@ calendars is expensive enough to want a per-account bucket rather than a per-IP 
 procedure gets its **own** 20/min per-user bucket — the limiter key includes the procedure
 path (`trpc:${path}:user:${id}`), so driving `range` hard cannot starve `list`; a spec
 that loops a single procedure (24 month-arrow presses in a minute) still trips that
-procedure's bucket and must say so.
+procedure's bucket and must say so. On the client, a `range` failure (429 or otherwise)
+renders as `CalendarWorkspace`'s own error message, not a silently empty grid — the same
+fix `InvitesList` already applies to `listInvites`.
 
 | Procedure | Reads | Notes |
 | --- | --- | --- |

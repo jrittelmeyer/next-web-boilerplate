@@ -253,6 +253,13 @@ export function CalendarWorkspace({
           <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
             {t("noCalendars")}
           </p>
+        ) : rangeQuery.isError ? (
+          // A 429 (or any other range-query failure) must never render as a plain empty
+          // grid — indistinguishable from "no events this month." `InvitesList` hit this
+          // exact defect for `listInvites` first; this is the same fix for the grid.
+          <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+            {t("rangeError")}
+          </p>
         ) : (
           <MonthGrid
             // Remounting on a month change re-seeds the roving tab stop to the 1st,

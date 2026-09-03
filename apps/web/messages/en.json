@@ -696,6 +696,7 @@
       "truncated": "This month has more events than can be shown. Hide some calendars to see the rest.",
       "seriesTruncated": "This month has more repeating events than can be shown. Hide some calendars to see the rest.",
       "noCalendars": "Create a calendar to start adding events.",
+      "rangeError": "This month's events could not be loaded. Please try again.",
       "dayDescription": "Events on this day.",
       "dayEmpty": "Nothing scheduled.",
       "addOnThisDay": "Add an event on this day",
