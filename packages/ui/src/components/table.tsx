@@ -7,10 +7,20 @@ import type * as React from "react";
 // headers reads correctly to a screen reader, unlike a <ul> of flex rows). Size/align
 // columns with utility classes on <TableHead>/<TableCell> (`w-24`, `text-right`, …).
 // <Table> wraps itself in an overflow-x-auto container so a wide table scrolls inside its
-// own box instead of the page. See admin/audit/page.tsx for a worked consumer.
+// own box instead of the page; tabIndex/role/aria-label on that container satisfy axe's
+// scrollable-region-focusable rule, which otherwise fires whenever the table's columns
+// actually overflow. See admin/audit/page.tsx for a worked consumer.
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    // biome-ignore lint/a11y/useSemanticElements: role="region" + aria-label on this div satisfies axe's scrollable-region-focusable rule without giving up the table-container's own semantics.
+    <div
+      data-slot="table-container"
+      className="relative w-full overflow-x-auto"
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: axe's scrollable-region-focusable rule needs this scroll container keyboard-reachable — the shadcn-documented remedy.
+      tabIndex={0}
+      role="region"
+      aria-label="Scrollable table"
+    >
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}

@@ -95,6 +95,12 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   to `InvitesList` for `listInvites`. The bucket itself is unchanged — it's
   deliberate, documented, and tested behaviour, not the bug. See
   [`docs/context/calendar/api.md`](docs/context/calendar/api.md).
+- **`@repo/ui`'s `<Table>` scroll container** (`packages/ui/src/components/table.tsx`)
+  — the `overflow-x-auto` wrapper had no focusable content and no `tabindex`, so
+  axe's `scrollable-region-focusable` rule (*serious*) fired whenever a table's
+  rendered columns actually overflowed, seen intermittently on `/admin/audit`. Now
+  carries `tabIndex={0}` + `role="region"` + a hardcoded accessible name — the
+  standard shadcn remedy, applied once for every table in the app.
 
 ### Security
 

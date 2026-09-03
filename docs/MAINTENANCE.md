@@ -143,19 +143,6 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   re-derive the affected rows through `deriveEventInstants` in a one-off migration. Never
   "fix" it by moving the check into a constraint.
 
-- **`/admin/audit` intermittently trips `scrollable-region-focusable`** — axe rates it
-  *serious*, so it fails the e2e a11y gate when it fires. The node is
-  `<div data-slot="table-container" class="relative w-full overflow-x-auto">` in
-  `packages/ui/src/components/table.tsx`: an `overflow-x: auto` container with no
-  focusable content and no `tabindex`, which axe reports only when the table **actually**
-  overflows — so it depends on the rendered column widths, and the audit table's widest
-  column is a generated e2e email address. Seen once on 2026-07-31 and **not reproducible
-  on a re-run of the same build**; the surface is untouched by the calendar work.
-  *Removal condition:* give the scroll container `tabIndex={0}` plus a `role="region"`
-  and an accessible name (the standard shadcn remedy) — a `@repo/ui` change that touches
-  every table in the app, which is why it is recorded rather than folded into an
-  unrelated branch.
-
 - **Calendar override integrity — two writer-enforced invariants** — an override must
   carry its master's `uid`, and its parent must be a recurring event. Both are cross-row
   predicates a `CHECK` cannot express, so the database enforces neither. **Detection, not
