@@ -66,7 +66,14 @@ test("a 429 on calendar.range renders the error message, not a blank grid", asyn
   // The page's own query is in the SAME bucket (same user, same procedure path), so
   // loading /calendar now must still be inside the tripped window.
   await page.goto("/calendar");
-  await expect(page.getByText("This month's events could not be loaded.")).toBeVisible();
+  // TanStack Query's default `retry: 3` (exponential backoff — ~1s/2s/4s) means
+  // `rangeQuery.isError` does not settle immediately: the first CI run of this test
+  // (with the burst fixed to fire concurrently) still failed here at the default 5s
+  // assertion timeout, with the retries still in flight. 15s comfortably covers the
+  // ~7s worst-case backoff plus render.
+  await expect(page.getByText("This month's events could not be loaded.")).toBeVisible({
+    timeout: 15_000,
+  });
   // Never both: the grid's day cells and the error message are mutually exclusive —
   // this is the assertion that would fail under the old `?? []` behaviour, where the
   // grid still rendered (empty) alongside no message at all.
