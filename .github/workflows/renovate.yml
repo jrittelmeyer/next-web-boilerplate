@@ -1,15 +1,21 @@
 name: Renovate
 
-# Self-hosted fallback for the Mend-hosted Renovate GitHub App. Diagnosis
-# (docs/archive/renovate-b1-diagnosis-plan.md, BACKLOG.md B1): the Mend App is
-# installed, in Interactive mode, and authenticates fine — a manual trigger at
-# developer.mend.io (job ea8d7e50, 2026-08-31) proved the scheduler/config are
-# both healthy (the job's own log shows "Matches schedule on monday"), but the
-# job was killed mid-run with no error logged while generating a pnpm lockfile
-# update — consistent with a resource ceiling on Mend's Community/Free tier for
-# a 14-package monorepo. Every scheduled Monday window since 2026-07-22 has
-# produced zero renovate/* branches. This workflow reuses the already-committed
-# .github/renovate.json unchanged — only the execution host changes.
+# Cold fallback. Mend (the GitHub App) is the CHOSEN Renovate host as of the
+# 2026-09-03 host decision (docs/archive/renovate-b1-host-decision-plan.md,
+# BACKLOG.md B1 shipped row): it opened #56, the first scheduled renovate/*
+# PR in repo history, 10/10 green, merged 2026-09-03 — proven delivery for
+# the no-lockfile update class (GitHub Actions digest/version bumps). Full
+# npm-manager/lockfile updates remain an accepted open risk on Mend's tier
+# (Dependency Dashboard's updatedAt was still frozen at 2026-07-22 as of the
+# decision) — see docs/MAINTENANCE.md → "Maintenance-only (Tier 3 G)".
+#
+# This file stays in the repo, dormant, as the fallback if Mend goes silent
+# again: ENABLE_RENOVATE is intentionally unset and should stay that way
+# unless Mend is later abandoned. Diagnosis behind the original build:
+# docs/archive/renovate-b1-diagnosis-plan.md (Mend Community/Free-tier
+# resource-ceiling hypothesis for a 14-package monorepo). This workflow
+# reuses the already-committed .github/renovate.json unchanged — only the
+# execution host changes.
 #
 # Requires a repo secret RENOVATE_TOKEN: a classic PAT with `repo` + `workflow`
 # scope (`workflow` is required because .github/renovate.json extends

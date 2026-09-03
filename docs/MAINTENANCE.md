@@ -69,34 +69,39 @@ The full per-dependency record (versions, pin style, and *why*) is
 
 GitHub repo settings don't travel with a template copy. On your own repo:
 
-- **Renovate dependency updates run via `.github/workflows/renovate.yml`**, a
-  self-hosted `renovatebot/github-action` cron reusing the committed
-  `.github/renovate.json` unchanged. Needs a repo secret `RENOVATE_TOKEN` — a
-  classic PAT with `repo` + `workflow` scope (`workflow` is required because
-  the config extends `helpers:pinGitHubActionDigests`, which writes to
-  `.github/workflows/*.yml`; the ambient `GITHUB_TOKEN` can't be used — it
-  can't trigger downstream CI on PRs it opens). Validate config edits with
-  `pnpm dlx --package renovate renovate-config-validator .github/renovate.json`.
-  **Gated on `ENABLE_RENOVATE` since 2026-09-02** (job-level `if`, the
-  `ENABLE_CODEQL`/`ENABLE_VISUAL` convention): unset — the state in this repo and in
-  every generated project — the lane *skips silently* rather than failing. Enabling
-  takes **two** actions, the secret **and** `gh variable set ENABLE_RENOVATE --body
-  true`; see the dated liveness check in Watch items below, which exists because a
-  forgotten variable would make the workflow silently dead rather than loudly broken.
-  The fallback to the **Mend GitHub App**, built 2026-08-31 (`BACKLOG.md` B1; which host
-  stays is the owner's call — see Watch items): Mend was
-  confirmed installed, Interactive-mode, and schedule-healthy, but every
-  scheduled Monday window since 2026-07-22 produced zero `renovate/*`
-  branches — a manual trigger's own job log showed the run get killed
-  mid-lockfile-generation with no error emitted, consistent with a
-  Community/Free-tier resource ceiling for this monorepo's size. Full
-  diagnosis: `docs/archive/renovate-b1-diagnosis-plan.md`. A fork that wants
-  the Mend App instead: choose **"Only selected repositories"** when
-  installing (an "All repositories" install defaults the org to **Silent**
-  mode — scans but never creates issues/PRs — and changing GitHub-side repo
-  access afterward doesn't clear it; flip to Interactive at
+- **Renovate dependency updates run via the Mend GitHub App** — chosen as the
+  host 2026-09-03 (`BACKLOG.md` B1 shipped row;
+  [host decision plan](archive/renovate-b1-host-decision-plan.md)). It opened
+  the first scheduled `renovate/*` PR in the repo's history
+  ([#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56),
+  `actions/checkout` 7.0.1, 10/10 green, merged 2026-09-03) — proven delivery
+  for the no-lockfile update class (GitHub Actions digest/version bumps). Full
+  npm-manager/lockfile updates remain an accepted open risk: the Dependency
+  Dashboard issue's `updatedAt` was still frozen at 2026-07-22 as of the
+  decision, meaning Mend's tier may keep failing to finish a pnpm resolve —
+  see "Maintenance-only (Tier 3 G)" in Watch items below. A fork that wants
+  the Mend App: choose **"Only selected repositories"** when installing (an
+  "All repositories" install defaults the org to **Silent** mode — scans but
+  never creates issues/PRs — and changing GitHub-side repo access afterward
+  doesn't clear it; flip to Interactive at
   [developer.mend.io](https://developer.mend.io) if the dashboard issue never
-  appears), and remove `renovate.yml`.
+  appears).
+- **`.github/workflows/renovate.yml`** is a self-hosted `renovatebot/github-action`
+  cron reusing the committed `.github/renovate.json` unchanged, kept in the repo as
+  the **cold fallback** if Mend goes silent again — not deleted, since it's a
+  real, already-CI-clean, ready-to-enable artifact. Needs a repo secret
+  `RENOVATE_TOKEN` — a classic PAT with `repo` + `workflow` scope (`workflow`
+  is required because the config extends `helpers:pinGitHubActionDigests`,
+  which writes to `.github/workflows/*.yml`; the ambient `GITHUB_TOKEN` can't
+  be used — it can't trigger downstream CI on PRs it opens). Validate config
+  edits with `pnpm dlx --package renovate renovate-config-validator
+  .github/renovate.json`. **Gated on `ENABLE_RENOVATE`** (job-level `if`, the
+  `ENABLE_CODEQL`/`ENABLE_VISUAL` convention): **intentionally unset** — the
+  lane *skips silently* rather than failing — and should stay that way unless
+  Mend is later abandoned. Enabling takes **two** actions, the secret **and**
+  `gh variable set ENABLE_RENOVATE --body true`. Diagnosis behind the original
+  build: `docs/archive/renovate-b1-diagnosis-plan.md` (Mend Community/Free-tier
+  resource-ceiling hypothesis for a 14-package monorepo).
 - **Re-create the CI gate variables** (they're repo variables, not workflow content):
   `ENABLE_CODEQL` (needs a public repo or GHAS), `ENABLE_VISUAL`, `ENABLE_CSP_NONCE` (the
   nonce-mode e2e twin), `ENABLE_RENOVATE`
@@ -345,22 +350,27 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   against it. Until then **hold Renovate's `typescript` v7 major**. Costs no audit points. The full
   entry as it stood — the 07-13 attempt, the lifted-gate verification, the dependency sweep — is
   preserved verbatim in [archive/WATCH_HISTORY.md#typescript-7-cutover-full-entry-as-of-2026-09-02](archive/WATCH_HISTORY.md#typescript-7-cutover-full-entry-as-of-2026-09-02).
-- **Maintenance-only (Tier 3 G) — the standing state; Renovate delivery is the open owner
-  decision.** Standing since 2026-07-17 (path-to-100 verified at 100.0). Renovate's scheduled lane
-  produced zero `renovate/*` branches from 2026-07-22 until 2026-08-31, when two things happened
-  the same day: the Mend App opened the first scheduled PR in the repo's history
+- **Maintenance-only (Tier 3 G) — the standing state; Renovate host decided 2026-09-03.**
+  Standing since 2026-07-17 (path-to-100 verified at 100.0). Renovate's scheduled lane produced
+  zero `renovate/*` branches from 2026-07-22 until 2026-08-31, when two things happened the same
+  day: the Mend App opened the first scheduled PR in the repo's history
   ([#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56), `actions/checkout`
-  7.0.1, every lane green — Mend *does* deliver the no-lockfile class; the Dependency Dashboard's
-  `updatedAt` is still 2026-07-22, so its pnpm run still never finishes), and the self-hosted
-  `renovate.yml` fallback's first cron run failed at startup for want of the `RENOVATE_TOKEN`
-  secret. Two hosts are configured against one repo and the workflow header's dual-run warning is
-  live. **Owner decision, not a build row:** (a) add `RENOVATE_TOKEN` **and** set
-  `ENABLE_RENOVATE` (the fork-safe gate shipped 2026-09-02 — see Automation on a fork), then
-  uninstall the Mend App; or (b) keep Mend, delete `renovate.yml`, and accept that npm-manager
-  PRs may keep dying on Mend's tier. Never both. Either way, merge or close #56 first (touching
-  `.github/workflows/*` needs the `workflow` scope). *Removal condition:* a scheduled
-  `renovate/*` PR from the *chosen* host merges. The full narrative (the 07-22 widening fix, the
-  empty Monday windows, the Mend-side diagnosis) is preserved verbatim in
+  7.0.1, every lane green), and the self-hosted `renovate.yml` fallback's first cron run failed
+  at startup for want of the `RENOVATE_TOKEN` secret (that run predates the `ENABLE_RENOVATE`
+  gate shipped 2026-09-02; since the gate landed, `renovate.yml` is unconditionally inert rather
+  than failing — no secret, `ENABLE_RENOVATE` unset). **Decided 2026-09-03
+  ([host decision plan](archive/renovate-b1-host-decision-plan.md)): Mend is the chosen host,
+  scoped precisely** — it delivers the no-lockfile class (#56, merged 2026-09-03) but the
+  Dependency Dashboard issue's `updatedAt` was still frozen at 2026-07-22 as of the decision, so
+  full npm-manager/lockfile updates remain an accepted open risk, not something this decision
+  claims to have fixed. `renovate.yml` stays in the repo as a documented cold fallback,
+  `ENABLE_RENOVATE` intentionally unset, in case Mend goes silent again. *Removal condition met*
+  by merging #56 for the no-lockfile class; npm-manager delivery is tracked as an open risk, not
+  a re-diagnosis target, unless it becomes a real problem. **Non-blocking glance point:**
+  2026-09-07 is the next scheduled Monday window — worth an informal check of the Dependency
+  Dashboard `updatedAt` for free confirmation Mend's no-lockfile delivery keeps working, but not
+  a gate on anything. The full narrative (the 07-22 widening fix, the empty Monday windows, the
+  Mend-side diagnosis) is preserved verbatim in
   [archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02](archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02); the diagnosis itself is
   [archive/renovate-b1-diagnosis-plan.md](archive/renovate-b1-diagnosis-plan.md).
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
@@ -373,15 +383,6 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (08-14) and 1.6.30 (08-26). Every take is in [CHANGELOG](../CHANGELOG.md); the verbatim
     dated entries are in [archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02](archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02) and
     [archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26](archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26).
-  - **NEW 2026-09-02 — Renovate liveness, 14 days after `RENOVATE_TOKEN` is set.**
-    Enabling the self-hosted workflow now takes **two** owner actions (the secret *and*
-    `gh variable set ENABLE_RENOVATE --body true`), because the fork-safe gate that
-    stops generated projects inheriting a weekly red also means a forgotten variable
-    leaves the lane skipping *silently*. That is the same observable that hid the Mend
-    failure for six weeks — zero `renovate/*` branches, no error anywhere. **So: within
-    14 days of adding the secret, confirm either a `renovate/*` branch or a Dependency
-    Dashboard `updatedAt` newer than 2026-07-22.** Neither ⇒ check
-    `gh variable list` first, before re-diagnosing anything upstream.
   - **2026-09-07 ~20:00 UTC — `next` 16.3.4** ages in (published 2026-08-31T20:00:51Z,
     registry-checked the same day; no advisory known). **Pre-triaged 2026-09-01
     (Dependency-policy rule 6, seventeenth audit):** the release *re-enables AVIF Image

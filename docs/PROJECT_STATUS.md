@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-09-02 — fast-uri advisory promotion, after the doc audit; see the 2026-09-02 rows below and the [CHANGELOG](../CHANGELOG.md)._
+_Last updated: 2026-09-03 — Renovate host decision closed (Mend chosen, #56 merged); see the row below and the [CHANGELOG](../CHANGELOG.md)._
 
 ## Where we are
 
@@ -43,8 +43,8 @@ _Last updated: 2026-09-02 — fast-uri advisory promotion, after the doc audit; 
   100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4 → 99.3/100** — reports in
   `docs/archive/PROJECT_AUDIT_*.md`; latest
   [PROJECT_AUDIT_2026-09-01.md](archive/PROJECT_AUDIT_2026-09-01.md) (the 2026-09-02 rows below
-  closed two of its three seeded rows; the standing deductions are B2/B3 rows plus the external
-  Renovate delivery).
+  closed two of its three seeded rows; the standing deductions are B2/B3 rows plus Mend's
+  unproven npm-manager/lockfile delivery class).
 - **CI is green** (`verify` · `audit` · `e2e` · `csp-nonce` · `docker-image` · `visual`,
   plus the variable-gated `perf` lane, deliberately unset here). **CodeQL is live** —
   `ENABLE_CODEQL` is set on the public repo (code scanning is free once public); the variable
@@ -142,6 +142,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Audit — 2026-09-01 | 1 | Seventeenth pass: **99.3** — 08-26 takes, CVE fix, v1.2.0 verified; new: fork-red `renovate.yml` (B1), month-boundary e2e red tracked (B2), draft releases (B3), STACK.md stale after both takes (fixed); 14 drift fixes; contrarian 13/13 folded | [report](archive/PROJECT_AUDIT_2026-09-01.md) |
 | Maintenance — 2026-09-02 (1/3) | 1 | Kit 0.23.11 → **0.23.16** from a tagged worktree (13 drifted files → 0; seven skills `disable-model-invocation`); adapter on the `verify` block, its command proven by running it; `docs:sanity` parity deep-equal, red-proven; new rule: install from a tag | [CHANGELOG](../CHANGELOG.md) |
 | Maintenance — 2026-09-02 (2/3) | 1 | `.claude/settings.json` least-privilege (`winget`/`docker exec` gone, `PowerShell(...)` twins, env files `ask`, force-push deny) · fork-safe `ENABLE_RENOVATE` gate (B1 closed) · `next` 16.3.3 age-exclude deleted on schedule | [CHANGELOG](../CHANGELOG.md) |
+| Renovate B1 — 2026-09-03 | 1 | Host decision closed: Mend kept (scoped to the no-lockfile class, #56 merged); `renovate.yml` kept dormant as cold fallback, `ENABLE_RENOVATE` unset; npm-manager delivery tracked as an accepted open risk | [host decision plan](archive/renovate-b1-host-decision-plan.md) |
 | Advisory — 2026-09-02 (3/3) | 1 | `browserslist` `<4.28.7` → 4.28.8 for two NEW HIGH advisories — advisory-DB drift on an unchanged lockfile, build-tooling-only, no age-exclude needed; `pnpm audit` 0 after. Contrarian caught two draft errors pre-implementation | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-09-02 | 1 | ~85 drift fixes across 27 docs (five verifier clusters, ~1,900 claims); MAINTENANCE's landed Watch → new `archive/WATCH_HISTORY.md` (78K → 51K chars); STATUS/BACKLOG compacted; showcase at 17 passes/99.3; 12 memory repairs; contrarian 13/13 folded | [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md) |
 | Advisory — 2026-09-02 | 1 | `fast-uri` `<3.1.5` → 3.1.6 for four NEW HIGH advisories, closed same-day (already aged in); `3.1.7`'s two more HIGHs pre-emptively parked in `ignoreGhsas` ahead of `pnpm audit`'s feed, exits 2026-09-09; `pnpm audit` 0 after. Contrarian: sound with caveats | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
@@ -159,8 +160,7 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each landed
-item. Open now: **Renovate host choice** (owner — `RENOVATE_TOKEN` + `ENABLE_RENOVATE` and
-drop the Mend App, or keep Mend and delete `renovate.yml`; then merge/close #56) · **e2e
+item. Open now: **e2e
 month-boundary red** (B2 — deterministic 00:00–04:00Z on the 1st; fix due before 2026-10-01) ·
 **`next` 16.3.4** ages in 2026-09-07 (pre-triaged, four riders) · **`better-auth` 1.7.x** is
 a breaking minor — plan → sign-off, no advisory forces it. Ledger clear: `ignoreGhsas` `[]`,

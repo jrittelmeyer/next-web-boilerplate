@@ -9,14 +9,21 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
+### Changed
+
+- **Renovate host decision closed**: kept the Mend GitHub App (opened
+  [#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56), merged),
+  scoped to the no-lockfile update class — full npm-manager/lockfile delivery
+  remains an accepted open risk. `.github/workflows/renovate.yml` stays in the
+  repo dormant as a cold fallback (`ENABLE_RENOVATE` intentionally unset). See
+  [`docs/archive/renovate-b1-host-decision-plan.md`](docs/archive/renovate-b1-host-decision-plan.md).
+
 ### Added
 
 - **Self-hosted Renovate workflow** — `.github/workflows/renovate.yml`
   (`renovatebot/github-action`, SHA-pinned, Monday cron + `workflow_dispatch`,
-  reusing `.github/renovate.json` unchanged) as the fallback for the Mend-hosted
-  App, whose scheduled runs had produced no PRs since 2026-07-22. Needs a
-  `RENOVATE_TOKEN` repo secret and is not yet live — the host decision is tracked
-  in [`docs/MAINTENANCE.md` → Watch](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
+  reusing `.github/renovate.json` unchanged) as the cold fallback for the
+  Mend-hosted App, kept dormant per the host decision above.
 
 ### Changed
 
