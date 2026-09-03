@@ -11,6 +11,10 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Changed
 
+- **v1.0.0 and v1.1.0 releases published** — both had sat `draft=true` since
+  2026-07-20 while this header already claimed a matching GitHub Release per
+  milestone; published non-latest (`--latest=false`) so v1.2.0 keeps the
+  "Latest" badge.
 - **Renovate host decision closed**: kept the Mend GitHub App (opened
   [#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56), merged),
   scoped to the no-lockfile update class — full npm-manager/lockfile delivery
