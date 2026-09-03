@@ -75,6 +75,19 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   Storybook's `@storybook/react-vite` builder. The override is what keeps that direct
   pin and every transitive copy in lockstep; both sites bump together.
 
+### Fixed
+
+- **The e2e month-boundary defect** (`apps/web/e2e/calendar-invitations.spec.ts`) —
+  `dayInThisMonth()` derived the event's month from the runner's UTC clock while
+  `/calendar` opens on today in the organizer's **stored zone**
+  (`America/New_York`), so the lane went deterministically red 00:00–04:00 UTC on
+  the 1st of every month (reproduced 2026-09-01, `3e68733`). Now derives the
+  month via `Intl.DateTimeFormat("en-CA", { timeZone: EVENT_ZONE })`, with `now`
+  injectable; a new browser-less proof test pins the exact failing instant and
+  asserts against it directly, so it discriminates the bug without waiting for
+  or faking the real calendar date. Test-only. See
+  [`docs/MAINTENANCE.md` → Watch (c)](docs/MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
+
 ### Security
 
 - **`browserslist` scoped override, `<4.28.7` → `4.28.8`** — two NEW HIGH advisories

@@ -50,12 +50,33 @@ const organizer = makeTestUser("rsvp-organizer");
  */
 const guest = `rsvp-guest-${Date.now()}@example.com`;
 
-/** The 15th of the current month, so the chip is on the grid the page opens on. */
-function dayInThisMonth(hour: number): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-15T${String(hour).padStart(2, "0")}:00`;
+/**
+ * The 15th of the current month, so the chip is on the grid the page opens on.
+ * "Current" means in `EVENT_ZONE`, not the runner's clock: `/calendar` opens on
+ * today in the organizer's stored zone (`calendar/page.tsx` →
+ * `instantToCivil(Date.now(), preferences.timeZone)`), so deriving this from
+ * runner-local UTC goes red for 00:00-04:00 UTC on the 1st of every month, when
+ * the runner has already rolled to the new month but the grid hasn't (diagnosed
+ * 2026-09-01, `3e68733`). `now` is injectable so the proof below can pin that
+ * exact failing instant instead of waiting for or faking the real date.
+ */
+function dayInThisMonth(hour: number, now: Date = new Date()): string {
+  // en-CA formats as YYYY-MM-DD; slicing off the day keeps the fixed "15th" below —
+  // only the year/month should track `now`, not the actual day it's called on.
+  const yearMonth = new Intl.DateTimeFormat("en-CA", { timeZone: EVENT_ZONE })
+    .format(now)
+    .slice(0, 7);
+  return `${yearMonth}-15T${String(hour).padStart(2, "0")}:00`;
 }
+
+test("dayInThisMonth derives the month in EVENT_ZONE, not the runner's UTC clock", () => {
+  // 2026-09-01T02:37:00Z is the exact instant `3e68733` attempt 1 went red on: UTC has
+  // already rolled to September, but America/New_York is still 2026-08-31 22:37, which
+  // is what the grid (opened on August) actually shows. The old runner-clock logic
+  // returned "2026-09-15…", off by a month from what was on screen.
+  const utcMidnightAfterMonthRoll = new Date("2026-09-01T02:37:00Z");
+  expect(dayInThisMonth(9, utcMidnightAfterMonthRoll)).toBe("2026-08-15T09:00");
+});
 
 test.afterAll(async () => {
   await deleteInvitationJobs(guest);

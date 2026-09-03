@@ -143,6 +143,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Maintenance — 2026-09-02 (1/3) | 1 | Kit 0.23.11 → **0.23.16** from a tagged worktree (13 drifted files → 0; seven skills `disable-model-invocation`); adapter on the `verify` block, its command proven by running it; `docs:sanity` parity deep-equal, red-proven; new rule: install from a tag | [CHANGELOG](../CHANGELOG.md) |
 | Maintenance — 2026-09-02 (2/3) | 1 | `.claude/settings.json` least-privilege (`winget`/`docker exec` gone, `PowerShell(...)` twins, env files `ask`, force-push deny) · fork-safe `ENABLE_RENOVATE` gate (B1 closed) · `next` 16.3.3 age-exclude deleted on schedule | [CHANGELOG](../CHANGELOG.md) |
 | Renovate B1 — 2026-09-03 | 1 | Host decision closed: Mend kept (scoped to the no-lockfile class, #56 merged); `renovate.yml` kept dormant as cold fallback, `ENABLE_RENOVATE` unset; npm-manager delivery tracked as an accepted open risk | [host decision plan](archive/renovate-b1-host-decision-plan.md) |
+| B2 e2e month-boundary fix — 2026-09-03 | 1 | `dayInThisMonth()` now derives the month in `EVENT_ZONE`, not the runner's UTC clock; injectable `now` + a pinned discrimination-proof test guard it. Test-only; removal condition (20-consecutive-green + the 2026-10-01 window) still open | [CHANGELOG](../CHANGELOG.md) |
 | Advisory — 2026-09-02 (3/3) | 1 | `browserslist` `<4.28.7` → 4.28.8 for two NEW HIGH advisories — advisory-DB drift on an unchanged lockfile, build-tooling-only, no age-exclude needed; `pnpm audit` 0 after. Contrarian caught two draft errors pre-implementation | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-09-02 | 1 | ~85 drift fixes across 27 docs (five verifier clusters, ~1,900 claims); MAINTENANCE's landed Watch → new `archive/WATCH_HISTORY.md` (78K → 51K chars); STATUS/BACKLOG compacted; showcase at 17 passes/99.3; 12 memory repairs; contrarian 13/13 folded | [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md) |
 | Advisory — 2026-09-02 | 1 | `fast-uri` `<3.1.5` → 3.1.6 for four NEW HIGH advisories, closed same-day (already aged in); `3.1.7`'s two more HIGHs pre-emptively parked in `ignoreGhsas` ahead of `pnpm audit`'s feed, exits 2026-09-09; `pnpm audit` 0 after. Contrarian: sound with caveats | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
@@ -161,7 +162,8 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each landed
 item. Open now: **e2e
-month-boundary red** (B2 — deterministic 00:00–04:00Z on the 1st; fix due before 2026-10-01) ·
+month-boundary red** (B2 — fix merged 2026-09-03; removal condition still open until the
+20-consecutive-green counter recovers and the 2026-10-01 window passes green) ·
 **`next` 16.3.4** ages in 2026-09-07 (pre-triaged, four riders) · **`better-auth` 1.7.x** is
 a breaking minor — plan → sign-off, no advisory forces it. Ledger clear: `ignoreGhsas` `[]`,
 `minimumReleaseAgeExclude` empty since 2026-09-02, `pnpm audit` zero. The paragraph this

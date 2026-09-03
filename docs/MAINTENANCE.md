@@ -282,8 +282,9 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     non-2xx now fails on status instead of hanging) and gave every Playwright lane a
     report + traces. *Removal condition:* a recurrence is diagnosed from its uploaded
     trace, or 20 consecutive green runs of the e2e lane.
-  - **(c) The month-boundary defect — DIAGNOSED 2026-09-01, fix pending
-    ([`BACKLOG.md`](BACKLOG.md) B2).** `3e68733` attempt 1 (2026-09-01 02:37Z) failed
+  - **(c) The month-boundary defect — DIAGNOSED 2026-09-01, FIX MERGED
+    2026-09-03, awaiting the 2026-10-01 green-window checkpoint
+    ([`CHANGELOG.md`](../CHANGELOG.md)).** `3e68733` attempt 1 (2026-09-01 02:37Z) failed
     in `e2e/calendar-invitations.spec.ts:165` — the "Standup" chip never appeared.
     `dayInThisMonth()` (`:54-58`) derives the event's month from the **runner's** clock
     (`new Date().getMonth()` → September, UTC) while the organizer's stored zone is
@@ -297,13 +298,15 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (`DEFAULT_TIME_ZONE = "UTC"`, `lib/user-preferences.ts`; the a11y user stores no
     zone), and no other spec derives a month from the runner clock. `apps/web/e2e`
     ships to generated projects, so their lanes inherit the window. *Fix (test-only,
-    S):* derive the day in `EVENT_ZONE` (`Intl.DateTimeFormat("en-CA", { timeZone })`)
-    and make `now` injectable so the discrimination proof runs on any day — **not**
-    `calendar.spec.ts`'s fixed-date + `gotoMonth` pattern: this spec visits `/calendar`
-    six times and ~7 arrow presses per visit would trip the 20/min `calendar.range` cap
-    its header already works around. ⚠️ This red reset the 20-consecutive-green
-    counter that (a) and (b) share. *Removal condition:* the fix merges and the
-    2026-10-01 window passes green.
+    S, MERGED 2026-09-03):* `dayInThisMonth()` now derives the month in `EVENT_ZONE`
+    (`Intl.DateTimeFormat("en-CA", { timeZone })`) with an injectable `now`, and a new
+    browser-less proof test pins the exact `3e68733` instant and asserts the fixed
+    function against it directly — deliberately **not** `calendar.spec.ts`'s
+    fixed-date + `gotoMonth` pattern: this spec visits `/calendar` six times and ~7
+    arrow presses per visit would trip the 20/min `calendar.range` cap its header
+    already works around. ⚠️ This red reset the 20-consecutive-green counter that (a)
+    and (b) share. *Removal condition:* the fix merges (done) and the 2026-10-01
+    window passes green — still open until that date.
   - ⚠️ **Why this was invisible for so long:** all three Playwright lanes ran a
     report-less CI reporter while `ci.yml` uploaded a report directory that was never
     created, and `if-no-files-found` defaulted to `warn` — an annotation nobody read. The
