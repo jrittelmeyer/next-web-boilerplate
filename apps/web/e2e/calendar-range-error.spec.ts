@@ -14,10 +14,19 @@ import { seedCalendar } from "./support/db";
  * then contend with their own assertions) or spend a chunk of their remaining budget. A
  * dedicated file with one signup keeps this test's bucket-exhaustion entirely its own.
  *
- * **The bucket is tripped via 21 direct `page.request.get` calls, not 21 UI month-arrow
- * clicks.** Same raw batch+superjson envelope `calendar-invites.spec.ts` already uses to
- * drive `calendar.range` directly — deterministic (no click/render/network race across 21
- * round trips) and it reuses the same authenticated session cookie the page itself holds.
+ * **The bucket is tripped via 21 direct `page.request.get` calls, fired concurrently, not
+ * 21 UI month-arrow clicks.** Same raw batch+superjson envelope `calendar-invites.spec.ts`
+ * already uses to drive `calendar.range` directly — deterministic (no click/render/network
+ * race) and it reuses the same authenticated session cookie the page itself holds.
+ * `Promise.all` rather than a sequential loop: the limiter's window is fixed from the FIRST
+ * call in it (`memoryRateLimit` in `lib/rate-limit.ts`), so 21 requests awaited one at a
+ * time under CI's own latency risked spending most of the 60s window just tripping the
+ * bucket, leaving the page's own `calendar.range` call outside it by the time `/calendar`
+ * loads — measured: the first CI run signed up and tripped the bucket fine but the grid
+ * never showed the error, exactly that race. Firing concurrently collapses the setup to
+ * ~one round trip. The in-memory limiter is safe under this: each check-and-increment runs
+ * synchronously with no `await` in between, so concurrent requests on the same Node process
+ * cannot lose an update.
  */
 
 const user = makeTestUser("range-error");
@@ -47,12 +56,11 @@ test("a 429 on calendar.range renders the error message, not a blank grid", asyn
   });
 
   // `userRateLimitedProcedure`'s bucket is 20/min per user per procedure
-  // (`apps/web/src/server/trpc/trpc.ts`) — the 21st call in this window must be the one
-  // that trips it.
-  const statuses: number[] = [];
-  for (let i = 0; i < 21; i++) {
-    statuses.push(await requestRange(page, calendarId));
-  }
+  // (`apps/web/src/server/trpc/trpc.ts`) — with all 21 landing in the same window, at
+  // least one must be the call that trips it.
+  const statuses = await Promise.all(
+    Array.from({ length: 21 }, () => requestRange(page, calendarId)),
+  );
   expect(statuses.filter((status) => status === 429).length).toBeGreaterThan(0);
 
   // The page's own query is in the SAME bucket (same user, same procedure path), so
