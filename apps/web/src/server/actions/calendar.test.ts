@@ -756,6 +756,24 @@ describe("createEvent", () => {
     expect(dbNotify).toHaveBeenCalledTimes(1);
   });
 
+  it("pins the per-user conjunct on the reminders existing-row read (predicate-sensor long tail)", async () => {
+    // `applyReminders`'s existing-row lookup, restated: it must scope by BOTH the event
+    // and the acting user, or a co-attendee's rules on the same event would be diffed
+    // against this caller's submission and deleted as `removed`. The planted defect for
+    // the wrong spelling lives in @repo/db's calendar-reminders integration suite; this
+    // pin is what turns red if the action stops issuing the right one.
+    const conditions: unknown[] = [];
+    dbSelect.mockImplementation(() => whereCapturingSelect(conditions));
+
+    expect(await createEvent(eventInput)).toEqual({ data: { id: EVENT, calendarId: CAL } });
+
+    const reminderWhere = conditions
+      .map(compiledSql)
+      .find((text) => text.includes('"calendar_event_reminders"'));
+    expect(reminderWhere).toMatch(/"calendar_event_reminders"\."event_id" = \$\d+/);
+    expect(reminderWhere).toMatch(/"calendar_event_reminders"\."user_id" = \$\d+/);
+  });
+
   it("maps an insert failure", async () => {
     dbInsert.mockReturnValue({
       values: () => ({ returning: () => Promise.reject(new Error("boom")) }),

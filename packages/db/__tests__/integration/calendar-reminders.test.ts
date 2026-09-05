@@ -6,7 +6,7 @@ import {
   type NewCalendarEventReminder,
   user,
 } from "@repo/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 /**
@@ -158,6 +158,90 @@ describe("the rule key", () => {
 
     const rows = await db.select().from(calendarEventReminders);
     expect(rows).toHaveLength(5);
+  });
+});
+
+describe("per-user scoping — a shared event (predicate-sensor long tail)", () => {
+  /**
+   * `calendar.byId`'s reminders read, restated (the router lives in `apps/web`, which this
+   * package cannot depend on — same constraint the attendees suite documents). Takes the
+   * `userId` conjunct as a parameter so the same helper serves the correct query and the
+   * planted defect below.
+   */
+  async function existingRulesFor(userId: string, scoped: boolean) {
+    return await db
+      .select({ id: calendarEventReminders.id })
+      .from(calendarEventReminders)
+      .where(
+        scoped
+          ? and(
+              eq(calendarEventReminders.eventId, EVENT_ID),
+              eq(calendarEventReminders.userId, userId),
+            )
+          : eq(calendarEventReminders.eventId, EVENT_ID),
+      );
+  }
+
+  /**
+   * `applyReminders`'s destructive tip, restated: given whatever the "existing" read
+   * returned, an empty submission keeps nothing, so every row that read saw is `removed`
+   * and gets deleted. This is `diffReminders`'s shape with the identity check skipped —
+   * legitimate here because the submission is empty, so every existing id is unkept
+   * regardless of key. What matters is which rows the "existing" read handed in.
+   */
+  async function saveEmptyReminderList(existing: { id: string }[]) {
+    if (existing.length === 0) return;
+    await db.delete(calendarEventReminders).where(
+      inArray(
+        calendarEventReminders.id,
+        existing.map((row) => row.id),
+      ),
+    );
+  }
+
+  beforeEach(async () => {
+    await insertRule({ userId: TEST_OWNER.id });
+    await insertRule({ userId: OTHER_USER.id, offsetMinutes: -30 });
+  });
+
+  it("reads only the caller's own rule off a shared event", async () => {
+    // The read `calendar.ts:593-598` performs. Without the `userId` conjunct, the
+    // composer would seed its editor from BOTH attendees' rules.
+    const mine = await existingRulesFor(TEST_OWNER.id, true);
+    expect(mine).toHaveLength(1);
+  });
+
+  it("sees both rules under the spelling without the `userId` conjunct — the composer's blind spot", async () => {
+    // The planted defect. Nothing here is destructive yet; this is what the read alone
+    // would hand the composer if the conjunct were dropped.
+    const both = await existingRulesFor(TEST_OWNER.id, false);
+    expect(both).toHaveLength(2);
+  });
+
+  it("an empty save deletes only the caller's own rule", async () => {
+    // `calendar.ts:668-670`, correctly scoped: the owner clearing their reminders never
+    // touches a co-attendee's row on the same event.
+    const existing = await existingRulesFor(TEST_OWNER.id, true);
+    await saveEmptyReminderList(existing);
+
+    const remaining = await db
+      .select({ userId: calendarEventReminders.userId })
+      .from(calendarEventReminders)
+      .where(eq(calendarEventReminders.eventId, EVENT_ID));
+    expect(remaining).toEqual([{ userId: OTHER_USER.id }]);
+  });
+
+  it("a save under the unscoped read deletes what the caller never saw", async () => {
+    // The defect, planted (the row's own "destructive gap"). The owner clears a list they
+    // were shown as their own reminders — but because the "existing" read carried no
+    // `userId` conjunct, it included the co-attendee's rule too, and the empty submission
+    // marks it `removed` right alongside. The composer never rendered it, and the
+    // co-attendee never asked for it to go.
+    const existing = await existingRulesFor(TEST_OWNER.id, false);
+    await saveEmptyReminderList(existing);
+
+    const remaining = await db.select().from(calendarEventReminders);
+    expect(remaining).toHaveLength(0);
   });
 });
 

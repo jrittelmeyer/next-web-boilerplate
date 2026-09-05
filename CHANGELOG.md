@@ -24,6 +24,13 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Added
 
+- **Predicate sensor for per-user reminder scoping** (B3 predicate-sensor long tail,
+  headline item) — a two-user shared-event fixture and planted defect in `@repo/db`'s
+  reminder integration suite, plus a spelling pin binding `applyReminders`'s
+  existing-row read, close the one gap the 2026-08-08 sweep flagged as destructive-
+  shaped. The scoping itself was already correct (`eq(userId)` on both the read and
+  the write's existing-row lookup) — nothing behavioral changed; this is coverage
+  proving a regression here would go red, the same posture as the F4/F6 sensors.
 - **Self-hosted Renovate workflow** — `.github/workflows/renovate.yml`
   (`renovatebot/github-action`, SHA-pinned, Monday cron + `workflow_dispatch`,
   reusing `.github/renovate.json` unchanged) as the cold fallback for the
