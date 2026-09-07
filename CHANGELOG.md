@@ -115,6 +115,15 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Security
 
+- **`fflate` scoped override, `<0.4.9` → `0.4.9`** — GHSA-px8p-9vwx-vf98 (MODERATE:
+  `unzipSync` can enter an infinite loop parsing a malformed ZIP64 archive),
+  vulnerable `>=0.4.5 <0.4.9`. Reached only via `posthog-js@1.391.2`'s own `^0.4.8`
+  dependency (`apps/web>posthog-js>fflate`) — 0.4.9 is in-range, a fix-forward, not
+  a pin-bypass, and cleared the 7-day age gate long before this advisory was
+  caught (published 2026-07-20; caught by the daily audit lane 2026-09-05). Ranged
+  key per the standing convention (see the other entries below): removed once a
+  routine `posthog-js` bump naturally carries the lockfile past 0.4.9. `pnpm
+  audit`: 0 advisories after the bump.
 - **`browserslist` scoped override, `<4.28.7` → `4.28.8`** — two NEW HIGH advisories
   (GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g: uncaught crash / prototype write via
   untrusted `browserslist-stats.json` in `normalizeStats`), vulnerable `<=4.28.6`.

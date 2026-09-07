@@ -115,6 +115,19 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 **This section is the canonical live Watch list** — full per-item detail and removal
 conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Currently:
 
+- **`fflate` override (2026-09-07)** — `"fflate@<0.4.9": 0.4.9` in
+  `pnpm-workspace.yaml`, taken for GHSA-px8p-9vwx-vf98 (moderate — `unzipSync`
+  infinite loop parsing a malformed ZIP64 archive), vulnerable `>=0.4.5 <0.4.9`.
+  Caught by the daily security-audit lane 2026-09-05 (pure advisory-database
+  drift — the lockfile hadn't changed). Reached only via
+  `apps/web>posthog-js>fflate` (posthog-js's own `^0.4.8` dependency); 0.4.9 is
+  in-range — a fix-forward, not a pin-bypass — and had cleared the 7-day age gate
+  months before this advisory was caught (published 2026-07-20). Ranged key so a
+  future posthog-js copy that already resolves >=0.4.9 is left for `pnpm audit`
+  to judge on its own rather than being silently pinned back down. *Removal
+  condition:* remove once a routine posthog-js bump naturally carries the
+  lockfile past 0.4.9 (the key is inert from that moment).
+
 - **`browserslist` override (2026-09-02)** — `"browserslist@<4.28.7": 4.28.8` in
   `pnpm-workspace.yaml`, taken for two NEW HIGH advisories (GHSA-c83g-rgw3-j3cx,
   GHSA-73wf-gq98-2v4g) that surfaced as pure advisory-database drift against an
