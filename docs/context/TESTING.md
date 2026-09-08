@@ -400,8 +400,17 @@ reverted with every lane green. Two patterns close the class, used together:
   an address that must never sign up) carries a warning comment at the fixture site —
   an innocent-looking fixture "fix" disarms the sensor silently.
 
-The predicates still lacking a sensor are one BACKLOG row (B3, predicate-sensor long
-tail), inventoried 2026-08-08.
+The 2026-08-08 inventory (BACKLOG's B3 predicate-sensor long tail) closed 2026-09-08
+across 5 batches — see [PROJECT_STATUS.md](../PROJECT_STATUS.md) and
+[the plan](../archive/predicate-sensor-long-tail-plan.md). Two additions to the
+toolkit above from that pass: a sensor must assert on the isolated statement a
+predicate lives in, not a multi-statement flow's net effect, when a LATER statement
+can mask the predicate's own contribution (the primary-calendar demote sensor was
+redesigned for exactly this after a contrarian review caught it); and a plain SQL
+predicate with no page-rendering dependency is often cheaper and more reliable as a
+`packages/db` integration test than as e2e, even when the production code lives in
+a router with no importable module boundary — restate the query, as the calendar
+suites already do for router/action predicates they cannot import.
 
 ### The frozen differential oracle (`packages/calendar`)
 

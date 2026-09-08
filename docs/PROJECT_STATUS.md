@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-09-03 — Renovate host decision closed (Mend chosen, #56 merged); see the row below and the [CHANGELOG](../CHANGELOG.md)._
+_Last updated: 2026-09-08 — B3 predicate-sensor long tail closed (all 12 items); see the row below and the [CHANGELOG](../CHANGELOG.md)._
 
 ## Where we are
 
@@ -151,6 +151,9 @@ Per-program summary (Rows = archived row count; full rows →
 | Advisory — 2026-09-02 | 1 | `fast-uri` `<3.1.5` → 3.1.6 for four NEW HIGH advisories, closed same-day (already aged in); `3.1.7`'s two more HIGHs pre-emptively parked in `ignoreGhsas` ahead of `pnpm audit`'s feed, exits 2026-09-09; `pnpm audit` 0 after. Contrarian: sound with caveats | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | B3 v1.0.0/v1.1.0 releases published — 2026-09-03 | 1 | Both had sat `draft=true` since 2026-07-20, contradicting the CHANGELOG header's "matching GitHub Release" claim; `gh release edit --draft=false --latest=false` on both, keeping v1.2.0 as Latest | [CHANGELOG](../CHANGELOG.md) |
 | B3 reminder-scoping predicate sensor — 2026-09-05 | 1 | The scoping was already correct (`eq(userId)` on both seams); closed the missing-sensor gap with a two-user `@repo/db` fixture + planted defect and an `apps/web` spelling pin, red-proven against the real conjunct | [TESTING.md](context/TESTING.md) |
+| Advisory — 2026-09-07 | 1 | `fflate` `<0.4.9` → 0.4.9 for GHSA-px8p-9vwx-vf98 (moderate, ZIP64 infinite loop) — advisory-DB drift, caught by the 3-day-red daily lane; `pnpm audit` 0 after | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| B3 predicate-sensor long tail, remaining 11 items — 2026-09-08 | 1 | Closes the row across 5 batches; `contrarian`-reviewed plan caught a false-positive-passing sensor design (primary-calendar demote) before build and flagged the audit `or()` site as highest-risk (no real defect found there); 2 items closed as `@repo/db` integration tests instead of the planned e2e (faster, flake-immune); no predicate was already wrong | [plan](archive/predicate-sensor-long-tail-plan.md) |
+| Advisory — 2026-09-08 | 1 | `sharp` `<0.35.4` → 0.35.4 (HIGH, libheif AVIF/HEIF — next's own pin re-excluded the fix, third time this shape has recurred) · `baseline-browser-mapping` `<2.11.0` → 2.11.20 (moderate DoS) · `vitest`/`@vitest/mocker` `4.1.9` → `4.1.11` (moderate path traversal, plain in-range bump); `pnpm audit` 0 after all three | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·

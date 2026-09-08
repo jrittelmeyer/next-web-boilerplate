@@ -31,6 +31,30 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   shaped. The scoping itself was already correct (`eq(userId)` on both the read and
   the write's existing-row lookup) — nothing behavioral changed; this is coverage
   proving a regression here would go red, the same posture as the F4/F6 sensors.
+- **Predicate-sensor long tail, remaining 11 items** (B3, closing the row) —
+  `calendar-rsvp`'s deleted-event UPDATE guard; primary-calendar demote's `ne()`
+  self-exclusion (redesigned mid-plan per contrarian review: the original test
+  would have passed regardless of the predicate, since a later unconditional
+  UPDATE in the same transaction masks its effect — now asserted on the
+  isolated demote statement); `splitSeries`/`truncateSeries`'s `gte` cut-edge
+  inclusivity; `skipOccurrence`'s `(parent, recurrenceId)` pair scoping;
+  `removeAttendees`'s event scope; `calendar.list`'s `(userId, organizationId)`
+  scope and `calendar.byId`'s occurrence-detail predicate (restated as
+  `packages/db` integration tests rather than e2e — faster and immune to the
+  local signUp flake for two plain SQL predicates with no page-rendering
+  dependency); `markAllRead`'s owner arm and `unreadCount`'s cross-user arm;
+  `data-export`'s audit `or()` completeness (flagged by contrarian as the site
+  most likely to hide a real bug — it did not); the `(createdAt, id)` keyset's
+  same-timestamp tiebreak, shared by five call sites over three tables (one
+  parameterized helper, not five copies); `createPost`'s duplicate-title check
+  scoped per workspace; `getOrgRole`'s `organizationId` conjunct (a
+  privilege-escalation-shaped gap — dropping it lets a role held in one
+  organization answer a permission check scoped to a different one); and two
+  e2e sensors for `/account` reads with no importable module boundary — the
+  expired-session exclusion and the OAuth-only password card, seeded by two
+  new direct-DB fixture helpers (no UI path reaches either state). Coverage
+  only; no predicate was found already wrong. Plan:
+  [`archive/predicate-sensor-long-tail-plan.md`](docs/archive/predicate-sensor-long-tail-plan.md).
 - **Self-hosted Renovate workflow** — `.github/workflows/renovate.yml`
   (`renovatebot/github-action`, SHA-pinned, Monday cron + `workflow_dispatch`,
   reusing `.github/renovate.json` unchanged) as the cold fallback for the

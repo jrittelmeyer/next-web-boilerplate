@@ -1,6 +1,14 @@
 # Plan: B3 predicate-sensor long tail (remaining 12 items)
 
-**Status: DRAFT — awaiting sign-off. Not yet built.**
+**Status: SHIPPED 2026-09-08**, across 5 batches (commits `21bea3c`, `64c529d`,
+`f110a4e`, `1a453f0`, `fd07fa3`/`db27c89`). Item 2's design was revised mid-plan per
+the contrarian finding below; item 6 was closed with `packages/db` integration
+tests instead of the e2e Pattern B originally planned (both predicates are plain
+SQL with no page-rendering dependency, so a DB-backed test is faster and immune to
+the local e2e signUp flake). No planted-defect test found a real production
+defect — every predicate was already correct. Kept here as the historical record
+per the [BACKLOG](../BACKLOG.md) shipped-row convention; not re-read for future
+work.
 
 Source: `docs/BACKLOG.md` → B3 "Predicate-sensor long tail" row, seeded by
 `archive/PROJECT_AUDIT_2026-08-06.md` F2. The 2026-08-08 sweep's headline item
