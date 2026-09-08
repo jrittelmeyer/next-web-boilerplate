@@ -67,3 +67,57 @@ describe("audit log (integration)", () => {
     expect(row?.metadata).toBeNull();
   });
 });
+
+describe("data-export's audit or() completeness (predicate-sensor long tail)", () => {
+  /**
+   * `data-export.ts:73-75`'s read, restated (the action lives in apps/web, which
+   * this package cannot depend on). A GDPR export must surface every event the
+   * user appears in, whichever side of the event they were on — narrowing to one
+   * arm silently drops half a user's export, the F4 bug shape (attendees.md's
+   * cancellation fan-out) resurfacing on a different table.
+   */
+  const ACTOR_ONLY_EVENT = `${PREFIX}-completeness-actor-event`;
+  const TARGET_ONLY_EVENT = `${PREFIX}-completeness-target-event`;
+  const SUBJECT = `${PREFIX}-completeness-subject`;
+  const OTHER_ACTOR = `${PREFIX}-completeness-other-actor`;
+  const OTHER_TARGET = `${PREFIX}-completeness-other-target`;
+
+  beforeEach(async () => {
+    await cleanup();
+    // The subject is only the ACTOR of one event (they changed someone else's role)...
+    await recordAuditEvent({
+      action: "user.role_changed",
+      actorId: SUBJECT,
+      targetId: OTHER_TARGET,
+      metadata: { event: ACTOR_ONLY_EVENT },
+    });
+    // ...and only the TARGET of a different event (someone else changed theirs).
+    await recordAuditEvent({
+      action: "user.role_changed",
+      actorId: OTHER_ACTOR,
+      targetId: SUBJECT,
+      metadata: { event: TARGET_ONLY_EVENT },
+    });
+  });
+
+  async function exportedEvents(userId: string, scoped: boolean) {
+    const rows = await db.query.auditLog.findMany({
+      where: scoped
+        ? or(eq(auditLog.actorId, userId), eq(auditLog.targetId, userId))
+        : eq(auditLog.actorId, userId),
+    });
+    return rows.map((row) => (row.metadata as { event: string } | null)?.event).sort();
+  }
+
+  it("includes events where the subject is only the actor and only the target", async () => {
+    expect(await exportedEvents(SUBJECT, true)).toEqual(
+      [ACTOR_ONLY_EVENT, TARGET_ONLY_EVENT].sort(),
+    );
+  });
+
+  it("drops the target-only event under the spelling missing that arm — the defect", async () => {
+    expect(await exportedEvents(SUBJECT, false)).toEqual([ACTOR_ONLY_EVENT]);
+  });
+
+  afterAll(cleanup);
+});
