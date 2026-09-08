@@ -1,5 +1,5 @@
-import { db, postRevisions, posts, user } from "@repo/db";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { db, member, organization, postRevisions, posts, user } from "@repo/db";
+import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 /**
@@ -258,5 +258,81 @@ describe("posts (integration)", () => {
     // the post and its history are all-or-nothing.
     const remaining = await listPostsForTestAuthor();
     expect(remaining.some((p) => p.title === "Doomed")).toBe(false);
+  });
+});
+
+describe("createPost's duplicate-title check is scoped per workspace (predicate-sensor long tail)", () => {
+  const ORG_ID = "integration-test-posts-duplicate-title-org";
+
+  async function cleanupOrg() {
+    await db.delete(organization).where(eq(organization.id, ORG_ID));
+  }
+
+  beforeEach(async () => {
+    await cleanup();
+    await cleanupOrg();
+    await seedAuthor();
+    await db.insert(organization).values({
+      id: ORG_ID,
+      name: "Duplicate Title Org",
+      slug: "integration-test-posts-duplicate-title-org",
+    });
+    await db.insert(member).values({
+      id: "integration-test-posts-duplicate-title-member",
+      organizationId: ORG_ID,
+      userId: TEST_AUTHOR.id,
+      role: "member",
+    });
+  });
+
+  afterAll(cleanupOrg);
+
+  /** `post.ts:99-106`'s duplicate check, restated. */
+  async function findDuplicate(organizationId: string | null, title: string) {
+    return await db.query.posts.findFirst({
+      where: and(
+        eq(posts.authorId, TEST_AUTHOR.id),
+        organizationId ? eq(posts.organizationId, organizationId) : isNull(posts.organizationId),
+        eq(posts.title, title),
+      ),
+      columns: { id: true },
+    });
+  }
+
+  it("finds the duplicate within the same workspace", async () => {
+    await db.insert(posts).values({
+      authorId: TEST_AUTHOR.id,
+      organizationId: null,
+      title: "Shared Title",
+      content: "personal",
+    });
+    expect(await findDuplicate(null, "Shared Title")).toBeDefined();
+  });
+
+  it("does not treat the same title in a DIFFERENT workspace as a duplicate", async () => {
+    // The same author, the same title — filed once in their personal workspace and
+    // once in an org. Without the organizationId conjunct, filing the second would be
+    // wrongly refused as a duplicate of the first.
+    await db.insert(posts).values({
+      authorId: TEST_AUTHOR.id,
+      organizationId: null,
+      title: "Shared Title",
+      content: "personal",
+    });
+    expect(await findDuplicate(ORG_ID, "Shared Title")).toBeUndefined();
+  });
+
+  it("wrongly blocks the same title in a different workspace under the spelling missing the organizationId conjunct — the defect", async () => {
+    await db.insert(posts).values({
+      authorId: TEST_AUTHOR.id,
+      organizationId: null,
+      title: "Shared Title",
+      content: "personal",
+    });
+    const unscoped = await db.query.posts.findFirst({
+      where: and(eq(posts.authorId, TEST_AUTHOR.id), eq(posts.title, "Shared Title")),
+      columns: { id: true },
+    });
+    expect(unscoped).toBeDefined();
   });
 });
