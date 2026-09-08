@@ -267,6 +267,25 @@ overrides:
   # than being silently pinned back down. Remove once a routine posthog-js bump
   # naturally carries the lockfile past 0.4.9 (the key is inert from that moment).
   "fflate@<0.4.9": 0.4.9
+  # sharp <0.35.4 (GHSA-rgj7-g3m4-5g8c → GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545,
+  # HIGH — libheif flaws in the AVIF/HEIF decoder, reachable through this repo's
+  # codec-allowlist-free Uploadthing image uploaders). Same shape as the
+  # 2026-08-14/08-26 sharp override: next@16.3.3's own EXACT-ish `^0.35.3`
+  # optionalDependency pin excludes the fix, so the tree can't resolve it unaided.
+  # 0.35.4 (published 2026-08-26) cleared the 7-day gate 2026-09-02. Bare key (not
+  # ranged): the only path in the tree is next's own pin, so there is no "already
+  # a different, safe copy" case a ranged key would need to protect. Remove once
+  # next's own `sharp` pin reaches >=0.35.4 (a no-op reinstall then confirms it).
+  sharp: 0.35.4
+  # baseline-browser-mapping <2.11.0 (GHSA-w5vr-8v7q-w6rv, MODERATE — process
+  # termination via invalid input, a DoS), via next's own dependency (build/dev
+  # tooling — Storybook's builder-vite + @sentry/webpack-plugin resolve it, never
+  # shipped in the request-handling path). 2.11.20 (published 2026-08-27) cleared
+  # the 7-day gate; 2.11.21 (2026-09-03) exists but is boundary-fresh with no
+  # advisory delta — same postcss/browserslist precedent, aged version wins.
+  # Ranged key so an already-safe >=2.11.0 copy is left alone. Remove once next's
+  # own resolution and the natural tree both carry it past 2.10.x unaided.
+  "baseline-browser-mapping@<2.11.0": 2.11.20
 # Supply-chain release-age gate (Step 26 · A11). Every Phase-1/2 dep note describes this
 # discipline ("let a release age before taking it; hours-old/days-old releases were
 # rejected, pins were chosen to clear the gate"). It is ENFORCED at two layers:

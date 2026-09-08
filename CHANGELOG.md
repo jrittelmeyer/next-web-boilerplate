@@ -115,6 +115,25 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Security
 
+- **`vitest` (+ `@vitest/coverage-v8`, `@vitest/mocker`) bumped `4.1.9` → `4.1.11`** —
+  GHSA-82fw-gwwq-j7x9 (MODERATE: `@vitest/mocker`'s redirect mock allows path
+  traversal / arbitrary file read), vulnerable `>=2.1.0 <4.1.11`. A direct
+  devDependency already declared `^4.1.9` in eight `package.json` files — 4.1.11
+  is in-range, so this is a plain `pnpm update vitest @vitest/coverage-v8
+  --recursive`, not an override. `vitest@5.0.0` exists but is a new major,
+  published 2026-09-03 (inside the 7-day gate) — stays on the 4.x fix-forward.
+- **`sharp` scoped override, `<0.35.4` → `0.35.4`** — GHSA-rgj7-g3m4-5g8c (→
+  GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545, HIGH: libheif flaws in the AVIF/HEIF
+  decoder), vulnerable `<0.35.4`. Same shape as the 2026-08-14 override removed
+  2026-08-26: `next@16.3.3`'s own `sharp` pin excludes the fix again. 0.35.4
+  (published 2026-08-26) cleared the 7-day gate 2026-09-02.
+- **`baseline-browser-mapping` scoped override, `<2.11.0` → `2.11.20`** —
+  GHSA-w5vr-8v7q-w6rv (MODERATE: process termination via invalid input, a DoS),
+  vulnerable `<2.11.0`. Reached via `next`'s own dependency — build/dev tooling
+  only (Storybook's builder-vite + `@sentry/webpack-plugin`). 2.11.20 (published
+  2026-08-27) cleared the gate; 2.11.21 (2026-09-03) is boundary-fresh with no
+  advisory delta, so the aged version is taken instead (the postcss/browserslist
+  precedent). `pnpm audit`: 0 advisories after all three fixes.
 - **`fflate` scoped override, `<0.4.9` → `0.4.9`** — GHSA-px8p-9vwx-vf98 (MODERATE:
   `unzipSync` can enter an infinite loop parsing a malformed ZIP64 archive),
   vulnerable `>=0.4.5 <0.4.9`. Reached only via `posthog-js@1.391.2`'s own `^0.4.8`

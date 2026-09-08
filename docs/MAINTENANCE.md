@@ -128,6 +128,28 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   condition:* remove once a routine posthog-js bump naturally carries the
   lockfile past 0.4.9 (the key is inert from that moment).
 
+- **`sharp` override (2026-09-08)** — `sharp: 0.35.4` in `pnpm-workspace.yaml`,
+  taken for GHSA-rgj7-g3m4-5g8c (→ GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545,
+  HIGH — libheif flaws in the AVIF/HEIF decoder, reachable through this repo's
+  codec-allowlist-free Uploadthing image uploaders), vulnerable `<0.35.4`. Same
+  shape as the 2026-08-14 override this row replaces: `next@16.3.3`'s own
+  `sharp` optionalDependency pin excludes the fix, so the tree can't resolve it
+  unaided. 0.35.4 (published 2026-08-26) cleared the 7-day gate 2026-09-02.
+  Bare key — the only path in the tree is next's own pin. *Removal condition:*
+  remove once next's own `sharp` pin reaches >=0.35.4 (a no-op reinstall then
+  confirms it — the same check that retired the prior sharp override, see
+  [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26)).
+- **`baseline-browser-mapping` override (2026-09-08)** — `"baseline-browser-mapping@<2.11.0": 2.11.20`
+  in `pnpm-workspace.yaml`, taken for GHSA-w5vr-8v7q-w6rv (moderate — process
+  termination via invalid input, a DoS), vulnerable `<2.11.0`. Reached via
+  `next`'s own dependency (build/dev tooling — Storybook's builder-vite +
+  `@sentry/webpack-plugin` — never shipped in the request-handling path).
+  2.11.20 (published 2026-08-27) cleared the 7-day gate; 2.11.21 (2026-09-03)
+  exists but is boundary-fresh with no advisory delta, so the aged version wins
+  (the postcss/browserslist precedent). Ranged key so an already-safe >=2.11.0
+  copy is left alone. *Removal condition:* remove once next's own resolution
+  and the natural tree both carry it past 2.10.x unaided.
+
 - **`browserslist` override (2026-09-02)** — `"browserslist@<4.28.7": 4.28.8` in
   `pnpm-workspace.yaml`, taken for two NEW HIGH advisories (GHSA-c83g-rgw3-j3cx,
   GHSA-73wf-gq98-2v4g) that surfaced as pure advisory-database drift against an
