@@ -1,6 +1,6 @@
 import { deriveEventInstants } from "@repo/calendar";
-import { calendarEventMasters, calendarEvents, calendars, db, user } from "@repo/db";
-import { eq, sql } from "drizzle-orm";
+import { calendarEventMasters, calendarEvents, calendars, db, organization, user } from "@repo/db";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 /**
@@ -615,5 +615,152 @@ describe("offset drift — detected and surfaced, never blocked", () => {
     // makes a legitimate row drift, THIS is where it surfaces — as a failing test
     // someone triages, never as a row the application can no longer write to.
     expect(drifted).toEqual(["drift-liar"]);
+  });
+});
+
+describe("calendar.list's scope (predicate-sensor long tail)", () => {
+  /**
+   * `calendar.ts` (trpc router) `list`'s SELECT, restated (the router lives in
+   * apps/web, which this package cannot depend on). Deliberately not fully
+   * dropped to "no predicate at all": `userScoped: false` alone already proves a
+   * stranger's calendar leaking is possible — that both conjuncts do real work.
+   */
+  const OTHER_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeef";
+  const OTHER_OWNER = {
+    id: "integration-test-calendar-list-scope-other",
+    name: "Integration Test Calendar List Scope Other",
+    email: "integration-test-calendar-list-scope-other@example.com",
+    emailVerified: true,
+  } as const;
+  const ORG_ID = "integration-test-calendar-list-scope-org";
+
+  async function cleanupScope() {
+    await db.delete(user).where(eq(user.id, OTHER_OWNER.id));
+    await db.delete(organization).where(eq(organization.id, ORG_ID));
+  }
+
+  beforeEach(async () => {
+    await cleanupScope();
+    await db.insert(user).values(OTHER_OWNER);
+    await db.insert(organization).values({
+      id: ORG_ID,
+      name: "Calendar List Scope Org",
+      slug: "integration-test-calendar-list-scope-org",
+    });
+    // A second calendar for THIS suite's owner, scoped to the org — alongside the
+    // personal one `seed()` already inserted.
+    await db.insert(calendars).values({
+      id: OTHER_ID,
+      userId: TEST_OWNER.id,
+      organizationId: ORG_ID,
+      name: "Org Calendar",
+      color: "chart-2",
+      timeZone: "UTC",
+    });
+    // A stranger's personal calendar — never scoped to this org, never owned by
+    // this suite's user.
+    await db.insert(calendars).values({
+      id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeff",
+      userId: OTHER_OWNER.id,
+      name: "Stranger's Calendar",
+      color: "chart-3",
+      timeZone: "UTC",
+    });
+  });
+
+  afterAll(cleanupScope);
+
+  async function listCalendars(organizationId: string | null, userScoped: boolean) {
+    const rows = await db
+      .select({ id: calendars.id })
+      .from(calendars)
+      .where(
+        and(
+          userScoped ? eq(calendars.userId, TEST_OWNER.id) : undefined,
+          organizationId
+            ? eq(calendars.organizationId, organizationId)
+            : isNull(calendars.organizationId),
+        ),
+      );
+    return rows.map((row) => row.id);
+  }
+
+  it("lists only the caller's own calendar for the requested workspace", async () => {
+    expect(await listCalendars(null, true)).toEqual([CALENDAR_ID]);
+    expect(await listCalendars(ORG_ID, true)).toEqual([OTHER_ID]);
+  });
+
+  it("leaks a stranger's calendar under the spelling missing the userId conjunct — the defect", async () => {
+    const ids = await listCalendars(null, false);
+    expect(ids).toContain("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeff");
+  });
+});
+
+describe("calendar.byId's occurrence-detail predicate (predicate-sensor long tail)", () => {
+  /**
+   * `calendar.ts` (trpc router) `byId`'s override sub-select, restated:
+   * `(recurrenceParentId, recurrenceId, deletedAt IS NULL)`. Two masters, each
+   * with an override at the SAME recurrenceId, is what makes dropping the
+   * `recurrenceParentId` half observable — the wrong master's occurrence would
+   * answer.
+   */
+  const MASTER_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeee00";
+  const OTHER_MASTER_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeee01";
+  const OCCURRENCE_ID = "2027-06-08 09:30:00";
+
+  /** A recurring master, written directly (this file's writer path derives instants). */
+  async function insertMaster(id: string, uid: string) {
+    await db.execute(sql`
+      INSERT INTO calendar_events
+        (id, calendar_id, uid, title, start_wall, start_tzid, start_offset_minutes, start_at,
+         end_wall, end_tzid, end_offset_minutes, end_at, rrule)
+      VALUES (${id}::uuid, ${CALENDAR_ID}::uuid, ${uid}, ${uid},
+        '2027-06-01 09:30:00'::timestamp, 'UTC', 0, '2027-06-01 09:30:00+00'::timestamptz,
+        '2027-06-01 10:30:00'::timestamp, 'UTC', 0, '2027-06-01 10:30:00+00'::timestamptz,
+        'FREQ=WEEKLY;BYDAY=MO')
+    `);
+  }
+
+  /** An override at `OCCURRENCE_ID` under the given master. */
+  async function insertOverride(parentId: string, uid: string) {
+    await db.execute(sql`
+      INSERT INTO calendar_events
+        (id, calendar_id, uid, title, start_wall, start_tzid, start_offset_minutes, start_at,
+         end_wall, end_tzid, end_offset_minutes, end_at, recurrence_parent_id, recurrence_id)
+      VALUES (gen_random_uuid(), ${CALENDAR_ID}::uuid, ${uid}, ${uid},
+        '2027-06-08 11:00:00'::timestamp, 'UTC', 0, '2027-06-08 11:00:00+00'::timestamptz,
+        '2027-06-08 12:00:00'::timestamp, 'UTC', 0, '2027-06-08 12:00:00+00'::timestamptz,
+        ${parentId}::uuid, ${OCCURRENCE_ID}::timestamp)
+    `);
+  }
+
+  beforeEach(async () => {
+    await insertMaster(MASTER_ID, "occurrence-detail-master");
+    await insertMaster(OTHER_MASTER_ID, "occurrence-detail-other-master");
+    await insertOverride(MASTER_ID, "occurrence-detail-master");
+    await insertOverride(OTHER_MASTER_ID, "occurrence-detail-other-master");
+  });
+
+  async function overrideAt(masterId: string, scoped: boolean) {
+    const rows = await db
+      .select({ id: calendarEvents.id })
+      .from(calendarEvents)
+      .where(
+        and(
+          scoped ? eq(calendarEvents.recurrenceParentId, masterId) : undefined,
+          eq(calendarEvents.recurrenceId, OCCURRENCE_ID),
+          isNull(calendarEvents.deletedAt),
+        ),
+      );
+    return rows.map((row) => row.id);
+  }
+
+  it("finds only the requested master's own override at that instant", async () => {
+    expect(await overrideAt(MASTER_ID, true)).toHaveLength(1);
+    expect(await overrideAt(OTHER_MASTER_ID, true)).toHaveLength(1);
+  });
+
+  it("returns overrides from BOTH masters under the spelling missing the recurrenceParentId conjunct — the defect", async () => {
+    expect(await overrideAt(MASTER_ID, false)).toHaveLength(2);
   });
 });

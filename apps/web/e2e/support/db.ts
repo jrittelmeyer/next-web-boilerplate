@@ -4,6 +4,7 @@ import {
   type AttendeeRole,
   type AttendeeStatus,
   type AuditAction,
+  account,
   auditLog,
   type CalendarColor,
   calendarEventAttendees,
@@ -12,6 +13,7 @@ import {
   calendars,
   notifications,
   rateLimit,
+  session,
   user,
   userPreferences,
 } from "@repo/db/schema";
@@ -446,4 +448,44 @@ export async function getEventReminders(
     .innerJoin(user, eq(user.id, calendars.userId))
     .where(and(eq(user.email, ownerEmail), eq(calendarEvents.title, title)))
     .orderBy(calendarEventReminders.offsetMinutes);
+}
+
+/**
+ * Seed an ALREADY-EXPIRED session row for a user by DIRECT insert — the same
+ * sanctioned out-of-band path as the other seed helpers. There is no UI path to an
+ * expired session (Better Auth prunes/rejects them before the app ever sees one),
+ * so this is the only way to plant the fixture `/account`'s `gt(expiresAt, now())`
+ * conjunct needs to prove itself against (predicate-sensor long tail).
+ */
+export async function seedExpiredSession(email: string): Promise<void> {
+  const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
+  if (!u) throw new Error(`seedExpiredSession: no user for ${email}`);
+  await db.insert(session).values({
+    id: crypto.randomUUID(),
+    token: crypto.randomUUID(),
+    userId: u.id,
+    expiresAt: new Date(Date.now() - 60 * 60 * 1000),
+  });
+}
+
+/**
+ * Replace a user's `credential` account row with an OAuth-shaped one — the same
+ * sanctioned out-of-band path as the other seed helpers. There is no configured
+ * OAuth provider in this deploy to drive a real social sign-up through, so this
+ * models the row shape one would leave: no `credential` provider row, one row
+ * under a different `providerId`. What `/account` reads off this is `hasPassword`
+ * (predicate-sensor long tail).
+ */
+export async function replaceCredentialWithOAuthAccount(email: string): Promise<void> {
+  const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
+  if (!u) throw new Error(`replaceCredentialWithOAuthAccount: no user for ${email}`);
+  await db
+    .delete(account)
+    .where(and(eq(account.userId, u.id), eq(account.providerId, "credential")));
+  await db.insert(account).values({
+    id: crypto.randomUUID(),
+    accountId: `oauth-${u.id}`,
+    providerId: "google",
+    userId: u.id,
+  });
 }
