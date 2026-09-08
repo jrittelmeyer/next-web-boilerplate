@@ -16,9 +16,9 @@ test("an expired session never appears in the active-sessions list", async ({ pa
   await signUp(page, user);
   await seedExpiredSession(user.email);
 
-  // A fresh load re-reads the session table server-side; the expired row must never
-  // render even though it exists.
-  await page.reload();
+  // signUp lands on /dashboard, not /account — the expired row must never render
+  // even though it exists.
+  await page.goto("/account");
   const rows = page.getByRole("listitem").filter({ hasText: "signed in" });
   await expect(rows).toHaveCount(1);
   await expect(page.getByText("Current session")).toBeVisible();
@@ -29,7 +29,7 @@ test("an OAuth-only account sees the social copy and no password form", async ({
   await signUp(page, user);
   await replaceCredentialWithOAuthAccount(user.email);
 
-  await page.reload();
+  await page.goto("/account");
   await expect(
     page.getByText("You signed in with a social provider, so there is no password to change."),
   ).toBeVisible();
