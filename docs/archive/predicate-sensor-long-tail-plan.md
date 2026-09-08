@@ -42,10 +42,21 @@ as its own fix + CHANGELOG entry, not silently folded into a coverage commit).
    returns 0 rows / doesn't flip `status`+`responded_at`.
 
 2. **primary-calendar demote `ne()` self-exclusion** —
-   `apps/web/src/server/actions/calendar.ts:876`. Plant the promote-target
-   calendar as the *already-incumbent* primary; assert the demote step doesn't
-   clobber the row the same transaction is about to re-primary. Spelling pin on
-   the compiled `where` asserting the `<>` token.
+   `apps/web/src/server/actions/calendar.ts:876`. ⚠️ **Revised per contrarian
+   (CONFIRMED, folded in):** the original design ("plant the target as
+   already-primary; assert the demote step doesn't clobber it") does **not**
+   discriminate — `calendar.ts:862-889` always runs an unconditional second
+   UPDATE that re-asserts `isPrimary: true` on the target row regardless of
+   whether `ne()` ran, so end-of-transaction state is identical with or
+   without the predicate. **Assert on the demote statement in isolation**
+   (restate just that UPDATE, check its own `rowCount`/effect on the target
+   row *before* the second statement runs), not the transaction's net effect.
+   Spelling pin on the compiled `where` asserting the `<>` token. **Every item
+   in this plan, not just this one, gets a manual "strip the predicate,
+   confirm the drafted test goes red" check before being considered done** —
+   promoted from a good idea to a required step by this finding, since it's
+   exactly the kind of false-positive-passing sensor this initiative exists to
+   prevent.
 
 3. **splitSeries/truncateSeries `gte` cut edges** —
    `calendar.ts:1459-1473` (splitSeries) and `:1862-1875` (truncateSeries).
@@ -86,7 +97,14 @@ as its own fix + CHANGELOG entry, not silently folded into a coverage commit).
    `apps/web/src/server/actions/data-export.ts:73-75`. Seed one audit row where
    the user is only `actorId` and one where only `targetId`; assert the export
    includes both — narrowing `or()` to one arm would silently drop half a
-   user's GDPR export.
+   user's GDPR export. ⚠️ **Flagged by contrarian as the single most likely
+   site in this batch to reveal a real defect, not just a coverage gap** — it
+   is structurally identical to the F4 bug already shipped and fixed in this
+   repo (`or(isNull, ne)` cancellation-recipient predicate,
+   [context/TESTING.md](../context/TESTING.md)), i.e. a second sighting of a
+   bug *shape* that has already burned this codebase once. Build this one
+   first in batch 2 and give it extra attention, not equal-peer treatment with
+   `markAllRead`/`unreadCount`.
 
 9. **expired-session listing + OAuth-only password card** —
    `apps/web/src/app/[locale]/(dashboard)/account/page.tsx:59` and `:82`. No
@@ -143,16 +161,51 @@ whole row, `docs/BACKLOG.md` strikethrough, `docs/PROJECT_STATUS.md` history
 line — same commit as the last batch, or one doc commit at the end covering
 all batches (owner's call at sign-off).
 
+## Mid-build real-defect handling (added per contrarian finding)
+
+If a planted-defect test surprises us by finding the *real* production code
+already wrong (item 8 is the most likely candidate — see above), do **not**
+fold it silently into the coverage commit. Pause the current batch and split
+it: (a) the completed coverage sub-items so far, as their own commit/PR; (b) a
+same-day standalone fix + CHANGELOG **Fixed** entry for the defect, reviewed
+with the same scrutiny as any other bugfix (contrarian if it's auth/RBAC-
+shaped). Resume the remaining batches after.
+
+## Contrarian disposition
+
+Full review: [[contrarian findings, this session]]. Verdict was **Needs
+rework**; both blocking findings are folded into this plan above, not
+overruled:
+
+- **[Critical, CONFIRMED] Item 2's original sensor design wouldn't
+  discriminate correct from broken code** (the unconditional second UPDATE in
+  the same transaction masks the predicate's effect on end-of-transaction
+  state) — **folded**: item 2's design rewritten above to assert on the
+  isolated demote statement; the "strip the predicate, confirm red" check
+  promoted to a requirement for every item, not just this one.
+- **[Major] Item 12's contrarian-exemption was self-argued rather than
+  rule-applied** — `getOrgRole` is a load-bearing authorization primitive
+  (its own file header names it the org-scoped analogue of `lib/rbac.ts`),
+  and CLAUDE.md's Always list says "auth/RBAC," not "auth/RBAC behavior
+  changes." **Folded, not overruled**: this review *is* that contrarian pass
+  for item 12 (and, per its own "frictionless consensus" argument, for the
+  plan as a whole) — the "Explicitly out of scope" contrarian-skip claim
+  below is corrected accordingly. No further contrarian pass is needed before
+  build unless batch 3 (org/post) surfaces a real behavior change.
+- **[Major] No decision rule for a mid-build real-defect surprise** —
+  **folded**: new section above, naming item 8 as the site to watch hardest.
+- **[Minor] Batch 4's "cheapest/most-isolated" ordering claim** — **noted, not
+  changed**: sequencing among independent batches doesn't block anything; if
+  batch 4 (the 5-site keyset helper spanning 3 tables) runs long, that's fine
+  since a mid-course reorder costs nothing.
+
 ## Explicitly out of scope
 
-- Any behavioral change to the predicates themselves — this is coverage only.
-  If a planted-defect test surprises us by finding the *real* code already
-  wrong, stop and scope that as a separate fix.
-- `contrarian` review: not template surface, not schema/auth/RBAC by itself
-  (org role lookup touches RBAC-adjacent code but is read-only test coverage,
-  not a schema/behavior change) — skip per CLAUDE.md's Skip list, unless the
-  build surfaces a real defect that turns into a behavior change, at which
-  point re-evaluate.
+- Any behavioral change to the predicates themselves — this is coverage only
+  (see the mid-build handling rule above for the one exception).
+- Further `contrarian` passes beyond the one already run above, unless a
+  batch's build surfaces a real behavior change (the mid-build rule) or a new
+  item is added to the row later.
 
 ## Open question for sign-off
 
@@ -161,4 +214,5 @@ This is a 12-item, multi-area batch (Effort M per BACKLOG). Options:
 PR/commit sequence; (b) approve the plan but ship batch-by-batch with a
 mid-stream check-in; (c) scope down to a subset now and re-file the rest.
 Recommend (a) — the batches are independent enough that a mid-course correction
-costs nothing, and the whole row closes in one pass.
+costs nothing, and the whole row closes in one pass. Batch 2 leads with item 8
+(the highest-risk site) per the contrarian finding above.
