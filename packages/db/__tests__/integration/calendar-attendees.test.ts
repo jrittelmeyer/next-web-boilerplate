@@ -877,3 +877,99 @@ describe("the cancellation fan-out — who is emailed when an event is deleted",
     expect(rows.map((row) => row.email)).toEqual([RESOLVED_GUEST.email]);
   });
 });
+
+describe("respondByToken's UPDATE cannot answer for a cancelled meeting (predicate-sensor long tail)", () => {
+  /**
+   * `calendar-rsvp.ts:109-116`'s UPDATE, restated (the action lives in apps/web,
+   * which this package cannot depend on): scoped to a live event in the WHERE
+   * itself, so a soft delete landing between a read and a write can never record
+   * an answer to a cancelled meeting.
+   */
+  async function respondByToken(attendeeId: string, guardDeletedEvent: boolean) {
+    const rows = await db
+      .update(calendarEventAttendees)
+      .set({ status: "accepted", respondedAt: new Date() })
+      .where(
+        guardDeletedEvent
+          ? and(
+              eq(calendarEventAttendees.id, attendeeId),
+              sql`EXISTS (SELECT 1 FROM ${calendarEvents}
+                           WHERE ${calendarEvents.id} = ${calendarEventAttendees.eventId}
+                             AND ${calendarEvents.deletedAt} IS NULL)`,
+            )
+          : eq(calendarEventAttendees.id, attendeeId),
+      )
+      .returning({ email: calendarEventAttendees.email });
+    return rows;
+  }
+
+  it("refuses to record an RSVP once the event is soft-deleted", async () => {
+    const [attendee] = await db
+      .insert(calendarEventAttendees)
+      .values({ eventId: MASTER_ID, email: "guest@example.com" })
+      .returning({ id: calendarEventAttendees.id });
+    if (!attendee) throw new Error("attendee insert returned no row");
+    await db
+      .update(calendarEvents)
+      .set({ deletedAt: new Date() })
+      .where(eq(calendarEvents.id, MASTER_ID));
+
+    expect(await respondByToken(attendee.id, true)).toEqual([]);
+    const [row] = await attendeeRows(MASTER_ID);
+    expect(row).toMatchObject({ status: "needs-action", respondedAt: null });
+  });
+
+  it("records the answer against a cancelled meeting under the spelling without the guard — the defect", async () => {
+    const [attendee] = await db
+      .insert(calendarEventAttendees)
+      .values({ eventId: MASTER_ID, email: "guest@example.com" })
+      .returning({ id: calendarEventAttendees.id });
+    if (!attendee) throw new Error("attendee insert returned no row");
+    await db
+      .update(calendarEvents)
+      .set({ deletedAt: new Date() })
+      .where(eq(calendarEvents.id, MASTER_ID));
+
+    expect(await respondByToken(attendee.id, false)).toHaveLength(1);
+    const [row] = await attendeeRows(MASTER_ID);
+    expect(row?.status).toBe("accepted");
+  });
+});
+
+describe("removeAttendees is scoped to its own event (predicate-sensor long tail)", () => {
+  /** `calendar.ts:716-724`'s DELETE, restated. */
+  async function removeAttendees(eventId: string, emails: readonly string[], scoped: boolean) {
+    return await db
+      .delete(calendarEventAttendees)
+      .where(
+        scoped
+          ? and(
+              eq(calendarEventAttendees.eventId, eventId),
+              inArray(calendarEventAttendees.email, [...emails]),
+            )
+          : inArray(calendarEventAttendees.email, [...emails]),
+      )
+      .returning({ eventId: calendarEventAttendees.eventId });
+  }
+
+  const SHARED_EMAIL = "shared-guest@example.com";
+
+  beforeEach(async () => {
+    await db.insert(calendarEventAttendees).values([
+      { eventId: MASTER_ID, email: SHARED_EMAIL },
+      { eventId: OTHER_EVENT_ID, email: SHARED_EMAIL },
+    ]);
+  });
+
+  it("removes the guest from only the event being edited", async () => {
+    await removeAttendees(MASTER_ID, [SHARED_EMAIL], true);
+    expect(await attendeeRows(MASTER_ID)).toEqual([]);
+    expect(await attendeeRows(OTHER_EVENT_ID)).toHaveLength(1);
+  });
+
+  it("removes the same guest from every event they're invited to under the spelling without the event scope — the defect", async () => {
+    await removeAttendees(MASTER_ID, [SHARED_EMAIL], false);
+    expect(await attendeeRows(MASTER_ID)).toEqual([]);
+    expect(await attendeeRows(OTHER_EVENT_ID)).toEqual([]);
+  });
+});

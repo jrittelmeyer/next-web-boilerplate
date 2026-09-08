@@ -1,5 +1,5 @@
 import { calendarEvents, calendarRecurrenceDates, calendars, db, user } from "@repo/db";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, gte, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 /**
@@ -482,5 +482,224 @@ describe("the two writer-enforced invariants — detected, never blocked", () =>
       WHERE child.calendar_id = ${CALENDAR_ID}::uuid AND parent.rrule IS NULL
     `);
     expect((orphaned.rows as { uid: string }[]).map((row) => row.uid)).toEqual(["one-off"]);
+  });
+});
+
+describe("primary-calendar demote — self-exclusion (predicate-sensor long tail)", () => {
+  /**
+   * `calendar.ts`'s demote UPDATE, restated in isolation — deliberately NOT run
+   * alongside the unconditional second UPDATE that sets the target's own
+   * `is_primary` true afterward. Read via the full two-statement flow, this
+   * predicate's effect is invisible: the second statement re-asserts the target's
+   * `is_primary` regardless of whether `ne()` ran (verified against
+   * `calendar.ts:862-889`; folded into the plan by contrarian review). What is
+   * proven here is the demote statement's OWN contract — if a refactor ever drops
+   * `ne()`, or the second statement's unconditional re-assert is ever removed,
+   * this is the sensor that catches it, not an end-to-end read.
+   */
+  async function demote(excludeTarget: boolean) {
+    await db
+      .update(calendars)
+      .set({ isPrimary: false })
+      .where(
+        excludeTarget
+          ? and(eq(calendars.userId, TEST_OWNER.id), ne(calendars.id, CALENDAR_ID))
+          : eq(calendars.userId, TEST_OWNER.id),
+      );
+  }
+
+  beforeEach(async () => {
+    await db.update(calendars).set({ isPrimary: true }).where(eq(calendars.id, CALENDAR_ID));
+  });
+
+  it("leaves the target's own primary flag untouched", async () => {
+    await demote(true);
+    const [row] = await db
+      .select({ isPrimary: calendars.isPrimary })
+      .from(calendars)
+      .where(eq(calendars.id, CALENDAR_ID));
+    expect(row?.isPrimary).toBe(true);
+  });
+
+  it("clobbers the target's own primary flag under the spelling without `ne()` — the defect", async () => {
+    await demote(false);
+    const [row] = await db
+      .select({ isPrimary: calendars.isPrimary })
+      .from(calendars)
+      .where(eq(calendars.id, CALENDAR_ID));
+    expect(row?.isPrimary).toBe(false);
+  });
+});
+
+describe("the series-cut `gte` boundary is inclusive of the occurrence AT the cut (predicate-sensor long tail)", () => {
+  const NEW_MASTER_ID = "11111111-2222-4333-8444-000000000040";
+  const NEW_MASTER_UID = "cut-new-master-uid";
+  const CUT = "2027-03-29 09:00:00";
+
+  beforeEach(async () => {
+    for (const day of ["2027-03-22", "2027-03-29", "2027-04-05"]) {
+      await insertRaw({
+        uid: MASTER_UID,
+        wall: `${day} 09:00:00`,
+        parentId: MASTER_ID,
+        recurrenceId: `${day} 09:00:00`,
+      });
+    }
+    await db.insert(calendarRecurrenceDates).values([
+      { eventId: MASTER_ID, kind: "exdate", dateWall: "2027-03-22 09:00:00" },
+      { eventId: MASTER_ID, kind: "exdate", dateWall: "2027-03-29 09:00:00" },
+      { eventId: MASTER_ID, kind: "exdate", dateWall: "2027-04-05 09:00:00" },
+    ]);
+    await insertRaw({ id: NEW_MASTER_ID, uid: NEW_MASTER_UID, wall: CUT, rrule: "FREQ=WEEKLY" });
+  });
+
+  it("splitSeries's `gte` re-parents the occurrence exactly at the cut, not just those strictly after it", async () => {
+    await db
+      .update(calendarEvents)
+      .set({ recurrenceParentId: NEW_MASTER_ID, uid: NEW_MASTER_UID })
+      .where(
+        and(
+          eq(calendarEvents.recurrenceParentId, MASTER_ID),
+          gte(calendarEvents.recurrenceId, CUT),
+        ),
+      );
+
+    const moved = await db
+      .select({ recurrenceId: calendarEvents.recurrenceId })
+      .from(calendarEvents)
+      .where(eq(calendarEvents.recurrenceParentId, NEW_MASTER_ID));
+    // 03-29 (the cut) and 04-05 move; 03-22 stays on the original master.
+    expect(moved).toHaveLength(2);
+    const remaining = await db
+      .select({ recurrenceId: calendarEvents.recurrenceId })
+      .from(calendarEvents)
+      .where(eq(calendarEvents.recurrenceParentId, MASTER_ID));
+    expect(remaining).toHaveLength(1);
+  });
+
+  it("leaves the cut occurrence behind under the off-by-one `>` spelling — the defect", async () => {
+    await db
+      .update(calendarEvents)
+      .set({ recurrenceParentId: NEW_MASTER_ID, uid: NEW_MASTER_UID })
+      .where(
+        and(eq(calendarEvents.recurrenceParentId, MASTER_ID), gt(calendarEvents.recurrenceId, CUT)),
+      );
+
+    // Only 04-05 moves; the cut occurrence itself (03-29) wrongly stays on the old
+    // master, still carrying the OLD uid — duplicated into neither half correctly.
+    const remaining = await db
+      .select({ recurrenceId: calendarEvents.recurrenceId })
+      .from(calendarEvents)
+      .where(eq(calendarEvents.recurrenceParentId, MASTER_ID));
+    expect(remaining).toHaveLength(2);
+  });
+
+  it("truncateSeries's `gte` deletes the recurrence-date exactly at the cut too", async () => {
+    await db
+      .delete(calendarRecurrenceDates)
+      .where(
+        and(
+          eq(calendarRecurrenceDates.eventId, MASTER_ID),
+          gte(calendarRecurrenceDates.dateWall, CUT),
+        ),
+      );
+    const remaining = await db
+      .select({ dateWall: calendarRecurrenceDates.dateWall })
+      .from(calendarRecurrenceDates)
+      .where(eq(calendarRecurrenceDates.eventId, MASTER_ID));
+    expect(remaining).toHaveLength(1);
+  });
+
+  it("leaves the cut recurrence-date behind under the off-by-one `>` spelling — the defect", async () => {
+    await db
+      .delete(calendarRecurrenceDates)
+      .where(
+        and(
+          eq(calendarRecurrenceDates.eventId, MASTER_ID),
+          gt(calendarRecurrenceDates.dateWall, CUT),
+        ),
+      );
+    const remaining = await db
+      .select({ dateWall: calendarRecurrenceDates.dateWall })
+      .from(calendarRecurrenceDates)
+      .where(eq(calendarRecurrenceDates.eventId, MASTER_ID));
+    expect(remaining).toHaveLength(2);
+  });
+});
+
+describe("skipOccurrence's delete is scoped by the (parent, recurrenceId) PAIR (predicate-sensor long tail)", () => {
+  const SIBLING_SAME_RECURRENCE_ID = "11111111-2222-4333-8444-000000000050";
+  const SIBLING_SAME_PARENT_ID = "11111111-2222-4333-8444-000000000051";
+  const OTHER_MASTER_ID = "11111111-2222-4333-8444-000000000052";
+  const RECURRENCE_ID = "2027-03-22 09:00:00";
+
+  beforeEach(async () => {
+    // The target override: what skipOccurrence's DELETE is meant to remove.
+    await insertRaw({
+      uid: MASTER_UID,
+      wall: RECURRENCE_ID,
+      parentId: MASTER_ID,
+      recurrenceId: RECURRENCE_ID,
+    });
+    // A second master, with an override at the SAME recurrence_id but a DIFFERENT
+    // parent — dropping the `recurrenceParentId` half of the pair would delete this
+    // one too.
+    await insertRaw({
+      id: OTHER_MASTER_ID,
+      uid: "other-master-uid",
+      wall: "2027-01-04 09:00:00",
+      rrule: "FREQ=WEEKLY;BYDAY=MO",
+    });
+    await insertRaw({
+      id: SIBLING_SAME_RECURRENCE_ID,
+      uid: "other-master-uid",
+      wall: RECURRENCE_ID,
+      parentId: OTHER_MASTER_ID,
+      recurrenceId: RECURRENCE_ID,
+    });
+    // A sibling override on the SAME parent but a DIFFERENT recurrence_id —
+    // dropping the `recurrenceId` half would delete this one too.
+    await insertRaw({
+      id: SIBLING_SAME_PARENT_ID,
+      uid: MASTER_UID,
+      wall: "2027-03-29 09:00:00",
+      parentId: MASTER_ID,
+      recurrenceId: "2027-03-29 09:00:00",
+    });
+  });
+
+  async function idsUnder(parentId: string) {
+    const rows = await db
+      .select({ id: calendarEvents.id })
+      .from(calendarEvents)
+      .where(eq(calendarEvents.recurrenceParentId, parentId));
+    return rows.map((row) => row.id);
+  }
+
+  it("deletes only the exact-pair override", async () => {
+    await db
+      .delete(calendarEvents)
+      .where(
+        and(
+          eq(calendarEvents.recurrenceParentId, MASTER_ID),
+          eq(calendarEvents.recurrenceId, RECURRENCE_ID),
+        ),
+      );
+    expect(await idsUnder(MASTER_ID)).toEqual([SIBLING_SAME_PARENT_ID]);
+    expect(await idsUnder(OTHER_MASTER_ID)).toEqual([SIBLING_SAME_RECURRENCE_ID]);
+  });
+
+  it("deletes every override at that instant, across series, under the spelling missing `recurrenceParentId` — the defect", async () => {
+    await db.delete(calendarEvents).where(eq(calendarEvents.recurrenceId, RECURRENCE_ID));
+    expect(await idsUnder(MASTER_ID)).toEqual([SIBLING_SAME_PARENT_ID]);
+    // The sibling on a DIFFERENT series, at the same instant, is wrongly gone too.
+    expect(await idsUnder(OTHER_MASTER_ID)).toEqual([]);
+  });
+
+  it("deletes every override on the series under the spelling missing `recurrenceId` — the defect", async () => {
+    await db.delete(calendarEvents).where(eq(calendarEvents.recurrenceParentId, MASTER_ID));
+    // The sibling on the SAME series but a different occurrence is wrongly gone too.
+    expect(await idsUnder(MASTER_ID)).toEqual([]);
+    expect(await idsUnder(OTHER_MASTER_ID)).toEqual([SIBLING_SAME_RECURRENCE_ID]);
   });
 });
