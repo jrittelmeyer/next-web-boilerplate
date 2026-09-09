@@ -20,13 +20,24 @@ punted on; this plan proposes a default for each and flags the alternative.
 1. **RFC 6868 param quoting + mailto hygiene** — `packages/calendar/src/ics.ts`
    `organizerProperty`/`textProperty` (~226-239). `CN=` currently runs the TEXT
    escaper (backslash-escapes) on a param-value, which uses a different grammar
-   (RFC 5545 §3.2: needs `DQUOTE`-quoting + RFC 6868 caret-encoding for
-   `"`/`;`/`,`/`:`/`^`, never backslash). `mailto:` addresses are emitted with no
-   encoding at all. Fix: a new param-value quoter (quote-and-caret-encode when
-   the value contains `"`, `;`, `,`, `:`, or `^`; otherwise bare) replacing the
+   (RFC 5545 §3.2: a value needing `"`, `;`, `,`, or `:` must be
+   `DQUOTE`-quoted; RFC 6868 separately caret-encodes only `^`→`^^`, `"`→`^'`,
+   and a literal newline→`^n` *inside* that quoted form). `mailto:` addresses
+   are emitted with no encoding at all.
+   ⚠️ **Revised per contrarian (CONFIRMED):** the quoter must NOT caret-encode
+   `;`, `,`, or `:` — RFC 6868 defines no escape for them, and doing so ships a
+   new corruption bug in the exact property this item exists to fix (a
+   conforming reader decoding `^,` gets undefined behavior). The two rules are
+   independent: **(1)** wrap in `"…"` if the value contains `"`, `;`, `,`, or
+   `:` (or, after step 2, any caret sequence); **(2)** only `^`, `"`, and
+   newline get literally transformed, and only when already inside the quoted
+   form. Fix: a new param-value quoter implementing both rules, replacing the
    TEXT escaper for `CN`; percent-encode/validate the mailto address. The
    existing `ics.test.ts` "escaping"/`ORGANIZER` cases pin the *wrong* current
-   shape and need rewriting, not just extending.
+   shape and need rewriting, not just extending — **add a comma/semicolon-in-
+   `CN` case whose expected output is quoted but NOT caret-escaped**, so a
+   regression here fails loudly rather than shipping behind a rewritten
+   assertion (the F4 audit's own failure shape).
 
 2. **DATE-form `UNTIL` zone semantics** — `packages/calendar/src/rrule.ts`
    `untilInstantMs` (~394-407), consumed in `expand.ts` (~321,352) and
@@ -109,12 +120,26 @@ cancellation about their own action.
     `and(ne(calendarEventAttendees.email, actor.email))`-shaped clause
     alongside the existing `userId` exclusion, so the actor is never emailed
     regardless of verification state.
+    ⚠️ **Revised per contrarian (CONFIRMED):** must be
+    `ne(calendarEventAttendees.email, sql\`lower(${actor.email})\`)`, not a
+    bare comparison. `calendar_event_attendees.email` is DB-CHECK-guaranteed
+    lowercase (`packages/db/src/schema/calendar-attendees.ts:106`); `user
+    .email` (the source of `actor.email`) is only lowercase "in practice" via
+    Better Auth's sign-up path, not DB-enforced — and every other same-file
+    comparison of these two columns already wraps the user-side value in
+    `lower()` (`calendar.ts:1593`, mirrored in `calendar-acl.ts:225` and
+    `routers/calendar.ts:701`). Skipping it here would be the one comparison
+    site in the batch that silently no-ops for a mixed-case account (OAuth-
+    provided email, an admin-seeded account) — shipping a fix that *looks*
+    closed while remaining exactly the bug it targets, the same shape as F4/
+    F6. **Add a mixed-case-email test case** alongside the existing one.
   - **(b) Leave behavior, fix the comment.** Reword to describe the actual
     guarantee and its one known gap, on the theory that a self-directed
     "you cancelled this" email is harmless.
-  - **Recommendation: (a).** It's a one-clause addition, removes a real (if
-    minor) annoyance, and "the deleter gets emailed about their own delete" has
-    no upside worth documenting as accepted behavior.
+  - **Recommendation: (a), with the `lower()` correction above.** It's a
+    one-clause addition, removes a real (if minor) annoyance, and "the
+    deleter gets emailed about their own delete" has no upside worth
+    documenting as accepted behavior.
 
 **C. `loadRecipients`'s organizer-exclusion comment vs. its filterless SELECT — fix the comment, or add the filter?**
 `invitations.ts:180-187`'s comment claims an organizer exclusion the `WHERE
@@ -142,9 +167,21 @@ one invariant ("never under-estimate", ~258-267):
   transition can have a true instant-span up to an hour longer than the
   master's (same wall-clock duration, larger elapsed-ms across the transition)
   — under-estimates, violating the invariant. Fix: add a fixed slack constant
-  (reuse or mirror `OVERLAP_SEEK_SLACK_DAYS`'s pattern, sized to the largest
-  real-world fall-back transition — 2 hours covers every zone in the existing
-  corpus per `expand.test.ts`'s Antarctica/Troll case).
+  (reuse or mirror `OVERLAP_SEEK_SLACK_DAYS`'s pattern), sized to the largest
+  fall-back in `derive.test.ts`'s DST corpus (Antarctica/Troll, 120 minutes —
+  contrarian-verified directly against the fixture file, not just the plan's
+  claim).
+  ⚠️ **Caveat added per contrarian:** "covers the existing corpus" is a fact
+  about the tested fixture set, not a proof about all IANA tzdata this package
+  will ever resolve — tzdata is external, versioned data, and a future zone
+  change (a one-time dateline-style shift, an untested historical rule) is a
+  real class this framing doesn't rule out, on a hard "never under-estimate"
+  invariant. Document the constant honestly as "bounded by the largest
+  fall-back in the tested corpus, not a guaranteed tzdata ceiling" rather than
+  presenting it as provably safe. (A computed-slack alternative — compare the
+  occurrence's actual resolved offset against the master's — was considered
+  but is a larger change than this batch's scope; leaving as a flagged
+  constant, revisit if a real-world under-estimate is ever reported.)
 - **COUNT branch** (300-311): reads `expanded.occurrences.at(-1)` without
   checking `expanded.truncated`. A sparse, high-COUNT rule that hits
   `MAX_EXPANSION_PERIODS` (10,000) before generating `count` occurrences
@@ -178,9 +215,14 @@ package):
    built last so earlier reviewer feedback on style/approach carries forward.
 8. Item 1 (RFC 6868 quoting + mailto hygiene) — the most self-contained but
    also the one requiring a genuinely new helper function; independent of
-   everything else, could also run first. Order isn't load-bearing between
-   1-8; grouped as roughly 2-4 commits by file area rather than 8 individual
-   commits, owner's call at sign-off.
+   everything else, could also run first.
+   ⚠️ **Narrowed per contrarian:** items 1, 3, 4, and B are independent of
+   each other and of 2/5, and can be reordered or grouped freely — but **2 and
+   5 must stay in this relative order** (item 5's UNTIL branch in
+   `occurrences.ts` calls `untilInstantMs`, whose signature item 2 changes;
+   building 5 before 2 lands hits a stale signature). Grouped as roughly 2-4
+   commits by file area rather than 8 individual commits, owner's call at
+   sign-off, respecting that one ordering constraint.
 
 Full gate (lint/type-check/build) + `packages/calendar`'s + `apps/web`'s test
 suites after each commit. No live-verify needed for the pure-function fixes
@@ -198,10 +240,35 @@ in a local email-configured run).
   (`rrule-corpus.json`) — none of the chosen fixes add a new generated rule
   family, so no regen is needed this pass.
 
-## Contrarian
+## Contrarian disposition
 
-Given item 5's RFC/correctness tradeoff and the three explicit decisions
-(A/B/C), this plan will go through a `contrarian` pass before presenting for
-sign-off, per CLAUDE.md's "frictionless consensus is the trigger" clause and
-because item 5 touches the range-query correctness invariant. Findings will be
-folded in below before this reaches the owner.
+Full review invoked per CLAUDE.md's "frictionless consensus is the trigger"
+clause (this plan came together without friction) and because item 5 touches
+the `series_end_at` range-query correctness invariant. Verdict: **Sound with
+caveats.** Two findings were CONFIRMED and folded above (not overruled); two
+more were noted without changing the plan's shape:
+
+- **[Major, CONFIRMED, folded] Item 1's quoter would caret-encode `;`/`,`/`:`**,
+  which RFC 6868 defines no escape for — would have shipped a new corruption
+  bug in the property it's fixing. Folded: the quoting/caret-encoding rules
+  split into two independent steps, plus a new required test case.
+- **[Major, CONFIRMED, folded] Decision B's clause needed `lower()`** on the
+  `actor.email` side to match this file's own established comparison
+  convention (`calendar.ts:1593` and two other sites) — without it, a
+  mixed-case account would silently defeat the fix. Folded: clause spec
+  corrected, mixed-case test case added to the item's requirements.
+- **[Minor, noted] The 2-hour slack constant is corpus-verified, not tzdata-
+  proof** — folded as a documentation requirement (state the bound honestly)
+  rather than a design change, since a computed alternative is out of this
+  batch's scope.
+- **[Minor, noted] The "order isn't load-bearing" claim was too broad** —
+  narrowed above to name the one real ordering constraint (2 before 5).
+- **Checked, found NOT to hold:** contrarian's own suspicion that item 3
+  (RSVP token shortening) might break a persistent webcal-style integration —
+  traced `apps/web/src/app/[locale]/rsvp/[token]/route.ts` directly and
+  confirmed the token is exchanged for a short-lived cookie on first click,
+  never polled long-term. Item 3's "no backwards-compat concern" framing
+  holds as originally written.
+
+No further contrarian pass needed before build unless implementation surfaces
+a behavior change beyond what's specified above.
