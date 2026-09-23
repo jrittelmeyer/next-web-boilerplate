@@ -1,5 +1,10 @@
 # Plan: render `calendar.range`'s error state (B2, Tier 4)
 
+**Status: SHIPPED 2026-09-03** (`4b0d0b6`, e2e settled in `6c9d2b0`/`dccaa29`). The
+2026-09-23 audit found the residual the plan did not cover — TanStack's default
+`retry: 3` keeps the grid blank for the ~7 s backoff and re-fires into the tripped
+bucket — filed as a B3 row.
+
 Backlog row: `docs/BACKLOG.md` B2 "Render `calendar.range`'s error state" —
 promoted from `MAINTENANCE.md` Watch, whose own text calls the blank grid "the
 part worth fixing." Effort S.

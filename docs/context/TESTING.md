@@ -466,7 +466,7 @@ test("home page renders the boilerplate landing", async ({ page }) => {
 
 Every spec except the DB-free `home.spec.ts`, `security-headers.spec.ts`,
 `i18n.spec.ts`, `state.spec.ts`, and `image-optimization.spec.ts` touches the
-database (29 specs total as of the calendar program's three specs, 2026-08-01), so the suite
+database (31 specs total as of `account-predicate-sensors` and `calendar-range-error`, 2026-09-08), so the suite
 belongs in the DB-backed E2E lane (the `e2e` job — every PR and push to main), which
 runs against a Postgres service.
 

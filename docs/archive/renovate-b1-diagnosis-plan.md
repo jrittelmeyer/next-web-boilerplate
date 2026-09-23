@@ -1,4 +1,4 @@
-# Renovate B1 diagnosis — plan (draft, pending sign-off)
+# Renovate B1 diagnosis — plan (SHIPPED 2026-08-31: the self-hosted `renovate.yml` fallback, `c69eb6e`; superseded by the host-decision plan 2026-09-03)
 
 **Backlog row:** `docs/BACKLOG.md:74` (B1, Tooling/deps). **Watch item:**
 `docs/MAINTENANCE.md` → Watch items → "Maintenance-only" bullet, Renovate

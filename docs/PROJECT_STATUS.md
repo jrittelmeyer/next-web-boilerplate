@@ -22,7 +22,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-09-23 — `better-auth` 1.6.30 → 1.6.33 routine patch bump (passkey lockstep, all three schema surfaces diffed clean, full gate green); doc audit: the three post-09-22 commits reconciled (the `smol-toml` red closed via `knip` 6.35.1 and #61 auto-closed; `next` 16.3.6 taken as an RCE exception with ten age-exclude entries until 09-29; the B3 calendar long-tail batch signed and built); ninth compaction of the table below (58 rows → archive); STACK.md's `next`/`knip`/`vitest` rows, the invitations token-expiry claim and the archive index caught up; a "cut v1.3.0" B3 row filed ([BACKLOG](BACKLOG.md))._
+_Last updated: 2026-09-23 — project audit pass 18: **99.5/100** ([report](archive/PROJECT_AUDIT_2026-09-23.md)); product code reviewed adversarially for the first time since 08-06 — one regression the calendar long-tail batch introduced (`updateOccurrence` refuses an RDATE past the rule's end; B2), five residuals (B3), the Renovate fixed deduction retired under the owner-decision rule with a monthly currency sweep as its substitute (B2 + cadence); the daily security lane confirmed green on HEAD by dispatch; Ubuntu 26 runner rollout (10-19) dated; ~20 drift fixes (STACK passkey row, MAINTENANCE's stale better-auth bullet + Docker-boot claim + rotted line refs, spec/suite counts). Earlier the same day: `better-auth` 1.6.33 (passkey lockstep, schema clean), the 09-23 doc audit (ninth compaction, "cut v1.3.0" row)._
 
 ## Where we are
 
@@ -40,12 +40,13 @@ _Last updated: 2026-09-23 — `better-auth` 1.6.30 → 1.6.33 routine patch bump
   [VERIFICATION.md](VERIFICATION.md)) and a proven Fly.io deploy (07-13) are all on `main`; the
   per-program table below is the record. The TS7 cutover stays outside maintenance — re-gated on
   TS 7.1: [MAINTENANCE.md → Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done).
-- **Seventeen `/project-audit` passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
-  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4 → 99.3/100** — reports in
-  `docs/archive/PROJECT_AUDIT_*.md`; latest
-  [PROJECT_AUDIT_2026-09-01.md](archive/PROJECT_AUDIT_2026-09-01.md) (the 2026-09-02 rows below
-  closed two of its three seeded rows; the standing deductions are B2/B3 rows plus Mend's
-  unproven npm-manager/lockfile delivery class).
+- **Eighteen `/project-audit` passes: 93 → 97.5 → 98.2 → 99.3 → 99.3 → 99.3 → 99.35 →
+  100.0 → 100.0 → 99.65 → 99.65 → 99.9 → 98.6 → 99.3 → 99.3 → 99.4 → 99.3 → 99.5/100** —
+  reports in `docs/archive/PROJECT_AUDIT_*.md`; latest
+  [PROJECT_AUDIT_2026-09-23.md](archive/PROJECT_AUDIT_2026-09-23.md) (seven rows seeded; the
+  standing deductions are the B2/B3 rows, `set-active`, the AVIF/plugin riders on the 09-29
+  batch, and the kit six tags behind; the Renovate fixed −2 retired under the owner-decision
+  rule).
 - **CI: every push lane green on `main` (`425e53e`, 2026-09-23 — CI + CodeQL).** The
   `smol-toml` HIGH that held the daily `security-audit` lane and the heartbeat red from
   2026-09-10 closed 2026-09-22 (`knip` 6.24.0 → 6.35.1; triage issue
@@ -114,6 +115,7 @@ the 58 rows dated 2026-08-02 → 09-08 →
 | Advisory — 2026-09-23 | 1 | `next` `16.3.3` → `16.3.6`, age-gate exception — GHSA-vcvr-r3jv-pc5j (RCE in `next/og`'s `ImageResponse`), live-exposed on three fully public, unauthenticated routes (`opengraph-image`, `icon`, `apple-icon`); took route (2) rather than wait for the 2026-09-29 gate. Full gate green; live-verified all four image routes 200 on a fresh `:3100` build; `pnpm audit` 0. Docker standalone boot check, AVIF-source `/_next/image` drive, and the `@next/eslint-plugin-next` lockstep bump carried forward, undone | [CHANGELOG](../CHANGELOG.md) · [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | B3 calendar long-tail correctness batch — 2026-09-23 | 1 | Signed off and built same session. All nine items: RFC 6868 param quoting + mailto percent-encoding, DATE-form `UNTIL` zone semantics, `seriesEndInstantMs` slack + `truncated` handling, DAILY+BYMONTHDAY honest refusal, one-off RSVP token expiry, `updateOccurrence` membership check, actor-self cancellation by-email exclusion, `loadRecipients` organizer filter (decision C resolved to (b), not the plan's recommended (a) — the verification trace found a real self-invite path). `packages/calendar` 100/100/100/100 (838 tests); new real-Postgres integration coverage for both DB-predicate items | [CHANGELOG](../CHANGELOG.md) · [plan](archive/calendar-long-tail-correctness-plan.md) |
 | Maintenance batch — 2026-09-23 | 1 | `better-auth` `1.6.30` → `1.6.33` (`@better-auth/passkey` lockstep), routine patch, release-1.6 line. All three schema surfaces diffed per the leaf rule — no column changes; only runtime diff was additive Turnstile captcha failure logging. Full gate green | [CHANGELOG](../CHANGELOG.md) |
+| Audit — 2026-09-23 | 1 | Pass 18 **99.5**: 113-file delta reviewed adversarially; `updateOccurrence` RDATE regression → B2; five residuals → B3; Renovate −2 retired, monthly currency sweep filed; daily lane green by dispatch; 11 contrarian findings folded | [report](archive/PROJECT_AUDIT_2026-09-23.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -131,9 +133,14 @@ is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry ea
 item. Open now (as of the 2026-09-23 maintenance batch): **e2e month-boundary** (B2 — fix
 merged 2026-09-03; removal condition open until the 2026-10-01 window passes green) ·
 **`better-auth` 1.7.x** is a breaking minor — plan → sign-off, no advisory forces it ·
-**`next` 16.3.6 take gaps** carried forward — Docker standalone boot check, an AVIF-source
-`/_next/image` drive, and the `@next/eslint-plugin-next` lockstep bump (still resolves
-16.2.12) are not done. Ledger: `ignoreGhsas` is `[]` (the `smol-toml` red closed via the
+**`next` 16.3.6 take gaps** carried forward — the AVIF-source `/_next/image` drive and the
+`@next/eslint-plugin-next` lockstep bump (still resolves 16.2.12; the age gate hides 16.3.6
+until 09-29, so it rides the exclude-deletion batch) are not done; the Docker standalone
+boot was resolved by the 09-23 audit (web target proven by CI's Docker lane on every 16.3.6
+head; worker target discharged by inspection — the 09-29 batch decides rule 6(a)'s scoping)
+· **`ubuntu-latest` → Ubuntu 26** rollout begins 2026-10-19 — pin-or-float owner decision
+before then · **monthly currency sweep** — first instance is a B2 row, next due ~10-23.
+Ledger: `ignoreGhsas` is `[]` (the `smol-toml` red closed via the
 `knip` 6.24.0 → 6.35.1 bump, and the two `fast-uri` 3.1.7 parks turned out to be unpublished
 GHSA IDs and were deleted rather than promoted — see [CHANGELOG](../CHANGELOG.md)),
 `minimumReleaseAgeExclude` holds 10 dated entries for `next` 16.3.6 (RCE in `next/og`'s

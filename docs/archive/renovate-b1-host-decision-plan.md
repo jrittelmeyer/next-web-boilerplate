@@ -1,4 +1,4 @@
-# Renovate B1 host decision — plan (draft, pending sign-off)
+# Renovate B1 host decision — plan (DECIDED + CLOSED 2026-09-03: Mend kept for the no-lockfile class, `renovate.yml` dormant, `494ea6c`)
 
 **Backlog row:** `docs/BACKLOG.md` B1 "Restore Renovate PR delivery" (owner
 decision pending since 2026-08-31). **Prior work:** the diagnosis in

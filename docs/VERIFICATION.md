@@ -112,7 +112,7 @@ The CI `verify` lane in one place, plus the dev tools that are wired but not par
 ## Phase 2 — DB-backed automated suites _(no account; Docker up)_
 
 - [ ] **DB integration tests** — `pnpm --filter @repo/db test:integration`
-  - _Expect:_ **9 files** pass against real Postgres — posts keyset pagination + `leftJoin` author, subscriptions upsert/idempotent/cascade, uploads persist/idempotent/null-MIME/cascade, audit-log, email-suppressions, and the four calendar suites (events derived-instant CHECK corpus, recurrence + planted-defect scans, attendees, reminder delivery ledger).
+  - _Expect:_ **12 files** pass against real Postgres — posts keyset pagination + `leftJoin` author, subscriptions upsert/idempotent/cascade, uploads persist/idempotent/null-MIME/cascade, audit-log, email-suppressions, the four calendar suites (events derived-instant CHECK corpus, recurrence + planted-defect scans, attendees, reminder delivery ledger), and the three predicate-sensor suites added 2026-09-05 → 08 (keyset same-timestamp tiebreak, notifications, organization).
 - [ ] **Jobs integration test** — `pnpm --filter @repo/jobs test:integration`
   - _Expect:_ **3 files** pass — the pg-boss enqueue → worker round-trip, dead-letter handling, and the calendar-reminders sweep, each in an isolated `pgboss_test` schema.
 - [ ] **Background-jobs cross-process demo** (two shells):
@@ -121,7 +121,7 @@ The CI `verify` lane in one place, plus the dev tools that are wired but not par
   - Back in Shell A → _Expect (email unset):_ `[jobs] welcome-email for you@example.com skipped — email not configured` (proves the job crossed processes; a real send appears here once Resend is set — Phase 4).
 - [ ] **E2E + a11y suite** — `$env:CI="true"; pnpm test:e2e`  _(then `Remove-Item Env:\CI`)_
   - `CI=true` forces `workers=1` + retries, mitigating a **known local flake**.
-  - _Expect (CI):_ all specs green — the full `apps/web/e2e/*.spec.ts` set, **29 specs** (home, auth, posts, admin family, a11y, security-headers, account family, data-export, i18n, organization, passkey, two-factor, billing-org, csp-nonce, email-suppression, image-optimization, magic-link, state, uploads, notifications, and the calendar trio: calendar, calendar-invites, calendar-invitations).
+  - _Expect (CI):_ all specs green — the full `apps/web/e2e/*.spec.ts` set, **31 specs** (home, auth, posts, admin family, a11y, security-headers, account family incl. `account-predicate-sensors`, data-export, i18n, organization, passkey, two-factor, billing-org, csp-nonce, email-suppression, image-optimization, magic-link, state, uploads, notifications, and the calendar quartet: calendar, calendar-invites, calendar-invitations, calendar-range-error).
   - ⚠️ **Known signup flake:** the `signUp → /dashboard` wait can hang locally. Long attributed to the environment — **the 2026-08-03 diagnosis found a real harness bug** (a pre-hydration click in the shared signup helper; fix in PR #37) plus a second, still-undiagnosed `set-active` hang. Current state + removal conditions: [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done). If a spec fails locally: rerun, or check the CI lane — `gh run watch <id>`, confirmed with `gh run view <id> --json status,conclusion`.
 
 ---

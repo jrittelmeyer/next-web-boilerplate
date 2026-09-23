@@ -283,7 +283,7 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     *Removal condition:* 20 consecutive green e2e lanes, **or** a recurrence whose uploaded
     trace names a different cause. ⚠️ Still unmeasured: a throttled control arm proving the
     settle wait alone fixes it — the local server died mid-run three times. CI is the arbiter.
-  - **(b) The `set-active` hang** — `e2e/organization.spec.ts:43`. **This is what died at
+  - **(b) The `set-active` hang** — `e2e/organization.spec.ts:48`. **This is what died at
     Retry #2 and turned the lane red.** Root cause **unknown**: `waitForResponse` was the
     pending op at teardown, so the predicate never matched, but whether the POST never
     fired, returned non-2xx, or the `Promise.all`'s *click* half hung is not recoverable
@@ -294,10 +294,12 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   - **(c) The month-boundary defect — DIAGNOSED 2026-09-01, FIX MERGED
     2026-09-03, awaiting the 2026-10-01 green-window checkpoint
     ([`CHANGELOG.md`](../CHANGELOG.md)).** `3e68733` attempt 1 (2026-09-01 02:37Z) failed
-    in `e2e/calendar-invitations.spec.ts:165` — the "Standup" chip never appeared.
-    `dayInThisMonth()` (`:54-58`) derives the event's month from the **runner's** clock
-    (`new Date().getMonth()` → September, UTC) while the organizer's stored zone is
-    `America/New_York` (`:73`) and `/calendar` opens on *today in the stored zone*
+    in `e2e/calendar-invitations.spec.ts` (the organizer-grid chip click, now `:184`) —
+    the "Standup" chip never appeared. `dayInThisMonth()` (now `:63`; line refs
+    re-pointed 2026-09-23 after the fix rewrote the file) derived the event's month from
+    the **runner's** clock (`new Date().getMonth()` → September, UTC) while the
+    organizer's stored zone is `America/New_York` (`EVENT_ZONE`, `:43`) and `/calendar`
+    opens on *today in the stored zone*
     (`calendar/page.tsx` → `instantToCivil(Date.now(), preferences.timeZone)`) — still
     22:37 on 08-31, so the grid showed August with nothing to click. **Deterministic**,
     not flaky: every push, heartbeat or rerun landing in **00:00–04:00 UTC on the 1st
@@ -382,10 +384,42 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   the Monday windows of 2026-09-07, 09-14 and 09-21 passed with no Mend PR (whether anything in
   the no-lockfile class was due is unverified — not evidence either way); an informal check of
   the Dependency Dashboard `updatedAt` stays free confirmation when one is, but not a gate on
-  anything. The full narrative (the 07-22 widening fix, the empty Monday windows, the
+  anything. **Audit cost: zero since the 2026-09-23 pass** — a recorded owner decision costs no
+  points (the TS7 / branch-protection precedent), so the fixed −2 the audits had held since
+  07-29 is retired; what the decision leaves behind (a tree at 63 outdated, a `vitest` major
+  aged in unproposed) is scored on its own merits and answered by the **monthly currency
+  sweep** below, not by re-diagnosing Mend. The full narrative (the 07-22 widening fix, the empty Monday windows, the
   Mend-side diagnosis) is preserved verbatim in
   [archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02](archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02); the diagnosis itself is
   [archive/renovate-b1-diagnosis-plan.md](archive/renovate-b1-diagnosis-plan.md).
+- **Monthly currency sweep (cadence, filed 2026-09-23 by audit pass 18, F1)** — the
+  substitute for the npm-manager Renovate lane that does not deliver. Each sweep is two
+  halves, each its own plan → sign-off: **(i)** in-range patches/minors across the tree
+  plus the exact-pinned publishers (`posthog-js` with the vendored-dompurify verify in the
+  Watch line below, `@sentry/*`, `stripe`, `knip`, `lucide-react` dual-pin), `dep-check`
+  each against the 7-day gate, **one `contrarian` pass** because it touches
+  `pnpm-workspace.yaml` and `tooling/**` (CLAUDE.md's path-set trigger); **(ii)** every
+  major behind `latest` as an individual triage decision (take / hold with its reason).
+  Full gate + e2e + Docker boot; `pnpm audit` 0 after; STACK.md rows in the same commit.
+  First instance: the B2 row in [`BACKLOG.md`](BACKLOG.md) (63 outdated as of 09-23;
+  majors `vitest` 5 · `jsdom` 30 · `@types/node` 26 · `size-limit` 14 · `jest-dom` 7;
+  TS 7 held). *Next due:* ~2026-10-23, then monthly; a sweep that finds nothing to take
+  still records the date here. *Removal condition:* npm-manager Renovate delivery
+  observed (a lockfile-bearing `renovate/*` PR merged) for two consecutive months.
+- **GitHub-hosted runner image: `ubuntu-latest` → Ubuntu 26, rollout begins
+  2026-10-19** (noted 2026-09-23 from the runner annotation on security-audit run
+  `35832400538`; [actions/runner-images#14748](https://github.com/actions/runner-images/issues/14748)).
+  All twelve jobs across the five workflows here use the floating label
+  (`ci.yml` ×7, `pages.yml` ×2, `codeql.yml`, `security-audit.yml`, `renovate.yml`),
+  and `scripts/init-app.mjs` ships them verbatim into every generated project. The
+  e2e/visual lanes run inside pinned containers and are less exposed; the Docker
+  job (host Docker engine), the static lane (host Node/pnpm via actions) and
+  CodeQL ride the image directly. *Owner decision before 10-19:* pin `ubuntu-24.04`
+  across the five files (template surface ⇒ contrarian + sign-off; a one-line
+  change per job) **or** let the label float and treat the first post-rollout
+  heartbeat (Thu 2026-10-22 04:30Z) as the acceptance run. *Removal condition:* a
+  green full-lane run on the Ubuntu 26 image (or the pin landed) — then move this
+  entry to `archive/WATCH_HISTORY.md`.
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
@@ -406,15 +440,24 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `apple-icon.tsx` all use `ImageResponse` directly, and all three are fully public,
     unauthenticated routes — a real, reachable path with zero access control, so route (2)
     (dated `minimumReleaseAgeExclude`) applied rather than waiting the ~6 days to
-    2026-09-29. Scoped exact-version, all 9 lockstep packages (`next` + `@next/env` + 8
-    `@next/swc-*`); `@next/eslint-plugin-next` untouched (still resolves 16.2.12, separate
+    2026-09-29. Scoped exact-version, **ten entries** (`next` + its 9 lockstep packages:
+    `@next/env` + 8 `@next/swc-*`); `@next/eslint-plugin-next` untouched (still resolves 16.2.12, separate
     `tooling/eslint` dependency — the lockstep bump from the 16.3.4 pre-triage below is
     still pending). `sharp`'s own override (`0.35.4`) needed no change — 16.3.6's
     `optionalDependencies.sharp` pin is still `^0.35.4`, unchanged since 16.3.4. Full gate
     green; live-verified on a fresh `:3100` prod build — `/icon`, `/apple-icon`,
     `/opengraph-image`, `/twitter-image` all 200 `image/png`. `pnpm audit`: 0 after.
-    Docker standalone boot check **not done this pass** — carried forward, same gap as the
-    16.3.3 take. This take incorporates every 16.3.4/16.3.5 change (all three versions ship
+    Docker standalone boot check — recorded as "not done" at take time; the 2026-09-23
+    audit resolved it in two halves: **the `web` target is proven by CI's Docker lane**
+    (the arbiter rule 6 itself names — `ci.yml`'s Docker job builds `docker/Dockerfile`'s
+    default `runner` target with `BUILD_STANDALONE=1`, boots it against Postgres and polls
+    `/api/health` for a real 200; green on every 16.3.6 head from `7f94191` on), and **the
+    `worker` target is discharged by inspection, not by a run** (CI builds it but never
+    boots it; no file under `packages/{db,email,jobs,calendar,validators}/src` — the whole
+    worker bundle — imports `next`, so a `next` bump cannot reach its boot path). Rule
+    6(a)'s literal "both targets" clause is therefore met for this bump only by inspection;
+    scoping that clause to bumps touching the worker bundle's inputs is an owner call,
+    carried as a rider on the 09-29 batch below. This take incorporates every 16.3.4/16.3.5 change (all three versions ship
     in the 16.3.3 → 16.3.6 lockfile diff); the AVIF re-enable / `sharp` `^0.35.4` /
     `@next/eslint-plugin-next` lockstep detail from the original 16.3.4 pre-triage below is
     kept for record, not re-verified separately:
@@ -423,22 +466,28 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `optionalDependencies.sharp` `^0.35.3` → `^0.35.4` (already carried above); three
     backports (testmode passthrough recursion #97691, a TS-alias build error #97997,
     Turbopack `crossOrigin` #97930); nothing touches `output: 'standalone'`. Still open:
-    drive `/_next/image` with an AVIF source (order-dependent per the 16.3.0 lesson) and
-    the Docker standalone boot check; bump `@next/eslint-plugin-next` in lockstep
-    (`tooling/eslint`, its own `pnpm add`). *Removal condition (the exclude):* delete all
-    ten `minimumReleaseAgeExclude` entries once 16.3.6 ages in — published
-    2026-09-22T16:19Z, so on or after **2026-09-29T16:19Z** — proven by CI's frozen install,
-    not a local one (Dependency-policy rule 2); the three carried gaps stay open until each
-    is actually run.
+    drive `/_next/image` with an AVIF source (order-dependent per the 16.3.0 lesson);
+    bump `@next/eslint-plugin-next` in lockstep (`tooling/eslint`, its own `pnpm add` —
+    note `pnpm outdated` reports 16.3.5 as its latest only because the age gate hides
+    16.3.6 until 09-29, so this bump belongs to the same batch as the exclude deletion).
+    *Removal condition (the exclude):* delete all ten `minimumReleaseAgeExclude` entries
+    once 16.3.6 ages in — published 2026-09-22T16:19Z, so on or after
+    **2026-09-29T16:19Z** — proven by CI's frozen install, not a local one
+    (Dependency-policy rule 2); the two carried gaps (AVIF drive, plugin lockstep) stay
+    open until each is actually run, and the same batch decides rule 6(a)'s worker-boot
+    scoping (above).
   - ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18; 1.7.5 as of 2026-09-23) is NOT a routine take** — a
     breaking minor: 15 breaking changes incl. account identity scoped by issuer (requires a
     migration), captcha paths needing explicit wildcards (this repo wires CAPTCHA), SCIM/MCP
     extractions. Plan → sign-off when there is a reason to move; no advisory forces it.
     `@better-auth/passkey` 1.7.x exists for lockstep. **Exact-pinning is the standing rule for
     this dependency** — a caret let `^1.6.30` silently resolve to 1.7.1 ([STACK.md](context/STACK.md)).
-    The `release-1.6` line has moved on to **1.6.33** (this repo pins 1.6.30, noted 2026-09-23):
-    a routine patch take when convenient — dep-check the age, schema-diff the full surface (the
-    auth leaf's rule), bump `@better-auth/passkey` in lockstep; no advisory forces it.
+    **1.6.33 taken 2026-09-23** (`261f4aa`; `@better-auth/passkey` in lockstep; all three
+    schema surfaces diffed clean per the auth leaf's rule — no migration; the only runtime
+    delta is additive Turnstile failure logging) — the `release-1.6` head as of that date. A
+    later 1.6.x patch is the same routine take: dep-check the age, schema-diff the full
+    surface, bump the passkey plugin in lockstep, and **update both STACK.md rows** (the
+    take updated the core row and not the passkey row — the 08-26 miss repeated).
 - **posthog-js rebuild bump — the real GHSA-55q2-fjhq-7xh7 fix channel** — the
   dompurify override is **audit-edge only**: the vulnerable `IN_PLACE` caller is
   posthog-js's remotely-loaded product-tours chunk, which vendors its own dompurify
