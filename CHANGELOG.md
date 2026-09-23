@@ -49,6 +49,14 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Changed
 
+- **`better-auth` `1.6.30` → `1.6.33`** (`@better-auth/passkey` in lockstep),
+  routine patch bump, release-1.6 line — published 2026-09-14, outside the
+  7-day dep-check window. Diffed all three schema surfaces per the leaf rule
+  (`better-auth`'s plugin `schema.mjs` files, `@better-auth/core`'s
+  `dist/db/schema` + `get-tables.mjs`, `@better-auth/passkey`'s inline
+  schema block): no column changes, no migration needed. Only runtime change
+  found was the Cloudflare Turnstile captcha handler logging a reason/details
+  object on verification failure — additive, not behavioral.
 - **v1.0.0 and v1.1.0 releases published** — both had sat `draft=true` since
   2026-07-20 while this header already claimed a matching GitHub Release per
   milestone; published non-latest (`--latest=false`) so v1.2.0 keeps the
