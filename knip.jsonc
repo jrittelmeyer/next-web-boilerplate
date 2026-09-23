@@ -65,6 +65,19 @@
       // verified working without it (VERIFICATION.md → Resend), so don't demand it.
       "ignoreDependencies": ["@react-email/ui"]
     },
+    "tooling/tailwind": {
+      // base.css only uses Tailwind v4 at-rules (`@theme`, `@custom-variant`,
+      // `@apply`) — plain CSS syntax with no `@import "tailwindcss"` of its own;
+      // it's processed by the *consuming* workspace's own tailwindcss import
+      // (apps/web, packages/ui each `@import "tailwindcss"` before this file's
+      // `@repo/tailwind-config/base`). So no file in this workspace ever imports
+      // the package, and knip 6.35.1's stricter CSS-compiler resolution (unlike
+      // 6.24.0) now correctly reports it unused-by-import — surfaced by the
+      // 6.24.0 → 6.35.1 bump for the smol-toml GHSA-7w5x-hrqm-74c2 fix. Kept as a
+      // real devDependency anyway for editor/IntelliSense resolution of the
+      // at-rules this file authors.
+      "ignoreDependencies": ["tailwindcss"]
+    },
     "tooling/typescript": {
       // nextjs.json sets compilerOptions.plugins [{ "name": "next" }] — a TS
       // language-service plugin resolved in the CONSUMING app (apps/web ships `next`);

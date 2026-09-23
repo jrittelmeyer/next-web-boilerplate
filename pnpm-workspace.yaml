@@ -150,10 +150,16 @@ overrides:
   # moment its feed catches up to a release already known to need a further bump.
   # ⚠️ Unlike every prior ignoreGhsas entry in this file's history, this pair was NOT
   # CI/Dependabot-confirmed before parking — there was nothing yet to confirm against.
-  # Promote to `"fast-uri@<3.1.7": 3.1.7` and delete both ignore entries once 3.1.7 ages
-  # in 2026-09-09; verify at that point that `pnpm audit --json` actually goes red on
-  # 3.1.6 for these two IDs before trusting the promotion closes anything out.
-  "fast-uri@<3.1.6": 3.1.6
+  # 2026-09-22: promoted to `"fast-uri@<3.1.7": 3.1.7` (aged in 2026-09-09, taken
+  # overdue). The verification the 09-02 note asked for came back negative: neither
+  # GHSA-qw65-cvwx-89v3 nor GHSA-58mr-gqgx-xq4g resolves via the GitHub Advisories
+  # API (404 on both), and the npm advisory-bulk endpoint returns nothing for
+  # fast-uri 3.1.5/3.1.6/3.1.7 beyond the four already fixed at 3.1.6 above — these
+  # two IDs were never published, so the pair in `ignoreGhsas` below was parking a
+  # park that had nothing to confirm. Deleted rather than promoted; 3.1.7 is taken
+  # here purely as a routine currency bump (in-range for ajv's `^3.0.1`, 4.x is the
+  # major outside it), not because it fixes a live advisory.
+  "fast-uri@<3.1.7": 3.1.7
   #
   # dompurify — classification: AUDIT-EDGE ONLY (this pin moves the audit ledger,
   # never executed bytes). posthog-js is the tree's sole dompurify importer, but the
@@ -364,19 +370,18 @@ minimumReleaseAge: 10080 # 7 days
 # 2026-07-27 (the two fast-uri GHSAs), 2026-07-30 (GHSA-mh99-v99m-4gvg, once
 # brace-expansion 5.0.8 cleared the gate), 2026-08-07 (GHSA-7p8r-x3mc-p8w7 —
 # batch #5's fast-uri park, promoted to the 3.1.5 override above the day 3.1.5 aged
-# in), and 2026-08-12 (the 08-07 dompurify + nanoid parks — GHSA-55q2-fjhq-7xh7,
+# in), 2026-08-12 (the 08-07 dompurify + nanoid parks — GHSA-55q2-fjhq-7xh7,
 # GHSA-2v37-7h3g-55p8 — promoted to the ranged overrides above; due 08-10, taken
-# two days late). `pnpm audit` therefore guards every
+# two days late), and 2026-09-22 (the fast-uri `GHSA-qw65-cvwx-89v3` /
+# `GHSA-58mr-gqgx-xq4g` pair — deleted rather than promoted, since neither ID
+# resolves via the GitHub Advisories API; see the fast-uri override comment
+# above). `pnpm audit` therefore guards every
 # override above live, and goes red the moment one regresses or a new advisory lands.
 # ⚠️ For the one case that took route (2) instead — GHSA-rgw5-rvv9-x895, 2026-08-03, its
 # dated exclude deleted on schedule 2026-08-06 — see the three-route rule stated once at
 # `minimumReleaseAge` above. This note is a pointer; the rule and its criteria live there.
 auditConfig:
-  # 2026-09-02: pre-emptive park for fast-uri 3.1.7's two fixes, ahead of pnpm audit's
-  # feed (see the fast-uri override comment above for full context and the
-  # 2026-09-09 exit condition). Path: apps/web > @sentry/nextjs >
-  # @sentry/webpack-plugin > webpack > schema-utils > ajv[-formats|-keywords] >
-  # fast-uri — build tooling only, zero request-handling exposure.
-  ignoreGhsas:
-    - GHSA-qw65-cvwx-89v3 # port injection in serialize(); fixed 3.1.7, not yet in feed
-    - GHSA-58mr-gqgx-xq4g # IP-literal host confusion; fixed 3.1.7, not yet in feed
+  # Empty since 2026-09-22 — the last two parks (fast-uri's speculative
+  # GHSA-qw65-cvwx-89v3 / GHSA-58mr-gqgx-xq4g pair) turned out to be advisory IDs
+  # that were never published; see the fast-uri override comment above.
+  ignoreGhsas: []

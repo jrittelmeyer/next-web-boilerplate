@@ -159,6 +159,7 @@ Per-program summary (Rows = archived row count; full rows →
 | B3 predicate-sensor long tail, remaining 11 items — 2026-09-08 | 1 | Closes the row across 5 batches; `contrarian`-reviewed plan caught a false-positive-passing sensor design (primary-calendar demote) before build and flagged the audit `or()` site as highest-risk (no real defect found there); 2 items closed as `@repo/db` integration tests instead of the planned e2e (faster, flake-immune); no predicate was already wrong | [plan](archive/predicate-sensor-long-tail-plan.md) |
 | Advisory — 2026-09-08 | 1 | `sharp` `<0.35.4` → 0.35.4 (HIGH, libheif AVIF/HEIF — next's own pin re-excluded the fix, third time this shape has recurred) · `baseline-browser-mapping` `<2.11.0` → 2.11.20 (moderate DoS) · `vitest`/`@vitest/mocker` `4.1.9` → `4.1.11` (moderate path traversal, plain in-range bump); `pnpm audit` 0 after all three | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-09-22 | 1 | Found the daily audit lane red 12 days (`smol-toml`, #61), the fast-uri park exit and the `next` 16.3.4 take overdue; ledger/override counts, the "open" Renovate decision and the archive index (+4 rows — its rule slipped a 4th time) fixed; showcase re-stamped; 4 memory repairs | [archive/README.md](archive/README.md) |
+| Maintenance batch — 2026-09-22 | 1 | `knip` `6.24.0` → `6.35.1` closes the 12-day `smol-toml` red (issue #61) without an override — surfaced 2 pre-existing knip findings the older version missed, fixed with a documented `tailwindcss` ignore; `fast-uri` `<3.1.6` → `<3.1.7` promoted overdue, but the two parked GHSAs it was meant to close turned out to be unpublished IDs (404 on the GitHub Advisories API) — deleted rather than promoted; `pnpm audit` 0 after both | [CHANGELOG](../CHANGELOG.md) · [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -173,20 +174,16 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each landed
-item. Open now (as of the 2026-09-22 doc audit): **`pnpm audit` is RED — `smol-toml`
-GHSA-7w5x-hrqm-74c2 (HIGH, DoS on malformed TOML; sole path `.>knip>smol-toml` 1.7.0, dev
-tooling only)**, advisory-DB drift caught by the daily lane 2026-09-10 (issue #61 and a
-Dependabot alert open); the fix 1.7.1 (published 2026-07-26, long aged in) is in-range for
-the exact-pinned `knip` 6.24.0 (`^1.6.1`), so a ranged `"smol-toml@<1.7.1": 1.7.1` override
-or the routine `knip` bump (≥6.30.0 requires `^1.7.1`; 6.37.0 is current) closes it with no
-age-exclude · **`fast-uri` 3.1.7 promotion OVERDUE** — its two `ignoreGhsas` parks were due
-to exit 2026-09-09 · **`next` 16.3.4 aged in 2026-09-07 and was not taken**; 16.3.5 (09-11)
-and 16.3.6 (09-22) have since shipped, neither triaged — re-run the rule-6 pre-triage on the
-newest aged release before any take · **e2e month-boundary** (B2 — fix merged 2026-09-03;
-removal condition open until the 2026-10-01 window passes green) · **`better-auth` 1.7.x**
-is a breaking minor — plan → sign-off, no advisory forces it. Ledger: `ignoreGhsas` holds
-the two `fast-uri` parks (not `[]`), `minimumReleaseAgeExclude` empty since 2026-09-02,
-`pnpm audit` 1 high. The paragraph this replaces is preserved in
+item. Open now (as of the 2026-09-22 maintenance batch): **`next` 16.3.4 aged in 2026-09-07
+and was not taken**; 16.3.5 (09-11) and 16.3.6 (09-22) have since shipped, neither triaged —
+re-run the rule-6 pre-triage on the newest aged release before any take · **e2e
+month-boundary** (B2 — fix merged 2026-09-03; removal condition open until the 2026-10-01
+window passes green) · **`better-auth` 1.7.x** is a breaking minor — plan → sign-off, no
+advisory forces it. Ledger: `ignoreGhsas` is `[]` (the `smol-toml` red closed via the `knip`
+6.24.0 → 6.35.1 bump, and the two `fast-uri` 3.1.7 parks turned out to be unpublished GHSA
+IDs and were deleted rather than promoted — see [CHANGELOG](../CHANGELOG.md)),
+`minimumReleaseAgeExclude` empty since 2026-09-02, `pnpm audit` 0. The paragraph this
+replaces is preserved in
 [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md#project_status-date-gated-watch-paragraph-as-of-2026-09-02).
 
 ## Fresh project on-ramp (clone → build a real app)

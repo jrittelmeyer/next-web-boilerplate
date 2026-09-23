@@ -222,6 +222,29 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
     Pre-emptively parked in `auditConfig.ignoreGhsas` rather than left to surface
     unplanned once the feed catches up; promotes to a `3.1.7` override and drops both
     ignore entries on 2026-09-09.
+- **`knip` `6.24.0` → `6.35.1`** — GHSA-7w5x-hrqm-74c2 (HIGH: DoS via a malformed
+  TOML document), sole path `.>knip>smol-toml` at `1.7.0`. `knip@6.35.1` (published
+  2026-09-09, safely past the 7-day gate) declares `smol-toml@^1.8.0`, clearing the
+  advisory without an override. Exact-pinned, matching the existing pin style.
+  `pnpm audit`: 0 advisories after the bump. The newer resolver surfaced two
+  pre-existing knip findings the older version missed — `tooling/tailwind`'s
+  `tailwindcss` devDependency (base.css only carries Tailwind v4 at-rules, no
+  `@import "tailwindcss"` of its own; consumers import it before pulling in this
+  file) and `packages/ui`'s dangling `./hooks/*` export entry (no `src/hooks/`
+  directory exists yet). The first got a documented `ignoreDependencies` in
+  `knip.jsonc`; the second is knip's non-fatal "Configuration hints" class (exits 0
+  both before and after this bump) and was left as-is.
+- **`fast-uri` scoped override, `<3.1.6` → `<3.1.7`** — promoted on schedule (aged
+  in 2026-09-09, taken overdue 2026-09-22). The 2026-09-02 note asked to verify
+  `pnpm audit --json` actually goes red on `3.1.6` for the two parked GHSAs before
+  trusting the promotion; that check came back negative — neither
+  GHSA-qw65-cvwx-89v3 nor GHSA-58mr-gqgx-xq4g resolves via the GitHub Advisories API
+  (404 on both), and npm's advisory-bulk endpoint returns nothing for fast-uri
+  `3.1.5`/`3.1.6`/`3.1.7` beyond the four already fixed at `3.1.6`. Both IDs were
+  never published — the pre-emptive park had nothing to confirm. Deleted rather
+  than promoted (`auditConfig.ignoreGhsas` is `[]` again); `3.1.7` is taken purely
+  as a routine currency bump (in-range for ajv's `^3.0.1`), not because it fixes a
+  live advisory. `pnpm audit`: 0 advisories after.
 
 ## [1.2.0] — 2026-08-30
 

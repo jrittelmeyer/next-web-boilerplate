@@ -36,7 +36,7 @@
     "@biomejs/biome": "^2.5.0",
     "@manypkg/cli": "0.25.1",
     "husky": "^9.1.7",
-    "knip": "6.24.0",
+    "knip": "6.35.1",
     "lint-staged": "17.0.7",
     "turbo": "^2.9.18",
     "typescript": "^6.0.3"

@@ -396,16 +396,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (08-14) and 1.6.30 (08-26). Every take is in [CHANGELOG](../CHANGELOG.md); the verbatim
     dated entries are in [archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02](archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02) and
     [archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26](archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26).
-  - ⚠️ **`smol-toml` GHSA-7w5x-hrqm-74c2 (HIGH) — OPEN, no override yet** (surfaced by the
-    2026-09-22 doc audit: the daily `security-audit` lane has been red since 2026-09-10 and
-    triage issue #61 has sat open since). DoS on malformed TOML documents; vulnerable
-    `<=1.7.0`, patched `>=1.7.1`; sole path `.>knip>smol-toml` (dev-only lint tooling,
-    never shipped). Pure advisory-DB drift on an unchanged lockfile. Route: 1.7.1
-    (published 2026-07-26, long past the 7-day gate) is in-range for the exact-pinned
-    `knip` 6.24.0 (`^1.6.1`), so a ranged `"smol-toml@<1.7.1": 1.7.1` override — or the
-    routine `knip` bump (≥6.30.0 requires `^1.7.1`; 6.37.0 is current, `^1.8.0`) — closes
-    it with no age-exclude. Record per the runbook when taken: CHANGELOG **Security**
-    entry + a Watch bullet with its removal condition.
+  - ~~**`smol-toml` GHSA-7w5x-hrqm-74c2 (HIGH)**~~ — **CLOSED 2026-09-22**: `knip`
+    `6.24.0` → `6.35.1` (exact-pinned, in-range for CI's `^1.6.1`-era lockfile;
+    `6.35.1` declares `smol-toml@^1.8.0`, clearing the advisory without a
+    `pnpm-workspace.yaml` override). Issue #61 auto-closes on the next green audit
+    run. See [CHANGELOG](../CHANGELOG.md) for the two pre-existing knip findings the
+    newer resolver surfaced (`tooling/tailwind`'s `tailwindcss` ignore, `packages/ui`'s
+    dangling `./hooks/*` hint).
   - **`next` 16.3.4 aged in 2026-09-07 ~20:00 UTC — NOT taken as of 2026-09-22.** 16.3.5
     (published 2026-09-11, aged in 09-18) and 16.3.6 (published 2026-09-22, ages in 09-29)
     have since shipped, neither triaged — re-run the rule-6 pre-triage against the newest
@@ -524,12 +521,16 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     `pnpm audit`'s feed at take time** — unlike every prior park here, this pair was
     parked pre-emptively rather than CI-confirmed, so `ignoreGhsas` is not
     guarding a live red for these two until the feed catches up. Promotes to
-    `"fast-uri@<3.1.7": 3.1.7` and drops both ignore entries once 3.1.7 ages in
-    **2026-09-09** (⚠️ **overdue** — both parks still live as of the 2026-09-22 doc
-    audit) — verify at that point that reverting the pair would actually turn
-    `pnpm audit` red on 3.1.6, confirming the suppression mechanism worked, before
-    trusting the close-out. Remove the override entirely once a routine bump
-    naturally carries the lockfile past whichever version is current.
+    `"fast-uri@<3.1.7": 3.1.7`. **Promoted 2026-09-22** (taken overdue — aged in
+    2026-09-09): the verification this entry asked for came back negative rather
+    than confirming a live red. Neither `GHSA-qw65-cvwx-89v3` nor
+    `GHSA-58mr-gqgx-xq4g` resolves via the GitHub Advisories API (404 on both), and
+    npm's advisory-bulk endpoint returns nothing for fast-uri `3.1.5`/`3.1.6`/`3.1.7`
+    beyond the four already fixed at `3.1.6` above — both IDs were never published.
+    Both `ignoreGhsas` entries deleted rather than promoted (allowlist `[]` again);
+    the `3.1.7` override itself is a routine currency bump, not an advisory fix.
+    Remove the override entirely once a routine bump naturally carries the lockfile
+    past whichever version is current.
   - `"nanoid@<3.3.18": 3.3.18` → GHSA-2v37-7h3g-55p8 (HIGH; audit-edge only — postcss
     calls plain `nanoid(6)`, the vulnerable custom-generator functions are never
     invoked here). Added 2026-08-12 as `<3.3.17`, promoted to `<3.3.18` on 2026-08-14
