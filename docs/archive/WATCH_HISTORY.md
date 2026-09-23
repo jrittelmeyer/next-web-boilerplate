@@ -23,6 +23,7 @@ Future landed takes and closed batches go here, under a dated heading.
 - [BACKLOG Watch bullets (as of 2026-09-02)](#backlog-watch-bullets-as-of-2026-09-02)
 - [BACKLOG B4 TypeScript 7 row (as of 2026-09-02)](#backlog-b4-typescript-7-row-as-of-2026-09-02)
 - [BACKLOG B1 Renovate row (as of 2026-09-02)](#backlog-b1-renovate-row-as-of-2026-09-02)
+- [smol-toml GHSA-7w5x-hrqm-74c2 closed 2026-09-22 (moved 2026-09-23)](#smol-toml-ghsa-7w5x-hrqm-74c2-closed-2026-09-22-moved-2026-09-23)
 
 ## TypeScript 7 cutover (full entry as of 2026-09-02)
 
@@ -569,3 +570,15 @@ _Moved verbatim from `docs/BACKLOG.md` on 2026-09-02._
 _Moved verbatim from `docs/BACKLOG.md` on 2026-09-02._
 
 | B1 | Tooling / deps | **Restore Renovate PR delivery** — `.github/workflows/renovate.yml` built 2026-08-31 (self-hosted `renovatebot/github-action`, SHA-pinned, reuses `.github/renovate.json` unchanged) after diagnosis at developer.mend.io ruled out every repo-side and account-side cause (App installed, Interactive mode, correct schedule evaluation) and a manual trigger's job log (`ea8d7e50`) showed the run killed mid-`pnpm update` with no error emitted — a Mend Community/Free-tier resource ceiling, not a config defect | [MAINTENANCE.md → Automation on a fork](../MAINTENANCE.md#automation-on-a-fork--new-repo) · [diagnosis](renovate-b1-diagnosis-plan.md) | **Owner decision pending (2026-08-31):** the first cron run (18:28 UTC) failed at startup — `'token' MUST be passed … RENOVATE_TOKEN`; `gh secret list` shows no repo secret — and the same Monday the Mend App opened [#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56) (`actions/checkout` 7.0.1, every lane green), the first scheduled `renovate/*` PR ever: Mend does deliver the no-lockfile class (the Dependency Dashboard's `updatedAt` is still 2026-07-22, so its run still never finishes). Pick **one** host — (a) add `RENOVATE_TOKEN` (classic PAT, `repo` + `workflow`) and uninstall the Mend App, per the plan; or (b) keep Mend, delete `renovate.yml`, and accept that lockfile-bearing PRs may keep dying on Mend's tier. Never both: the duplicate-dashboard race in the workflow header is live now. Then merge/close #56 (10/10 checks green as of 2026-09-01; it touches `ci.yml`/`codeql.yml`/`pages.yml`/`security-audit.yml` — **not** `renovate.yml`, which postdates it and keeps `actions/checkout` v7.0.0; the `workflow` scope is needed) and confirm a scheduled `renovate/*` PR from the chosen host; move to Shipped once observed. Independent of the choice, and now **shipped** (2026-09-02): the fork-safe `ENABLE_RENOVATE` gate, so a generated project no longer inherits the weekly red — but enabling here is now a **two**-action close (secret **and** variable), tracked by a dated 14-day liveness check in MAINTENANCE. Evidence 2026-09-01: 58 outdated (66 on 08-19); exact-pinned `posthog-js` 32 minors behind, `@sentry/nextjs` 14, `knip` 10, `stripe` 4. |
+
+## smol-toml GHSA-7w5x-hrqm-74c2 closed 2026-09-22 (moved 2026-09-23)
+
+_Moved verbatim from `docs/MAINTENANCE.md → Watch items → Dated dependency takes` on 2026-09-23 (doc audit) once the take had landed; de-indented one level from its sub-bullet position, relative link paths rewritten. The live list keeps a struck one-liner pointing here._
+
+- ~~**`smol-toml` GHSA-7w5x-hrqm-74c2 (HIGH)**~~ — **CLOSED 2026-09-22**: `knip`
+  `6.24.0` → `6.35.1` (exact-pinned, in-range for CI's `^1.6.1`-era lockfile;
+  `6.35.1` declares `smol-toml@^1.8.0`, clearing the advisory without a
+  `pnpm-workspace.yaml` override). Issue #61 auto-closes on the next green audit
+  run. See [CHANGELOG](../../CHANGELOG.md) for the two pre-existing knip findings the
+  newer resolver surfaced (`tooling/tailwind`'s `tailwindcss` ignore, `packages/ui`'s
+  dangling `./hooks/*` hint).

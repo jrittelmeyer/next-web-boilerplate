@@ -175,7 +175,11 @@ outstanding link without touching the secret.
 
 ### Expiry and revocation, stated precisely
 
-`exp = series_end_at + 30 days`, and `0` (never) when `series_end_at IS NULL`.
+`exp = series_end_at + 30 days` for a recurring event, and `0` (never) only when that
+bound is `NULL` — an unbounded series. A **one-off** event (`rrule IS NULL`) has
+`series_end_at` schema-`NULL` by construction, so `loadSeriesForEmail` falls back to the
+row's own `end_at` for it (fixed 2026-09-23 — before that every one-off minted a
+non-expiring token despite having a perfectly good end time in the same row).
 `series_end_at` is a stored, deliberately over-estimating bound ([model.md](model.md)), so
 the error direction is the safe one.
 

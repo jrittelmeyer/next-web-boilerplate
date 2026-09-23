@@ -28,6 +28,10 @@ One imperative per line; mechanics + rationale live in
 - `timezone.ts` is the **only** place that converts a wall reading to an instant. A
   second implementation anywhere is a second answer at every DST boundary — use
   `civilToInstant` / `resolveCivil`, even for a query bound.
+- ICS **parameter values** (`CN=`, `TZID=`) go through `quoteParamValue` (RFC 6868 caret
+  encoding inside a DQUOTE-wrapped value), never the TEXT escaper — the grammars differ
+  and a conforming reader hands the backslashes back. `mailto:` addresses are
+  percent-encoded: CAL-ADDRESS is a URI, not TEXT.
 - A new module joins the coverage run automatically (`all: true`); the gate is
   **100/100/100/100**.
 - **The engine-swap window is CLOSED.** `recurrence_id` is produced by this engine and

@@ -104,7 +104,7 @@ in any browser.
 
 ---
 
-*Current as of 2026-09-22. The audit score stands at 99.3 — it peaked at a
+*Current as of 2026-09-23. The audit score stands at 99.3 — it peaked at a
 perfect 100 across seventeen passes; the calendar feature that entered at 85 now
 sits at 95.5. The newest pass verified the summer's security work landed as recorded,
 then took a tenth of a point back for four things nobody had scored: a scheduled
@@ -130,11 +130,18 @@ chance. It now has a chapter of its own —
 [**12. The Calendar**](12-the-calendar.md) — which walks the newest room in the
 house properly, including the doors it deliberately hasn't opened yet.*
 
-*Also recent: a third tagged release (`v1.2.0`) bundled the calendar with the
-summer's security work; the framework was updated again for a security release;
-and a documentation review found — and fixed — a set of instructions that had quietly fallen out of
-step with the code, including a removal guide that would have left broken pieces
-behind. Earlier: a high-severity sign-in vulnerability (an account-takeover path
+*Also recent: the framework was updated twice more for security releases — the
+latest taken the same day it was published, because it closed a flaw in the routes
+that generate the site's link-preview images that could have let an attacker run
+their own code on the server; a security watchdog that had been reporting a problem
+for twelve days with nobody looking was noticed by a documentation review and fixed
+the same night; and the calendar received nine small correctness fixes — its exported
+calendar-file format, some repeating-event edge cases, and invitation links that never
+expired for one-off events — none visible in normal use. Before that: a third tagged
+release (`v1.2.0`) bundled the calendar with the summer's security work, and a
+documentation review found — and fixed — a set of instructions that had quietly fallen
+out of step with the code, including a removal guide that would have left broken
+pieces behind. Earlier: a high-severity sign-in vulnerability (an account-takeover path
 in the authentication library) fixed the day the daily security watch surfaced
 it, and that watchdog hardened so it can no longer report "all clear" on a day it
 failed to actually run its check; the instruction files reorganized so an AI

@@ -396,13 +396,9 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (08-14) and 1.6.30 (08-26). Every take is in [CHANGELOG](../CHANGELOG.md); the verbatim
     dated entries are in [archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02](archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02) and
     [archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26](archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26).
-  - ~~**`smol-toml` GHSA-7w5x-hrqm-74c2 (HIGH)**~~ — **CLOSED 2026-09-22**: `knip`
-    `6.24.0` → `6.35.1` (exact-pinned, in-range for CI's `^1.6.1`-era lockfile;
-    `6.35.1` declares `smol-toml@^1.8.0`, clearing the advisory without a
-    `pnpm-workspace.yaml` override). Issue #61 auto-closes on the next green audit
-    run. See [CHANGELOG](../CHANGELOG.md) for the two pre-existing knip findings the
-    newer resolver surfaced (`tooling/tailwind`'s `tailwindcss` ignore, `packages/ui`'s
-    dangling `./hooks/*` hint).
+  - ~~**`smol-toml` GHSA-7w5x-hrqm-74c2 (HIGH)**~~ — **CLOSED 2026-09-22** by the routine
+    `knip` 6.24.0 → 6.35.1 bump (no override; issue #61 auto-closed 2026-09-23). Record →
+    [archive/WATCH_HISTORY.md#smol-toml-ghsa-7w5x-hrqm-74c2-closed-2026-09-22-moved-2026-09-23](archive/WATCH_HISTORY.md#smol-toml-ghsa-7w5x-hrqm-74c2-closed-2026-09-22-moved-2026-09-23).
   - ~~**`next` 16.3.4 aged in 2026-09-07, not taken**~~ — **superseded 2026-09-23: `next`
     16.3.3 → 16.3.6 taken as a security exception**, not the planned routine take. 16.3.6
     (published 2026-09-22T16:19:00Z) fixes GHSA-vcvr-r3jv-pc5j — RCE in `next/og`'s
@@ -429,13 +425,20 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     Turbopack `crossOrigin` #97930); nothing touches `output: 'standalone'`. Still open:
     drive `/_next/image` with an AVIF source (order-dependent per the 16.3.0 lesson) and
     the Docker standalone boot check; bump `@next/eslint-plugin-next` in lockstep
-    (`tooling/eslint`, its own `pnpm add`).
-  - ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18, 1.7.2 now) is NOT a routine take** — a
+    (`tooling/eslint`, its own `pnpm add`). *Removal condition (the exclude):* delete all
+    ten `minimumReleaseAgeExclude` entries once 16.3.6 ages in — published
+    2026-09-22T16:19Z, so on or after **2026-09-29T16:19Z** — proven by CI's frozen install,
+    not a local one (Dependency-policy rule 2); the three carried gaps stay open until each
+    is actually run.
+  - ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18; 1.7.5 as of 2026-09-23) is NOT a routine take** — a
     breaking minor: 15 breaking changes incl. account identity scoped by issuer (requires a
     migration), captcha paths needing explicit wildcards (this repo wires CAPTCHA), SCIM/MCP
     extractions. Plan → sign-off when there is a reason to move; no advisory forces it.
     `@better-auth/passkey` 1.7.x exists for lockstep. **Exact-pinning is the standing rule for
     this dependency** — a caret let `^1.6.30` silently resolve to 1.7.1 ([STACK.md](context/STACK.md)).
+    The `release-1.6` line has moved on to **1.6.33** (this repo pins 1.6.30, noted 2026-09-23):
+    a routine patch take when convenient — dep-check the age, schema-diff the full surface (the
+    auth leaf's rule), bump `@better-auth/passkey` in lockstep; no advisory forces it.
 - **posthog-js rebuild bump — the real GHSA-55q2-fjhq-7xh7 fix channel** — the
   dompurify override is **audit-edge only**: the vulnerable `IN_PLACE` caller is
   posthog-js's remotely-loaded product-tours chunk, which vendors its own dompurify
