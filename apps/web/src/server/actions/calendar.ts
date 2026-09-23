@@ -431,7 +431,7 @@ function planSeriesCut(
   const startMs = resolveCivil(dtstart, target.startTzid).instantMs;
 
   const notInSeries = { recurrenceId: "That date isn't part of this repeating event." };
-  if (rule.until !== null && cutMs > untilInstantMs(rule.until))
+  if (rule.until !== null && cutMs > untilInstantMs(rule.until, target.startTzid))
     return { fieldErrors: notInSeries };
 
   // Occurrences STRICTLY before the cut. A COUNT rule cannot seek — COUNT is positional —
@@ -1299,6 +1299,22 @@ async function updateOccurrence(
   times: DerivedTimes,
   recurrenceId: LocalDateTime,
 ): Promise<EventResult> {
+  // `target.rrule` is guaranteed non-null by the caller's `scope === "this"` guard. The
+  // `.insert(...).onConflictDoUpdate(...)` below accepts ANY `recurrenceId` — nothing
+  // upstream of it checks that the caller-supplied date is an occurrence this rule
+  // actually produces, which would otherwise let a tampered request write a "phantom
+  // chip" no expansion of the rule ever generates. Reuse `planSeriesCut`'s bounds check
+  // (the same one `splitSeries` already runs) rather than duplicate it; only its
+  // `fieldErrors` half is wanted here, not the cut itself.
+  const source = parseSubmittedRule(target.rrule);
+  if ("fieldErrors" in source || source.data === null) {
+    return { error: "This repeating event's rule could not be read." };
+  }
+  const membership = planSeriesCut(target, source.data, recurrenceId);
+  if ("fieldErrors" in membership) {
+    return { error: FIELD_ERRORS, fieldErrors: membership.fieldErrors };
+  }
+
   const columns = { ...eventColumns(values), ...times };
   try {
     await db.transaction(async (tx) => {
@@ -1749,6 +1765,16 @@ async function softDeleteEvent(target: EventTarget, actor: Actor): Promise<Delet
             // email is (audit F4). The NULL-safe spelling is proven against real
             // Postgres in @repo/db's calendar-attendees integration suite.
             or(isNull(calendarEventAttendees.userId), ne(calendarEventAttendees.userId, actor.id)),
+            // The `userId` exclusion above only catches a *resolved* self-guest row. An
+            // unverified self-guest row still carries `userId: NULL` (the F6 shape) and
+            // slips through it, mailing the deleter a cancellation about their own
+            // action on an email-configured deploy. Exclude by email too, regardless of
+            // verification state. `lower()` goes on `actor.email`, not the column:
+            // `calendar_event_attendees.email` is CHECK-lowercased already, but `user
+            // .email` is only lowercase "in practice" (Better Auth sign-up), never
+            // DB-enforced — every other comparison of these two columns in this file
+            // wraps the user-side value the same way (`calendar.ts:1593` et al.).
+            ne(calendarEventAttendees.email, sql`lower(${actor.email})`),
           ),
         );
       // The addresses go out with the job, not an id to re-read: the event is soft-deleted

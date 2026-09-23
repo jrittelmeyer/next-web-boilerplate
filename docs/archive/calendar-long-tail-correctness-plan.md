@@ -1,6 +1,9 @@
 # Plan: B3 calendar long-tail correctness batch (9 smalls)
 
-**Status: DRAFT — awaiting sign-off. Not yet built.**
+**Status: SIGNED 2026-09-23, BUILT 2026-09-23.** All nine items landed in one session;
+decision C resolved to **(b)** (add the filter), not the recommended (a) — the
+verification trace this plan asked for turned up a real self-invite path the comment's
+claimed invariant didn't hold against. See CHANGELOG for the full landed list.
 
 Source: `docs/BACKLOG.md` → B3 "Long-tail correctness batch" row, seeded by
 `archive/PROJECT_AUDIT_2026-08-04.md` F10 and `archive/PROJECT_AUDIT_2026-08-06.md`

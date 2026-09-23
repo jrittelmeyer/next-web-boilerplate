@@ -103,7 +103,7 @@ describe("parseRRule", () => {
     ["FREQ=MONTHLY;BYSETPOS=0;BYDAY=MO", /BYSETPOS expects/],
     ["FREQ=MONTHLY;BYSETPOS=1", /BYSETPOS needs another BY rule/],
     ["FREQ=WEEKLY;BYMONTHDAY=1", /BYMONTHDAY cannot be combined with FREQ=WEEKLY/],
-    ["FREQ=DAILY;BYMONTHDAY=1", /BYMONTHDAY cannot be combined with FREQ=DAILY/],
+    ["FREQ=DAILY;BYMONTHDAY=1", /BYMONTHDAY with FREQ=DAILY is not supported by this engine/],
     ["FREQ=WEEKLY;BYDAY=1MO", /ordinals \(like 1MO or -1FR\) are meaningless with FREQ=WEEKLY/],
     ["FREQ=DAILY;BYDAY=-1FR", /ordinals \(like 1MO or -1FR\) are meaningless with FREQ=DAILY/],
   ])("rejects %s", (text, message) => {
@@ -139,15 +139,25 @@ describe("formatRRule", () => {
 });
 
 describe("untilInstantMs", () => {
-  it("passes a UTC bound through", () => {
-    expect(untilInstantMs({ kind: "utc", instantMs: 1234 })).toBe(1234);
+  it("passes a UTC bound through, ignoring the zone", () => {
+    expect(untilInstantMs({ kind: "utc", instantMs: 1234 }, "Pacific/Kiritimati")).toBe(1234);
   });
 
-  it("takes a DATE bound to the END of its day", () => {
+  it("takes a DATE bound to the END of its day, in UTC", () => {
     // Otherwise `UNTIL=20270401` would drop an occurrence at 09:00 on the 1st, which is
     // the opposite of what the author wrote.
-    expect(untilInstantMs({ kind: "date", date: "2027-04-01" })).toBe(
+    expect(untilInstantMs({ kind: "date", date: "2027-04-01" }, "UTC")).toBe(
       Date.UTC(2027, 3, 1, 23, 59, 59, 999),
+    );
+  });
+
+  it("takes a DATE bound to the end of its day in the series' OWN zone, not UTC", () => {
+    // The bug this closes: a UTC+ zone's local midnight is EARLIER than UTC's, so
+    // comparing a zone-resolved occurrence instant against a UTC-only bound let a UTC+
+    // occurrence land up to a day past what UNTIL's author actually wrote. Kiritimati is
+    // a fixed UTC+14 (no DST) — 23:59:59.999 local on the 1st is 09:59:59.999 UTC.
+    expect(untilInstantMs({ kind: "date", date: "2027-04-01" }, "Pacific/Kiritimati")).toBe(
+      Date.UTC(2027, 3, 1, 9, 59, 59, 999),
     );
   });
 });

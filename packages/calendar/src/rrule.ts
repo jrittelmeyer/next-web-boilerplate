@@ -25,7 +25,7 @@
  */
 
 import { daysInMonth, MS_PER_DAY, toDayNumber } from "./civil";
-import { instantToCivil } from "./timezone";
+import { instantToCivil, resolveCivil } from "./timezone";
 
 export const RECURRENCE_FREQUENCIES = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
 export type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCIES)[number];
@@ -334,11 +334,18 @@ export function parseRRule(text: string): RecurrenceRule {
           "a non-zero position from -366 to 366",
         );
 
-  // Combinations RFC 5545 §3.3.10 forbids outright. Refused rather than quietly ignored,
-  // because "my weekly meeting silently stopped honouring BYMONTHDAY" is a support
-  // ticket nobody can reproduce.
-  if (byMonthDay.length > 0 && (freq === "WEEKLY" || freq === "DAILY")) {
-    fail(`BYMONTHDAY cannot be combined with FREQ=${freq}`);
+  // RFC 5545 §3.3.10 forbids BYMONTHDAY with FREQ=WEEKLY outright. Refused rather than
+  // quietly ignored, because "my weekly meeting silently stopped honouring BYMONTHDAY"
+  // is a support ticket nobody can reproduce.
+  if (byMonthDay.length > 0 && freq === "WEEKLY") {
+    fail(`BYMONTHDAY cannot be combined with FREQ=WEEKLY`);
+  }
+  // DAILY+BYMONTHDAY is legal RFC syntax — §3.3.10 only forbids the WEEKLY pairing above
+  // — this engine just doesn't expand it (no BYMONTHDAY filter in expand.ts's DAILY
+  // case). Refused honestly rather than under the WEEKLY rule's RFC citation, which does
+  // not apply here (docs/context/calendar/recurrence.md).
+  if (byMonthDay.length > 0 && freq === "DAILY") {
+    fail(`BYMONTHDAY with FREQ=DAILY is not supported by this engine`);
   }
   if (byDay.some((entry) => entry.ordinal !== null) && (freq === "WEEKLY" || freq === "DAILY")) {
     fail(`BYDAY ordinals (like 1MO or -1FR) are meaningless with FREQ=${freq}`);
@@ -396,12 +403,20 @@ export function formatRRule(rule: RecurrenceRule): string {
  *
  * A `DATE` form means "through the end of that day", so it resolves to the day's last
  * millisecond rather than its midnight — otherwise `UNTIL=20270401` would drop an
- * occurrence at 09:00 on the 1st, the opposite of what the author wrote.
+ * occurrence at 09:00 on the 1st, the opposite of what the author wrote. "That day" is a
+ * civil day **in the series' own zone**: resolved via `resolveCivil`, not raw UTC
+ * arithmetic — a UTC+ zone's last millisecond of the day is a different instant than
+ * UTC's, and comparing a zone-resolved occurrence instant against a UTC-only bound let a
+ * UTC+ occurrence land up to a day past what the author wrote.
  */
-export function untilInstantMs(until: RecurrenceUntil): number {
+export function untilInstantMs(until: RecurrenceUntil, timeZone: string): number {
   if (until.kind === "utc") return until.instantMs;
   const year = Number(until.date.slice(0, 4));
   const month = Number(until.date.slice(5, 7));
   const day = Number(until.date.slice(8, 10));
-  return toDayNumber(year, month, day) * MS_PER_DAY + MS_PER_DAY - 1;
+  // 23:59:59 + 999ms, not next-midnight - 1ms: `CivilDateTime` has no millisecond field,
+  // so this is the only way to land on the day's last instant without a second type.
+  return (
+    resolveCivil({ year, month, day, hour: 23, minute: 59, second: 59 }, timeZone).instantMs + 999
+  );
 }

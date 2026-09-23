@@ -228,14 +228,62 @@ function textProperty(name: string, value: string | null): string[] {
 }
 
 /**
+ * RFC 6868 caret-encoding — applied ONLY inside a DQUOTE-quoted param-value (see
+ * {@link quoteParamValue}), and only to the three characters the RFC actually defines an
+ * escape for. Order matters: `^` must be encoded first, on the ORIGINAL text alone, or the
+ * carets the other two rules introduce get double-escaped by a later `^` pass.
+ *
+ * **Never encodes `;`, `,`, or `:`.** RFC 6868 defines no unescape for those — a caret
+ * sequence is only ever `^^`, `^'`, or `^n` — so caret-encoding a semicolon would ship a
+ * NEW corruption bug in the exact property this function exists to fix: a conforming
+ * reader decoding `^,` back gets undefined behavior. Quoting alone (the DQUOTE wrapper,
+ * not an escape) is what makes those three safe inside a param-value — RFC 5545 §3.2's
+ * grammar, a different rule from RFC 5545 §3.3.11 TEXT escaping, which is what `CN` used
+ * to run through by mistake.
+ */
+function caretEncode(value: string): string {
+  return value
+    .replace(/\^/g, "^^")
+    .replace(/"/g, "^'")
+    .replace(/\r\n|\r|\n/g, "^n");
+}
+
+/**
+ * RFC 5545 §3.2 param-value quoting. DQUOTE-wraps when the value contains `"`, `;`, `,`,
+ * or `:` — or, once caret-encoded, would contain a caret sequence, which is exactly the
+ * `^`/`"`/newline set above; checking the raw value for any of the seven characters below
+ * is equivalent to checking the encoded result for a caret, without encoding twice.
+ * Caret-encoding runs only inside the quotes it triggers (rule 2 is not independent of
+ * rule 1's decision — an unquoted value is never caret-encoded).
+ */
+function quoteParamValue(value: string): string {
+  const needsQuoting = /["\r\n;,:^]/.test(value);
+  return needsQuoting ? `"${stripControls(caretEncode(value))}"` : stripControls(value);
+}
+
+/**
+ * `mailto:` percent-encoding (RFC 6068). `ORGANIZER`'s value type is CAL-ADDRESS — a URI,
+ * not TEXT — so a `;`, `,` or `:` inside the address needs URI percent-encoding here, not
+ * backslash-escaping: emitting one unencoded would either truncate the property at the
+ * next `;`/`:` in a strict parser or silently merge into the next param. Iterates by CODE
+ * POINT (`[...value]`, not `value[i]`), matching `foldLine`'s own reasoning — a UTF-16
+ * surrogate pair split by index would encode two invalid halves.
+ */
+function encodeMailtoAddress(email: string): string {
+  return [...stripControls(email)]
+    .map((char) => (/^[A-Za-z0-9._+@-]$/.test(char) ? char : encodeURIComponent(char)))
+    .join("");
+}
+
+/**
  * `ORGANIZER` is REQUIRED for `PUBLISH` (RFC 5546 §3.2.1) and is the only address this file
  * emits. It is informational: with no `ATTENDEE` line there is nobody for a client to reply
  * *as*, which is precisely the property that removes the dead buttons.
  */
 function organizerProperty(email: string | null, name: string | null): string[] {
   if (email === null || email === "") return [];
-  const cn = name === null || name === "" ? "" : `;CN=${escapeText(name)}`;
-  return [`ORGANIZER${cn}:mailto:${email}`];
+  const cn = name === null || name === "" ? "" : `;CN=${quoteParamValue(name)}`;
+  return [`ORGANIZER${cn}:mailto:${encodeMailtoAddress(email)}`];
 }
 
 function eventBody(event: IcsEvent, dtstampMs: number): string[] {

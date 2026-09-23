@@ -1571,6 +1571,23 @@ describe("updateEvent, scope: this", () => {
       seriesEndAt: null,
     });
   });
+
+  it("refuses a recurrenceId that is not part of the series", async () => {
+    // Same bound check `scope: "thisAndFollowing"` already runs via `planSeriesCut` —
+    // without it, `onConflictDoUpdate` would happily write a "phantom chip" no
+    // expansion of this rule ever produces.
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO" });
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: "2027-06-07 09:00:00",
+      }),
+    ).toMatchObject({ fieldErrors: { recurrenceId: expect.any(String) } });
+    expect(dbInsert).not.toHaveBeenCalled();
+  });
 });
 
 describe("updateEvent, scope: thisAndFollowing", () => {

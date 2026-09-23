@@ -285,10 +285,50 @@ describe("escaping — RFC 5545 §3.3.11", () => {
     });
     expect(ics).toContain("DESCRIPTION:abcde\tf");
   });
+});
 
-  it("escapes a CN in the ORGANIZER, which is a TEXT value too", () => {
+describe("RFC 6868 param quoting — RFC 5545 §3.2, not §3.3.11 TEXT escaping", () => {
+  it("DQUOTE-wraps a CN containing a comma or semicolon, WITHOUT caret-escaping it", () => {
+    // The bug this closes: CN used to run through the TEXT escaper (`Doe\, Jane`), a
+    // different grammar. RFC 6868 defines no unescape for `,`/`;`/`:`, so caret-encoding
+    // them (`Doe^, Jane`) would ship a NEW corruption bug in the exact property this
+    // fixes — a conforming reader decoding `^,` back gets undefined behavior. Quoting
+    // alone is what makes the comma safe inside a param-value.
     expect(render({ organizerEmail: "a@b.c", organizerName: "Doe, Jane" })).toContain(
-      String.raw`ORGANIZER;CN=Doe\, Jane:mailto:a@b.c`,
+      String.raw`ORGANIZER;CN="Doe, Jane":mailto:a@b.c`,
+    );
+    expect(render({ organizerEmail: "a@b.c", organizerName: "Doe; Jane" })).toContain(
+      String.raw`ORGANIZER;CN="Doe; Jane":mailto:a@b.c`,
+    );
+    expect(render({ organizerEmail: "a@b.c", organizerName: "9:00 Jane" })).toContain(
+      String.raw`ORGANIZER;CN="9:00 Jane":mailto:a@b.c`,
+    );
+  });
+
+  it("leaves a CN with no special characters unquoted", () => {
+    expect(render({ organizerEmail: "ada@example.com", organizerName: "Ada L" })).toContain(
+      "ORGANIZER;CN=Ada L:mailto:ada@example.com",
+    );
+  });
+
+  it("caret-encodes a literal caret and a DQUOTE, only once inside the quotes they trigger", () => {
+    expect(render({ organizerEmail: "a@b.c", organizerName: 'Jane "JJ"^' })).toContain(
+      String.raw`ORGANIZER;CN="Jane ^'JJ^'^^":mailto:a@b.c`,
+    );
+  });
+
+  it("caret-encodes an embedded newline to ^n", () => {
+    expect(render({ organizerEmail: "a@b.c", organizerName: "Jane\nDoe" })).toContain(
+      String.raw`ORGANIZER;CN="Jane^nDoe":mailto:a@b.c`,
+    );
+  });
+
+  it("percent-encodes a mailto address instead of backslash-escaping it", () => {
+    // CAL-ADDRESS is a URI value, not TEXT — a raw `;`/`,`/`:` in the address would
+    // truncate the property at a strict parser's next delimiter or merge into the next
+    // param, so it needs URI percent-encoding, not RFC 5545 §3.3.11 escaping.
+    expect(render({ organizerEmail: "a;b,c:d@example.com" })).toContain(
+      "ORGANIZER:mailto:a%3Bb%2Cc%3Ad@example.com",
     );
   });
 });

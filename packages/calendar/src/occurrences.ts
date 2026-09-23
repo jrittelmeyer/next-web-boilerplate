@@ -280,6 +280,22 @@ export function seriesEndInstantMs(series: SeriesInput): number | null {
   return Math.max(ruleEnd, rdateEnd);
 }
 
+/**
+ * Slack added to the UNTIL branch's estimate, covering a later occurrence's fall-back
+ * transition straddling — same wall-clock duration as the master, but a larger elapsed-ms
+ * span across the transition, which `spanMs` alone (computed from the FIRST occurrence)
+ * does not account for.
+ *
+ * Sized to the largest fall-back in `derive.test.ts`'s DST corpus (Antarctica/Troll,
+ * 120 minutes) — a fact about the tested fixture set, not a proof about all IANA tzdata
+ * this package will ever resolve. tzdata is external, versioned data; a future zone
+ * change (a one-time dateline-style shift, an untested historical rule) is a real class
+ * this bound does not rule out. Revisit if a real-world under-estimate is ever reported;
+ * a computed alternative (comparing the occurrence's actual resolved offset against the
+ * master's) was considered and is a larger change than sizing a constant.
+ */
+const UNTIL_FALLBACK_SLACK_MS = 120 * 60_000;
+
 function ruleEndInstantMs(
   rule: RecurrenceRule,
   series: SeriesInput,
@@ -289,8 +305,9 @@ function ruleEndInstantMs(
 ): number | null {
   if (rule.until !== null) {
     // No expansion needed: no occurrence can start after UNTIL, so UNTIL plus the span
-    // bounds every end. A small over-estimate, in the safe direction.
-    return untilInstantMs(rule.until) + spanMs;
+    // (plus fall-back slack) bounds every end. A small over-estimate, in the safe
+    // direction.
+    return untilInstantMs(rule.until, series.startTzid) + spanMs + UNTIL_FALLBACK_SLACK_MS;
   }
   if (rule.count === null) return null;
 
@@ -305,6 +322,12 @@ function ruleEndInstantMs(
     toMs: LATEST_INSTANT_MS,
     limit: rule.count,
   });
+  // A sparse, high-COUNT rule that hits MAX_EXPANSION_PERIODS before generating `count`
+  // occurrences returns a PARTIAL walk here — trusting its last element as if it were the
+  // real one can under-estimate the series' end (or, if `last` is undefined only because
+  // the walk gave up early, wrongly report "can never occur"). Treat a truncated walk the
+  // same as the "no expansion" branch below: no known end, rather than a wrong finite one.
+  if (expanded.truncated) return null;
   const last = expanded.occurrences.at(-1);
   // A rule that matches no date at all (`BYMONTH=2;BYMONTHDAY=30`) produces nothing, and
   // a series that can never occur has no end to record.

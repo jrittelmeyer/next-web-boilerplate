@@ -10,7 +10,7 @@ import {
 } from "@repo/db/schema";
 import { formatEventWhen } from "@repo/email";
 import { enqueue, JOBS } from "@repo/jobs";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { partitionRecurrenceDates } from "@/lib/calendar/recurrence-dates";
 import { mintRsvpToken } from "@/lib/calendar-tokens";
 import { siteUrl } from "@/lib/site";
@@ -173,16 +173,40 @@ export async function loadSeriesForEmail(
     location: master.location,
     when: formatEventWhen(master),
     organizerEmail: row.organizerEmail,
-    seriesEndAt: master.seriesEndAt,
+    // `series_end_at` is schema-NULL for every one-off event (it exists only to bound a
+    // recurring series), so passing it straight through minted a NON-EXPIRING RSVP token
+    // for an ordinary event with a perfectly good end time sitting in the same row. Fall
+    // back to the event's own `end_at` for a one-off; a true unbounded series
+    // (`rrule !== null && seriesEndAt === null`) still gets `exp=0` — that residual is
+    // `mintRsvpToken`'s own documented tradeoff, not this file's to second-guess.
+    seriesEndAt: master.rrule === null ? master.endAt : master.seriesEndAt,
   };
 }
 
-/** Every guest of a series except the organizer's own row, which needs no invitation. */
+/**
+ * Every guest of a series except the organizer's own row, which needs no invitation.
+ *
+ * The organizer CAN end up as a real attendee row — nothing upstream stops a self-invite
+ * (the composer's own-email field has no such guard, and neither does `addAttendees`) — so
+ * this excludes by email rather than assuming the row can't exist. `lower()` goes on the
+ * `user.email` parameter, not the `calendar_event_attendees.email` column: that column is
+ * CHECK-lowercased already, and putting the function on it would lose
+ * `calendar_event_attendees_email_idx` (same rationale as `calendar-acl.ts`'s read-side
+ * comparison).
+ */
 export async function loadRecipients(masterId: string): Promise<Recipient[]> {
   const rows = await db
     .select({ attendeeId: calendarEventAttendees.id, email: calendarEventAttendees.email })
     .from(calendarEventAttendees)
-    .where(eq(calendarEventAttendees.eventId, masterId));
+    .innerJoin(calendarEvents, eq(calendarEvents.id, calendarEventAttendees.eventId))
+    .innerJoin(calendars, eq(calendars.id, calendarEvents.calendarId))
+    .innerJoin(user, eq(user.id, calendars.userId))
+    .where(
+      and(
+        eq(calendarEventAttendees.eventId, masterId),
+        ne(calendarEventAttendees.email, sql`lower(${user.email})`),
+      ),
+    );
   return rows;
 }
 

@@ -133,6 +133,57 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   rendered columns actually overflowed, seen intermittently on `/admin/audit`. Now
   carries `tabIndex={0}` + `role="region"` + a hardcoded accessible name — the
   standard shadcn remedy, applied once for every table in the app.
+- **Calendar long-tail correctness batch** (B3, all nine items) — none user-visible on
+  a standard configured deploy, `contrarian`-reviewed plan:
+  [archive/calendar-long-tail-correctness-plan.md](docs/archive/calendar-long-tail-correctness-plan.md).
+  - **RFC 6868 param quoting + mailto hygiene** (`packages/calendar/src/ics.ts`) — `CN`
+    ran the TEXT escaper (backslash-escapes) on a param-value, a different grammar; a
+    conforming reader decoding `Doe\, Jane` back gets the literal backslash. New
+    `quoteParamValue`/`caretEncode` implement RFC 5545 §3.2's actual two independent
+    rules: DQUOTE-wrap when the value carries `"`/`;`/`,`/`:`/`^`/a newline, and
+    caret-encode only `^`→`^^`, `"`→`^'`, newline→`^n` *inside* that quoted form —
+    never `;`/`,`/`:`, which RFC 6868 defines no unescape for. `mailto:` addresses now
+    percent-encode instead (CAL-ADDRESS is a URI value, not TEXT).
+  - **DATE-form `UNTIL` zone semantics** (`untilInstantMs`, now zone-aware) — the
+    `"date"` branch computed UTC end-of-day with no zone, so a UTC+ series (e.g.
+    Kiritimati, UTC+14) could accept an occurrence a full calendar day past its own
+    stated `UNTIL`. Now resolves via `resolveCivil` in the series' own zone.
+  - **`seriesEndInstantMs`'s two under-estimate risks** — the `UNTIL` branch now adds a
+    120-minute fall-back-straddle slack (sized to `derive.test.ts`'s DST corpus, not a
+    tzdata-wide guarantee); the `COUNT` branch now checks `expanded.truncated` before
+    trusting a partial walk's last element, returning "unbounded" instead of a wrong
+    finite estimate for a sparse rule that hits `MAX_EXPANSION_PERIODS` before
+    generating `count` real occurrences.
+  - **DAILY+BYMONTHDAY's false RFC citation** — RFC 5545 §3.3.10 only forbids
+    `BYMONTHDAY` with `WEEKLY`; the refusal for `DAILY` (still refused — this engine's
+    `DAILY` expansion has no `BYMONTHDAY` filter) now carries its own honest message
+    instead of borrowing `WEEKLY`'s citation.
+  - **One-off events' RSVP tokens never expired** (`loadSeriesForEmail`) —
+    `series_end_at` is schema-NULL for every one-off, so passing it straight through
+    minted a non-expiring token for an ordinary event with a perfectly good end time in
+    the same row. Falls back to the event's own `end_at` when `rrule === null`.
+  - **`updateOccurrence` accepted a non-member `recurrenceId`** — no validation that a
+    caller-supplied date was an actual generated occurrence, so `onConflictDoUpdate`
+    would write a "phantom chip" no expansion of the rule ever produces. Now reuses
+    `planSeriesCut`'s bound check (the same one `scope: "thisAndFollowing"` already
+    runs).
+  - **Actor-self cancellation email, mixed unverified+configured state**
+    (`softDeleteEvent`) — the `userId`-only exclusion missed an unverified self-guest
+    row (F6's `userId: NULL` shape), so the deleter could get emailed about their own
+    delete on an email-configured deploy. Now excludes by email too, `lower()`-matched
+    against `actor.email` (mixed-case accounts included).
+  - **`loadRecipients`'s organizer-exclusion comment vs. its filterless SELECT** — the
+    comment claimed "the organizer is never a row here"; the trace this plan asked for
+    before trusting that (before writing anything) found the opposite: nothing upstream
+    (the composer, `addAttendees`) stops a genuine self-invite. Decision resolved to
+    **(b)**, not the plan's recommended (a) — added the filter instead of just fixing
+    the comment.
+  - Full gate green (lint · type-check · build); `packages/calendar` 100/100/100/100
+    coverage (838 tests); real-Postgres integration coverage added for both DB-predicate
+    items (`packages/db/__tests__/integration/calendar-attendees.test.ts`) alongside the
+    existing mock-based unit suites, since a mocked `db.select` cannot prove a `WHERE`
+    clause. Live-verified: a fresh `:3100` prod build boots clean with DB connectivity
+    after the change.
 
 ### Security
 

@@ -318,7 +318,7 @@ export function expandRRule(input: ExpandRRuleInput): ExpandRRuleResult {
   const occurrences: CivilDateTime[] = [];
 
   const dtstartDay = toDayNumber(dtstart.year, dtstart.month, dtstart.day);
-  const untilMs = rule.until === null ? null : untilInstantMs(rule.until);
+  const untilMs = rule.until === null ? null : untilInstantMs(rule.until, timeZone);
   // The window's end as a civil day in the series' own zone, plus a day of slack, is what
   // stops the period walk. Comparing civil days rather than instants keeps the loop
   // condition in the same space as the generator.

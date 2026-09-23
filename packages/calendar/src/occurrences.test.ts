@@ -474,10 +474,12 @@ describe("seriesEndInstantMs", () => {
 
   it("bounds an UNTIL series without expanding it", () => {
     const end = seriesEndInstantMs(series({ rrule: "FREQ=WEEKLY;UNTIL=20270201T140000Z" }));
-    // UNTIL plus the nominal span. A deliberate over-estimate: the range query uses this
-    // to EXCLUDE masters, so being late costs a wasted expansion and being early makes a
-    // whole series vanish.
-    expect(end).toBe(Date.UTC(2027, 1, 1, 15, 0, 0));
+    // UNTIL plus the nominal span (1h) plus the fall-back slack (120m). A deliberate
+    // over-estimate: the range query uses this to EXCLUDE masters, so being late costs a
+    // wasted expansion and being early makes a whole series vanish. The slack covers a
+    // LATER occurrence's fall-back straddle, which the span alone (computed from the
+    // first occurrence) cannot see.
+    expect(end).toBe(Date.UTC(2027, 1, 1, 17, 0, 0));
   });
 
   it("walks a COUNT series to its last occurrence", () => {
@@ -547,8 +549,33 @@ describe("seriesEndInstantMs", () => {
 
   it("is null for a rule that can never occur", () => {
     // Legal to write, impossible to hit. A series that can never occur has no end.
+    // YEARLY, not MONTHLY: a YEARLY walk over the representable range (year 1-9999) stays
+    // under MAX_EXPANSION_PERIODS, so this exits via the window closing with truncated:
+    // false and zero occurrences — the ONLY way `last === undefined` is still reached now
+    // that a truncated walk returns null first (a MONTHLY walk over the same range blows
+    // the period cap long before the window closes, truncated: true, covered by the
+    // truncated-COUNT-walk case below instead).
     expect(
-      seriesEndInstantMs(series({ rrule: "FREQ=MONTHLY;BYMONTH=2;BYMONTHDAY=30;COUNT=3" })),
+      seriesEndInstantMs(series({ rrule: "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=30;COUNT=3" })),
+    ).toBeNull();
+  });
+
+  it("is null for a truncated COUNT walk, not a wrong finite estimate from its partial last", () => {
+    // 29 February genuinely occurs every leap year, but a MONTHLY walk burns 12 periods
+    // per year to find it — COUNT=1000 asks for more matches than MAX_EXPANSION_PERIODS's
+    // 10,000-period walk ever reaches (it finds 203 REAL occurrences, not zero, then hits
+    // the cap). Trusting `.at(-1)` here would under-estimate the series' true end (it
+    // never actually stops at the 203rd), the opposite of this function's "never
+    // under-estimate" invariant; this is a genuinely different case from "can never
+    // occur" above, which truncates with ZERO occurrences.
+    expect(
+      seriesEndInstantMs(
+        series({
+          rrule: "FREQ=MONTHLY;BYMONTH=2;BYMONTHDAY=29;COUNT=1000",
+          startWall: "2027-01-01 09:00:00",
+          endWall: "2027-01-01 10:00:00",
+        }),
+      ),
     ).toBeNull();
   });
 });

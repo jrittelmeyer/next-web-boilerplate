@@ -16,8 +16,10 @@ overrides, or the edit and delete scopes. The time model underneath it all is
 `FREQ` ∈ `DAILY` | `WEEKLY` | `MONTHLY` | `YEARLY`, plus `INTERVAL`, `COUNT`, `UNTIL`,
 `WKST`, `BYMONTH`, `BYMONTHDAY` (negatives included), `BYDAY` (ordinals included, e.g.
 `-1FR`) and `BYSETPOS`. One caveat inside that grammar (audit 2026-08-04, a B3 row in
-[BACKLOG.md](../../BACKLOG.md)): `DAILY`+`BYMONTHDAY` is **refused** (loudly — though the
-refusal's RFC attribution is wrong; the combination is valid). `YEARLY;BYMONTHDAY`
+[BACKLOG.md](../../BACKLOG.md), honest-refusal fix landed 2026-09-23): `DAILY`+`BYMONTHDAY`
+is legal RFC syntax (§3.3.10 only forbids the `WEEKLY` pairing) but **refused** anyway —
+this engine's `DAILY` expansion has no `BYMONTHDAY` filter — under its own message rather
+than borrowing `WEEKLY`'s RFC citation. `YEARLY;BYMONTHDAY`
 *without* `BYMONTH` expands the day in **every** month — RFC semantics, fixed 2026-08-06
 (audit F8), and the frozen corpus samples the unpaired family since the same change.
 

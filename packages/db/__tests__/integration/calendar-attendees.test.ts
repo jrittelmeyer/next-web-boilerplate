@@ -876,6 +876,103 @@ describe("the cancellation fan-out — who is emailed when an event is deleted",
       );
     expect(rows.map((row) => row.email)).toEqual([RESOLVED_GUEST.email]);
   });
+
+  it("excludes an UNVERIFIED self-guest row too, by email, even with a mixed-case account", async () => {
+    // The `userId` exclusion alone only catches a *resolved* self-guest row (audit F6's
+    // `userId: NULL` shape slips through it) — and the email exclusion has to compare
+    // `lower($actor.email)`, not the bare address: an OAuth-provided or admin-seeded
+    // account can carry mixed case, while `calendar_event_attendees.email` is
+    // CHECK-lowercased already. Self-invite as an unverified guest — no `userId` yet —
+    // under the mixed-case account, and prove the updated predicate still excludes them.
+    await db
+      .insert(calendarEventAttendees)
+      .values({ eventId: MASTER_ID, email: MIXED_CASE_GUEST.email.toLowerCase() });
+
+    const rows = await db
+      .select({ email: calendarEventAttendees.email })
+      .from(calendarEventAttendees)
+      .where(
+        and(
+          eq(calendarEventAttendees.eventId, MASTER_ID),
+          or(
+            isNull(calendarEventAttendees.userId),
+            ne(calendarEventAttendees.userId, MIXED_CASE_GUEST.id),
+          ),
+          ne(calendarEventAttendees.email, sql`lower(${MIXED_CASE_GUEST.email})`),
+        ),
+      )
+      .orderBy(calendarEventAttendees.email);
+    expect(rows.map((row) => row.email)).toEqual([
+      "external@example.com",
+      RESOLVED_GUEST.email,
+      TEST_OWNER.email,
+    ]);
+  });
+
+  it("regresses without the email clause: an unverified self-guest row leaks through", async () => {
+    // What the fix closes: the `userId`-only predicate has no way to know the
+    // unverified row belongs to the actor, mixed case or not.
+    await db
+      .insert(calendarEventAttendees)
+      .values({ eventId: MASTER_ID, email: MIXED_CASE_GUEST.email.toLowerCase() });
+
+    const rows = await db
+      .select({ email: calendarEventAttendees.email })
+      .from(calendarEventAttendees)
+      .where(
+        and(
+          eq(calendarEventAttendees.eventId, MASTER_ID),
+          or(
+            isNull(calendarEventAttendees.userId),
+            ne(calendarEventAttendees.userId, MIXED_CASE_GUEST.id),
+          ),
+        ),
+      );
+    expect(rows.map((row) => row.email)).toContain(MIXED_CASE_GUEST.email.toLowerCase());
+  });
+});
+
+describe("loadRecipients — organizer self-invite exclusion (B3 long-tail, decision C)", () => {
+  // `loadRecipients`'s predicate, restated (the function lives in apps/web, which this
+  // package cannot depend on). Its comment used to claim "the organizer is never a row
+  // here" while its SELECT carried no such filter — nothing upstream (the composer's
+  // own-email field, `addAttendees`) stops a genuine self-invite, so seeding TEST_OWNER
+  // as a real attendee row of their own event is exactly the shape the fix closes.
+  beforeEach(async () => {
+    await db.insert(calendarEventAttendees).values([
+      { eventId: MASTER_ID, email: TEST_OWNER.email, userId: TEST_OWNER.id, role: "organizer" },
+      { eventId: MASTER_ID, email: RESOLVED_GUEST.email, userId: RESOLVED_GUEST.id },
+      { eventId: MASTER_ID, email: "external@example.com" },
+    ]);
+  });
+
+  it("excludes the organizer's own row, joined through calendar_events -> calendars -> user", async () => {
+    const rows = await db
+      .select({ email: calendarEventAttendees.email })
+      .from(calendarEventAttendees)
+      .innerJoin(calendarEvents, eq(calendarEvents.id, calendarEventAttendees.eventId))
+      .innerJoin(calendars, eq(calendars.id, calendarEvents.calendarId))
+      .innerJoin(user, eq(user.id, calendars.userId))
+      .where(
+        and(
+          eq(calendarEventAttendees.eventId, MASTER_ID),
+          ne(calendarEventAttendees.email, sql`lower(${user.email})`),
+        ),
+      )
+      .orderBy(calendarEventAttendees.email);
+    expect(rows.map((row) => row.email)).toEqual(["external@example.com", RESOLVED_GUEST.email]);
+    expect(rows.map((row) => row.email)).not.toContain(TEST_OWNER.email);
+  });
+
+  it("leaks the organizer's row under the comment's claimed but unenforced invariant", async () => {
+    // What the fix closes: a SELECT with no organizer filter at all — the shape the
+    // stale comment described as impossible.
+    const rows = await db
+      .select({ email: calendarEventAttendees.email })
+      .from(calendarEventAttendees)
+      .where(eq(calendarEventAttendees.eventId, MASTER_ID));
+    expect(rows.map((row) => row.email)).toContain(TEST_OWNER.email);
+  });
 });
 
 describe("respondByToken's UPDATE cannot answer for a cancelled meeting (predicate-sensor long tail)", () => {

@@ -192,6 +192,28 @@ describe("window bounds", () => {
     expect(result.truncated).toBe(true);
   });
 
+  it("resolves a DATE-form UNTIL in the series' OWN zone, not UTC", () => {
+    // Kiritimati is a fixed UTC+14 (no DST). A daily 13:00-local series' 2027-04-02
+    // occurrence lands at instant 2027-04-01T23:00:00Z — which is BEFORE a pure-UTC
+    // "end of 2027-04-01" bound (2027-04-01T23:59:59.999Z), so the old UTC-only
+    // arithmetic wrongly admitted it. In Kiritimati's own zone, 2027-04-02 13:00 is
+    // already the 2nd — a full calendar day past what `UNTIL=20270401` means — and the
+    // zone-resolved bound (2027-04-01T09:59:59.999Z) correctly excludes it.
+    const result = expandRRule({
+      rule: parseRRule("FREQ=DAILY;UNTIL=20270401"),
+      dtstart: parseLocalDateTime("2027-03-30 13:00:00"),
+      timeZone: "Pacific/Kiritimati",
+      fromMs: utcMs(2027, 3, 29),
+      toMs: utcMs(2027, 4, 5),
+      limit: 100,
+    });
+    expect(result.occurrences.map(formatLocalDateTime)).toEqual([
+      "2027-03-30 13:00:00",
+      "2027-03-31 13:00:00",
+      "2027-04-01 13:00:00",
+    ]);
+  });
+
   it("skips candidates in DTSTART's own period that precede it", () => {
     // DTSTART is a Wednesday; the week it opens also contains a Monday, which is not an
     // occurrence because the series had not started yet.

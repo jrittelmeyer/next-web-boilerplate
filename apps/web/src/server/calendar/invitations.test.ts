@@ -8,6 +8,7 @@ import {
   enqueueCancellations,
   enqueueInvitations,
   enqueueSeriesUpdate,
+  loadSeriesForEmail,
   rsvpUrlFor,
 } from "./invitations";
 
@@ -29,6 +30,7 @@ const master = {
   startTzid: "America/New_York",
   endWall: "2026-08-10 09:30:00",
   endTzid: "America/New_York",
+  endAt: new Date("2026-08-10T13:30:00Z"),
   rrule: "FREQ=WEEKLY",
   seriesEndAt: null as Date | null,
 };
@@ -75,6 +77,38 @@ describe("rsvpUrlFor", () => {
 
   it("gives two attendees two different links", () => {
     expect(rsvpUrlFor(A1, null)).not.toBe(rsvpUrlFor(A2, null));
+  });
+});
+
+describe("loadSeriesForEmail — RSVP token expiry", () => {
+  it("falls back to the event's own end time for a one-off (rrule: null)", async () => {
+    // `series_end_at` is schema-NULL for every one-off — passing it straight through
+    // used to mint a token that never expires for an ordinary event with a perfectly
+    // good end time sitting in the same row.
+    queueSelects(
+      [{ event: { ...master, rrule: null }, organizerEmail: "ada@example.com" }],
+      [],
+      [],
+    );
+    const loaded = await loadSeriesForEmail(MASTER, { cancelled: false });
+    expect(loaded?.seriesEndAt).toEqual(master.endAt);
+  });
+
+  it("keeps a true unbounded series (rrule set, seriesEndAt null) non-expiring", async () => {
+    queueSelects(eventRow, [], []);
+    const loaded = await loadSeriesForEmail(MASTER, { cancelled: false });
+    expect(loaded?.seriesEndAt).toBeNull();
+  });
+
+  it("still honors a bounded series' own seriesEndAt, not the event's endAt", async () => {
+    const seriesEndAt = new Date("2027-01-01T00:00:00Z");
+    queueSelects(
+      [{ event: { ...master, seriesEndAt }, organizerEmail: "ada@example.com" }],
+      [],
+      [],
+    );
+    const loaded = await loadSeriesForEmail(MASTER, { cancelled: false });
+    expect(loaded?.seriesEndAt).toEqual(seriesEndAt);
   });
 });
 
