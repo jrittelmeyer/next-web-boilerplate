@@ -403,25 +403,33 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     run. See [CHANGELOG](../CHANGELOG.md) for the two pre-existing knip findings the
     newer resolver surfaced (`tooling/tailwind`'s `tailwindcss` ignore, `packages/ui`'s
     dangling `./hooks/*` hint).
-  - **`next` 16.3.4 aged in 2026-09-07 ~20:00 UTC — NOT taken as of 2026-09-22.** 16.3.5
-    (published 2026-09-11, aged in 09-18) and 16.3.6 (published 2026-09-22, ages in 09-29)
-    have since shipped, neither triaged — re-run the rule-6 pre-triage against the newest
-    aged release before any take; the 16.3.4 notes below still describe the AVIF/`sharp`
-    delta any later take inherits. (16.3.4 published 2026-08-31T20:00:51Z,
-    registry-checked the same day; no advisory known.) **Pre-triaged 2026-09-01
-    (Dependency-policy rule 6, seventeenth audit):** the release *re-enables AVIF Image
-    Optimization* (vercel/next.js#97949 — the other half of the 16.3.3 mitigation, i.e.
-    exactly the subsystem the security take moved) and raises
-    `optionalDependencies.sharp` `^0.35.3` → **`^0.35.4`** (`sharp` 0.35.4 published
-    2026-08-26T09:42Z, ages in 09-02 — clear by the take; the lockfile moves `sharp`
-    too); three backports (testmode passthrough recursion #97691, a TS-alias build error
-    #97997, Turbopack `crossOrigin` #97930); nothing touches `output: 'standalone'`.
-    Take-plan riders: (a) rule 6's Docker build + boot + `/api/health` for **both**
-    images; (b) drive `/_next/image` with an **AVIF** source first, *then* the OG/icon
-    routes (order-dependent, per the 16.3.0 lesson); (c) confirm the libheif floor in
-    `sharp` 0.35.4's vendored libvips; (d) bump `@next/eslint-plugin-next` in lockstep
-    (`tooling/eslint`, its own `pnpm add` — it has resolved 16.2.12 since the 16.3.3
-    take left it outside the exclude). Plan → sign-off.
+  - ~~**`next` 16.3.4 aged in 2026-09-07, not taken**~~ — **superseded 2026-09-23: `next`
+    16.3.3 → 16.3.6 taken as a security exception**, not the planned routine take. 16.3.6
+    (published 2026-09-22T16:19:00Z) fixes GHSA-vcvr-r3jv-pc5j — RCE in `next/og`'s
+    `ImageResponse`. `apps/web/src/app/opengraph-image.tsx`, `icon.tsx`, and
+    `apple-icon.tsx` all use `ImageResponse` directly, and all three are fully public,
+    unauthenticated routes — a real, reachable path with zero access control, so route (2)
+    (dated `minimumReleaseAgeExclude`) applied rather than waiting the ~6 days to
+    2026-09-29. Scoped exact-version, all 9 lockstep packages (`next` + `@next/env` + 8
+    `@next/swc-*`); `@next/eslint-plugin-next` untouched (still resolves 16.2.12, separate
+    `tooling/eslint` dependency — the lockstep bump from the 16.3.4 pre-triage below is
+    still pending). `sharp`'s own override (`0.35.4`) needed no change — 16.3.6's
+    `optionalDependencies.sharp` pin is still `^0.35.4`, unchanged since 16.3.4. Full gate
+    green; live-verified on a fresh `:3100` prod build — `/icon`, `/apple-icon`,
+    `/opengraph-image`, `/twitter-image` all 200 `image/png`. `pnpm audit`: 0 after.
+    Docker standalone boot check **not done this pass** — carried forward, same gap as the
+    16.3.3 take. This take incorporates every 16.3.4/16.3.5 change (all three versions ship
+    in the 16.3.3 → 16.3.6 lockfile diff); the AVIF re-enable / `sharp` `^0.35.4` /
+    `@next/eslint-plugin-next` lockstep detail from the original 16.3.4 pre-triage below is
+    kept for record, not re-verified separately:
+    the release *re-enables AVIF Image Optimization* (vercel/next.js#97949 — the other half
+    of the 16.3.3 mitigation, i.e. exactly the subsystem the security take moved) and raises
+    `optionalDependencies.sharp` `^0.35.3` → `^0.35.4` (already carried above); three
+    backports (testmode passthrough recursion #97691, a TS-alias build error #97997,
+    Turbopack `crossOrigin` #97930); nothing touches `output: 'standalone'`. Still open:
+    drive `/_next/image` with an AVIF source (order-dependent per the 16.3.0 lesson) and
+    the Docker standalone boot check; bump `@next/eslint-plugin-next` in lockstep
+    (`tooling/eslint`, its own `pnpm add`).
   - ⚠️ **`better-auth` 1.7.x (`latest` since 2026-08-18, 1.7.2 now) is NOT a routine take** — a
     breaking minor: 15 breaking changes incl. account identity scoped by issuer (requires a
     migration), captcha paths needing explicit wildcards (this repo wires CAPTCHA), SCIM/MCP

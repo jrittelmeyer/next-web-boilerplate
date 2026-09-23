@@ -160,6 +160,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Advisory — 2026-09-08 | 1 | `sharp` `<0.35.4` → 0.35.4 (HIGH, libheif AVIF/HEIF — next's own pin re-excluded the fix, third time this shape has recurred) · `baseline-browser-mapping` `<2.11.0` → 2.11.20 (moderate DoS) · `vitest`/`@vitest/mocker` `4.1.9` → `4.1.11` (moderate path traversal, plain in-range bump); `pnpm audit` 0 after all three | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Doc audit — 2026-09-22 | 1 | Found the daily audit lane red 12 days (`smol-toml`, #61), the fast-uri park exit and the `next` 16.3.4 take overdue; ledger/override counts, the "open" Renovate decision and the archive index (+4 rows — its rule slipped a 4th time) fixed; showcase re-stamped; 4 memory repairs | [archive/README.md](archive/README.md) |
 | Maintenance batch — 2026-09-22 | 1 | `knip` `6.24.0` → `6.35.1` closes the 12-day `smol-toml` red (issue #61) without an override — surfaced 2 pre-existing knip findings the older version missed, fixed with a documented `tailwindcss` ignore; `fast-uri` `<3.1.6` → `<3.1.7` promoted overdue, but the two parked GHSAs it was meant to close turned out to be unpublished IDs (404 on the GitHub Advisories API) — deleted rather than promoted; `pnpm audit` 0 after both | [CHANGELOG](../CHANGELOG.md) · [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Advisory — 2026-09-23 | 1 | `next` `16.3.3` → `16.3.6`, age-gate exception — GHSA-vcvr-r3jv-pc5j (RCE in `next/og`'s `ImageResponse`), live-exposed on three fully public, unauthenticated routes (`opengraph-image`, `icon`, `apple-icon`); took route (2) rather than wait for the 2026-09-29 gate. Full gate green; live-verified all four image routes 200 on a fresh `:3100` build; `pnpm audit` 0. Docker standalone boot check, AVIF-source `/_next/image` drive, and the `@next/eslint-plugin-next` lockstep bump carried forward, undone | [CHANGELOG](../CHANGELOG.md) · [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -174,16 +175,17 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each landed
-item. Open now (as of the 2026-09-22 maintenance batch): **`next` 16.3.4 aged in 2026-09-07
-and was not taken**; 16.3.5 (09-11) and 16.3.6 (09-22) have since shipped, neither triaged —
-re-run the rule-6 pre-triage on the newest aged release before any take · **e2e
-month-boundary** (B2 — fix merged 2026-09-03; removal condition open until the 2026-10-01
-window passes green) · **`better-auth` 1.7.x** is a breaking minor — plan → sign-off, no
-advisory forces it. Ledger: `ignoreGhsas` is `[]` (the `smol-toml` red closed via the `knip`
-6.24.0 → 6.35.1 bump, and the two `fast-uri` 3.1.7 parks turned out to be unpublished GHSA
-IDs and were deleted rather than promoted — see [CHANGELOG](../CHANGELOG.md)),
-`minimumReleaseAgeExclude` empty since 2026-09-02, `pnpm audit` 0. The paragraph this
-replaces is preserved in
+item. Open now (as of the 2026-09-23 maintenance batch): **e2e month-boundary** (B2 — fix
+merged 2026-09-03; removal condition open until the 2026-10-01 window passes green) ·
+**`better-auth` 1.7.x** is a breaking minor — plan → sign-off, no advisory forces it ·
+**`next` 16.3.6 take gaps** carried forward — Docker standalone boot check, an AVIF-source
+`/_next/image` drive, and the `@next/eslint-plugin-next` lockstep bump (still resolves
+16.2.12) are not done. Ledger: `ignoreGhsas` is `[]` (the `smol-toml` red closed via the
+`knip` 6.24.0 → 6.35.1 bump, and the two `fast-uri` 3.1.7 parks turned out to be unpublished
+GHSA IDs and were deleted rather than promoted — see [CHANGELOG](../CHANGELOG.md)),
+`minimumReleaseAgeExclude` holds 10 dated entries for `next` 16.3.6 (RCE in `next/og`'s
+`ImageResponse`, GHSA-vcvr-r3jv-pc5j — expires 2026-09-29), `pnpm audit` 0. The paragraph
+this replaces is preserved in
 [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md#project_status-date-gated-watch-paragraph-as-of-2026-09-02).
 
 ## Fresh project on-ramp (clone → build a real app)

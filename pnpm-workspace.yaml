@@ -331,6 +331,32 @@ overrides:
 #      why it is low-risk here, and no expiry to promise.
 # (`docs/MAINTENANCE.md` → Dependency policy carries the same three; keep them in step.)
 minimumReleaseAge: 10080 # 7 days
+# TEMPORARY security exception (2026-09-23): `next` 16.3.6 (published
+# 2026-09-22T16:19:00Z) patches GHSA-vcvr-r3jv-pc5j — remote code execution in
+# `next/og`'s `ImageResponse`. This repo's `apps/web/src/app/opengraph-image.tsx`,
+# `icon.tsx`, and `apple-icon.tsx` all use `ImageResponse` directly, and all three
+# are fully public, unauthenticated routes (no session gate at all — every visitor
+# and crawler hits them) — a real, reachable path, not a theoretical one. Waiting
+# the ~6 days for the 7-day gate to clear naturally means knowingly carrying an
+# unpatched RCE on routes with zero access control, so route (2) applies.
+# Scoped exact-version per route (2)'s rule (never a bare name/glob): the 8
+# `@next/swc-*` platform binaries are `next`'s own lockstep optionalDependencies,
+# same release, same publish timestamp, so each inherits `next`'s "published fix
+# exists" reasoning directly. `@next/eslint-plugin-next` is untouched (declared
+# separately in tooling/eslint/package.json, not part of this security fix).
+# REMOVE once 16.3.6 ages past the gate (2026-09-29) — tracked in
+# docs/MAINTENANCE.md → Watch items.
+minimumReleaseAgeExclude:
+  - next@16.3.6
+  - "@next/env@16.3.6"
+  - "@next/swc-darwin-arm64@16.3.6"
+  - "@next/swc-darwin-x64@16.3.6"
+  - "@next/swc-linux-arm64-gnu@16.3.6"
+  - "@next/swc-linux-arm64-musl@16.3.6"
+  - "@next/swc-linux-x64-gnu@16.3.6"
+  - "@next/swc-linux-x64-musl@16.3.6"
+  - "@next/swc-win32-arm64-msvc@16.3.6"
+  - "@next/swc-win32-x64-msvc@16.3.6"
 # The 2026-08-26 `minimumReleaseAgeExclude` for `next` 16.3.3 + its 9 lockstep
 # packages — route (2)'s second use, taken for GHSA-2xp9-vwfh-vxw4 /
 # GHSA-g89c-p67h-r497 (unauthenticated RCE via a libheif flaw in `sharp` when the

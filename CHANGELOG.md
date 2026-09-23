@@ -245,6 +245,30 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   than promoted (`auditConfig.ignoreGhsas` is `[]` again); `3.1.7` is taken purely
   as a routine currency bump (in-range for ajv's `^3.0.1`), not because it fixes a
   live advisory. `pnpm audit`: 0 advisories after.
+- **`next` `16.3.3` → `16.3.6`, age-gate exception (RCE in `next/og`)** —
+  GHSA-vcvr-r3jv-pc5j, fixed in 16.3.6 (published 2026-09-22T16:19:00Z, inside the
+  7-day gate — ages in 2026-09-29). `apps/web/src/app/opengraph-image.tsx`,
+  `icon.tsx`, and `apple-icon.tsx` all use `next/og`'s `ImageResponse` directly, and
+  all three are fully public, unauthenticated routes (no session gate — every
+  visitor and crawler hits them), so this is a real, reachable RCE path, not a
+  theoretical one. Waiting the ~6 days for the gate to clear naturally meant
+  knowingly carrying an unpatched RCE on zero-access-control routes, so this took
+  the age-gate's route (2) exception (`minimumReleaseAgeExclude`, same shape as the
+  2026-08-26 `next` 16.3.3 AVIF take): 10 exact-version-scoped entries (`next` +
+  `@next/env` + 8 `@next/swc-*` lockstep binaries), expiring 2026-09-29.
+  `@next/eslint-plugin-next` untouched (separate `tooling/eslint` dependency,
+  still resolves 16.2.12). `sharp`'s existing override (`0.35.4`) needed no
+  change — 16.3.6's own `optionalDependencies.sharp` pin is still `^0.35.4`. This
+  take incorporates 16.3.4 and 16.3.5 (both ship in the same lockfile diff); the
+  16.3.4 pre-triage from 2026-09-01 (AVIF Image Optimization re-enabled,
+  `sharp` `^0.35.3` → `^0.35.4`, three unrelated backports, nothing touching
+  `output: 'standalone'`) is folded in rather than re-verified separately. Full
+  gate green (lint, type-check, build); `pnpm audit`: 0 advisories after.
+  Live-verified on a fresh `:3100` prod build: `/icon`, `/apple-icon`,
+  `/opengraph-image`, `/twitter-image` all 200 `image/png`. **Not done this
+  pass** (carried forward as a gap, same as the 16.3.3 take): the Docker
+  standalone boot check, an AVIF-source `/_next/image` drive, and the
+  `@next/eslint-plugin-next` lockstep bump.
 
 ## [1.2.0] — 2026-08-30
 
