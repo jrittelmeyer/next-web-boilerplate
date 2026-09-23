@@ -21,7 +21,7 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-09-08 — B3 predicate-sensor long tail closed (all 12 items); see the row below and the [CHANGELOG](../CHANGELOG.md)._
+_Last updated: 2026-09-22 — doc audit: the daily audit lane has been red since 09-10 on a new `smol-toml` advisory (OPEN — see the date-gated watch below); the B3 calendar long-tail plan is drafted and awaiting sign-off ([BACKLOG](BACKLOG.md))._
 
 ## Where we are
 
@@ -45,8 +45,12 @@ _Last updated: 2026-09-08 — B3 predicate-sensor long tail closed (all 12 items
   [PROJECT_AUDIT_2026-09-01.md](archive/PROJECT_AUDIT_2026-09-01.md) (the 2026-09-02 rows below
   closed two of its three seeded rows; the standing deductions are B2/B3 rows plus Mend's
   unproven npm-manager/lockfile delivery class).
-- **CI is green** (`verify` · `audit` · `e2e` · `csp-nonce` · `docker-image` · `visual`,
-  plus the variable-gated `perf` lane, deliberately unset here). **CodeQL is live** —
+- **CI: push lanes green on `main` (`a671798`, 2026-09-09); the scheduled heartbeat and the
+  daily `security-audit` lane have been RED since 2026-09-10 on the `audit` job alone** — a
+  new HIGH advisory (`smol-toml`, reached only via `knip`; triage issue
+  [#61](https://github.com/jrittelmeyer/next-web-boilerplate/issues/61) open), see the
+  date-gated watch below. Lanes: `verify` · `audit` · `e2e` · `csp-nonce` · `docker-image` ·
+  `visual`, plus the variable-gated `perf` lane, deliberately unset here. **CodeQL is live** —
   `ENABLE_CODEQL` is set on the public repo (code scanning is free once public); the variable
   gate stays so private forks don't go false-red ([context/DEPLOYMENT.md](context/DEPLOYMENT.md)).
 - **ai-dev-kit:** the repo's agentic-dev techniques are a portable skill library — the
@@ -154,6 +158,7 @@ Per-program summary (Rows = archived row count; full rows →
 | Advisory — 2026-09-07 | 1 | `fflate` `<0.4.9` → 0.4.9 for GHSA-px8p-9vwx-vf98 (moderate, ZIP64 infinite loop) — advisory-DB drift, caught by the 3-day-red daily lane; `pnpm audit` 0 after | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | B3 predicate-sensor long tail, remaining 11 items — 2026-09-08 | 1 | Closes the row across 5 batches; `contrarian`-reviewed plan caught a false-positive-passing sensor design (primary-calendar demote) before build and flagged the audit `or()` site as highest-risk (no real defect found there); 2 items closed as `@repo/db` integration tests instead of the planned e2e (faster, flake-immune); no predicate was already wrong | [plan](archive/predicate-sensor-long-tail-plan.md) |
 | Advisory — 2026-09-08 | 1 | `sharp` `<0.35.4` → 0.35.4 (HIGH, libheif AVIF/HEIF — next's own pin re-excluded the fix, third time this shape has recurred) · `baseline-browser-mapping` `<2.11.0` → 2.11.20 (moderate DoS) · `vitest`/`@vitest/mocker` `4.1.9` → `4.1.11` (moderate path traversal, plain in-range bump); `pnpm audit` 0 after all three | [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
+| Doc audit — 2026-09-22 | 1 | Found the daily audit lane red 12 days (`smol-toml`, #61), the fast-uri park exit and the `next` 16.3.4 take overdue; ledger/override counts, the "open" Renovate decision and the archive index (+4 rows — its rule slipped a 4th time) fixed; showcase re-stamped; 4 memory repairs | [archive/README.md](archive/README.md) |
 | Context-engineering — 2026-07-23 | 8 | kit 0.7.0 (hunt 7 · three-strikes · context-guard hook · budgets) · stable prefix + 7th compaction + provenance split · `auth/`+`services/` splits · 5 leaf AGENTS.md · memory −35% · docs-sanity CI lane | [program record](archive/PHASE_HISTORY.md#context-engineering-overhaul-2026-07-23--archived-program-record) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
@@ -168,13 +173,21 @@ Current model, ACL and API: [context/calendar/](context/calendar/model.md).
 
 **Date-gated watch** — [MAINTENANCE.md → Watch items](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done)
 is canonical; the per-program rows above + [CHANGELOG](../CHANGELOG.md) carry each landed
-item. Open now: **e2e
-month-boundary red** (B2 — fix merged 2026-09-03; removal condition still open until the
-20-consecutive-green counter recovers and the 2026-10-01 window passes green) ·
-**`next` 16.3.4** ages in 2026-09-07 (pre-triaged, four riders) · **`better-auth` 1.7.x** is
-a breaking minor — plan → sign-off, no advisory forces it. Ledger clear: `ignoreGhsas` `[]`,
-`minimumReleaseAgeExclude` empty since 2026-09-02, `pnpm audit` zero. The paragraph this
-replaces is preserved in [archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md#project_status-date-gated-watch-paragraph-as-of-2026-09-02).
+item. Open now (as of the 2026-09-22 doc audit): **`pnpm audit` is RED — `smol-toml`
+GHSA-7w5x-hrqm-74c2 (HIGH, DoS on malformed TOML; sole path `.>knip>smol-toml` 1.7.0, dev
+tooling only)**, advisory-DB drift caught by the daily lane 2026-09-10 (issue #61 and a
+Dependabot alert open); the fix 1.7.1 (published 2026-07-26, long aged in) is in-range for
+the exact-pinned `knip` 6.24.0 (`^1.6.1`), so a ranged `"smol-toml@<1.7.1": 1.7.1` override
+or the routine `knip` bump (≥6.30.0 requires `^1.7.1`; 6.37.0 is current) closes it with no
+age-exclude · **`fast-uri` 3.1.7 promotion OVERDUE** — its two `ignoreGhsas` parks were due
+to exit 2026-09-09 · **`next` 16.3.4 aged in 2026-09-07 and was not taken**; 16.3.5 (09-11)
+and 16.3.6 (09-22) have since shipped, neither triaged — re-run the rule-6 pre-triage on the
+newest aged release before any take · **e2e month-boundary** (B2 — fix merged 2026-09-03;
+removal condition open until the 2026-10-01 window passes green) · **`better-auth` 1.7.x**
+is a breaking minor — plan → sign-off, no advisory forces it. Ledger: `ignoreGhsas` holds
+the two `fast-uri` parks (not `[]`), `minimumReleaseAgeExclude` empty since 2026-09-02,
+`pnpm audit` 1 high. The paragraph this replaces is preserved in
+[archive/WATCH_HISTORY.md](archive/WATCH_HISTORY.md#project_status-date-gated-watch-paragraph-as-of-2026-09-02).
 
 ## Fresh project on-ramp (clone → build a real app)
 

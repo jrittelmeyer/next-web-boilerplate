@@ -379,9 +379,10 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   `ENABLE_RENOVATE` intentionally unset, in case Mend goes silent again. *Removal condition met*
   by merging #56 for the no-lockfile class; npm-manager delivery is tracked as an open risk, not
   a re-diagnosis target, unless it becomes a real problem. **Non-blocking glance point:**
-  2026-09-07 is the next scheduled Monday window — worth an informal check of the Dependency
-  Dashboard `updatedAt` for free confirmation Mend's no-lockfile delivery keeps working, but not
-  a gate on anything. The full narrative (the 07-22 widening fix, the empty Monday windows, the
+  the Monday windows of 2026-09-07, 09-14 and 09-21 passed with no Mend PR (whether anything in
+  the no-lockfile class was due is unverified — not evidence either way); an informal check of
+  the Dependency Dashboard `updatedAt` stays free confirmation when one is, but not a gate on
+  anything. The full narrative (the 07-22 widening fix, the empty Monday windows, the
   Mend-side diagnosis) is preserved verbatim in
   [archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02](archive/WATCH_HISTORY.md#maintenance-only-tier-3-g-the-renovate-narrative-to-2026-09-02); the diagnosis itself is
   [archive/renovate-b1-diagnosis-plan.md](archive/renovate-b1-diagnosis-plan.md).
@@ -395,8 +396,22 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     (08-14) and 1.6.30 (08-26). Every take is in [CHANGELOG](../CHANGELOG.md); the verbatim
     dated entries are in [archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02](archive/WATCH_HISTORY.md#dated-dependency-takes-landed-2026-08-10-to-2026-09-02) and
     [archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26](archive/WATCH_HISTORY.md#better-auth-1626-and-1630-takes-2026-08-14-2026-08-26).
-  - **2026-09-07 ~20:00 UTC — `next` 16.3.4** ages in (published 2026-08-31T20:00:51Z,
-    registry-checked the same day; no advisory known). **Pre-triaged 2026-09-01
+  - ⚠️ **`smol-toml` GHSA-7w5x-hrqm-74c2 (HIGH) — OPEN, no override yet** (surfaced by the
+    2026-09-22 doc audit: the daily `security-audit` lane has been red since 2026-09-10 and
+    triage issue #61 has sat open since). DoS on malformed TOML documents; vulnerable
+    `<=1.7.0`, patched `>=1.7.1`; sole path `.>knip>smol-toml` (dev-only lint tooling,
+    never shipped). Pure advisory-DB drift on an unchanged lockfile. Route: 1.7.1
+    (published 2026-07-26, long past the 7-day gate) is in-range for the exact-pinned
+    `knip` 6.24.0 (`^1.6.1`), so a ranged `"smol-toml@<1.7.1": 1.7.1` override — or the
+    routine `knip` bump (≥6.30.0 requires `^1.7.1`; 6.37.0 is current, `^1.8.0`) — closes
+    it with no age-exclude. Record per the runbook when taken: CHANGELOG **Security**
+    entry + a Watch bullet with its removal condition.
+  - **`next` 16.3.4 aged in 2026-09-07 ~20:00 UTC — NOT taken as of 2026-09-22.** 16.3.5
+    (published 2026-09-11, aged in 09-18) and 16.3.6 (published 2026-09-22, ages in 09-29)
+    have since shipped, neither triaged — re-run the rule-6 pre-triage against the newest
+    aged release before any take; the 16.3.4 notes below still describe the AVIF/`sharp`
+    delta any later take inherits. (16.3.4 published 2026-08-31T20:00:51Z,
+    registry-checked the same day; no advisory known.) **Pre-triaged 2026-09-01
     (Dependency-policy rule 6, seventeenth audit):** the release *re-enables AVIF Image
     Optimization* (vercel/next.js#97949 — the other half of the 16.3.3 mitigation, i.e.
     exactly the subsystem the security take moved) and raises
@@ -510,7 +525,8 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     parked pre-emptively rather than CI-confirmed, so `ignoreGhsas` is not
     guarding a live red for these two until the feed catches up. Promotes to
     `"fast-uri@<3.1.7": 3.1.7` and drops both ignore entries once 3.1.7 ages in
-    **2026-09-09** — verify at that point that reverting the pair would actually turn
+    **2026-09-09** (⚠️ **overdue** — both parks still live as of the 2026-09-22 doc
+    audit) — verify at that point that reverting the pair would actually turn
     `pnpm audit` red on 3.1.6, confirming the suppression mechanism worked, before
     trusting the close-out. Remove the override entirely once a routine bump
     naturally carries the lockfile past whichever version is current.

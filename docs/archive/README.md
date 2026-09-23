@@ -2,7 +2,8 @@
 
 **Historical record — not part of normal agent task context.** Load a file here only
 when you need the background behind a past decision, the exact verification a step
-performed, or a completed plan. Current, living docs are one level up in `docs/` and
+performed, or a plan (plans are filed here from their first draft — each row states
+whether it shipped). Current, living docs are one level up in `docs/` and
 in `docs/context/`.
 
 | File | What it is |
@@ -15,6 +16,10 @@ in `docs/context/`.
 | [PROJECT_STATE_LESSONS.md](PROJECT_STATE_LESSONS.md) | Per-item build lessons preserved verbatim from the project-state persistent memory when it was slimmed on 2026-07-23, plus the one-liner index itself as it stood when that memory collapsed to a pointer here on 2026-08-31. |
 | [plan-cve-2026-14456.md](plan-cve-2026-14456.md) | The CVE-2026-14456 fix plan (2026-08-30, shipped the same day): the Docker Trivy gate red since 08-27 on `libssl3`/`libcrypto3` in `node:24-alpine`, the shared `patched` build stage, both images verified locally, and the contrarian disposition. |
 | [renovate-b1-diagnosis-plan.md](renovate-b1-diagnosis-plan.md) | The Renovate B1 diagnosis plan (2026-08-30 → 31, contrarian-folded): repo-side causes ruled out, the frozen Dependency-Dashboard `updatedAt` as the tell, the Mend-side findings, and the self-hosted `renovate.yml` fallback it produced (`c69eb6e`). |
+| [renovate-b1-host-decision-plan.md](renovate-b1-host-decision-plan.md) | The Renovate B1 host-decision plan (2026-09-03, contrarian-folded, closed the same day): Mend kept and scoped to the no-lockfile class (#56), `renovate.yml` left dormant as the cold fallback with `ENABLE_RENOVATE` unset, npm-manager/lockfile delivery recorded as an accepted open risk. |
+| [calendar-range-error-state-plan.md](calendar-range-error-state-plan.md) | The B2 `calendar.range` error-state plan (2026-09-03, shipped the same day): a 429 or any range-query failure now renders `CalendarWorkspace`'s own error message instead of a blank month grid; the 20/min bucket itself deliberately kept. |
+| [predicate-sensor-long-tail-plan.md](predicate-sensor-long-tail-plan.md) | The B3 predicate-sensor long-tail plan (drafted 2026-09-08, contrarian-folded; all 12 items shipped 2026-09-05 → 08 in five batches): the demote-sensor redesign contrarian caught, the two items restated as `@repo/db` integration tests instead of e2e, and the finding that no predicate was actually wrong. |
+| [calendar-long-tail-correctness-plan.md](calendar-long-tail-correctness-plan.md) | The B3 calendar long-tail correctness plan (drafted 2026-09-08, contrarian-folded) — **DRAFT, awaiting sign-off, not yet built**: the nine ICS / recurrence / RSVP-token smalls seeded by audits 08-04 (F10) and 08-06 (F5), with a proposed default for each of the three decisions the audits punted on. |
 | [PROJECT_AUDIT_2026-07-08.md](PROJECT_AUDIT_2026-07-08.md) | The `/project-audit` scoring pass (2026-07-08): per-feature-group scores /100 (overall 93), the 7 doc-drift fixes, the considered-and-excluded list, and the A1–A22 backlog it seeded (rows live in `../BACKLOG.md`). |
 | [PROJECT_AUDIT_2026-07-12.md](PROJECT_AUDIT_2026-07-12.md) | The second `/project-audit` scoring pass (2026-07-12, post-Tier-4 re-score): per-group scores /100 (overall **97.5**, no correctness bugs) and the A23–A31 polish backlog it seeded — all closed 2026-07-11→12 (A31 evaluated → not adopted). |
 | [PROJECT_AUDIT_2026-07-12B.md](PROJECT_AUDIT_2026-07-12B.md) | The third `/project-audit` scoring pass (2026-07-12B, post-A23–A31 close): verified every close in code, re-scored **98.2** (no correctness bugs, one comment-date drift fixed), seeded A32 (locale-aware date formatting). |

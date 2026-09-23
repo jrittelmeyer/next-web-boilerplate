@@ -98,21 +98,22 @@ in any browser.
 > brand-new calendar feature for the first time, found it good but not yet perfect, and
 > the next verified that five of the issues it raised were fixed within two days; the
 > latest priced a scheduled update job that failed in every copy of the kit, a test that
-> fails for four hours on the first of each month, and five places where the code breaks
-> one of its own written rules — exactly the way the project says its own audits are
-> allowed to behave.
+> failed for four hours on the first of each month (since fixed), and five places where
+> the code breaks one of its own written rules — exactly the way the project says its own
+> audits are allowed to behave.
 
 ---
 
-*Current as of 2026-09-02. The audit score stands at 99.3 — it peaked at a
+*Current as of 2026-09-22. The audit score stands at 99.3 — it peaked at a
 perfect 100 across seventeen passes; the calendar feature that entered at 85 now
 sits at 95.5. The newest pass verified the summer's security work landed as recorded,
 then took a tenth of a point back for four things nobody had scored: a scheduled
 dependency-update job that failed every Monday in every project generated from the kit
-(fixed the next day), a calendar test that fails for four hours on the first of each
-month (fix scheduled before October), two milestone release notes never published, and —
-a first — five places where the code breaks one of its own written rules without a
-recorded exception. The oldest open deduction is still an outside service, not this code.
+(fixed the next day), a calendar test that failed for four hours on the first of each
+month (fixed two days later; the first of October is the proof), two milestone release
+notes never published (published two days later), and — a first — five places where the
+code breaks one of its own written rules without a recorded exception (still open, filed
+as a to-do). The oldest open deduction is still an outside service, not this code.
 The same week, a first audit of the AI tooling itself — the skills, hooks and context
 files the agent works from — scored it 93.9 out of 100 and seeded four improvements.*
 

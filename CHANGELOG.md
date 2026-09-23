@@ -9,19 +9,6 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
-### Changed
-
-- **v1.0.0 and v1.1.0 releases published** — both had sat `draft=true` since
-  2026-07-20 while this header already claimed a matching GitHub Release per
-  milestone; published non-latest (`--latest=false`) so v1.2.0 keeps the
-  "Latest" badge.
-- **Renovate host decision closed**: kept the Mend GitHub App (opened
-  [#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56), merged),
-  scoped to the no-lockfile update class — full npm-manager/lockfile delivery
-  remains an accepted open risk. `.github/workflows/renovate.yml` stays in the
-  repo dormant as a cold fallback (`ENABLE_RENOVATE` intentionally unset). See
-  [`docs/archive/renovate-b1-host-decision-plan.md`](docs/archive/renovate-b1-host-decision-plan.md).
-
 ### Added
 
 - **Predicate sensor for per-user reminder scoping** (B3 predicate-sensor long tail,
@@ -62,6 +49,16 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Changed
 
+- **v1.0.0 and v1.1.0 releases published** — both had sat `draft=true` since
+  2026-07-20 while this header already claimed a matching GitHub Release per
+  milestone; published non-latest (`--latest=false`) so v1.2.0 keeps the
+  "Latest" badge.
+- **Renovate host decision closed**: kept the Mend GitHub App (opened
+  [#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56), merged),
+  scoped to the no-lockfile update class — full npm-manager/lockfile delivery
+  remains an accepted open risk. `.github/workflows/renovate.yml` stays in the
+  repo dormant as a cold fallback (`ENABLE_RENOVATE` intentionally unset). See
+  [`docs/archive/renovate-b1-host-decision-plan.md`](docs/archive/renovate-b1-host-decision-plan.md).
 - **ai-dev-kit 0.23.11 → 0.23.16** (13 drifted files reconciled; `install.mjs --check`
   13 → 0). Seven workflow skills — `checkpoint`, `harness-audit`, `project-adopt`,
   `project-audit`, `project-init`, `retro`, `tidy` — now carry

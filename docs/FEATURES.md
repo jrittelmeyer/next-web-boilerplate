@@ -5,7 +5,7 @@ choice. Treat it as two things at once: a pitch (what you get by starting here i
 of `create-next-app`) and a decision record (why each piece is the right default in
 2026, so you can re-evaluate honestly as the ecosystem moves).
 
-_Current as of 2026-09-02. Numeric claims here (audit score, surface and doc counts) are
+_Current as of 2026-09-22. Numeric claims here (audit score, surface and doc counts) are
 re-checked by the `/doc-audit` pass; if this stamp is old, trust the code._
 
 Every claim below is backed by a deeper doc — each section links to the
@@ -411,9 +411,9 @@ building and running, not by assuming**:
   the score to 99.4, and the seventeenth (2026-09-01) settled to 99.3 — it verified the
   summer's security work landed as recorded, then priced four things nobody had scored: a
   scheduled dependency-update job that failed every Monday in every project generated from
-  the template (fixed the next day), a calendar test that fails deterministically for four
-  hours on the 1st of each month (fix scheduled before October), two milestone release notes
-  never published, and — a first — a code deduction, five places where the code breaks one
+  the template (fixed the next day), a calendar test that failed deterministically for four
+  hours on the 1st of each month (fixed 2026-09-03; the October 1st window is the proof), two
+  milestone release notes never published (published 2026-09-03), and — a first — a code deduction, five places where the code breaks one
   of its own stated rules without a recorded exception. The oldest open deduction still sits
   in an external service (dependency-update delivery) rather than in this code.
 

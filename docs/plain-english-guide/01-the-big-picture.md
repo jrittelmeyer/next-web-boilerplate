@@ -160,9 +160,9 @@ Two honest footnotes, because credibility matters more than a round number:
   entry the same day. The seventeenth (1 September) settled to **99.3**: it verified
   the summer's security work landed as recorded, then priced four things nobody had
   scored — a scheduled dependency-update job that failed every Monday in every project
-  generated from the kit (fixed the next day), a calendar test that fails for four hours
-  on the first of each month (fix scheduled before October), two milestone release notes
-  never published, and, for the first time, a deduction in the code itself: five places
+  generated from the kit (fixed the next day), a calendar test that failed for four hours
+  on the first of each month (fixed two days later), two milestone release notes never
+  published (published two days later), and, for the first time, a deduction in the code itself: five places
   where it breaks one of its own written rules without a recorded exception. The oldest
   open deduction is still an outside service. That is the caveat working exactly as
   advertised: the number tracks reality, and reality includes upkeep.
