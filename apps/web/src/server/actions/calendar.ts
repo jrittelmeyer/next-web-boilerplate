@@ -53,7 +53,10 @@ import {
 import { and, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { partitionRecurrenceDates } from "@/lib/calendar/recurrence-dates";
+import {
+  type PartitionedRecurrenceDates,
+  partitionRecurrenceDates,
+} from "@/lib/calendar/recurrence-dates";
 import {
   classifyEventChange,
   type EventChange,
@@ -455,6 +458,41 @@ function planSeriesCut(
       : { ...rule, count: before };
 
   return { data: { before, boundedRule } };
+}
+
+/**
+ * Whether `recurrenceId` names a real occurrence of this series — `scope: "this"`'s
+ * membership check, distinct from `planSeriesCut`'s bounds-only cut math.
+ *
+ * `EXDATE` is checked first, matching `occurrences.ts`'s own precedence (EXDATE deletes
+ * after RDATE inserts, so EXDATE wins on a contradictory row). An `RDATE` is accepted
+ * without consulting the rule at all — it's an explicit addition, not subject to the
+ * rule's `UNTIL`/`COUNT`. Otherwise a single-instant `expandRRule` hit decides: it still
+ * enforces the rule's own `UNTIL`/`COUNT` internally regardless of the window, so it
+ * naturally refuses both a truly out-of-bounds date and an in-bounds date the pattern
+ * never generates.
+ */
+function checkOccurrenceMembership(
+  target: EventTarget,
+  rule: RecurrenceRule,
+  recurrenceId: LocalDateTime,
+  dates: Pick<PartitionedRecurrenceDates, "exdates" | "rdates">,
+): { data: true } | { fieldErrors: FieldErrors } {
+  const notInSeries = { recurrenceId: "That date isn't part of this repeating event." };
+  if (dates.exdates.includes(recurrenceId)) return { fieldErrors: notInSeries };
+  if (dates.rdates.includes(recurrenceId)) return { data: true };
+
+  const dtstart = parseLocalDateTime(target.startWall);
+  const cutMs = resolveCivil(parseLocalDateTime(recurrenceId), target.startTzid).instantMs;
+  const { occurrences } = expandRRule({
+    rule,
+    dtstart,
+    timeZone: target.startTzid,
+    fromMs: cutMs,
+    toMs: cutMs,
+    limit: 1,
+  });
+  return occurrences.length === 1 ? { data: true } : { fieldErrors: notInSeries };
 }
 
 /**
@@ -1303,14 +1341,14 @@ async function updateOccurrence(
   // `.insert(...).onConflictDoUpdate(...)` below accepts ANY `recurrenceId` — nothing
   // upstream of it checks that the caller-supplied date is an occurrence this rule
   // actually produces, which would otherwise let a tampered request write a "phantom
-  // chip" no expansion of the rule ever generates. Reuse `planSeriesCut`'s bounds check
-  // (the same one `splitSeries` already runs) rather than duplicate it; only its
-  // `fieldErrors` half is wanted here, not the cut itself.
+  // chip" no expansion of the rule ever generates, or refuse a real RDATE chip past the
+  // rule's own bound.
   const source = parseSubmittedRule(target.rrule);
   if ("fieldErrors" in source || source.data === null) {
     return { error: "This repeating event's rule could not be read." };
   }
-  const membership = planSeriesCut(target, source.data, recurrenceId);
+  const dates = await loadRecurrenceDates(target.id);
+  const membership = checkOccurrenceMembership(target, source.data, recurrenceId, dates);
   if ("fieldErrors" in membership) {
     return { error: FIELD_ERRORS, fieldErrors: membership.fieldErrors };
   }

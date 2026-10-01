@@ -172,9 +172,16 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
     the same row. Falls back to the event's own `end_at` when `rrule === null`.
   - **`updateOccurrence` accepted a non-member `recurrenceId`** — no validation that a
     caller-supplied date was an actual generated occurrence, so `onConflictDoUpdate`
-    would write a "phantom chip" no expansion of the rule ever produces. Now reuses
-    `planSeriesCut`'s bound check (the same one `scope: "thisAndFollowing"` already
-    runs).
+    would write a "phantom chip" no expansion of the rule ever produces. **Correction
+    (B2, `audit-2026-09-23` R1+R2):** the fix above reused `planSeriesCut`'s *bounds*
+    check as the membership check, which was itself wrong two ways — a real RDATE past
+    the rule's own `UNTIL`/`COUNT` (a legitimate, grid-emitted chip) was refused, and
+    an in-bounds date the rule never generates still wrote a phantom override. Replaced
+    with a dedicated `checkOccurrenceMembership`: an `EXDATE`'d date refuses, an
+    `RDATE` accepts unconditionally (not subject to the rule at all), otherwise a
+    single-instant `expandRRule` hit decides — which still enforces `UNTIL`/`COUNT`
+    internally regardless of the window. `splitSeries`/`truncateSeries` keep
+    `planSeriesCut` unchanged (their cut semantics stay rule-relative).
   - **Actor-self cancellation email, mixed unverified+configured state**
     (`softDeleteEvent`) — the `userId`-only exclusion missed an unverified self-guest
     row (F6's `userId: NULL` shape), so the deleter could get emailed about their own

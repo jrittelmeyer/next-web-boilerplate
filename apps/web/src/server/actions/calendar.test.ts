@@ -1573,9 +1573,8 @@ describe("updateEvent, scope: this", () => {
   });
 
   it("refuses a recurrenceId that is not part of the series", async () => {
-    // Same bound check `scope: "thisAndFollowing"` already runs via `planSeriesCut` —
-    // without it, `onConflictDoUpdate` would happily write a "phantom chip" no
-    // expansion of this rule ever produces.
+    // `checkOccurrenceMembership`'s `expandRRule` branch — no recurrence-date rows, and
+    // this date is past the rule's own COUNT, so nothing accepts it.
     findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO" });
     expect(
       await updateEvent({
@@ -1584,6 +1583,62 @@ describe("updateEvent, scope: this", () => {
         id: EVENT,
         scope: "this",
         recurrenceId: "2027-06-07 09:00:00",
+      }),
+    ).toMatchObject({ fieldErrors: { recurrenceId: expect.any(String) } });
+    expect(dbInsert).not.toHaveBeenCalled();
+  });
+
+  it("accepts an RDATE past the rule's own UNTIL/COUNT", async () => {
+    // An RDATE is a real, grid-emitted chip regardless of the rule's own bound —
+    // `planSeriesCut`'s bounds-only check used to refuse this (the R1 regression).
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO" });
+    dbSelect.mockReturnValue(selectReturning([{ kind: "rdate", dateWall: "2027-06-07 09:00:00" }]));
+    dbInsert.mockReturnValue({
+      values: () => ({ onConflictDoUpdate: () => Promise.resolve() }),
+    });
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: "2027-06-07 09:00:00",
+      }),
+    ).toEqual({ data: { id: EVENT, calendarId: CAL } });
+    expect(dbInsert).toHaveBeenCalled();
+  });
+
+  it("refuses an in-bounds date the rule's own pattern never generates", async () => {
+    // Bounds-only would have passed this (it's within COUNT=2's window) — the R2
+    // phantom-accept regression. No recurrence-date rows, and the rule only emits
+    // Mondays, so a Tuesday in the same window is refused by the single-instant hit.
+    findEvent.mockResolvedValue({ ...seriesTarget, rrule: "FREQ=WEEKLY;COUNT=2;BYDAY=MO" });
+    dbSelect.mockReturnValue(selectReturning([]));
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: "2027-03-16 09:00:00",
+      }),
+    ).toMatchObject({ fieldErrors: { recurrenceId: expect.any(String) } });
+    expect(dbInsert).not.toHaveBeenCalled();
+  });
+
+  it("refuses an EXDATE'd date even though the bare rule would generate it", async () => {
+    // EXDATE wins on a contradictory row, matching `occurrences.ts`'s own precedence —
+    // today it's silently accepted because the bounds-only check never consulted
+    // `exdates`.
+    findEvent.mockResolvedValue(seriesTarget);
+    dbSelect.mockReturnValue(selectReturning([{ kind: "exdate", dateWall: THIRD }]));
+    expect(
+      await updateEvent({
+        ...seriesInput,
+        rrule: null,
+        id: EVENT,
+        scope: "this",
+        recurrenceId: THIRD,
       }),
     ).toMatchObject({ fieldErrors: { recurrenceId: expect.any(String) } });
     expect(dbInsert).not.toHaveBeenCalled();
