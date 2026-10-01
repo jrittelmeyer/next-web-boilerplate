@@ -195,6 +195,29 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Security
 
+- **`undici` scoped override, `<7.29.0` → `7.29.1`** — ten advisories against the
+  7.29.0 floor (2 high — GHSA-rfgv-xxqx-mfg5 unrequested-WebSocket-subprotocol DoS,
+  GHSA-w293-vg96-wgc3 TLS cert-validation bypass via `BalancedPool`; 7 moderate; 1
+  low), vulnerable `<7.29.1`. Reached only via `vitest`→`jsdom` (test tooling, no
+  runtime exposure). 7.29.1 (published 2026-09-04) cleared the 7-day gate 2026-09-11.
+  Auto-filed issue #62.
+- **`brace-expansion` scoped override, `<5.0.9` → `5.0.12`** — three advisories on
+  the same `expand()`/`parseCommaParts` path (2 high stack-exhaustion, 1 moderate
+  quadratic-time CPU DoS), via `minimatch@10.2.5` (eslint/glob — build tooling
+  only). 5.0.12 (published 2026-09-14) cleared the 7-day gate 2026-09-21.
+- **`fast-uri` scoped override, `<3.1.7` → `3.1.8`** — GHSA-hrr3-gc8f-f4qj
+  (MODERATE: inconsistent host-case normalization via percent-encoded octets),
+  vulnerable `<3.1.8`. Via `ajv@8.20.0` (build tooling only). 3.1.8 (published
+  2026-09-15) cleared the 7-day gate 2026-09-22.
+- **`dompurify` scoped override, `<3.4.13` → `3.4.16`** — GHSA-p98j-92pf-mc4p (LOW:
+  `IN_PLACE` mode's node-removing `afterSanitize` hook leaves a detached subtree's
+  event handlers armed, DOM XSS), vulnerable `<=3.4.15`. Audit-edge only — see
+  MAINTENANCE's posthog-js Watch line. 3.4.16 (published 2026-09-23) cleared the
+  7-day gate 2026-09-30.
+- **`engine.io` scoped override (new key)**, `6.6.10` — GHSA-2gc4-cqfq-p2gv (HIGH:
+  Socket.IO Engine.IO protocol-revision-mismatch DoS), vulnerable `<6.6.10`. Via
+  react-email's dev preview server (`socket.io@4.8.3` — dev tooling only). 6.6.10
+  (published 2026-09-03) cleared the 7-day gate 2026-09-10.
 - **`vitest` (+ `@vitest/coverage-v8`, `@vitest/mocker`) bumped `4.1.9` → `4.1.11`** —
   GHSA-82fw-gwwq-j7x9 (MODERATE: `@vitest/mocker`'s redirect mock allows path
   traversal / arbitrary file read), vulnerable `>=2.1.0 <4.1.11`. A direct

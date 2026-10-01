@@ -545,7 +545,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     dompurify, missed on this third key — fifteenth audit, F5). **Converted** to the
     ranged `"brace-expansion@<5.0.9": 5.0.9` on 2026-08-14 (riding the nanoid take),
     so the condition is now real: the key goes inert once the tree resolves past
-    5.0.9.
+    5.0.9. **Reopened again 2026-09-30** (issue #62, same `pnpm audit` run that
+    resurfaced undici/fast-uri/dompurify below): three more advisories on the same
+    expand()/parseCommaParts path (2 high stack-exhaustion, 1 moderate
+    quadratic-time CPU DoS) — raised straight to `"brace-expansion@<5.0.12": 5.0.12`
+    (published 2026-09-14, aged in 2026-09-21; full GHSA list in the
+    `pnpm-workspace.yaml` override comment). Remove once a routine bump naturally
+    carries the lockfile past 5.0.12.
   - `"dompurify@<3.4.13": 3.4.13` (ranged since the 2026-08-12 park exit) → 3.4.12
     **fell vulnerable in turn 2026-08-07** (GHSA-55q2-fjhq-7xh7, moderate — parked
     route (1), owner-signed; **exited 2026-08-12**, due 08-10 ~14:16 UTC). ⚠️ The
@@ -555,6 +561,12 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     the lockfile past it. The ranged key is what makes the condition real: it goes
     inert once posthog-js resolves >=3.4.13 — which is also the moment the real fix
     lands, this edge being audit-only (see the posthog-js Watch line above).
+    **Reopened again 2026-09-30** (issue #62): GHSA-p98j-92pf-mc4p (low — IN_PLACE
+    mode's node-removing afterSanitize hook leaves a detached subtree's event
+    handlers armed, DOM XSS) — raised to `"dompurify@<3.4.16": 3.4.16` (published
+    2026-09-23, aged in 2026-09-30). Same AUDIT-EDGE-ONLY classification; full detail
+    in the `pnpm-workspace.yaml` override comment. Remove once a routine bump
+    naturally carries the lockfile past 3.4.16.
   - ~~`sharp: 0.35.3`~~ → **REMOVED 2026-08-26** with the `next` 16.3.3 take: its condition
     (next's own sharp pin ≥0.35.0) is met by 16.3.3's `^0.35.3`, and a no-op reinstall confirmed
     the lockfile resolves `sharp@0.35.3` unaided. Record → [archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26](archive/WATCH_HISTORY.md#sharp-override-removed-2026-08-26).
@@ -590,7 +602,11 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
     Both `ignoreGhsas` entries deleted rather than promoted (allowlist `[]` again);
     the `3.1.7` override itself is a routine currency bump, not an advisory fix.
     Remove the override entirely once a routine bump naturally carries the lockfile
-    past whichever version is current.
+    past whichever version is current. **Reopened again 2026-09-30** (issue #62):
+    GHSA-hrr3-gc8f-f4qj (moderate — inconsistent host-case normalization via
+    percent-encoded octets) — raised to `"fast-uri@<3.1.8": 3.1.8` (published
+    2026-09-15, aged in 2026-09-22). Same ajv@8.20.0 build-tooling-only exposure;
+    full detail in the `pnpm-workspace.yaml` override comment.
   - `"nanoid@<3.3.18": 3.3.18` → GHSA-2v37-7h3g-55p8 (HIGH; audit-edge only — postcss
     calls plain `nanoid(6)`, the vulnerable custom-generator functions are never
     invoked here). Added 2026-08-12 as `<3.3.17`, promoted to `<3.3.18` on 2026-08-14
@@ -611,11 +627,24 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   - `"undici@<7.29.0": 7.29.0` → five advisories at once (GHSA-4cwx-7wf7-3272, high,
     plus four moderates), reached only via vitest→jsdom (test tooling). In-range for
     jsdom's own `^7.25.0`. Remove when the lockfile's undici entry moves past 7.29.0
-    (the key is inert from that moment).
+    (the key is inert from that moment). **Reopened 2026-09-30** (issue #62): ten more
+    advisories against the 7.29.0 floor (2 high, 7 moderate, 1 low — permessage-deflate/
+    RetryHandler/WebSocketStream DoS, TLS cert-validation bypass, cross-user cookie
+    disclosure, response splitting/truncation, unsafe-method caching), all fixed by the
+    very next patch — raised to `"undici@<7.29.1": 7.29.1` (published 2026-09-04, aged
+    in 2026-09-11). Same vitest→jsdom exposure; full GHSA list in the
+    `pnpm-workspace.yaml` override comment. Remove when the lockfile's undici entry
+    moves past 7.29.1.
   - `"socket.io-parser@<4.2.7": 4.2.7` → GHSA-2m8v-j782-fhvr (high, zero-attachment
     memory exhaustion), via react-email's dev preview server. In-range for socket.io's
     own `~4.2.4` — the lockfile's 4.2.6 simply predated the fix. Remove when the
     react-email chain re-resolves >=4.2.7.
+  - `"engine.io@<6.6.10": 6.6.10` (NEW key, added 2026-09-30, issue #62) →
+    GHSA-2gc4-cqfq-p2gv (high — Socket.IO Engine.IO protocol-revision-mismatch DoS),
+    via the same react-email→socket.io@4.8.3 chain as socket.io-parser above. In-range
+    for the installed socket.io@4.8.3's own `~6.6.0` dependency on engine.io. Published
+    2026-09-03, aged in 2026-09-10. Caught by CI's `pnpm audit` lane, not a Dependabot
+    alert. Remove when the react-email chain re-resolves >=6.6.10 unaided.
 - ~~**Advisory batch 2026-08-04 (#5)**~~ — closed ([#41](https://github.com/jrittelmeyer/next-web-boilerplate/issues/41)):
   nine advisories (4 high), every path build/dev/test tooling; two were against our own previous
   remediation pins (an override is a standing liability — `pnpm audit` re-judging pinned values

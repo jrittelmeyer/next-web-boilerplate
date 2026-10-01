@@ -102,7 +102,19 @@ overrides:
   # fire — the same defect already fixed for fast-uri and dompurify 2026-08-12.
   # The ranged key rewrites only vulnerable copies and goes inert once the tree
   # resolves >=5.0.9 naturally; the conversion itself moved nothing.
-  "brace-expansion@<5.0.9": 5.0.9
+  # ⚠️ 2026-09-30 (CI run 36776703632 on `main`, auto-filed issue #62): THREE more
+  # advisories on the same expand()/parseCommaParts path, same minimatch@10.2.5 chain
+  # (eslint + glob@13.0.6 for Storybook/Sentry's webpack plugin/react-email — all
+  # build-tooling). GHSA-6j4f-fj2g-mc7p (HIGH — stack exhaustion via uncontrolled
+  # recursion in parseCommaParts, fixed 5.0.10), GHSA-qhr7-859c-m2p7 (HIGH — stack
+  # exhaustion via uncontrolled recursion on nested brace groups, fixed 5.0.11),
+  # GHSA-q2hr-2g5m-vwhr (MODERATE — quadratic-time expansion of the `{a},b}` rewrite,
+  # CPU DoS, fixed 5.0.12). Floor raised straight to 5.0.12 (published 2026-09-14,
+  # cleared the 7-day gate 2026-09-21) — in-range for minimatch's own `^5.0.5`
+  # (re-verified against the installed minimatch@10.2.5), a fix-forward. Remove once a
+  # routine bump naturally carries the lockfile past 5.0.12 (the ranged key is inert
+  # from that moment).
+  "brace-expansion@<5.0.12": 5.0.12
   # ——— Advisory remediation (2026-07-22): transitive-only advisories, all newly
   # disclosed since the prior day's green CI run (pnpm audit queries live
   # advisory data — nothing in the lockfile changed to surface these). Only
@@ -159,7 +171,16 @@ overrides:
   # park that had nothing to confirm. Deleted rather than promoted; 3.1.7 is taken
   # here purely as a routine currency bump (in-range for ajv's `^3.0.1`, 4.x is the
   # major outside it), not because it fixes a live advisory.
-  "fast-uri@<3.1.7": 3.1.7
+  # ⚠️ 2026-09-30 (same CI run / issue #62 as the brace-expansion addendum above):
+  # GHSA-hrr3-gc8f-f4qj (MODERATE — inconsistent host-case normalization via
+  # percent-encoded octets, >=3.0.0 <3.1.8), fixed 3.1.8 (published 2026-09-15,
+  # cleared the 7-day gate 2026-09-22) — in-range for ajv@8.20.0's own `^3.0.1`
+  # (re-verified against the installed ajv), a fix-forward. Same exposure as every
+  # prior fast-uri entry here: build tooling only (Sentry's webpack plugin /
+  # Storybook's builder-vite), zero request-handling reach. Remove once a routine
+  # bump naturally carries the lockfile past 3.1.8 (the ranged key is inert from
+  # that moment).
+  "fast-uri@<3.1.8": 3.1.8
   #
   # dompurify — classification: AUDIT-EDGE ONLY (this pin moves the audit ledger,
   # never executed bytes). posthog-js is the tree's sole dompurify importer, but the
@@ -187,7 +208,17 @@ overrides:
   # fix-forward, not a pin-bypass); posthog-js latest 1.414.0 declares ^3.4.12.
   # Remove once a routine bump naturally carries the lockfile past 3.4.13 (the
   # ranged key is inert from that moment).
-  "dompurify@<3.4.13": 3.4.13
+  # ⚠️ 2026-09-30 (same CI run / issue #62 as above): GHSA-p98j-92pf-mc4p (LOW —
+  # IN_PLACE mode's node-removing afterSanitize hook leaves a detached subtree's
+  # event handlers armed, DOM XSS; >=3.4.13 <=3.4.15), fixed 3.4.16 (published
+  # 2026-09-23, cleared the 7-day gate 2026-09-30) — in-range for the installed
+  # posthog-js@1.391.2's `^3.3.2` (re-verified). Same AUDIT-EDGE-ONLY classification
+  # as above: the bundled `module.js` ships zero dompurify code, and the IN_PLACE
+  # caller lives in the remotely-loaded product-tours chunk, which vendors its own
+  # copy — fixed only by a posthog-js bump or a PostHog-side CDN redeploy, never by
+  # this override. Remove once a routine bump naturally carries the lockfile past
+  # 3.4.16 (the ranged key is inert from that moment).
+  "dompurify@<3.4.16": 3.4.16
   # nanoid <3.3.17 (GHSA-2v37-7h3g-55p8, HIGH, CVSS v4 8.2 — customAlphabet/
   # customRandom never exit their generation loop when size is 0). Sole edge:
   # postcss>nanoid@3.3.16 (19 paths, all build tooling), and postcss calls the
@@ -242,7 +273,26 @@ overrides:
   # The ranged key rewrites only vulnerable copies, goes inert once the tree resolves
   # >=7.29.0 naturally, and leaves any future 8.x copy for `pnpm audit` to judge
   # loudly. Remove when the lockfile's undici entry moves past 7.29.0 (key inert then).
-  "undici@<7.29.0": 7.29.0
+  # ⚠️ 2026-09-30 (CI run 36776703632 on `main`, auto-filed issue #62): TEN more
+  # advisories against the same 7.29.0 floor, all fixed by the very next patch, 7.29.1
+  # (published 2026-09-04, cleared the 7-day gate 2026-09-11) — in-range for jsdom's
+  # own `^7.25.0` (re-verified against the installed jsdom@29.1.1), a fix-forward.
+  # High: GHSA-rfgv-xxqx-mfg5 (DoS via unrequested WebSocket subprotocol, >=7.0.0) and
+  # GHSA-w293-vg96-wgc3 (TLS cert-validation bypass via dropped connect options in
+  # BalancedPool, >=7.24.1). Moderate: GHSA-3wwx-pv8p-q78v (permessage-deflate
+  # decompression DoS, >=7.28.0), GHSA-pmjh-fq2x-6v4x (orphaned RetryHandler response
+  # body DoS, >=7.11.0), GHSA-3xpg-4rpp-hhhm (unbounded decompression DoS, >=7.15.0),
+  # GHSA-2jfj-6hjv-fm6j (cross-user cookie disclosure via shared-cache Set-Cookie
+  # caching, >=7.0.0), GHSA-rx4f-c7p8-82vq (WebSocketStream unclean-close DoS,
+  # >=7.0.0). Low: GHSA-r53p-7pc4-xj5r (response splitting via retry interceptor,
+  # >=7.0.0), GHSA-2gqq-gqf2-x968 (response truncation via oversized chunked
+  # responses in the dump interceptor, >=7.1.0), GHSA-8436-99hf-9mmv (caching/replay
+  # of unsafe HTTP method responses, >=7.0.0). Same exposure as 2026-08-04:
+  # vitest→jsdom, test-tooling only across every workspace package, nothing here
+  # ships undici at runtime. Ranged key still correct — rewrites only <7.29.1, leaves
+  # a future 8.x copy for `pnpm audit` to judge loudly. Remove when the lockfile's
+  # undici entry moves past 7.29.1 (key inert then).
+  "undici@<7.29.1": 7.29.1
   # socket.io-parser >=4.0.0 <4.2.7 (GHSA-2m8v-j782-fhvr, HIGH — zero-attachment
   # memory exhaustion), via react-email→socket.io@4.8.3 (the email dev preview
   # server — dev tooling only). 4.2.7 (published 2026-07-15, aged in 07-22) is
@@ -250,6 +300,17 @@ overrides:
   # Same ranged-key reasoning as undici above. Remove when the react-email chain
   # re-resolves >=4.2.7 (key inert then).
   "socket.io-parser@<4.2.7": 4.2.7
+  # engine.io >=6.6.0 <6.6.10 (GHSA-2gc4-cqfq-p2gv, HIGH — Socket.IO Engine.IO
+  # protocol-revision-mismatch DoS), via the same react-email→socket.io@4.8.3 chain
+  # as socket.io-parser above (the email dev preview server — dev tooling only).
+  # 6.6.10 (published 2026-09-03, cleared the 7-day gate 2026-09-10) is in-range for
+  # the installed socket.io@4.8.3's own `~6.6.0` dependency on engine.io (verified) —
+  # a fix-forward, not a pin-bypass. Caught by CI's pnpm-audit lane 2026-09-30
+  # (issue #62); not a Dependabot alert. Same ranged-key reasoning as
+  # socket.io-parser above: rewrites only vulnerable copies, inert once the tree
+  # resolves >=6.6.10 naturally. Remove when the react-email chain re-resolves
+  # >=6.6.10 unaided (key inert then).
+  "engine.io@<6.6.10": 6.6.10
   # browserslist <=4.28.6 (GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g, both HIGH —
   # uncaught crash / prototype write via untrusted browserslist-stats.json in
   # normalizeStats). Reached via @babel/helper-compilation-targets and webpack
