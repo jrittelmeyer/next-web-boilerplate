@@ -9,8 +9,23 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
+### Changed
+
+- **`@next/eslint-plugin-next` `16.2.12` → `16.3.6`** (`tooling/eslint`), lockstep
+  with `next`'s own resolved version, landed with the exclude deletion below.
+
 ### Security
 
+- **`next` 16.3.8 watched, not yet taken** — CVE-2026-94483 /
+  GHSA-cjq9-62q9-8jv4 (SSRF in Image Optimization, reachable only via
+  DNS-rebinding control over an `images.remotePatterns`-allow-listed host;
+  this repo allow-lists Uploadthing's own `*.ufs.sh`, not attacker input).
+  `pnpm audit` doesn't surface it yet (feed lag, confirmed against the GitHub
+  Advisories API and npm's advisory-bulk endpoint). Ages in naturally
+  2026-10-07; see MAINTENANCE Watch item.
+- **`next` 16.3.6 `minimumReleaseAgeExclude` removed** — all ten dated entries
+  deleted from `pnpm-workspace.yaml`; the fix (GHSA-vcvr-r3jv-pc5j) cleared the
+  7-day age gate 2026-09-29, a frozen install resolves unaided. Full gate green.
 - **`braces` <=3.0.3 parked in `auditConfig.ignoreGhsas`** (GHSA-vfj7-8cjw-p6xm,
   HIGH — stack-exhaustion DoS via deeply nested patterns), reached only via
   `tooling/eslint`'s `@next/eslint-plugin-next>fast-glob>micromatch>braces`
