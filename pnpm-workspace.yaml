@@ -468,7 +468,23 @@ minimumReleaseAgeExclude:
 # dated exclude deleted on schedule 2026-08-06 — see the three-route rule stated once at
 # `minimumReleaseAge` above. This note is a pointer; the rule and its criteria live there.
 auditConfig:
-  # Empty since 2026-09-22 — the last two parks (fast-uri's speculative
-  # GHSA-qw65-cvwx-89v3 / GHSA-58mr-gqgx-xq4g pair) turned out to be advisory IDs
-  # that were never published; see the fast-uri override comment above.
-  ignoreGhsas: []
+  # braces <=3.0.3 (GHSA-vfj7-8cjw-p6xm, HIGH — stack-exhaustion DoS via deeply
+  # nested patterns in the recursive AST walkers), via tooling/eslint's
+  # @next/eslint-plugin-next>fast-glob>micromatch>braces (lint tooling only —
+  # not shipped in the request-handling path, and not reachable by untrusted
+  # input: the patterns it walks come from this repo's own lint config, never
+  # user data). Route (3): the advisory's `first_patched_version` is `null` on
+  # the GitHub Advisories API — no fixed release exists at all, so there is no
+  # version to override to and no expiry to promise. OSV.dev independently
+  # confirms the same (3.0.3 = npm `latest`, last-affected = 3.0.3); issue
+  # #63's own human-readable table claims "patched >=3.0.4" anyway — that's
+  # the GHSA-summary-vs-API-field inconsistency this file already hit once
+  # with fast-uri's unpublished-ID pair below, not a real second data point.
+  # `micromatch`'s own latest release (4.0.8) still pins `braces: ^3.0.3`, so
+  # no eslint-plugin-next/fast-glob/micromatch bump routes around it either.
+  # Parked 2026-10-05 (filed as issue #63 on 2026-10-03). *Removal
+  # condition:* remove once micromatch/braces ships a fix and it resolves
+  # into the lockfile (promote to a real override then, per the three-route
+  # rule at `minimumReleaseAge` above).
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm

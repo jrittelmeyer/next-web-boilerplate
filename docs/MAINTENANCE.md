@@ -115,6 +115,25 @@ GitHub repo settings don't travel with a template copy. On your own repo:
 **This section is the canonical live Watch list** — full per-item detail and removal
 conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Currently:
 
+- **`braces` ignoreGhsas park (2026-10-05)** — `GHSA-vfj7-8cjw-p6xm` in
+  `pnpm-workspace.yaml`'s `auditConfig.ignoreGhsas` (HIGH — stack-exhaustion
+  DoS via deeply nested patterns in the recursive AST walkers), vulnerable
+  `<=3.0.3`. Reached only via `tooling/eslint`'s own
+  `@next/eslint-plugin-next>fast-glob>micromatch>braces` (lint tooling only —
+  never shipped in the request-handling path, and the patterns it walks come
+  from this repo's own lint config, never untrusted input). Route (3), not
+  route (1): the GitHub Advisories API reports `first_patched_version: null`
+  — no fixed release exists anywhere, so there is no version to park behind
+  and no expiry to promise. OSV.dev independently confirms the same; issue
+  #63's own human-readable table claims "patched >=3.0.4" anyway, which is
+  the GHSA-summary-vs-API-field inconsistency this repo already hit once
+  with fast-uri (2026-09-22), not a real second data point. `micromatch`'s
+  own latest release still pins `braces: ^3.0.3`, so no upstream bump routes
+  around it. Auto-filed issue #63 (2026-10-03). *Removal condition:* remove
+  once micromatch/braces ships a fix and it resolves into the lockfile
+  (promote to a real override at that point, per the three-route rule at
+  `minimumReleaseAge` in `pnpm-workspace.yaml`).
+
 - **`fflate` override (2026-09-07)** — `"fflate@<0.4.9": 0.4.9` in
   `pnpm-workspace.yaml`, taken for GHSA-px8p-9vwx-vf98 (moderate — `unzipSync`
   infinite loop parsing a malformed ZIP64 archive), vulnerable `>=0.4.5 <0.4.9`.

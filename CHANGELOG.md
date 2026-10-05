@@ -9,6 +9,15 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
+### Security
+
+- **`braces` <=3.0.3 parked in `auditConfig.ignoreGhsas`** (GHSA-vfj7-8cjw-p6xm,
+  HIGH — stack-exhaustion DoS via deeply nested patterns), reached only via
+  `tooling/eslint`'s `@next/eslint-plugin-next>fast-glob>micromatch>braces`
+  (lint tooling, never shipped). No fixed version exists upstream
+  (`first_patched_version: null`), so route (3) applies — parked with no
+  expiry to promise. Auto-filed issue #63.
+
 ### Added
 
 - **Predicate sensor for per-user reminder scoping** (B3 predicate-sensor long tail,
