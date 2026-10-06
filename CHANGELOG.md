@@ -9,11 +9,6 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ## [Unreleased]
 
-### Changed
-
-- **`@next/eslint-plugin-next` `16.2.12` → `16.3.6`** (`tooling/eslint`), lockstep
-  with `next`'s own resolved version, landed with the exclude deletion below.
-
 ### Security
 
 - **`next` 16.3.8 watched, not yet taken** — CVE-2026-94483 /
@@ -23,15 +18,77 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
   `pnpm audit` doesn't surface it yet (feed lag, confirmed against the GitHub
   Advisories API and npm's advisory-bulk endpoint). Ages in naturally
   2026-10-07; see MAINTENANCE Watch item.
-- **`next` 16.3.6 `minimumReleaseAgeExclude` removed** — all ten dated entries
-  deleted from `pnpm-workspace.yaml`; the fix (GHSA-vcvr-r3jv-pc5j) cleared the
-  7-day age gate 2026-09-29, a frozen install resolves unaided. Full gate green.
+
+## [1.3.0] — 2026-10-05
+
+Maintenance-only cut since v1.2.0 — closing the calendar correctness long
+tail, a Renovate host decision, an ai-dev-kit modernization bump, and
+continuous dependency-advisory remediation (no new features). See
+[`v1.2.0...v1.3.0`](https://github.com/jrittelmeyer/next-web-boilerplate/compare/v1.2.0...v1.3.0).
+
+### Added
+
+- **Predicate-sensor long tail closed** (12 items across two batches) —
+  coverage sensors for per-user reminder scoping, `calendar-rsvp`/demote/
+  split-truncate/`skipOccurrence`/`removeAttendees`/list-scope/
+  occurrence-detail, `markAllRead`/`unreadCount`/data-export, the keyset
+  same-timestamp tiebreak, duplicate-title/org-role, and two e2e
+  session/OAuth sensors. No predicate was found already wrong — coverage
+  only. See
+  [predicate-sensor-long-tail-plan](docs/archive/predicate-sensor-long-tail-plan.md).
+- **Self-hosted Renovate workflow** (`.github/workflows/renovate.yml`) as a
+  dormant cold fallback to the Mend-hosted App (`ENABLE_RENOVATE`
+  intentionally unset).
+
+### Changed
+
+- **ai-dev-kit `0.23.11` → `0.23.16`** — seven workflow skills gained
+  `disable-model-invocation`; install-from-a-tag standing rule adopted after
+  a clone-drift near-miss.
+- **`better-auth` `1.6.20` → `1.6.33`** (incl. `@better-auth/passkey`
+  lockstep) across two bumps; schema diffed each time, no migrations needed.
+- **`@next/eslint-plugin-next` `16.2.12` → `16.3.6`**, lockstep with `next`.
+- **Renovate host decision closed** — kept the Mend GitHub App
+  ([#56](https://github.com/jrittelmeyer/next-web-boilerplate/pull/56)),
+  `renovate.yml` stays dormant.
+- **v1.0.0 and v1.1.0 GitHub Releases published** (had sat draft since
+  2026-07-20).
+- **`docs:sanity`'s kit-wiring parity check now deep-compares every key**
+  instead of an enumerated list; `vite` override comment corrected;
+  `renovate.yml` gated fork-safe on `ENABLE_RENOVATE`.
+
+### Fixed
+
+- **Calendar long-tail correctness batch** (9 items, two-pass — a
+  membership-check correction after the first attempt reused bounds-checking
+  logic by mistake) — RFC 6868 ICS param quoting, DATE-form `UNTIL` zone
+  semantics, `seriesEndInstantMs` under-estimate risks, DAILY+BYMONTHDAY's
+  false RFC citation, one-off RSVP token expiry, `updateOccurrence`'s
+  non-member `recurrenceId` acceptance, actor-self cancellation email gap,
+  `loadRecipients`'s organizer-exclusion gap. See
+  [calendar-long-tail-correctness-plan](docs/archive/calendar-long-tail-correctness-plan.md).
+- E2E month-boundary defect in `calendar-invitations.spec.ts`;
+  `calendar.range`'s error state now renders instead of a blank grid;
+  `@repo/ui`'s `<Table>` scroll container gained a focusable, labeled region
+  role.
+
+### Security
+
+- **Least-privilege pass on the tracked `.claude/settings.json`** — arbitrary
+  install/exec grants removed, force-push deny tripwire added, permission
+  prefixes corrected per shell tool. See
+  [CONVENTIONS.md](docs/context/CONVENTIONS.md#agent-tooling-claude).
+- **`next` `16.3.3` → `16.3.6`** age-gate exception for an RCE in `next/og`
+  (GHSA-vcvr-r3jv-pc5j, reachable via unauthenticated OG-image routes);
+  exclude removed on schedule 2026-09-29.
+- **Eleven dependency-advisory remediations** — `undici`, `brace-expansion`,
+  `fast-uri` (three rounds), `dompurify`, `engine.io`, `vitest`, `sharp`,
+  `baseline-browser-mapping`, `fflate`, `browserslist`, `knip`/`smol-toml` —
+  each parked behind the release-age gate and promoted/removed on schedule;
+  `pnpm audit` clean throughout.
 - **`braces` <=3.0.3 parked in `auditConfig.ignoreGhsas`** (GHSA-vfj7-8cjw-p6xm,
-  HIGH — stack-exhaustion DoS via deeply nested patterns), reached only via
-  `tooling/eslint`'s `@next/eslint-plugin-next>fast-glob>micromatch>braces`
-  (lint tooling, never shipped). No fixed version exists upstream
-  (`first_patched_version: null`), so route (3) applies — parked with no
-  expiry to promise. Auto-filed issue #63.
+  stack-exhaustion DoS, no fix exists upstream) — reached only via lint
+  tooling, never shipped. Auto-filed issue #63.
 
 ### Added
 
