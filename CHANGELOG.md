@@ -11,13 +11,29 @@ milestones rather than package releases. Each milestone is tagged (`v1.0.0`,
 
 ### Security
 
-- **`next` 16.3.8 watched, not yet taken** — CVE-2026-94483 /
-  GHSA-cjq9-62q9-8jv4 (SSRF in Image Optimization, reachable only via
-  DNS-rebinding control over an `images.remotePatterns`-allow-listed host;
-  this repo allow-lists Uploadthing's own `*.ufs.sh`, not attacker input).
-  `pnpm audit` doesn't surface it yet (feed lag, confirmed against the GitHub
-  Advisories API and npm's advisory-bulk endpoint). Ages in naturally
-  2026-10-07; see MAINTENANCE Watch item.
+- **`next` `16.3.6` → `16.3.8`** — closes six advisories: GHSA-cjq9-62q9-8jv4
+  (HIGH, SSRF in Image Optimization — the previously-watched item, taken
+  11 days after its age gate cleared following a session gap),
+  GHSA-f87g-xv8r-7p7x, GHSA-4jqv-mc3x-m676, GHSA-3w37-wq28-93x7,
+  GHSA-mcj8-r9mp-w47p (MODERATE), GHSA-39w2-rjm5-chcv (LOW). Took the
+  same-line patch over the newer `16.4.x` minor (feature release, out of
+  scope for a security remediation). `@next/eslint-plugin-next` bumped
+  lockstep. Docker boot check per `MAINTENANCE.md` rule 6: both `web` and
+  `worker` targets build clean; `web` boots against a throwaway Postgres
+  with `/api/health` returning `database: up`.
+- **`sharp` scoped override, `<0.35.5` → `0.35.5`** — GHSA-wq5f-xc86-pv6w
+  (HIGH: librsvg CVE-2026-96889). `next`'s own `sharp` pin is still
+  `^0.35.4`, so the bare key stays load-bearing.
+- **`source-map-js` scoped override (new key), `<1.2.2` → `1.2.2`** —
+  GHSA-68fv-2mgg-jv7q (HIGH: event-loop DoS via indexed source-map section
+  offsets), via `postcss` (build/dev tooling only — `next`, Tailwind, and
+  Sentry's vite chain). In-range for `postcss@8.5.23`'s own declared
+  `^1.2.1`.
+- **`smol-toml` scoped override (new key), `<1.9.1` → `1.9.1`** —
+  GHSA-r4xh-jqrq-34v2 (MODERATE: quadratic-time `parse()`), via
+  `.>knip>smol-toml` (lint tooling only). The advisory's stated fix version,
+  `1.8.1`, was never published; the real fix is `1.9.0`, in-range for
+  `knip@6.35.1`'s own declared `^1.8.0`.
 
 ## [1.3.0] — 2026-10-05
 

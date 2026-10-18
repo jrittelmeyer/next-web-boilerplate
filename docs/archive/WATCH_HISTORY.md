@@ -582,3 +582,20 @@ _Moved verbatim from `docs/MAINTENANCE.md → Watch items → Dated dependency t
   run. See [CHANGELOG](../../CHANGELOG.md) for the two pre-existing knip findings the
   newer resolver surfaced (`tooling/tailwind`'s `tailwindcss` ignore, `packages/ui`'s
   dangling `./hooks/*` hint).
+
+## `next` GHSA-cjq9-62q9-8jv4 closed 2026-10-18 (moved 2026-10-18)
+
+_Moved verbatim from `docs/MAINTENANCE.md → Watch items` on 2026-10-18 once the
+take had landed; the live list keeps no struck one-liner (the item predates
+that convention) — this record stands alone._
+
+- ~~**`next` 16.3.8 watched, not yet taken (2026-10-05)**~~ — **CLOSED
+  2026-10-18**: taken 11 days after its 2026-10-07 age gate cleared (a
+  13-day session gap). `next` `16.3.6` → `16.3.8` closed this GHSA plus five
+  more advisories that had accumulated in the meantime (GHSA-f87g-xv8r-7p7x,
+  GHSA-4jqv-mc3x-m676, GHSA-3w37-wq28-93x7, GHSA-mcj8-r9mp-w47p moderate,
+  GHSA-39w2-rjm5-chcv low), alongside unrelated `sharp`/`source-map-js`/
+  `smol-toml` overrides found in the same Dependabot sweep (1 → 6 open
+  alerts). `contrarian`-reviewed (required, `pnpm-workspace.yaml`); Docker
+  boot check per `MAINTENANCE.md` rule 6 run before commit. See
+  [CHANGELOG](../../CHANGELOG.md).

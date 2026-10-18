@@ -134,29 +134,6 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   (promote to a real override at that point, per the three-route rule at
   `minimumReleaseAge` in `pnpm-workspace.yaml`).
 
-- **`next` 16.3.8 watched, not yet taken (2026-10-05)** — CVE-2026-94483 /
-  GHSA-cjq9-62q9-8jv4 (SSRF in Image Optimization, CWE-918, CVSS v4
-  `AC:H/AT:P` — network but high attack complexity, attack requirements
-  present, unlike the trivial unauth `next/og` RCE this repo just finished
-  excluding for): Image Optimization can follow attacker-controlled DNS
-  resolution for a URL matching `images.remotePatterns`, reaching private IPs
-  after the allow-list check passes; apps without `remotePatterns` configured
-  are unaffected. This repo's `apps/web/next.config.ts` DOES configure
-  `remotePatterns` (`*.ufs.sh`, Uploadthing's own domain, for signed-upload
-  image serving) — but exploitation needs DNS-rebinding control over an
-  allow-listed host, which here means compromising Uploadthing's own DNS, not
-  attacker-supplied input; lower urgency than a directly-reachable path.
-  Fixed in `next` 16.3.8 (published 2026-09-30T16:07Z); **not yet surfaced by
-  `pnpm audit`** (confirmed via the GitHub Advisories API and npm's
-  advisory-bulk endpoint both returning empty/404 for this GHSA as of
-  2026-10-05 — feed lag, not a false negative in this repo's tree). The 7-day
-  age gate ages 16.3.8 in naturally **2026-10-07T16:07Z**; default route (1)
-  applies rather than a dated exclude (route 2) given the weaker
-  reachability. *Removal condition:* take the routine bump (`next` 16.3.8 + 9
-  lockstep packages, `@next/eslint-plugin-next` lockstep too) once it ages
-  in, or escalate to a dated `minimumReleaseAgeExclude` sooner if `pnpm
-  audit` goes red on this GHSA before 2026-10-07.
-
 - **`fflate` override (2026-09-07)** — `"fflate@<0.4.9": 0.4.9` in
   `pnpm-workspace.yaml`, taken for GHSA-px8p-9vwx-vf98 (moderate — `unzipSync`
   infinite loop parsing a malformed ZIP64 archive), vulnerable `>=0.4.5 <0.4.9`.

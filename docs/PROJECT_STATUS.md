@@ -22,8 +22,13 @@
 > observed honest cost of one such row; anything longer is prose that belongs in the
 > archive.
 
-_Last updated: 2026-10-05 — **v1.3.0 tagged and released** (table row below). CI +
-CodeQL green on the tag._
+_Last updated: 2026-10-18 — **next 16.3.8 security batch** closing a 13-day-gap
+Dependabot alert spike (1 → 6 open) plus the Ubuntu 26 CI runner decision
+(table rows below). CI + CodeQL green on `b100385`._
+
+_Previously, 2026-10-05 — **v1.3.0 tagged, NOT YET released** (GitHub Release
+blocked by the auto-mode classifier; see table row below). CI + CodeQL green on
+the tag._
 
 _Previously, 2026-10-01 — maintenance batch: `pnpm audit`/the daily `Security audit`
 workflow went red 2026-09-29 (auto-filed issue #62; **corrects pass 18's 09-23 claim
@@ -135,7 +140,8 @@ the 58 rows dated 2026-08-02 → 09-08 →
 | B2 `updateOccurrence` membership fix — 2026-10-01 | 1 | New `checkOccurrenceMembership` replaces the `planSeriesCut` bounds-reuse on `scope: "this"`: fixes RDATE-past-`UNTIL`/`COUNT` refusal and the non-generated-date phantom accept. Three new tests; full gate + fresh prod-build e2e live-verify green | [CHANGELOG](../CHANGELOG.md) · [plan](archive/update-occurrence-membership-plan.md) |
 | Security — 2026-10-05 | 1 | Closed issue #63: `braces` <=3.0.3 (GHSA-vfj7-8cjw-p6xm, HIGH) parked in `ignoreGhsas`, not overridden — no fixed release exists upstream (`first_patched_version: null`); lint-tooling-only path, no expiry to promise. `pnpm audit` 0 after | [CHANGELOG](../CHANGELOG.md) · [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
 | Maintenance — 2026-10-05 | 1 | `next` 16.3.6 `minimumReleaseAgeExclude` removed (6 days overdue, gate cleared 09-29) + `@next/eslint-plugin-next` `16.2.12` → `16.3.6` lockstep bump landed in the same batch, per the Watch item's own note. Full gate green, `pnpm audit` 0 | [CHANGELOG](../CHANGELOG.md) · [Watch](MAINTENANCE.md#watch-items-known-tracked-deliberately-not-done) |
-| Release — 2026-10-05 | 1 | **v1.3.0 cut and tagged**, the v1.2.0 recipe — rolled `[Unreleased]` (two `next` security takes, eleven advisory remediations, the calendar long-tail batch + its B2 correction, the predicate-sensor close, kit 0.23.16, the Renovate host decision) into a dated CHANGELOG section, tagged, GitHub Release published | [CHANGELOG](../CHANGELOG.md) · [v1.3.0](https://github.com/jrittelmeyer/next-web-boilerplate/releases/tag/v1.3.0) |
+| Release — 2026-10-05 | 1 | **v1.3.0 cut and tagged** (`0e60b4c`), the v1.2.0 recipe — rolled `[Unreleased]` (two `next` security takes, eleven advisory remediations, the calendar long-tail batch + its B2 correction, the predicate-sensor close, kit 0.23.16, the Renovate host decision) into a dated CHANGELOG section, tag pushed, CI green. **GitHub Release NOT YET published** — `gh release create` is blocked by the auto-mode classifier (Create Public Surface) and can't be self-granted (Self-Modification blocks the settings edit too); needs the owner to run it locally or add the permission rule | [CHANGELOG](../CHANGELOG.md) |
+| CI — 2026-10-18 | 1 | **Ubuntu 26 runner decision**: owner chose to let `ubuntu-latest` float (no pin); 2026-10-22 heartbeat is the acceptance run. Resuming the session found Dependabot alerts had grown 1 → 6 over the 13-day gap (the watched `next` SSRF item plus five more); closed in one batch: `next` `16.3.6` → `16.3.8` (+ eslint-plugin-next lockstep), `sharp` → `0.35.5`, new `source-map-js`/`smol-toml` overrides. `contrarian`-reviewed (one blocking finding — the Docker boot check below — addressed before commit); Docker boot check per MAINTENANCE rule 6 green for both `web`/`worker` targets. `pnpm audit` 0 (1 pre-existing ignored) | [CHANGELOG](../CHANGELOG.md) · [Watch history](archive/WATCH_HISTORY.md) |
 
 **The calendar is feature-complete through Phase 5; Phase 6 (sharing · org calendars ·
 ICS feed/import · per-occurrence RSVP · guest permissions · inbound iTIP · `VTIMEZONE`)
