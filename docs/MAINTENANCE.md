@@ -456,12 +456,13 @@ conditions live here; [`BACKLOG.md`](BACKLOG.md) carries one-line pointers. Curr
   and `scripts/init-app.mjs` ships them verbatim into every generated project. The
   e2e/visual lanes run inside pinned containers and are less exposed; the Docker
   job (host Docker engine), the static lane (host Node/pnpm via actions) and
-  CodeQL ride the image directly. *Owner decision before 10-19:* pin `ubuntu-24.04`
-  across the five files (template surface ⇒ contrarian + sign-off; a one-line
-  change per job) **or** let the label float and treat the first post-rollout
-  heartbeat (Thu 2026-10-22 04:30Z) as the acceptance run. *Removal condition:* a
-  green full-lane run on the Ubuntu 26 image (or the pin landed) — then move this
-  entry to `archive/WATCH_HISTORY.md`.
+  CodeQL ride the image directly. **Owner decision (2026-10-18): let the label
+  float** — no pin, no template-surface change. The first post-rollout heartbeat
+  (Thu 2026-10-22 04:30Z `security-audit` run) is the acceptance run; if it's
+  green, close this item, and if something breaks, root-cause and fix the
+  specific failure rather than the pin this decision declined. *Removal
+  condition:* a green full-lane run observed on the Ubuntu 26 image — then move
+  this entry to `archive/WATCH_HISTORY.md`.
 - **Dated dependency takes (manual while Renovate delivery is down)** — the npm
   publish time governs each 7-day age-in; this bullet is the canonical dated set the
   PROJECT_STATUS watch line points at. Open now:
